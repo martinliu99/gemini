@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>io.gemini</groupId>
+        <artifactId>gemini</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>gemini-aop</artifactId>
+
+
+    <properties>
+        <aop.log4j.file>META-INF/aop-log4j2.xml</aop.log4j.file>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>io.gemini</groupId>
+            <artifactId>gemini-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.gemini</groupId>
+            <artifactId>gemini-aspectj</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.gemini</groupId>
+            <artifactId>gemini-agent</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>package</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>>
+                                <copy file="${project.build.directory}/${artifact.file.name}.jar"
+                                      tofile="${release.lib.dir}/${artifact.file.name}.jar" overwrite="true"/>
+                                <copy todir="${release.lib.dir}/" overwrite="true">
+                                    <fileset dir="${project.build.directory}/dependencies/" erroronmissingdir="warn"/>
+                                </copy>
+                                <copy todir="${release.conf.dir}/" overwrite="true" >
+                                    <fileset dir="${project.basedir}/src/main/resources/${resource.userconf.folder}" />
+                                    <fileset file="${project.basedir}/src/main/resources/${aop.log4j.file}" />
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

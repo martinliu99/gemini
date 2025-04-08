@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.gemini</groupId>
+    <artifactId>gemini</artifactId>
+    <packaging>pom</packaging>
+    <version>${revision}</version>
+
+
+    <modules>
+        <module>gemini-core</module>
+        <module>gemini-aspectj</module>
+        <module>gemini-agent</module>
+        <module>gemini-aop</module>
+
+        <module>gemini-toolkit</module>
+        <module>gemini-aspectapps</module>
+
+        <module>gemini-demo</module>
+    </modules>
+
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+
+    <properties>
+        <!-- project settings -->
+        <revision>0.10.0</revision>
+
+        <license.root.dir>${maven.multiModuleProjectDirectory}/docs/license</license.root.dir>
+
+        <release.root.dir>${maven.multiModuleProjectDirectory}/gemini-releases</release.root.dir>
+        <release.lib.dir>${release.root.dir}/lib</release.lib.dir>
+        <release.conf.dir>${release.root.dir}/conf</release.conf.dir>
+        <release.aspectapps.dir>${release.root.dir}/aspectapps</release.aspectapps.dir>
+        <release.demoapps.dir>${release.root.dir}/demoapps</release.demoapps.dir>
+
+        <resource.userconf.folder>userconf</resource.userconf.folder>
+
+        <artifact.file.name>${project.artifactId}-${project.version}</artifact.file.name>
+
+
+        <!-- dependencies settings -->
+        <slf4j-api.version>2.0.16</slf4j-api.version>
+        <log4j.version>2.24.3</log4j.version>
+        <disruptor.version>3.4.4</disruptor.version>
+
+        <bytebuddy.version>1.15.11</bytebuddy.version>
+        <classgraph.version>4.8.179</classgraph.version>
+        <aspectjweaver.version>1.9.22.1</aspectjweaver.version>
+
+        <javax.inject.version>1</javax.inject.version>
+        <jakarta.inject-api.version>2.0.1</jakarta.inject-api.version>
+        <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
+        <jakarta.annotation-api.version>3.0.0</jakarta.annotation-api.version>
+        <spring.version>4.3.30.RELEASE</spring.version>
+
+        <junit-jupiter-api.version>5.11.4</junit-jupiter-api.version>
+        <assertj-core.version>3.27.2</assertj-core.version>
+
+
+        <!-- plugin settings -->
+        <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+
+        <spotbugs-maven-plugin.version>4.8.3.1</spotbugs-maven-plugin.version>
+        <spotbugs.version>4.8.4</spotbugs.version>
+
+        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+
+        <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
+        <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
+        <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
+        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <maven-flatten-plugin.version>1.5.0</maven-flatten-plugin.version>      <!-- maven 3.6.3 -->
+
+        <license-check-plugin.version>2.4.0</license-check-plugin.version>
+        <license-maven-plugin.version>4.3</license-maven-plugin.version>
+        <versions-maven-plugin.version>2.8.1</versions-maven-plugin.version>
+
+
+        <!-- switchs -->
+        <skipTests>true</skipTests>
+        <spotbugs.skip>true</spotbugs.skip>
+    </properties>
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-aspectj</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-aop</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-toolkit</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-agent</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                 <version>${slf4j-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-jcl</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.lmax</groupId>
+                <artifactId>disruptor</artifactId>
+                <version>${disruptor.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${bytebuddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${bytebuddy.version}</version>
+                <scope>test</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.classgraph</groupId>
+                <artifactId>classgraph</artifactId>
+                <version>${classgraph.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjweaver</artifactId>
+                <version>${aspectjweaver.version}</version>
+            </dependency>
+
+
+            <!-- provided scope -->
+            <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>${javax.inject.version}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.inject</groupId>
+                <artifactId>jakarta.inject-api</artifactId>
+                <version>${jakarta.inject-api.version}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>${javax.annotation-api.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <version>${jakarta.annotation-api.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-context</artifactId>
+                <version>${spring.version}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
+            </dependency>
+
+
+            <!-- test scope -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit-jupiter-api.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj-core.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <source>${maven.compiler.source}</source>
+                        <target>${maven.compiler.target}</target>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                        <proc>none</proc>
+                        <compilerArgument>-parameters</compilerArgument>
+                        <showWarnings>true</showWarnings>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs-maven-plugin.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.github.spotbugs</groupId>
+                            <artifactId>spotbugs</artifactId>
+                            <version>${spotbugs.version}</version>
+                          </dependency>
+                    </dependencies>
+                    <configuration>
+                        <effort>Max</effort>
+                        <threshold>Low</threshold>
+                        <failOnError>true</failOnError>
+
+                        <includeFilterFile>scripts\spotbugs\spotbugs-security-include.xml</includeFilterFile>
+                        <excludeFilterFile>scripts\spotbugs\spotbugs-security-exclude.xml</excludeFilterFile>
+                        <plugins>
+                            <plugin>
+                                <groupId>com.h3xstream.findsecbugs</groupId>
+                                <artifactId>findsecbugs-plugin</artifactId>
+                                <version>1.12.0</version>
+                            </plugin>
+                        </plugins>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>check</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                    <configuration>
+                      <archive>
+                        <!-- https://bugs.openjdk.org/browse/JDK-8305597 -->
+                        <index>false</index>
+                        <manifest>
+                            <addClasspath>false</addClasspath>
+                            <addDefaultEntries>true</addDefaultEntries>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <addBuildEnvironmentEntries>true</addBuildEnvironmentEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <source-compatibility>${maven.compiler.source}</source-compatibility>
+                            <target-compatibility>${maven.target.source}</target-compatibility>
+                        </manifestEntries>
+                      </archive>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>test-jar</goal> <!-- 关键：生成测试 JAR -->
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>${maven-antrun-plugin.version}</version>
+                    <inherited>false</inherited>            <!-- submodule does not inherit this task! -->
+                    <executions>
+                        <execution>
+                            <id>package</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target>
+                                   <mkdir dir="${release.root.dir}"/>
+                                </target>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>clean</id>
+                            <phase>pre-clean</phase>
+                            <goals>
+                              <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target>
+                                    <delete dir="${release.root.dir}" includeemptydirs="true"/>
+                                </target>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-dependency-plugin</artifactId>
+                  <version>${maven-dependency-plugin.version}</version>
+                  <executions>
+                    <execution>
+                      <id>install</id>
+                      <phase>install</phase>
+                      <goals>
+                        <goal>sources</goal>
+                      </goals>
+                    </execution>
+                    <execution>
+                      <id>compile</id>
+                      <phase>compile</phase>
+                      <goals>
+                        <goal>copy-dependencies</goal>
+                      </goals>
+                      <configuration>
+                        <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
+                        <includeScope>runtime</includeScope>
+                      </configuration>
+                    </execution>
+                  </executions>
+                </plugin>      
+
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-clean-plugin</artifactId>
+                  <version>${maven-clean-plugin.version}</version>
+                  <executions>
+                    <execution>
+                      <id>clean</id>
+                      <phase>clean</phase>
+                      <goals>
+                        <goal>clean</goal>
+                      </goals>
+                      <configuration>
+                        <directory>${project.build.directory}/dependencies</directory>
+                      </configuration>
+                    </execution>
+                  </executions>
+                </plugin>
+
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-surefire-plugin</artifactId>
+                  <version>${maven-surefire-plugin.version}</version>
+                  <configuration>
+<!--                    <skipTests>true</skipTests>-->
+                  </configuration>
+                </plugin>
+
+                <!--remove ${revision} when install or deploy artifact to repository -->
+                <plugin>
+                  <groupId>org.codehaus.mojo</groupId>
+                  <artifactId>flatten-maven-plugin</artifactId>
+                  <version>${maven-flatten-plugin.version}</version>
+                  <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    <keepCommentsInPom>true</keepCommentsInPom>
+                    <outputDirectory>${project.build.directory}/pom</outputDirectory>
+                  </configuration>
+                  <executions>
+                    <execution>
+                      <id>flatten</id>
+                      <phase>process-resources</phase>
+                      <goals>
+                        <goal>flatten</goal>
+                      </goals>
+                    </execution>
+                    <execution>
+                      <id>flatten.clean</id>
+                      <phase>pre-clean</phase>
+                      <goals>
+                        <goal>clean</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+                </plugin>
+
+
+<!--                <plugin>-->
+<!--                  <groupId>org.codehaus.mojo</groupId>-->
+<!--                  <artifactId>license-maven-plugin</artifactId>-->
+<!--                  <version>${license-check-plugin.version}</version>-->
+<!--                </plugin>-->
+
+                <plugin>
+                  <groupId>com.mycila</groupId>
+                  <artifactId>license-maven-plugin</artifactId>
+                  <version>${license-maven-plugin.version}</version>
+                  <executions>
+                    <execution>
+                      <phase>process-sources</phase>
+                      <goals>
+                        <goal>format</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+                  <configuration>
+                    <header>${license.root.dir}/HEADER.txt</header>
+                    <includes>
+                      <include>**/*.java</include>
+                    </includes>
+                    <strictCheck>true</strictCheck>
+                    <properties>
+                        <license.year.period>2023</license.year.period>
+                    </properties>
+                  </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>versions-maven-plugin</artifactId>
+                    <version>${versions-maven-plugin.version}</version>
+                    <configuration>
+                        <generateBackupPoms>false</generateBackupPoms>
+                    </configuration>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+
+
+        <finalName>${artifact.file.name}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <excludes>
+                    <exclude>${resource.userconf.folder}/*.*</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-clean-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>flatten-maven-plugin</artifactId>
+            </plugin>
+
+<!--            <plugin>-->
+<!--              <groupId>org.codehaus.mojo</groupId>-->
+<!--              <artifactId>license-maven-plugin</artifactId>-->
+<!--            </plugin>-->
+
+            <plugin>
+              <groupId>com.mycila</groupId>
+              <artifactId>license-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+            </plugin>
+
+        </plugins>
+    </build>
+
+
+    <repositories>
+        <repository>
+            <id>aliyun-repos</id>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun-repos</id>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+</project>

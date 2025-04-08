@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+ <configuration status="WARN" monitorInterval="30">
+     <appenders>
+         <console name="Console" target="SYSTEM_OUT">
+             <PatternLayout pattern="[%d{HH:mm:ss:SSS}] [%p] - %l - %m%n"/>
+         </console>
+         <RollingFile name="RollingFile" fileName="${sys:user.home}/logs/gemini.log"
+                      filePattern="${sys:user.home}/logs/$${date:yyyy-MM}/info-%d{yyyy-MM-dd}-%i.log">
+             <PatternLayout pattern="[%d{HH:mm:ss:SSS}] [%p] - %l - %m%n"/>
+             <Policies>
+                 <TimeBasedTriggeringPolicy/>
+                 <SizeBasedTriggeringPolicy size="100 MB"/>
+             </Policies>
+         </RollingFile>
+     </appenders>
+     <loggers>
+         <logger name="org.springframework" level="INFO"></logger>
+         <logger name="org.mybatis" level="INFO"></logger>
+         <logger name="io.gemini" level="debug"></logger>
+         <root level="debug">
+             <appender-ref ref="Console"/>
+             <appender-ref ref="RollingFile"/>
+         </root>
+     </loggers>
+ </configuration>

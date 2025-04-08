@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+ <configuration status="${logger:aop.logger.allLogLevel:-ERROR}" verbose="false" strict="true" monitorInterval="10" > 
+     <Properties>
+        <property name="LOG_FILE_PATH" value="${logger:aop.logger.logFilePath}" />
+        <property name="INCLUDE_LOCATION" value="${logger:aop.logger.includeLocation:-true}" />
+    </Properties>
+ 
+    <appenders>
+        <console name="Console" target="SYSTEM_OUT">
+            <PatternLayout charset="UTF-8" pattern="${logger:aop.logger.logConsolePattern}"/>
+       <!--     <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>  -->
+        </console>
+
+        <RollingRandomAccessFile name="RollingFile" fileName="${LOG_FILE_PATH}/gemini.log"
+                  filePattern="${LOG_FILE_PATH}/gemini-%d{yyyy-MM-dd}-%i.log" immediateFlush="false" append="true">
+            <!-- <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>-->     
+            <PatternLayout charset="UTF-8" pattern="${logger:aop.logger.logFilePattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+             </Policies>
+             <DefaultRolloverStrategy max="15"/>
+        </RollingRandomAccessFile>
+    </appenders>
+
+
+    <loggers>
+        <logger name="io.gemini" level="WARN" includeLocation="${INCLUDE_LOCATION}" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFile"/>
+        </logger>
+        <logger name="io.gemini.aop.AopMetrics" level="INFO" includeLocation="${INCLUDE_LOCATION}" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFile"/>
+        </logger>
+
+        <root level="WARN" includeLocation="${INCLUDE_LOCATION}" >
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFile"/>
+        </root>
+    </loggers>
+ </configuration>

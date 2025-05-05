@@ -22,7 +22,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
 import net.bytebuddy.agent.builder.AgentBuilder;
 
@@ -37,8 +36,8 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
     private final AopMetrics.BootstraperMetrics bootstraperMetrics;
 
 
-    public DefaultRedefinitionListener(AopContext aopContext) {
-        bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
+    public DefaultRedefinitionListener(AopMetrics aopMetrics) {
+        bootstraperMetrics = aopMetrics.getBootstraperMetrics();
     }
 
     @Override

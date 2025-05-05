@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.aspectj.AspectJExprTypeMatcher;
 import io.gemini.aop.matcher.Pattern.Type;
 import io.gemini.aspectj.weaver.world.TypeWorld;
 import io.gemini.aspectj.weaver.world.TypeWorldFactory;

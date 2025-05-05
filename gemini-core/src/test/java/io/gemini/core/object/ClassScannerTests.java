@@ -27,7 +27,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.gemini.core.object.ClassScanner.Ignored;
+import io.gemini.api.annotation.NoScanning;
 
 public class ClassScannerTests {
 
@@ -40,7 +40,7 @@ public class ClassScannerTests {
                 .scannedClassLoaders(classLoader)
                 .acceptPackages(ObjectFactoryTests.class.getPackage().getName())
                 .acceptJarPatterns("*.jar", "classes")
-                .classpathElementUrls( ( (URLClassLoader)classLoader ).getURLs() )
+                .filteredClasspathElementUrls( ( (URLClassLoader)classLoader ).getURLs() )
                 .build();
     }
 
@@ -100,7 +100,7 @@ public class ClassScannerTests {
     @AtMarker
     public class InnerClass implements Marker {}
 
-    @Ignored
+    @NoScanning
     @AtMarker
     public class IgnoredInnerClass implements Marker {}
 

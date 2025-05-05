@@ -38,7 +38,7 @@ public class ResourcesTests {
         List<URL> urls = Resources.scanResource(resources, extNames, false);
 
         LOGGER.info("{}", urls);
-        assertTrue(urls.size() == 1);
+        assertTrue(urls.size() == 3);
     }
 
     @Test

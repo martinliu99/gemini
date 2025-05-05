@@ -1,20 +1,5 @@
 <FindBugsFilter>
     <Match>
-       <Class name="io.gemini.core.object.Resources" />
-       <Bug pattern="PATH_TRAVERSAL_IN" />
-    </Match>
-
-    <Match>
-       <Class name="io.gemini.aop.bootstraper.AopBootstraperConfig" />
-       <Bug pattern="PATH_TRAVERSAL_IN" />
-    </Match>
-
-    <Match>
-       <Class name="io.gemini.aop.aspectapp.support.AspectContextHelper" />
-       <Bug pattern="PATH_TRAVERSAL_IN" />
-    </Match>
-
-    <Match>
        <Class name="io.gemini.aop.weaver.support.DefaultAspectWeaver" />
        <Bug pattern="PATH_TRAVERSAL_IN" />
     </Match>

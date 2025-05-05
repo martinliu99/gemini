@@ -17,6 +17,8 @@ package io.gemini.core.logging;
 
 import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -47,7 +49,8 @@ public interface LoggingSystem {
 
     class Log4j2 implements LoggingSystem {
 
-        public static final String SIMPLE_INITIALIZATION_KEY = "aop.logger.simpleInitialization";
+        private static final String LOG_CONFIG_LOCATION_KEY = "aop.logger.configLocation";
+        static final String SIMPLE_INITIALIZATION_KEY = "aop.logger.simpleInitialization";
 
         private static final String INTERNAL_CONFIGURATION_FILE = "META-INF/aop-log4j2.xml";
         private static final String CONTEXT_NAME = "GeminiLogger";
@@ -58,17 +61,27 @@ public interface LoggingSystem {
         private final DiagnosticLevel diagnosticLevel;
 
         private final boolean simpleInitialization;
-        private final Level allLogLevel;
 
         private final Level defaultStatusLevel = LOGGER.getLevel();
+        private final Level statusLevel;
+
+        private final Level allLogLevel;
 
 
-        public Log4j2(String configLocation, ConfigSource configSource,
+        Log4j2(String configLocation, ConfigSource configSource,
                 DiagnosticLevel diagnosticLevel) {
-            this.configLocation = configLocation;
             this.diagnosticLevel = diagnosticLevel;
 
             this.configSource =  new ConfigSourceAdapter(configSource, diagnosticLevel.isDebugEnabled());
+
+
+            if(StringUtils.hasText(configLocation))
+                this.configLocation = configLocation;
+            else if(this.configSource.containsKey(LOG_CONFIG_LOCATION_KEY))
+                this.configLocation = this.configSource.getProperty(LOG_CONFIG_LOCATION_KEY).trim();
+            else
+                this.configLocation = INTERNAL_CONFIGURATION_FILE;
+
 
             if(this.configSource.containsProperty(SIMPLE_INITIALIZATION_KEY)) {
                 String value = this.configSource.getProperty(SIMPLE_INITIALIZATION_KEY);
@@ -76,6 +89,12 @@ public interface LoggingSystem {
             } else {
                 this.simpleInitialization = true;
             }
+
+            if(this.configSource.containsProperty(ConfigSourceAdapter.STATUS_LOG_LEVEL_KEY)) {
+                String logLevel = this.configSource.getProperty(ConfigSourceAdapter.STATUS_LOG_LEVEL_KEY).toString().trim();
+                this.statusLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
+            } else
+                this.statusLevel = null;
 
             if(this.configSource.containsProperty(ConfigSourceAdapter.ALL_LOG_LEVEL_KEY)) {
                 String logLevel = this.configSource.getProperty(ConfigSourceAdapter.ALL_LOG_LEVEL_KEY).toString().trim();
@@ -91,19 +110,21 @@ public interface LoggingSystem {
             StatusConsoleListener fallbackListener = LOGGER.getFallbackListener();
             try {
                 // 1.set status log level
-                if(allLogLevel != null && defaultStatusLevel.compareTo(allLogLevel) < 0) {
-                    fallbackListener.setLevel(allLogLevel);
+                if(diagnosticLevel.isSimpleEnabled()) {
+                    fallbackListener.setLevel(Level.INFO);
+
+                    Collection<String> loggerPropertyNames = configSource.getLoggerPropertyNames();
+                    LOGGER.info("^Initializing LoggingSystem with settings, \n"
+                            + "  defaultStatusLevel: {} \n  statusLevel: {} \n"
+                            + "  allLogLevel: {} \n  configLocation: {} "
+                            + "{} ",
+                            defaultStatusLevel, statusLevel,
+                            allLogLevel, configLocation,
+                            loggerPropertyNames.size() == 0 ? "" : loggerPropertyNames.stream().map( name -> name + ": " + configSource.getProperty(name) ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
                 }
 
-                if(diagnosticLevel.isSimpleEnabled()) {
-                    LOGGER.info("^Initializing LoggingSystem with settings,");
-                    LOGGER.info("  defaultStatusLevel: {}", defaultStatusLevel);
-                    LOGGER.info("  allLogLevel: {}", allLogLevel);
-                    LOGGER.info("  configLocation: {}", configLocation);
-
-                    for(String settingKey : configSource.getLoggerPropertyNames()) {
-                        LOGGER.info("  {}: {}", settingKey, configSource.getProperty(settingKey));
-                    }
+                if(statusLevel != null && defaultStatusLevel.compareTo(statusLevel) < 0) {
+                    fallbackListener.setLevel(statusLevel);
                 }
 
                 // 2.load log4j2 settings from configSource
@@ -173,7 +194,7 @@ public interface LoggingSystem {
 
             if(LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Took '{}' seconds to create Configuration '{}'.", 
-                        (System.nanoTime() - startedAt) / 1e9, configLocation);
+                        (System.nanoTime() - startedAt) / 1e9, configFile);
             }
 
 
@@ -192,23 +213,19 @@ public interface LoggingSystem {
         }
 
         private URL loadConfigurationFile(ClassLoader currentClassLoader) {
-            // 1.try to load user-defined configuration file
+            // load user-defined configuration file, or built-in configuration file
             URL configFile = currentClassLoader.getResource(configLocation);
             if(configFile != null) {
-                if(LOGGER.isDebugEnabled())
+                if(LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Loaded config file '{}'.", configLocation);
+                }
 
                 return configFile;
-            }
+            } else {
+                LOGGER.warn("Did not find config file '{}'.\n", configLocation);
 
-            // 2.load built-in configuration file
-            configFile = currentClassLoader.getResource(INTERNAL_CONFIGURATION_FILE);
-            if(configFile != null) {
-                if(LOGGER.isDebugEnabled())
-                    LOGGER.debug("Loaded config file '{}'.", configLocation);
-            } else
-                    LOGGER.warn("Did not find config file '{}'.\n", configLocation);
-            return configFile;
+                return null;
+            }
         }
 
         private void customizeConfiguration(Configuration configuration) {

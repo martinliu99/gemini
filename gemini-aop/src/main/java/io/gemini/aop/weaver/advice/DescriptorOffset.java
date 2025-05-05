@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.gemini.aop.java.lang.BootstrapAdvice;
+import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import net.bytebuddy.asm.Advice.OffsetMapping;
 import net.bytebuddy.asm.Advice.OffsetMapping.ForStackManipulation;
 import net.bytebuddy.description.annotation.AnnotationDescription.Loadable;
@@ -82,6 +84,7 @@ public interface DescriptorOffset {
     }
 
 
+    @BootstrapClassConsumer
     class ForRegularInvocation extends AbstractBase {
 
         private static final Generic STRING = TypeDefinition.Sort.describe(String.class);
@@ -127,6 +130,7 @@ public interface DescriptorOffset {
     }
 
 
+    @BootstrapClassConsumer
     class ForDynamicInvocation extends AbstractBase {
 
         private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_INDY_BSM 

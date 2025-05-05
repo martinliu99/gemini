@@ -8,18 +8,12 @@
     <packaging>pom</packaging>
     <version>${revision}</version>
 
+    <name>${project.artifactId}</name>
 
-    <modules>
-        <module>gemini-core</module>
-        <module>gemini-aspectj</module>
-        <module>gemini-agent</module>
-        <module>gemini-aop</module>
+    <inceptionYear>2023</inceptionYear>
 
-        <module>gemini-toolkit</module>
-        <module>gemini-aspectapps</module>
-
-        <module>gemini-demo</module>
-    </modules>
+    <description>Java-agent based, runtime-weaving aop framework</description>
+    <url>https://github.com/martinliu99/gemini</url>
 
 
     <licenses>
@@ -29,17 +23,46 @@
         </license>
     </licenses>
 
+    <scm>
+        <connection>scm:git:git@github.com:martinliu99/gemini.git</connection>
+        <developerConnection>scm:git:git@github.com:martinliu99/gemini.git</developerConnection>
+        <url>https://github.com/martinliu99/gemini</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>martin.liu</name>
+        </developer>
+    </developers>
+
+
+    <modules>
+        <module>gemini-api</module>
+
+        <module>gemini-core</module>
+        <module>gemini-aspectj</module>
+        <module>gemini-aop</module>
+
+        <module>gemini-activator</module>
+
+        <module>gemini-toolkit</module>
+        <module>gemini-aspectories</module>
+
+        <module>gemini-demo</module>
+    </modules>
+
 
     <properties>
         <!-- project settings -->
-        <revision>0.10.0</revision>
+        <revision>0.11.0-SNAPSHOT</revision>
 
         <license.root.dir>${maven.multiModuleProjectDirectory}/docs/license</license.root.dir>
 
         <release.root.dir>${maven.multiModuleProjectDirectory}/gemini-releases</release.root.dir>
         <release.lib.dir>${release.root.dir}/lib</release.lib.dir>
         <release.conf.dir>${release.root.dir}/conf</release.conf.dir>
-        <release.aspectapps.dir>${release.root.dir}/aspectapps</release.aspectapps.dir>
+        <release.aspectories.dir>${release.root.dir}/aspectories</release.aspectories.dir>
         <release.demoapps.dir>${release.root.dir}/demoapps</release.demoapps.dir>
 
         <resource.userconf.folder>userconf</resource.userconf.folder>
@@ -52,9 +75,10 @@
         <log4j.version>2.24.3</log4j.version>
         <disruptor.version>3.4.4</disruptor.version>
 
-        <bytebuddy.version>1.15.11</bytebuddy.version>
+        <jspecify.version>1.0.0</jspecify.version>
+        <bytebuddy.version>1.17.5</bytebuddy.version>
         <classgraph.version>4.8.179</classgraph.version>
-        <aspectjweaver.version>1.9.22.1</aspectjweaver.version>
+        <aspectj.version>1.9.24</aspectj.version>
 
         <javax.inject.version>1</javax.inject.version>
         <jakarta.inject-api.version>2.0.1</jakarta.inject-api.version>
@@ -67,18 +91,22 @@
 
 
         <!-- plugin settings -->
-        <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <java.version>8</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
 
+        <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
         <spotbugs-maven-plugin.version>4.8.3.1</spotbugs-maven-plugin.version>
         <spotbugs.version>4.8.4</spotbugs.version>
 
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
 
         <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
         <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
@@ -91,14 +119,20 @@
         <versions-maven-plugin.version>2.8.1</versions-maven-plugin.version>
 
 
-        <!-- switchs -->
+        <!-- switches -->
         <skipTests>true</skipTests>
-        <spotbugs.skip>true</spotbugs.skip>
+        <spotbugs.skipskip>true</spotbugs.skipskip>
     </properties>
 
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-api</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
             <dependency>
                 <groupId>io.gemini</groupId>
                 <artifactId>gemini-core</artifactId>
@@ -114,6 +148,13 @@
                 <artifactId>gemini-aop</artifactId>
                 <version>${revision}</version>
             </dependency>
+
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-activator</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
             <dependency>
                 <groupId>io.gemini</groupId>
                 <artifactId>gemini-toolkit</artifactId>
@@ -159,6 +200,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>${jspecify.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
                 <version>${bytebuddy.version}</version>
@@ -179,8 +226,13 @@
 
             <dependency>
                 <groupId>org.aspectj</groupId>
-                <artifactId>aspectjweaver</artifactId>
-                <version>${aspectjweaver.version}</version>
+                <artifactId>aspectjrt</artifactId>
+                <version>${aspectj.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjmatcher</artifactId>
+                <version>${aspectj.version}</version>
             </dependency>
 
 
@@ -237,6 +289,13 @@
                 <scope>test</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjweaver</artifactId>
+                <version>${aspectj.version}</version>
+                <scope>test</scope>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -251,11 +310,69 @@
                     <configuration>
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
+                        <release>${maven.compiler.release}</release>
                         <encoding>${project.build.sourceEncoding}</encoding>
                         <proc>none</proc>
                         <compilerArgument>-parameters</compilerArgument>
                         <showWarnings>true</showWarnings>
                     </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${maven-enforcer-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-versions</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <requireJavaVersion>
+                                        <version>[8,)</version>
+                                    </requireJavaVersion>
+                                    <requireMavenVersion>
+                                        <version>[3.6.3,)</version>
+                                    </requireMavenVersion>
+                                </rules>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>enforce-dependency</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <dependencyConvergence />
+<!--                                    <requireReleaseDeps />-->
+                                    <requireUpperBoundDeps />
+                                </rules>
+                            </configuration>
+                        </execution>
+<!--                        <execution>-->
+<!--                            <id>enforce-noDuplicateClasses</id>-->
+<!--                            <goals>-->
+<!--                                <goal>enforce</goal>-->
+<!--                            </goals>-->
+<!--                            <configuration>-->
+<!--                                <rules>-->
+<!--                                    <banDuplicateClasses>-->
+<!--                                        <scopes>-->
+<!--                                            <scope>compile</scope>-->
+<!--                                        </scopes>-->
+<!--                                        <findAllDuplicates>true</findAllDuplicates>-->
+<!--                                        <ignoreWhenIdentical>true</ignoreWhenIdentical>-->
+<!--                                        <ignoreClasses>-->
+<!--                                            <ignoreClass>module-info</ignoreClass>-->
+<!--                                        </ignoreClasses>-->
+<!--                                    </banDuplicateClasses>-->
+<!--                                </rules>-->
+<!--                            </configuration>-->
+<!--                        </execution>-->
+                    </executions>
                 </plugin>
 
                 <plugin>
@@ -270,6 +387,7 @@
                           </dependency>
                     </dependencies>
                     <configuration>
+                        <skip>true</skip>
                         <effort>Max</effort>
                         <threshold>Low</threshold>
                         <failOnError>true</failOnError>
@@ -312,17 +430,23 @@
                         </manifest>
                         <manifestEntries>
                             <source-compatibility>${maven.compiler.source}</source-compatibility>
-                            <target-compatibility>${maven.target.source}</target-compatibility>
+                            <target-compatibility>${maven.compiler.target}</target-compatibility>
                         </manifestEntries>
                       </archive>
                     </configuration>
                     <executions>
                         <execution>
                             <goals>
-                                <goal>test-jar</goal> <!-- 关键：生成测试 JAR -->
+                                <goal>test-jar</goal>
                             </goals>
                         </execution>
                     </executions>
+                </plugin>
+
+                <plugin>
+	                <groupId>org.apache.maven.plugins</groupId>
+	                <artifactId>maven-shade-plugin</artifactId>
+	                <version>${maven-shade-plugin.version}</version>
                 </plugin>
 
                 <plugin>
@@ -339,7 +463,7 @@
                             </goals>
                             <configuration>
                                 <target>
-                                   <mkdir dir="${release.root.dir}"/>
+                                    <mkdir dir="${release.root.dir}" />
                                 </target>
                             </configuration>
                         </execution>
@@ -351,7 +475,7 @@
                             </goals>
                             <configuration>
                                 <target>
-                                    <delete dir="${release.root.dir}" includeemptydirs="true"/>
+                                    <delete dir="${release.root.dir}" includeemptydirs="true" />
                                 </target>
                             </configuration>
                         </execution>
@@ -359,116 +483,118 @@
                 </plugin>
 
                 <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-dependency-plugin</artifactId>
-                  <version>${maven-dependency-plugin.version}</version>
-                  <executions>
-                    <execution>
-                      <id>install</id>
-                      <phase>install</phase>
-                      <goals>
-                        <goal>sources</goal>
-                      </goals>
-                    </execution>
-                    <execution>
-                      <id>compile</id>
-                      <phase>compile</phase>
-                      <goals>
-                        <goal>copy-dependencies</goal>
-                      </goals>
-                      <configuration>
-                        <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
-                        <includeScope>runtime</includeScope>
-                      </configuration>
-                    </execution>
-                  </executions>
-                </plugin>      
-
-                <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-clean-plugin</artifactId>
-                  <version>${maven-clean-plugin.version}</version>
-                  <executions>
-                    <execution>
-                      <id>clean</id>
-                      <phase>clean</phase>
-                      <goals>
-                        <goal>clean</goal>
-                      </goals>
-                      <configuration>
-                        <directory>${project.build.directory}/dependencies</directory>
-                      </configuration>
-                    </execution>
-                  </executions>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${maven-dependency-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>install</id>
+                            <phase>install</phase>
+                            <goals>
+                                <goal>sources</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>compile</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>copy-dependencies</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>
+                                    ${project.build.directory}/dependencies</outputDirectory>
+                                <includeScope>runtime</includeScope>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
 
                 <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-surefire-plugin</artifactId>
-                  <version>${maven-surefire-plugin.version}</version>
-                  <configuration>
-<!--                    <skipTests>true</skipTests>-->
-                  </configuration>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>${maven-clean-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>clean</id>
+                            <phase>clean</phase>
+                            <goals>
+                                <goal>clean</goal>
+                            </goals>
+                            <configuration>
+                                <directory>
+                                    ${project.build.directory}/dependencies</directory>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <skipTests>${skipTests}</skipTests>
+                    </configuration>
                 </plugin>
 
                 <!--remove ${revision} when install or deploy artifact to repository -->
                 <plugin>
-                  <groupId>org.codehaus.mojo</groupId>
-                  <artifactId>flatten-maven-plugin</artifactId>
-                  <version>${maven-flatten-plugin.version}</version>
-                  <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                    <keepCommentsInPom>true</keepCommentsInPom>
-                    <outputDirectory>${project.build.directory}/pom</outputDirectory>
-                  </configuration>
-                  <executions>
-                    <execution>
-                      <id>flatten</id>
-                      <phase>process-resources</phase>
-                      <goals>
-                        <goal>flatten</goal>
-                      </goals>
-                    </execution>
-                    <execution>
-                      <id>flatten.clean</id>
-                      <phase>pre-clean</phase>
-                      <goals>
-                        <goal>clean</goal>
-                      </goals>
-                    </execution>
-                  </executions>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>flatten-maven-plugin</artifactId>
+                    <version>${maven-flatten-plugin.version}</version>
+                    <configuration>
+                        <updatePomFile>true</updatePomFile>
+                        <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                        <keepCommentsInPom>true</keepCommentsInPom>
+                        <outputDirectory>${project.build.directory}/pom</outputDirectory>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>flatten</id>
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>flatten</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>flatten.clean</id>
+                            <phase>pre-clean</phase>
+                            <goals>
+                                <goal>clean</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
 
 
-<!--                <plugin>-->
-<!--                  <groupId>org.codehaus.mojo</groupId>-->
-<!--                  <artifactId>license-maven-plugin</artifactId>-->
-<!--                  <version>${license-check-plugin.version}</version>-->
-<!--                </plugin>-->
+                <!--                <plugin>-->
+                <!--                  <groupId>org.codehaus.mojo</groupId>-->
+                <!--                  <artifactId>license-maven-plugin</artifactId>-->
+                <!--                  <version>${license-check-plugin.version}</version>-->
+                <!--                </plugin>-->
 
                 <plugin>
-                  <groupId>com.mycila</groupId>
-                  <artifactId>license-maven-plugin</artifactId>
-                  <version>${license-maven-plugin.version}</version>
-                  <executions>
-                    <execution>
-                      <phase>process-sources</phase>
-                      <goals>
-                        <goal>format</goal>
-                      </goals>
-                    </execution>
-                  </executions>
-                  <configuration>
-                    <header>${license.root.dir}/HEADER.txt</header>
-                    <includes>
-                      <include>**/*.java</include>
-                    </includes>
-                    <strictCheck>true</strictCheck>
-                    <properties>
-                        <license.year.period>2023</license.year.period>
-                    </properties>
-                  </configuration>
+                    <groupId>com.mycila</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>${license-maven-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <phase>process-sources</phase>
+                            <goals>
+                                <goal>format</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <header>${license.root.dir}/HEADER.txt</header>
+                        <includes>
+                            <include>**/*.java</include>
+                        </includes>
+                        <strictCheck>true</strictCheck>
+                        <properties>
+                            <license.year.period>2023</license.year.period>
+                        </properties>
+                    </configuration>
                 </plugin>
 
                 <plugin>
@@ -500,6 +626,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
             </plugin>
 
             <plugin>

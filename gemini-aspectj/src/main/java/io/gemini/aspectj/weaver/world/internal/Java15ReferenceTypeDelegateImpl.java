@@ -32,7 +32,6 @@ import org.aspectj.weaver.TypeVariable;
 import org.aspectj.weaver.TypeVariableReferenceType;
 import org.aspectj.weaver.UnresolvedType;
 import org.aspectj.weaver.World;
-import org.aspectj.weaver.reflect.DeferredResolvedPointcutDefinition;
 import org.aspectj.weaver.tools.PointcutDesignatorHandler;
 
 import io.gemini.aspectj.weaver.tools.PointcutParameter;
@@ -488,8 +487,7 @@ public class Java15ReferenceTypeDelegateImpl extends ReferenceTypeDelegateImpl {
             for (int j = 0; j < weaverPTypes.length; j++) {
                 weaverPTypes[j] = this.typeConverter.fromType(ptypes[j]);
             }
-            pointcuts[i] = new DeferredResolvedPointcutDefinition(getResolvedTypeX(), pcs[i].getModifiers(), pcs[i].getName(),
-                    weaverPTypes);
+            pointcuts[i] = new ResolvedPointcutDefinition(getResolvedTypeX(), pcs[i].getModifiers(), pcs[i].getName(), weaverPTypes, null);
         }
         // phase 2, now go back round and resolve in-place all of the
         // pointcuts

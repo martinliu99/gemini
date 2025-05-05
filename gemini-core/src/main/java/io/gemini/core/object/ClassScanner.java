@@ -15,12 +15,7 @@
  */
 package io.gemini.core.object;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +28,7 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.api.annotation.NoScanning;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.Assert;
 import io.github.classgraph.AnnotationInfo;
@@ -65,14 +61,6 @@ public interface ClassScanner {
     ClassInfoList getClassesWithAnnotation(String annotationName);
 
 
-    /**
-     * Mark annotation to ignore type, and type elements, such as constructor, method and field.
-     */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target( {ElementType.TYPE, ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.FIELD} )
-    @interface Ignored {  }
-
-
     class Default implements ClassScanner {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(ClassScanner.class);
@@ -80,8 +68,6 @@ public interface ClassScanner {
         private static final String STAR = "*";
         private static final Set<Pattern> ACCEPT_ALL_JARS = new HashSet<>();
         private static final String[] ACCEPT_ALL_PACKAGES = new String[] { STAR };
-
-        private static final IgnoredClassInfoFilter IGNORED_CLASS_FILTER = new IgnoredClassInfoFilter();
 
 
         // refer to ClassLoaderHandlerRegistry#AUTOMATIC_PACKAGE_ROOT_PREFIXES
@@ -103,38 +89,42 @@ public interface ClassScanner {
         }
 
 
-        private final List<URL> classpathElementUrls;
         private final DiagnosticLevel diagnosticLevel;
+
+        private final Set<URL> filteredClasspathElementUrls;
 
         private final ClassInfoList classInfoList;   // cache found class info globally.
 
 
-        protected Default(List<ClassLoader> scannedClassLoaders, 
-                boolean enableVerbose, Set<String> acceptJarPatterns, Set<String> acceptPackages, int workThreads,
-                List<URL> classpathElementUrls, 
-                DiagnosticLevel diagnosticLevel) {
+        protected Default(boolean enableVerbose, DiagnosticLevel diagnosticLevel,
+                Set<ClassLoader> scannedClassLoaders, Set<URL> overrideClasspaths, 
+                Set<String> acceptJarPatterns, Set<String> acceptPackages, 
+                int workThreads, Set<URL> filteredClasspathElementUrls) {
             // 1.check input arguments
-            Assert.notEmpty(scannedClassLoaders, "'scannedClassLoaders' must not be empty.");
+            Assert.notNull(diagnosticLevel, "'diagnosticLevel' must not be null.");
+            this.diagnosticLevel = diagnosticLevel;
+
+            Assert.isTrue( !(scannedClassLoaders.size() == 0 && overrideClasspaths.size() == 0), 
+                    "'scannedClassLoaders' and 'overrideClasspaths' must not be both empty.");
 
             Set<Pattern> formattedJarPatterns = this.formatAcceptJarPatterns(acceptJarPatterns);
             String[] formmatedPackages = this.formatAcceptPackages(acceptPackages);
             workThreads = workThreads > NO_WORK_THREAD ? workThreads : NO_WORK_THREAD;
 
-            Assert.notEmpty(classpathElementUrls, "'classpathElementUrls' must not be empty.");
-            this.classpathElementUrls = classpathElementUrls;
-
-            Assert.notNull(diagnosticLevel, "'diagnosticLevel' must not be null.");
-            this.diagnosticLevel = diagnosticLevel;
+            Assert.notEmpty(filteredClasspathElementUrls, "'filteredClasspathElementUrls' must not be empty.");
+            this.filteredClasspathElementUrls = filteredClasspathElementUrls;
 
             long startedAt = System.nanoTime();
             if(diagnosticLevel.isSimpleEnabled()) {
                 LOGGER.info("^Creating ClassScanner with settings, \n"
-                        + "  scannedClassLoaders: {} \n  enableVerbose: {} \n  acceptJarPatterns: {} \n"
-                        + "  acceptPackages: {} \n  workThreads: {} \n  classpathElementUrls: {} \n"
-                        + "  diagnosticLevel: {} \n",
-                        scannedClassLoaders, enableVerbose, acceptJarPatterns,
-                        acceptPackages, workThreads, classpathElementUrls,
-                        diagnosticLevel
+                        + "  enableVerbose: {} \n  diagnosticLevel: {} \n"
+                        + "  scannedClassLoaders: {} \n  overrideClasspaths: {}\n"
+                        + "  acceptPackages: {} \n  acceptJarPatterns: {} \n"
+                        + "  workThreads: {} \n  filteredClasspathElementUrls: {} \n",
+                        enableVerbose, diagnosticLevel, 
+                        scannedClassLoaders, overrideClasspaths,
+                        acceptPackages, acceptJarPatterns, 
+                        workThreads, filteredClasspathElementUrls
                 );
             }
 
@@ -156,8 +146,14 @@ public interface ClassScanner {
                                     ? new AllClasspathElementFilter() : new DefaultClasspathElementFilter(formattedJarPatterns) )
                         ;
 
-                for(ClassLoader classLoader : scannedClassLoaders) {
-                    classGraph.addClassLoader(classLoader);
+                if(overrideClasspaths.size() > 0) {
+                    for(URL overrideClasspath : overrideClasspaths) {
+                        classGraph.overrideClasspath(overrideClasspath);
+                    }
+                } else {
+                    for(ClassLoader classLoader : scannedClassLoaders) {
+                        classGraph.addClassLoader(classLoader);
+                    }
                 }
 
                 if(workThreads > NO_WORK_THREAD)
@@ -167,8 +163,8 @@ public interface ClassScanner {
 
                 // 3.cache found class info
                 this.classInfoList = result.getAllClasses()
-                        // remove @Ignored types
-                        .filter(IGNORED_CLASS_FILTER)
+                        // remove {@code NoScanning} types
+                        .filter(NoScanningClassInfoFilter.INSTANCE)
                         ;
             } finally {
                 if(result != null) {
@@ -213,13 +209,13 @@ public interface ClassScanner {
             return packages;
         }
 
-        protected Default(ClassScanner classScanner, List<URL> classpathElementUrls) {
+        protected Default(ClassScanner classScanner, Set<URL> filteredClasspathElementUrls) {
             Assert.notNull(classScanner, "'classScanner' must not be null.");
             if(classScanner instanceof Default == false)
                 throw new IllegalArgumentException("classScanner must be instanceof ClassScanner.Default");
 
-            Assert.notNull(classpathElementUrls, "'classpathElementUrls' must not be empty.");
-            this.classpathElementUrls = classpathElementUrls;
+            Assert.notNull(filteredClasspathElementUrls, "'filteredClasspathElementUrls' must not be empty.");
+            this.filteredClasspathElementUrls = filteredClasspathElementUrls;
 
             Default defaultSanner = (Default) classScanner;
             this.classInfoList = defaultSanner.classInfoList;
@@ -231,56 +227,56 @@ public interface ClassScanner {
          * @see io.gemini.core.object.ClassScanner#getClasseNamesImplementing(java.lang.String)
          */
         public List<String> getClassNamesImplementing(String typeName) {
-            return this.getClassesImplementing(typeName, this.classpathElementUrls).getNames();
+            return this.getClassesImplementing(typeName, this.filteredClasspathElementUrls).getNames();
         }
 
         /* @see io.gemini.core.object.ClassScanner#getClassesImplementing(java.lang.String) 
          */
         @Override
         public ClassInfoList getClassesImplementing(String typeName) {
-            return this.getClassesImplementing(typeName, this.classpathElementUrls);
+            return this.getClassesImplementing(typeName, this.filteredClasspathElementUrls);
         }
 
-        private ClassInfoList getClassesImplementing(String typeName, List<URL> resourceUrls) {
+        private ClassInfoList getClassesImplementing(String typeName, Collection<URL> filteredClasspathElementUrls) {
             Assert.hasText(typeName, "'typeName' must not be empty");
 
             ClassInfo classInfo = this.classInfoList.get(typeName);
             if(classInfo == null)
-                return null;
+                return new ClassInfoList();
 
-            return filterClasses(classInfo.getClassesImplementing(), resourceUrls);
+            return filterClasses(classInfo.getClassesImplementing(), filteredClasspathElementUrls);
         }
 
         /*
          * @see io.gemini.core.object.ClassScanner#getClasseNamesWithAnnotation(java.lang.String)
          */
         public List<String> getClassNamesWithAnnotation(String annotationName) {
-            return this.getClassesWithAnnotation(annotationName, this.classpathElementUrls).getNames();
+            return this.getClassesWithAnnotation(annotationName, this.filteredClasspathElementUrls).getNames();
         }
 
         /* @see io.gemini.core.object.ClassScanner#getClasseWithAnnotation(java.lang.String) 
          */
         @Override
         public ClassInfoList getClassesWithAnnotation(String annotationName) {
-            return getClassesWithAnnotation(annotationName, classpathElementUrls);
+            return getClassesWithAnnotation(annotationName, filteredClasspathElementUrls);
         }
 
-        private ClassInfoList getClassesWithAnnotation(String annotationName, List<URL> resourceUrls) {
+        private ClassInfoList getClassesWithAnnotation(String annotationName, Collection<URL> filteredClasspathElementUrls) {
             Assert.hasText(annotationName, "'annotationName' must not be empty");
 
             ClassInfo classInfo = this.classInfoList.get(annotationName);
             if(classInfo == null)
-                return null;
+                return new ClassInfoList();
 
-            return filterClasses(classInfo.getClassesWithAnnotation(), resourceUrls);
+            return filterClasses(classInfo.getClassesWithAnnotation(), filteredClasspathElementUrls);
         }
 
-        private ClassInfoList filterClasses(ClassInfoList classInfoList, List<URL> resourceUrls) {
+        private ClassInfoList filterClasses(ClassInfoList classInfoList, Collection<URL> filteredClasspathElementUrls) {
             return classInfoList
-                    // filter @Ignored class
-                    .filter(IGNORED_CLASS_FILTER)
-                    // filter class via ClassPathElement
-                    .filter(new DefaultClassInfoFilter(resourceUrls));
+                    // filter out {@code NoScanning} types
+                    .filter(NoScanningClassInfoFilter.INSTANCE)
+                    // filter out class via ClassPathElement
+                    .filter(new DefaultClassInfoFilter(filteredClasspathElementUrls));
         }
 
 
@@ -318,18 +314,18 @@ public interface ClassScanner {
         }
 
 
-        static class IgnoredClassInfoFilter implements ClassInfoFilter {
+        static enum NoScanningClassInfoFilter implements ClassInfoFilter {
 
-            /**
-             * 
-             */
-            private static final String IGNORED_TYPE = Ignored.class.getName();
+            INSTANCE
+            ;
+
+            private static final String NO_SCANNING_TYPE = NoScanning.class.getName();
 
             @Override
             public boolean accept(ClassInfo classInfo) {
                 // filter annotation
                 for(AnnotationInfo annotationInfo : classInfo.getAnnotationInfo()) {
-                    if(IGNORED_TYPE.equals(annotationInfo.getClassInfo().getName()) == true)
+                    if(NO_SCANNING_TYPE.equals(annotationInfo.getClassInfo().getName()) == true)
                         return false;
                 }
 
@@ -339,9 +335,9 @@ public interface ClassScanner {
 
         static class DefaultClassInfoFilter implements ClassInfoFilter {
 
-            private List<URL> classpathElementURLs;
+            private Collection<URL> classpathElementURLs;
 
-            protected DefaultClassInfoFilter(List<URL> classpathElementURLs) {
+            protected DefaultClassInfoFilter(Collection<URL> classpathElementURLs) {
                 this.classpathElementURLs = classpathElementURLs == null ? Collections.emptyList() : classpathElementURLs;;
             }
 
@@ -366,7 +362,8 @@ public interface ClassScanner {
 
     public static class AccessibleClassInfoFilter implements ClassInfoFilter {
 
-        /* @see io.github.classgraph.ClassInfoList.ClassInfoFilter#accept(io.github.classgraph.ClassInfo) 
+        /* 
+         * @see io.github.classgraph.ClassInfoList.ClassInfoFilter#accept(io.github.classgraph.ClassInfo) 
          */
         @Override
         public boolean accept(ClassInfo classInfo) {
@@ -383,25 +380,31 @@ public interface ClassScanner {
 
     public class Builder {
 
-        private List<ClassLoader> classLoaders;
-
         private boolean enableVerbose = false;
-        private Set<String> acceptJarPatterns;
-        private Set<String> acceptPackages;
-        private int workThreads = 0;
-
-        private List<URL> classpathElementUrls;
         private DiagnosticLevel diagnosticLevel = DiagnosticLevel.DISABLED;
 
+        private final Set<ClassLoader> scannedClassLoaders;
+        private final Set<URL> overrideClasspaths;
+
+        private final Set<String> acceptJarPatterns;
+        private final Set<String> acceptPackages;
+
+        private int workThreads = 0;
+
         private ClassScanner classScanner;
+        private final Set<URL> filteredClasspathElementUrls;
 
 
-        public Builder scannedClassLoaders(ClassLoader... classLoaders) {
-            if(classLoaders != null)
-                this.classLoaders = Arrays.asList(classLoaders);
+        public Builder() {
+            this.scannedClassLoaders = new LinkedHashSet<>();
+            this.overrideClasspaths = new LinkedHashSet<>();
 
-            return this;
+            this.acceptJarPatterns = new LinkedHashSet<>();
+            this.acceptPackages = new LinkedHashSet<>();
+
+            this.filteredClasspathElementUrls = new LinkedHashSet<>();
         }
+
 
         public Builder enableVerbose(boolean enableVerbose) {
             this.enableVerbose = enableVerbose;
@@ -409,23 +412,51 @@ public interface ClassScanner {
             return this;
         }
 
+        public Builder diagnosticLevel(DiagnosticLevel diagnosticLevel) {
+            this.diagnosticLevel = diagnosticLevel;
+
+            return this;
+        }
+
+        public Builder scannedClassLoaders(ClassLoader... classLoaders) {
+            if(classLoaders != null)
+                this.scannedClassLoaders.addAll( Arrays.asList(classLoaders) );
+
+            return this;
+        }
+
+        public Builder scannedClassLoaders(Collection<ClassLoader> classLoaders) {
+            if(classLoaders != null)
+                this.scannedClassLoaders.addAll( classLoaders );
+
+            return this;
+        }
+
+        public Builder overrideClasspaths(URL... overrideClasspaths) {
+            if(overrideClasspaths != null)
+                this.overrideClasspaths.addAll( Arrays.asList(overrideClasspaths) );
+
+            return this;
+        }
+
+        public Builder overrideClasspaths(Collection<URL> overrideClasspaths) {
+            if(overrideClasspaths != null)
+                this.overrideClasspaths.addAll( overrideClasspaths );
+
+            return this;
+        }
+
         public Builder acceptJarPatterns(String... acceptJarPatterns) {
             if(acceptJarPatterns != null) {
-                LinkedHashSet<String> _acceptJarPatterns = new LinkedHashSet<String>(acceptJarPatterns.length);
-                for(String acceptJarPattern : acceptJarPatterns) 
-                    _acceptJarPatterns.add(acceptJarPattern);
-
-                this.acceptJarPatterns = _acceptJarPatterns;
+                this.acceptJarPatterns.addAll( Arrays.asList(acceptJarPatterns) );
             }
 
             return this;
         }
 
-        @SuppressWarnings({ "unchecked", "rawtypes" })
         public Builder acceptJarPatterns(Collection<String> acceptJarPatterns) {
             if(acceptJarPatterns != null) {
-                this.acceptJarPatterns = acceptJarPatterns instanceof Set 
-                        ? (Set) acceptJarPatterns : new LinkedHashSet<>(acceptJarPatterns);
+                this.acceptJarPatterns.addAll( acceptJarPatterns );
             }
 
             return this;
@@ -433,21 +464,15 @@ public interface ClassScanner {
 
         public Builder acceptPackages(String... acceptPackages) {
             if(acceptPackages != null) {
-                LinkedHashSet<String> _acceptPackages = new LinkedHashSet<String>(acceptPackages.length);
-                for(String acceptPackage : acceptPackages) 
-                    _acceptPackages.add(acceptPackage);
-
-                this.acceptPackages = _acceptPackages;
+                this.acceptPackages.addAll( Arrays.asList(acceptPackages) );
             }
 
             return this;
         }
 
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        public Builder acceptPackages(Set<String> acceptPackages) {
+        public Builder acceptPackages(Collection<String> acceptPackages) {
             if(acceptPackages != null) {
-                this.acceptPackages = acceptPackages instanceof Set
-                        ? (Set) acceptPackages : new LinkedHashSet<>(acceptPackages);
+                this.acceptPackages.addAll(acceptPackages);
             }
 
             return this;
@@ -465,35 +490,29 @@ public interface ClassScanner {
             return this;
         }
 
-        public Builder classpathElementUrls(URL... classpathElementUrls) {
+        public Builder filteredClasspathElementUrls(URL... classpathElementUrls) {
             if(classpathElementUrls != null) {
-                this.classpathElementUrls = Arrays.asList(classpathElementUrls);
+                this.filteredClasspathElementUrls.addAll( Arrays.asList(classpathElementUrls) );
             }
 
             return this;
         }
 
-        @SuppressWarnings({ "rawtypes", "unchecked" })
-        public Builder classpathElementUrls(Collection<URL> classpathElementUrls) {
+        public Builder filteredClasspathElementUrls(Collection<URL> classpathElementUrls) {
             if(classpathElementUrls != null) {
-                this.classpathElementUrls = classpathElementUrls instanceof List
-                        ? (List) classpathElementUrls : new ArrayList<>(classpathElementUrls);
+                this.filteredClasspathElementUrls.addAll( classpathElementUrls );
             }
-
-            return this;
-        }
-
-        public Builder diagnosticLevel(DiagnosticLevel diagnosticLevel) {
-                this.diagnosticLevel = diagnosticLevel;
 
             return this;
         }
 
         public ClassScanner build() {
             return this.classScanner == null
-                    ? new Default(classLoaders,
-                            enableVerbose, acceptJarPatterns, acceptPackages, workThreads, classpathElementUrls, diagnosticLevel)
-                    : new Default(classScanner, classpathElementUrls);
+                    ? new Default(enableVerbose, diagnosticLevel,
+                            scannedClassLoaders, overrideClasspaths,
+                            acceptJarPatterns, acceptPackages, 
+                            workThreads, filteredClasspathElementUrls)
+                    : new Default(classScanner, filteredClasspathElementUrls);
         }
     }
 }

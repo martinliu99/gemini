@@ -15,14 +15,26 @@
  */
 package io.gemini.core.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.CharArrayWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 
+/**
+ * 
+ * @author martin.liu
+ *
+ */
 public class IOUtils {
 
     public static final int EOF = -1;
@@ -98,6 +110,15 @@ public class IOUtils {
         return output.toString();
     }
 
+    public static byte[] toByteArray(final InputStream inputStream) throws IOException {
+        Assert.notNull(inputStream, "'inputStream' must not be null.");
+
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        doCopy(inputStream, outputStream, new byte[DEFAULT_BUFFER_SIZE]);
+
+        return outputStream.toByteArray();
+    }
+
     public static void closeQuietly(InputStream inStream) {
         try {
             if(inStream != null)
@@ -110,5 +131,70 @@ public class IOUtils {
             if(outStream != null)
                 outStream.close();
         } catch (IOException ignored) { /**/ }
+    }
+
+    public static void saveToFile(byte[] sourceBytes, String targetFile) throws IOException {
+        File file = new File(targetFile);
+        file.getParentFile().mkdir();
+        OutputStream os = new FileOutputStream(file);
+        try {
+            os.write(sourceBytes);
+        } finally {
+            closeQuietly(os);
+        }
+    }
+
+    /**
+     * 
+     * @param path
+     * @param bytes
+     * @return
+     * @throws MalformedURLException
+     */
+    public static URL toURL(String path, byte[] bytes) throws MalformedURLException {
+        return new URL("byteArray", path, -1, "", new ByteArrayURLStreamHandler(bytes));
+    }
+
+
+    static class ByteArrayURLStreamHandler extends URLStreamHandler {
+
+        private final byte[] byteCode;
+
+        public ByteArrayURLStreamHandler(byte[] byteCode) {
+            this.byteCode = byteCode;
+        }
+
+        /* @see java.net.URLStreamHandler#openConnection(java.net.URL) 
+         */
+        @Override
+        protected URLConnection openConnection(URL u) throws IOException {
+            return new ByteArrayURLConnection(u, new ByteArrayInputStream(byteCode));
+        }
+        
+    }
+
+    static class ByteArrayURLConnection extends URLConnection {
+
+        private final InputStream inputStream;
+
+        /**
+         * @param url
+         */
+        protected ByteArrayURLConnection(URL url, InputStream inputStream) {
+            super(url);
+            this.inputStream = inputStream;
+        }
+
+        /* @see java.net.URLConnection#connect() 
+         */
+        @Override
+        public void connect() {
+            this.connected  = true;
+        }
+
+        public InputStream getInputStream() {
+            connect(); 
+            return inputStream;
+        }
     }
 }

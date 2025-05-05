@@ -34,12 +34,12 @@ public class ClassUtils {
     /**
      * The file extension for a Java class file.
      */
-    private static final String CLASS_FILE_EXTENSION = ".class";
+    public static final String CLASS_FILE_EXTENSION = ".class";
 
     /** The package separator character: {@code '.'}. */
-    private static final char PACKAGE_SEPARATOR = '.';
+    public static final char PACKAGE_SEPARATOR = '.';
 
-    private static final char RESOURCE_SPERATOR = '/';
+    public static final char RESOURCE_SPERATOR = '/';
 
 
     private static final Map<String, Class<?>> PRIMITIVE_TYPE_MAP;

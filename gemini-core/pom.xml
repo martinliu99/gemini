@@ -14,6 +14,11 @@
 
     <dependencies>
         <dependency>
+          <groupId>io.gemini</groupId>
+            <artifactId>gemini-api</artifactId>
+        </dependency>
+
+        <dependency>
           <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
@@ -41,6 +46,16 @@
             <artifactId>classgraph</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -54,30 +69,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <!-- cache Log4j2Plugins.dat in main/resources, and open this configuration if need to re-create Log4j2Plugins.dat -->
-<!--                <executions>-->
-<!--                  <execution>-->
-<!--                    <id>compile-with-annotation-processing</id>-->
-<!--                    <phase>process-classes</phase>-->
-<!--                    <goals>-->
-<!--                      <goal>compile</goal>-->
-<!--                    </goals>-->
-<!--                    <configuration>-->
-<!--                      <proc>only</proc>-->
-<!--                      <annotationProcessors>-->
-<!--                        <annotationProcessor>org.apache.logging.log4j.core.config.plugins.processor.PluginProcessor</annotationProcessor>-->
-<!--                      </annotationProcessors>-->
-<!--                    </configuration>-->
-<!--                  </execution>-->
-<!--                </executions>-->
-            </plugin>
-        </plugins>
-    </build>
 </project>

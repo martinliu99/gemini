@@ -15,6 +15,8 @@
  */
 package io.gemini.core.object;
 
+import java.io.IOException;
+
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -60,7 +62,7 @@ public abstract class AbstractSpringObjectFactory extends AbstractBase {
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         this.applicationContext.close();
     }
 

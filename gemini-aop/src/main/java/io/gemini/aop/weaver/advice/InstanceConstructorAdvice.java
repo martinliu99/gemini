@@ -15,12 +15,20 @@
  */
 package io.gemini.aop.weaver.advice;
 
-import java.lang.BootstrapAdvice.Dispatcher;
-
-import io.gemini.aop.weaver.support.Constants;
+import io.gemini.aop.java.lang.BootstrapAdvice;
+import io.gemini.aop.java.lang.BootstrapClassConsumer;
+import io.gemini.aop.java.lang.BootstrapAdvice.Dispatcher;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
+/**
+ * 
+ *
+ *
+ * @author   martin.liu
+ * @since	 1.0
+ */
+@BootstrapClassConsumer
 public class InstanceConstructorAdvice {
 
     @Advice.OnMethodEnter(inline = true, prependLineNumber = true)

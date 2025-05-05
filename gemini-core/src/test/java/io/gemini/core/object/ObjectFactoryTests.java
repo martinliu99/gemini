@@ -37,7 +37,7 @@ public class ObjectFactoryTests {
                 .scannedClassLoaders(classLoader)
                 .acceptPackages(ObjectFactoryTests.class.getPackage().getName())
                 .acceptJarPatterns("*.jar", "classes")
-                .classpathElementUrls( ( (URLClassLoader)classLoader ).getURLs() )
+                .filteredClasspathElementUrls( ( (URLClassLoader)classLoader ).getURLs() )
                 .build();
 
         objectFactory = new ObjectFactory.Simple(classLoader, classScanner);

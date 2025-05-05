@@ -39,6 +39,7 @@ import io.gemini.core.util.StringUtils;
  */
 public class ConfigSourceAdapter implements PropertySource, ConfigSource {
 
+    public static final String STATUS_LOG_LEVEL_KEY = "aop.logger.statusLogLevel";
     public static final String ALL_LOG_LEVEL_KEY = "aop.logger.allLogLevel";
 
     private static final int DEFAULT_PRIORITY = 10000;
@@ -56,6 +57,7 @@ public class ConfigSourceAdapter implements PropertySource, ConfigSource {
 
         DEBUG_SETTINGS.put(SETTING_KEY_PREFIX + "log4j2.disableJmx", "false");
 
+        DEBUG_SETTINGS.put(STATUS_LOG_LEVEL_KEY, Level.DEBUG.name());
         DEBUG_SETTINGS.put(ALL_LOG_LEVEL_KEY, Level.DEBUG.name());
         DEBUG_SETTINGS.put("aop.logger.includeLocation", "true");
     }

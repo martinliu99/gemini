@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.aspect.Aspect;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.config.ConfigView;
@@ -56,7 +55,7 @@ public class AopMetrics {
 
     private String bannerTemplate;;
 
-    private String agentStartupSummrayTemplate;
+    private String launcherStartupSummrayTemplate;
     private String appStartupSummrayTemplate;
 
     private String weaverSummrayHeaderTemplate;
@@ -72,7 +71,7 @@ public class AopMetrics {
     private volatile ConcurrentMap<ClassLoader, WeaverMetrics> weaverMetricsMap;
 
     private WeaverSummary bytebuddyWarmupSummary;
-    private WeaverSummary agentStartupSummary;
+    private WeaverSummary launcherStartupSummary;
     private WeaverSummary appStartupSummary;
 
     private ElementMatcher<String> excludedClassLoaderMatcher;
@@ -100,7 +99,7 @@ public class AopMetrics {
 
         this.bannerTemplate = configView.<String>getValue("aop.metrics.bannerTemplate", "", ToString.INSTANCE, false);
 
-        this.agentStartupSummrayTemplate = configView.<String>getValue("aop.metrics.agentStartupSummrayTemplate", "", ToString.INSTANCE, false);
+        this.launcherStartupSummrayTemplate = configView.<String>getValue("aop.metrics.launcherStartupSummrayTemplate", "", ToString.INSTANCE, false);
         this.appStartupSummrayTemplate =   configView.<String>getValue("aop.metrics.appStartupSummrayTemplate", "", ToString.INSTANCE, false);
 
         this.weaverSummrayHeaderTemplate = configView.<String>getValue("aop.metrics.weaverSummrayHeaderTemplate", "", ToString.INSTANCE, false);
@@ -147,21 +146,21 @@ public class AopMetrics {
         this.bytebuddyWarmupSummary = this.newWeaverSummary();
     }
 
-    public void startupAgent() {
-        this.agentStartupSummary = this.newWeaverSummary();
+    public void startupLauncher() {
+        this.launcherStartupSummary = this.newWeaverSummary();
 
         if(diagnosticLevel.isSimpleEnabled() == false) {
-            LOGGER.info("$Took '{}' seconds to start Gemini Agent. \n{}\n{}\n", 
-                    (System.nanoTime() - bootstraperMetrics.getAgentStartedAt()) / 1e9,
+            LOGGER.info("$Took '{}' seconds to launcher Gemini. \n{}\n{}\n", 
+                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
-                    renderAgentStartupSummaryTemplate(bootstraperMetrics) );
+                    renderLauncherStartupSummaryTemplate(bootstraperMetrics) );
         } else {
-            LOGGER.info("$Took '{}' seconds to start Gemini Agent. \n{}\n{}\n{}\n{}", 
-                    (System.nanoTime() - bootstraperMetrics.getAgentStartedAt()) / 1e9,
+            LOGGER.info("$Took '{}' seconds to launcher Gemini. \n{}\n{}\n{}\n{}", 
+                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
-                    renderAgentStartupSummaryTemplate(bootstraperMetrics),
+                    renderLauncherStartupSummaryTemplate(bootstraperMetrics),
                     bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary) : "",
-                    agentStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", agentStartupSummary) : "" );
+                    launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary) : "" );
         }
     }
 
@@ -170,11 +169,11 @@ public class AopMetrics {
 
         if(diagnosticLevel.isSimpleEnabled() == false) {
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n",
-                    (System.nanoTime() - bootstraperMetrics.getAgentStartedAt()) / 1e9,
+                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics) );
         } else {
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}",
-                    (System.nanoTime() - bootstraperMetrics.getAgentStartedAt()) / 1e9,
+                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics),
                     renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary) );
         }
@@ -187,57 +186,58 @@ public class AopMetrics {
         return new WeaverSummary(existingMetricsMap);
     }
 
-    private String renderAgentStartupSummaryTemplate(BootstraperMetrics bootstraperMetrics) {
+    private String renderLauncherStartupSummaryTemplate(BootstraperMetrics bootstraperMetrics) {
         Map<String, Object> valueMap = new HashMap<>();
 
-        valueMap.put("agentStartupTime", bootstraperMetrics.getAgentStartupTime() / NANO_TIME);
+        valueMap.put("launcherStartupTime", bootstraperMetrics.getLauncherStartupTime() / NANO_TIME);
 
         valueMap.put("loggerCreationTime", bootstraperMetrics.getLoggerCreationTime() / NANO_TIME);
 
         valueMap.put("aopContextCreationTime", bootstraperMetrics.getAopContextCreationTime() / NANO_TIME);
         valueMap.put("classScannerCreationTime", bootstraperMetrics.getClassScannerCreationTime() / NANO_TIME);
 
-        valueMap.put("bootstrapClassInjectionTime", bootstraperMetrics.getBootstrapClassInjectionTime() / NANO_TIME);
+        valueMap.put("bootstrapCLConfigTime", bootstraperMetrics.getBootstrapCLConfigTime() / NANO_TIME);
+        valueMap.put("aopCLConfigTime", bootstraperMetrics.getAopCLConfigTime() / NANO_TIME);
 
+        valueMap.put("aspectFactoryCreationTime", bootstraperMetrics.getAspectFactoryCreationTime() / NANO_TIME);
         valueMap.put("aspectWeaverCreationTime", bootstraperMetrics.getAspectWeaverCreationTime() / NANO_TIME);
-        valueMap.put("aspectDefinitionLoadingTime", bootstraperMetrics.getAspectDefinitionLoadingTime() / NANO_TIME);
 
         valueMap.put("bytebuddyInstallationTime", bootstraperMetrics.getBytebuddyInstallationTime() / NANO_TIME);
 
         valueMap.put("bytebuddtWarnupTime", bytebuddyWarmupSummary != null ? bytebuddyWarmupSummary.getTypeLoadingTime() : 0);
         valueMap.put("typeRedefiningTime", bootstraperMetrics.getTypeRedefiningTime() / NANO_TIME);
-        valueMap.put("typeWeavingTime", agentStartupSummary != null ? agentStartupSummary.getTypeLoadingTime() : 0);
+        valueMap.put("typeWeavingTime", launcherStartupSummary != null ? launcherStartupSummary.getTypeLoadingTime() : 0);
 
         valueMap.put("uncategorizedTime", bootstraperMetrics.getUncategorizedTime() /NANO_TIME );
 
         valueMap = format(valueMap);
 
-        StringBuilder aspectDefs = new StringBuilder();
-        if(CollectionUtils.isEmpty(bootstraperMetrics.getAspectDefinitions()) == false) {
-            for(Entry<String, Integer> entry : bootstraperMetrics.getAspectDefinitions().entrySet()) {
-                aspectDefs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
+        StringBuilder aspectSepcs = new StringBuilder();
+        if(CollectionUtils.isEmpty(bootstraperMetrics.getAspectSpecs()) == false) {
+            for(Entry<String, Integer> entry : bootstraperMetrics.getAspectSpecs().entrySet()) {
+                aspectSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
             }
-            aspectDefs.delete(aspectDefs.length()-2, aspectDefs.length());
+            aspectSepcs.delete(aspectSepcs.length()-2, aspectSepcs.length());
         } else
-            aspectDefs.append(0);
-        valueMap.put("aspectDefs", aspectDefs.toString());
+            aspectSepcs.append(0);
+        valueMap.put("aspectSpecs", aspectSepcs.toString());
 
         valueMap.put("typeRedefiningCount", bootstraperMetrics.getTypeRedefiningCount());
 
         PlaceholderHelper placeholderHelper = new PlaceholderHelper.Builder().build(valueMap);
-        return placeholderHelper.replace(agentStartupSummrayTemplate);
+        return placeholderHelper.replace(launcherStartupSummrayTemplate);
     }
 
     private String renderAppStartupSummaryTemplate(BootstraperMetrics bootstraperMetrics) {
         Map<String, Object> valueMap = new HashMap<>();
 
-        double appStartupTime = (System.nanoTime() - this.bootstraperMetrics.getAgentStartedAt()) / NANO_TIME;
+        double appStartupTime = (System.nanoTime() - this.bootstraperMetrics.getLauncherStartedAt()) / NANO_TIME;
         valueMap.put("appStartupTime", appStartupTime );
 
-        valueMap.put("agentStartupTime", bootstraperMetrics.getAgentStartupTime() / NANO_TIME);
+        valueMap.put("launcherStartupTime", bootstraperMetrics.getLauncherStartupTime() / NANO_TIME);
         valueMap.put("tyepWeavingTime", appStartupSummary.getTypeLoadingTime() );
 
-        valueMap.put("uncategorizedTime", appStartupTime - bootstraperMetrics.getAgentStartupTime() / NANO_TIME - appStartupSummary.getTypeLoadingTime() );
+        valueMap.put("uncategorizedTime", appStartupTime - bootstraperMetrics.getLauncherStartupTime() / NANO_TIME - appStartupSummary.getTypeLoadingTime() );
 
         valueMap = format(valueMap);
 
@@ -402,19 +402,20 @@ public class AopMetrics {
 
     public class BootstraperMetrics {
 
-        private long agentStartedAt;
-        private long agentStartupTime;
+        private long launcherStartedAt;
+        private long launcherStartupTime;
 
         private long loggerCreationTime;
 
         private long aopContextCreationTime;
         private long classScannerCreationTime;
 
-        private long bootstrapClassInjectionTime;
+        private long bootstrapCLConfigTime;
+        private long aopCLConfigTime;
 
+        private long aspectFactoryCreationTime;
+        private Map<String, Integer> aspectSpecs;
         private long aspectWeaverCreationTime;
-        private long aspectDefinitionLoadingTime;
-        private Map<String, Integer> aspectDefinitions;
 
         private long bytebuddyInstallationTime;
 
@@ -422,12 +423,12 @@ public class AopMetrics {
         private int typeRedefiningCount;
 
 
-        protected long getAgentStartedAt() {
-            return agentStartedAt;
+        protected long getLauncherStartedAt() {
+            return launcherStartedAt;
         }
 
-        public void setAgentStartedAt(long agentStartedAt) {
-            this.agentStartedAt = agentStartedAt;
+        public void setLauncherStartedAt(long launcherStartedAt) {
+            this.launcherStartedAt = launcherStartedAt;
         }
 
         protected long getLoggerCreationTime() {
@@ -455,14 +456,37 @@ public class AopMetrics {
             this.classScannerCreationTime = classScannerCreationTime;
         }
 
-        protected long getBootstrapClassInjectionTime() {
-            return bootstrapClassInjectionTime;
+        protected long getBootstrapCLConfigTime() {
+            return bootstrapCLConfigTime;
         }
 
-        public void setBootstrapClassInjectionTime(long bootstrapClassInjectionTime) {
-            this.bootstrapClassInjectionTime = bootstrapClassInjectionTime;
+        public void setBootstrapCLConfigTime(long bootstrapCLConfigTime) {
+            this.bootstrapCLConfigTime = bootstrapCLConfigTime;
         }
 
+        protected long getAopCLConfigTime() {
+            return aopCLConfigTime;
+        }
+
+        public void setAopCLConfigTime(long aopCLConfigTime) {
+            this.aopCLConfigTime = aopCLConfigTime;
+        }
+
+        protected long getAspectFactoryCreationTime() {
+            return aspectFactoryCreationTime;
+        }
+
+        public void setAspectFactoryCreationTime(long aspectFactoryCreationTime) {
+            this.aspectFactoryCreationTime = aspectFactoryCreationTime;
+        }
+
+        protected Map<String, Integer> getAspectSpecs() {
+            return aspectSpecs;
+        }
+
+        public void setAspectSpecs(Map<String, Integer> aspectSpecs) {
+            this.aspectSpecs = aspectSpecs;
+        }
 
         protected long getAspectWeaverCreationTime() {
             return aspectWeaverCreationTime;
@@ -470,22 +494,6 @@ public class AopMetrics {
 
         public void setAspectWeaverCreationTime(long aspectDefinitionLoadingTime) {
             this.aspectWeaverCreationTime = aspectDefinitionLoadingTime;
-        }
-
-        protected long getAspectDefinitionLoadingTime() {
-            return aspectDefinitionLoadingTime;
-        }
-
-        public void setAspectDefinitionLoadingTime(long aspectDefinitionLoadingTime) {
-            this.aspectDefinitionLoadingTime = aspectDefinitionLoadingTime;
-        }
-
-        protected Map<String, Integer> getAspectDefinitions() {
-            return aspectDefinitions;
-        }
-
-        public void setAspectSpecs(Map<String, Integer> aspectDefinitions) {
-            this.aspectDefinitions = aspectDefinitions;
         }
 
         protected long getBytebuddyInstallationTime() {
@@ -514,19 +522,22 @@ public class AopMetrics {
             this.typeRedefiningCount += typeRedefiningCount;
         }
 
-        protected long getAgentStartupTime() {
-            return this.agentStartupTime;
+        protected long getLauncherStartupTime() {
+            return this.launcherStartupTime;
         }
 
-        public void setAgentStartupTime(long agentStartupTime) {
-            this.agentStartupTime = agentStartupTime;
+        public void setLauncherStartupTime(long launcherStartupTime) {
+            this.launcherStartupTime = launcherStartupTime;
 
-            AopMetrics.this.startupAgent();
+            AopMetrics.this.startupLauncher();
         }
 
         protected long getUncategorizedTime() {
-            return this.agentStartupTime - loggerCreationTime - aopContextCreationTime - bootstrapClassInjectionTime 
-                    - aspectWeaverCreationTime - bytebuddyInstallationTime - typeRedefiningTime;
+            return this.launcherStartupTime 
+                    - loggerCreationTime - aopContextCreationTime
+                    - bootstrapCLConfigTime - aopCLConfigTime
+                    - aspectFactoryCreationTime - aspectWeaverCreationTime 
+                    - bytebuddyInstallationTime - typeRedefiningTime;
         }
     }
 

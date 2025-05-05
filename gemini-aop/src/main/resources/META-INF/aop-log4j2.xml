@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
- <configuration status="${logger:aop.logger.allLogLevel:-ERROR}" verbose="false" strict="true" monitorInterval="10" > 
+ <configuration status="${logger:aop.logger.statusLogLevel:-${logger:aop.logger.allLogLevel}}" verbose="false" strict="true" monitorInterval="10" > 
      <Properties>
         <property name="LOG_FILE_PATH" value="${logger:aop.logger.logFilePath}" />
         <property name="INCLUDE_LOCATION" value="${logger:aop.logger.includeLocation:-true}" />

@@ -16,13 +16,13 @@
     <modules>
         <module>gemini-demo-service</module>
         <module>gemini-demo-runner</module>
-        <module>gemini-demo-aspects</module>
+        <module>gemini-demo-aspectory</module>
     </modules>
 
 
     <properties>
       <release.demoapp.dir>${release.demoapps.dir}/${project.artifactId}</release.demoapp.dir>
-      <release.aspectapp.dir>${release.aspectapps.dir}/${project.artifactId}</release.aspectapp.dir>
+      <release.aspectory.dir>${release.aspectories.dir}/${project.artifactId}</release.aspectory.dir>
     </properties>
 
 

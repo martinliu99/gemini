@@ -15,6 +15,8 @@
  */
 package io.gemini.core.object;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -55,7 +57,7 @@ public interface ObjectFactory extends Closeable {
 
     <T> T createObject(Class<T> clazz) throws ObjectsException;
 
-    void close();
+    void close() throws IOException;
 
 
     abstract class AbstractBase implements ObjectFactory {
@@ -304,7 +306,7 @@ public interface ObjectFactory extends Closeable {
         }
 
         @Override
-        public void close() {
+        public void close() throws IOException {
             this.objectMap.clear();
         }
 

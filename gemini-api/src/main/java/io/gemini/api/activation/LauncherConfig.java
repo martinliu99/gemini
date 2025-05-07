@@ -44,9 +44,9 @@ public interface LauncherConfig {
     String getUserDefinedConfigLocation();
 
 
-    URL[] getLaunchResourceURLs();
+    URL[] getLaunchClassPathURLs();
 
     boolean isScanClassesFolder();
 
-    Map<String /* AspectoryName */, URL[]> getAspectoryResourceURLs();
+    Map<String /* AspectoryName */, URL[]> getAspectoryClassPathURLs();
 }

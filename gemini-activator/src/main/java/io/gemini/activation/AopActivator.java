@@ -40,30 +40,34 @@ public class AopActivator {
      */
     private static final Class<AopActivator> ACTIVATOR_CLASS = AopActivator.class;
 
+
     public static void activateAop(String agentArgs, Instrumentation instrumentation) {
         wrap( () -> {
-            doActivateAop(agentArgs, instrumentation, null);
+            doActivateAop(agentArgs, instrumentation, null, null);
             return null;
         });
     }
 
-    public static void activateAop(String agentArgs, Instrumentation instrumentation, LauncherConfig launchConfig) {
+    public static void activateAop(String agentArgs, Instrumentation instrumentation, 
+            LauncherConfig launchConfig, AopClassLoader aopClassLoader) {
         wrap( () -> {
-            doActivateAop(agentArgs, instrumentation, launchConfig);
+            doActivateAop(agentArgs, instrumentation, launchConfig, aopClassLoader);
             return null;
         });
     }
 
     // TODO: launch at runtime or multiple time
-    private static void doActivateAop(String agentArgs, Instrumentation instrumentation, LauncherConfig launchConfig) throws URISyntaxException, IOException {
+    private static void doActivateAop(String agentArgs, Instrumentation instrumentation, 
+            LauncherConfig launchConfig, AopClassLoader aopClassLoader) throws URISyntaxException, IOException {
         // initialize LaunchConfig
         if(launchConfig == null) {
-            Path launchPath = Paths.get(ACTIVATOR_CLASS.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent();
-            launchConfig = new UnpackedArchiveConfig(launchPath, agentArgs);
+            Path launchFile = Paths.get(ACTIVATOR_CLASS.getProtectionDomain().getCodeSource().getLocation().toURI());
+            launchConfig = new UnpackedArchiveConfig(launchFile.getParent(), launchFile, agentArgs);
         }
 
         // initialize class loader
-        AopClassLoader aopClassLoader = new DefaultAopClassLoader(launchConfig.getLaunchResourceURLs(), ACTIVATOR_CLASS.getClassLoader());
+        aopClassLoader = aopClassLoader != null
+                ? aopClassLoader : new DefaultAopClassLoader(launchConfig.getLaunchClassPathURLs(), ACTIVATOR_CLASS.getClassLoader());
 
         // load launcher class
         AopLauncher aopLauncher = ServiceLoaders.loadClass(AopLauncher.class, aopClassLoader);

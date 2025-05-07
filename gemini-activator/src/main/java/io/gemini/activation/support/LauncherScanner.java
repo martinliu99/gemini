@@ -33,37 +33,40 @@ import io.gemini.activation.util.FileUtils;
  */
 public interface LauncherScanner {
 
-    URL[] scanResources() throws IOException;
+    URL[] scanClassPathURLs() throws IOException;
 
 
     class Default implements LauncherScanner {
 
         private final Path launchPath;
+        private final Path launchFile;
 
-        public Default(Path launchPath) {
+
+        public Default(Path launchPath, Path launchFile) {
             this.launchPath = launchPath;
+            this.launchFile = launchFile;
         }
 
-        /* 
-         * @see io.gemini.bootstrap.support.LauncherScanner#scanResources() 
-         */
         @Override
-        public URL[] scanResources() throws IOException {
-            List<Path> launchResourcePaths = new ArrayList<>();
+        public URL[] scanClassPathURLs() throws IOException {
+            List<Path> launchClassPaths = new ArrayList<>();
+
+            if(launchFile != null)
+                launchClassPaths.add(launchFile);
 
             // 1.include conf folder
             Path confPath = launchPath.resolve("conf");
             if(Files.exists(confPath))
-                launchResourcePaths.add( confPath );
+                launchClassPaths.add( confPath );
 
             // 2.scan lib folder
             Path libPath = launchPath.resolve("lib");
             if(Files.exists(libPath))
                 Files.list( libPath )
                 .filter( Files::isRegularFile )
-                .collect( Collectors.toCollection( () -> launchResourcePaths) );
+                .collect( Collectors.toCollection( () -> launchClassPaths) );
 
-            return FileUtils.toURL(launchResourcePaths);
+            return FileUtils.toURL(launchClassPaths);
         }
     }
 }

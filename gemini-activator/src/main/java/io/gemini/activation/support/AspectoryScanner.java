@@ -43,7 +43,7 @@ import io.gemini.activation.util.FileUtils;
  */
 public interface AspectoryScanner {
 
-    Map<String /* AspectoryName */, URL[]> scanResources() throws IOException;
+    Map<String /* AspectoryName */, URL[]> scanClassPathURLs() throws IOException;
 
 
     public class Default implements AspectoryScanner {
@@ -59,32 +59,32 @@ public interface AspectoryScanner {
         }
 
         @Override
-        public Map<String, URL[]> scanResources() throws IOException {
-            Map<Path, List<Path>> aspectoryResourcePaths = new LinkedHashMap<>();
+        public Map<String, URL[]> scanClassPathURLs() throws IOException {
+            Map<Path, List<Path>> aspectoryClassPaths = new LinkedHashMap<>();
             for(Iterator<Path> iterator = Files.list(aspectoriesPath).filter( Files::isDirectory ).iterator(); iterator.hasNext(); ) {
                 Path aspectoryPath = iterator.next();
-                aspectoryResourcePaths.put(aspectoryPath, this.getAspectoryResourcePaths(aspectoryPath));
+                aspectoryClassPaths.put(aspectoryPath, this.getAspectoryClassPaths(aspectoryPath));
             }
 
-            return FileUtils.toURL(aspectoryResourcePaths);
+            return FileUtils.toURL(aspectoryClassPaths);
         }
 
-        private List<Path> getAspectoryResourcePaths(Path aspectoryPath) throws IOException {
-            List<Path> resourcePaths = new ArrayList<>();
+        private List<Path> getAspectoryClassPaths(Path aspectoryPath) throws IOException {
+            List<Path> classPaths = new ArrayList<>();
 
             Path confPath = aspectoryPath.resolve("conf");
             if(Files.exists(confPath))
-                resourcePaths.add( confPath );
+                classPaths.add( confPath );
 
             Path aspectsPath = aspectoryPath.resolve("aspects");
             if(Files.exists(aspectsPath))
-                scanPath(Files.list(aspectsPath), resourcePaths);
+                scanPath(Files.list(aspectsPath), classPaths);
 
             Path libPath = aspectoryPath.resolve("lib");
             if(Files.exists(libPath))
-                scanPath(Files.list(libPath), resourcePaths);
+                scanPath(Files.list(libPath), classPaths);
 
-            return resourcePaths;
+            return classPaths;
         }
 
         private void scanPath(Stream<Path> pathStream, List<Path> resourcePaths) {
@@ -106,11 +106,8 @@ public interface AspectoryScanner {
             this.scannedClassFolders.add("/test-classes");
         }
 
-        /* 
-         * @see io.gemini.bootstrap.support.AspectoryScanner#scanResources() 
-         */
         @Override
-        public Map<String, URL[]> scanResources() throws IOException {
+        public Map<String, URL[]> scanClassPathURLs() throws IOException {
 //          // retrieve folder from classpath
           List<Path> candidatePaths = new ArrayList<>();
           for(String classPath : getClassPaths()) {
@@ -154,17 +151,14 @@ public interface AspectoryScanner {
             return new Compound(aspectoryScanners);
         }
 
-        /* 
-         * @see io.gemini.bootstrap.support.AspectoryScanner#scanResources() 
-         */
         @Override
-        public Map<String, URL[]> scanResources() throws IOException {
-            Map<String, URL[]> resources = new LinkedHashMap<>();
+        public Map<String, URL[]> scanClassPathURLs() throws IOException {
+            Map<String, URL[]> classPathURLs = new LinkedHashMap<>();
             for(AspectoryScanner aspectoryScanner : aspectoryScanners) {
-                resources.putAll( aspectoryScanner.scanResources() );
+                classPathURLs.putAll( aspectoryScanner.scanClassPathURLs() );
             }
 
-            return resources;
+            return classPathURLs;
         }
     }
 }

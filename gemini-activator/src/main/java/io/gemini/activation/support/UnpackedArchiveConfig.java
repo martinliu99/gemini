@@ -52,20 +52,20 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     private Map<String /* AspectoryName */, URL[]> aspectoryResourceURLs;
 
 
-    public UnpackedArchiveConfig(Path launchPath, String launchArgsStr) throws IOException {
-        this(launchPath, launchArgsStr, 
-                new LauncherScanner.Default(launchPath), 
+    public UnpackedArchiveConfig(Path launchPath, Path launchFile, String launchArgsStr) throws IOException {
+        this(launchPath, launchFile, launchArgsStr, 
+                new LauncherScanner.Default(launchPath, launchFile), 
                 false,
                 new AspectoryScanner.Default( launchPath.resolve(FOLDER_ASPECTORIES) ) );
     }
 
-    public UnpackedArchiveConfig(Path launchPath, String launchArgsStr, 
+    public UnpackedArchiveConfig(Path launchPath, Path launchFile, String launchArgsStr, 
             LauncherScanner launcherScanner, boolean scanClassesFolder, AspectoryScanner aspectoryScanner) throws IOException {
         this.launchedAt = System.nanoTime();
 
         this.launchPath = launchPath;
         if(Files.exists(launchPath) == false || Files.isDirectory(launchPath) == false)
-            throw new IllegalArgumentException("Illegal launchLocation: " + this.launchPath);
+            throw new IllegalArgumentException("Illegal launchPath: " + this.launchPath);
 
         this.launchArgs = Collections.unmodifiableMap(
                 parseLaunchArgs(launchArgsStr) );
@@ -73,14 +73,14 @@ public class UnpackedArchiveConfig implements LauncherConfig {
         this.activeProfile = this.parseActiveProfile(launchArgs);
 
         if(launcherScanner == null)
-            launcherScanner = new LauncherScanner.Default(launchPath);
-        this.launchResourceURLs = launcherScanner.scanResources();
+            launcherScanner = new LauncherScanner.Default(launchPath, launchFile);
+        this.launchResourceURLs = launcherScanner.scanClassPathURLs();
 
         this.scanClassesFolder = scanClassesFolder;
 
         if(aspectoryScanner == null)
             aspectoryScanner = new AspectoryScanner.Default( launchPath.resolve(FOLDER_ASPECTORIES) );
-        this.aspectoryResourceURLs = aspectoryScanner.scanResources();
+        this.aspectoryResourceURLs = aspectoryScanner.scanClassPathURLs();
     }
 
     private Map<String, String> parseLaunchArgs(String launchArgsStr) {
@@ -142,7 +142,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     }
 
 
-    public URL[] getLaunchResourceURLs() {
+    public URL[] getLaunchClassPathURLs() {
         return this.launchResourceURLs;
     }
 
@@ -152,7 +152,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     }
 
     @Override
-    public Map<String, URL[]> getAspectoryResourceURLs() {
+    public Map<String, URL[]> getAspectoryClassPathURLs() {
         return this.aspectoryResourceURLs;
     }
 }

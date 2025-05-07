@@ -55,7 +55,7 @@
 
     <properties>
         <!-- project settings -->
-        <revision>0.11.0</revision>
+        <revision>0.12.0-SNAPSHOT</revision>
 
         <license.root.dir>${maven.multiModuleProjectDirectory}/docs/license</license.root.dir>
 
@@ -405,7 +405,7 @@
                     <executions>
                         <execution>
                             <id>check</id>
-                            <phase>compile</phase>
+                            <phase>verify</phase>
                             <goals>
                                 <goal>check</goal>
                             </goals>
@@ -495,8 +495,8 @@
                             </goals>
                         </execution>
                         <execution>
-                            <id>compile</id>
-                            <phase>compile</phase>
+                            <id>copy-dependencies</id>
+                            <phase>package</phase>
                             <goals>
                                 <goal>copy-dependencies</goal>
                             </goals>
@@ -633,19 +633,14 @@
                 <artifactId>maven-enforcer-plugin</artifactId>
             </plugin>
 
-            <plugin>
-                <groupId>com.github.spotbugs</groupId>
-                <artifactId>spotbugs-maven-plugin</artifactId>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>com.github.spotbugs</groupId>-->
+<!--                <artifactId>spotbugs-maven-plugin</artifactId>-->
+<!--            </plugin>-->
 
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-antrun-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-dependency-plugin</artifactId>
             </plugin>
 
             <plugin>
@@ -673,6 +668,30 @@
                 <artifactId>versions-maven-plugin</artifactId>
             </plugin>
 
+            <plugin>
+                <groupId>org.eclipse.m2e</groupId>
+                <artifactId>lifecycle-mapping</artifactId>
+                <version>1.0.0</version>
+                <configuration>
+                    <lifecycleMappingMetadata>
+                        <pluginExecutions>
+                            <pluginExecution>
+                                <pluginExecutionFilter>
+                                    <groupId>org.apache.maven.plugins</groupId>
+                                    <artifactId>maven-dependency-plugin</artifactId>
+                                    <versionRange>[1.0.0,)</versionRange>
+                                    <goals>
+                                        <goal>copy-dependencies</goal>
+                                    </goals>
+                                </pluginExecutionFilter>
+                                <action>
+                                    <ignore />
+                                </action>
+                            </pluginExecution>
+                        </pluginExecutions>
+                    </lifecycleMappingMetadata>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

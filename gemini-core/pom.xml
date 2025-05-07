@@ -14,7 +14,7 @@
 
     <dependencies>
         <dependency>
-          <groupId>io.gemini</groupId>
+            <groupId>io.gemini</groupId>
             <artifactId>gemini-api</artifactId>
         </dependency>
 

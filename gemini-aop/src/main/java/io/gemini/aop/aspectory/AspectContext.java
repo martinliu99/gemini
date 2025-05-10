@@ -17,6 +17,7 @@ package io.gemini.aop.aspectory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URLClassLoader;
 
 import io.gemini.aspectj.weaver.world.TypeWorld;
 import io.gemini.core.object.ObjectFactory;
@@ -37,7 +38,7 @@ public class AspectContext implements Closeable {
     private final String joinpointClassLoaderName;
     private final JavaModule javaModule;
 
-    private final ClassLoader classLoader;
+    private final URLClassLoader classLoader;
     private final ObjectFactory objectFactory;
     private final TypePool typePool;
     private final TypeWorld typeWorld;
@@ -53,7 +54,7 @@ public class AspectContext implements Closeable {
 
     protected AspectContext(AspectoryContext aspectoryContext, 
             String joinpointClassLoaderName, JavaModule javaModule,
-            ClassLoader classLoader, ObjectFactory objectFactory, 
+            URLClassLoader classLoader, ObjectFactory objectFactory, 
             TypePool typePool, TypeWorld typeWorld,
             ElementMatcher<String> defaultClassLoaderMatcher,
             boolean validateContext) {
@@ -125,5 +126,7 @@ public class AspectContext implements Closeable {
     public void close() throws IOException {
         this.typePool.clear();
         this.objectFactory.close();
+
+        this.classLoader.close();
     }
 }

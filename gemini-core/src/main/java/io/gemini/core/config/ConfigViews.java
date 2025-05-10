@@ -44,32 +44,33 @@ public class ConfigViews {
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
         launchArgs = launchArgs == null ? Collections.emptyMap() : launchArgs;
 
-        // 1.load built-in and default settings
         // built-in settings, can NOT be overrode
         builtinSettings = builtinSettings == null ? new LinkedHashMap<>() : builtinSettings;
-        // default settings, can be overrode by user-defined settings
-        Map<String, Object> defaultSettings = new LinkedHashMap<>();
 
-        String configName = "BuiltinSettings";
-        loadSettings(classLoader, 
-                internalConfigLocation,configName,  
-                builtinSettings, defaultSettings, 
-                true);
-
-
-        // 2.load user-defined settings
         ConfigSource.Builder builder = new ConfigSource.Builder()
                 .configSource("BuiltinSettings", builtinSettings)
                 .configSource("LaunchArgs", launchArgs);
 
+
+        // 1.load built-in and default settings
+        // default settings, can be overrode by user-defined settings
+        Map<String, Object> defaultSettings = new LinkedHashMap<>();
+
+        String configName = "BuiltinSettings";
+        if(internalConfigLocation != null)
+            loadSettings(classLoader, 
+                    internalConfigLocation, configName,  
+                    builtinSettings, defaultSettings);
+
+
+        // 2.load user-defined settings
         for(Entry<String, String> entry : userDefinedConfigLocations.entrySet()) {
             String userDefinedConfigLocation = entry.getKey();
 
             Map<String, Object> userDefinedSettings = new LinkedHashMap<>();
             loadSettings(classLoader, 
                     userDefinedConfigLocation, entry.getValue(),  
-                    null, userDefinedSettings, 
-                    true);
+                    null, userDefinedSettings);
 
             builder.configSource(userDefinedConfigLocation, userDefinedSettings);
         }
@@ -81,32 +82,34 @@ public class ConfigViews {
 
     public static ConfigView createConfigView(ConfigView parentConfigView,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
-        // 1.load built-in and default settings
+        ConfigView.Builder builder = new ConfigView.Builder();
+        if(parentConfigView != null)
+            builder = builder.parent(parentConfigView);
+
         // built-in settings, can NOT be overrode
         Map<String, Object> builtinSettings = new LinkedHashMap<>();
-        // default settings, can be overrode by user-defined settings
-        Map<String, Object> defaultSettings = new LinkedHashMap<>();
 
         String configName = "BuiltinSettings";
-        loadSettings(classLoader, 
-                internalConfigLocation, configName, 
-                builtinSettings, defaultSettings, 
-                true);
+        builder.configSource(configName, builtinSettings);
+
+
+        // 1.load built-in and default settings
+        // default settings, can be overrode by user-defined settings
+        Map<String, Object> defaultSettings = new LinkedHashMap<>();
+        if(internalConfigLocation != null)
+            loadSettings(classLoader, 
+                    internalConfigLocation, configName, 
+                    builtinSettings, defaultSettings);
 
 
         // 2.load user-defined settings
-        ConfigView.Builder builder = new ConfigView.Builder()
-                .parent(parentConfigView)
-                .configSource(configName, builtinSettings);
-
         for(Entry<String, String> entry : userDefinedConfigLocations.entrySet()) {
             String userDefinedConfigLocation = entry.getKey();
 
             Map<String, Object> userDefinedSettings = new LinkedHashMap<>();
             loadSettings(classLoader, 
                     userDefinedConfigLocation, entry.getValue(),  
-                    null, userDefinedSettings, 
-                    false);
+                    null, userDefinedSettings);
 
             builder.configSource(userDefinedConfigLocation, userDefinedSettings);
         }
@@ -118,10 +121,9 @@ public class ConfigViews {
 
     private static void loadSettings(ClassLoader classLoader, 
             String propertiesFileLocation, String configName, 
-            Map<String, Object> builtinSettings, Map<String, Object> settings, 
-            boolean warnException) {
+            Map<String, Object> builtinSettings, Map<String, Object> settings) {
         InputStream inStream = classLoader.getResourceAsStream(propertiesFileLocation);
-        if(inStream == null && warnException) {
+        if(inStream == null) {
             LOGGER.error("Did NOT find properties file '{} for '{}'. \n", propertiesFileLocation, configName);
             return;
         }
@@ -141,10 +143,8 @@ public class ConfigViews {
                 }
             }
         } catch(IOException e) {
-            if(warnException) {
-                LOGGER.error("Failed to load properties file '{} for '{}'. \n", propertiesFileLocation, configName);
-                e.printStackTrace(System.out);
-            }
+            LOGGER.error("Failed to load properties file '{} for '{}'. \n", propertiesFileLocation, configName);
+            e.printStackTrace(System.out);
         } finally {
             IOUtils.closeQuietly(inStream);
         }

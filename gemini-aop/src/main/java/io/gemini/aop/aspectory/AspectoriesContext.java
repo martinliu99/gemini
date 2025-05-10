@@ -59,23 +59,23 @@ class AspectoriesContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AspectoriesContext.class);
 
-    private static final String ASPECT_WEAVER_INCLUDED_ASPECT_APPS_KEY = "aop.aspectory.includedAspectories";
-    private static final String ASPECT_WEAVER_EXCLUDED_ASPECT_APPS_KEY = "aop.aspectory.excludedAspectories";
+    private static final String ASPECTORIES_INCLUDED_ASPECTORIES_KEY = "aop.aspectories.includedAspectories";
+    private static final String ASPECTORIES_EXCLUDED_ASPECTORIES_KEY = "aop.aspectories.excludedAspectories";
 
-    static final String ASPECTORY_GLOBAL_MATCHING_CLASS_LOADERS_KEY = "aop.aspectory.globalMatchingClassLoaders";
+    static final String ASPECTORIES_DEFAULT_MATCHING_CLASS_LOADERS_KEY = "aop.aspectories.defaultMatchingClassLoaders";
 
 
     private final AopContext aopContext;
 
 
-    // aspectorty settings
+    // aspectorties settings
     private final StringMatcherFactory aspectoryMatcherFactory;
 
     private ElementMatcher<String> includedAspectoriesMatcher;
     private ElementMatcher<String> excludedAspectoriesMatcher;
 
 
-    private Set<String> globalMatchingClassLoaders;
+    private Set<String> defaultMatchingClassLoaders;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
@@ -122,33 +122,33 @@ class AspectoriesContext implements Closeable {
 
         // load aspectory settings
         {
-            Set<String> includedAspectories = configView.getAsStringSet(ASPECT_WEAVER_INCLUDED_ASPECT_APPS_KEY, Collections.emptySet());
+            Set<String> includedAspectories = configView.getAsStringSet(ASPECTORIES_INCLUDED_ASPECTORIES_KEY, Collections.emptySet());
 
             if(includedAspectories.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        includedAspectories.size(), ASPECT_WEAVER_INCLUDED_ASPECT_APPS_KEY,
+                        includedAspectories.size(), ASPECTORIES_INCLUDED_ASPECTORIES_KEY,
                         includedAspectories.stream().collect( Collectors.joining("\n  ") ) );
 
             this.includedAspectoriesMatcher = CollectionUtils.isEmpty(includedAspectories) 
                     ? BooleanMatcher.of(true)
                     : this.aspectoryMatcherFactory.createStringMatcher(
-                            ASPECT_WEAVER_INCLUDED_ASPECT_APPS_KEY,
+                            ASPECTORIES_INCLUDED_ASPECTORIES_KEY,
                             Parser.parsePatterns(includedAspectories), 
                             false, false );
         }
 
         {
-            Set<String> excludedAspectories = configView.getAsStringSet(ASPECT_WEAVER_EXCLUDED_ASPECT_APPS_KEY, Collections.emptySet());
+            Set<String> excludedAspectories = configView.getAsStringSet(ASPECTORIES_EXCLUDED_ASPECTORIES_KEY, Collections.emptySet());
 
             if(excludedAspectories.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        excludedAspectories.size(), ASPECT_WEAVER_EXCLUDED_ASPECT_APPS_KEY,
+                        excludedAspectories.size(), ASPECTORIES_EXCLUDED_ASPECTORIES_KEY,
                         excludedAspectories.stream().collect( Collectors.joining("\n  ") ) );
 
             this.excludedAspectoriesMatcher = CollectionUtils.isEmpty(excludedAspectories) 
                     ? BooleanMatcher.of(false)
                     : this.aspectoryMatcherFactory.createStringMatcher(
-                            ASPECT_WEAVER_EXCLUDED_ASPECT_APPS_KEY,
+                            ASPECTORIES_EXCLUDED_ASPECTORIES_KEY,
                             Parser.parsePatterns(excludedAspectories), 
                             true, false );
         }
@@ -156,14 +156,14 @@ class AspectoriesContext implements Closeable {
         {
             Set<String> classLoaders = new HashSet<>();
             classLoaders.addAll( 
-                    configView.getAsStringSet(ASPECTORY_GLOBAL_MATCHING_CLASS_LOADERS_KEY, Collections.emptySet()) );
-            this.globalMatchingClassLoaders = classLoaders;
+                    configView.getAsStringSet(ASPECTORIES_DEFAULT_MATCHING_CLASS_LOADERS_KEY, Collections.emptySet()) );
+            this.defaultMatchingClassLoaders = classLoaders;
 
-            this.shareAspectClassLoader = configView.getAsBoolean("aop.aspectory.shareAspectClassLoader", false);
+            this.shareAspectClassLoader = configView.getAsBoolean("aop.aspectories.shareAspectClassLoader", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
-                    configView.getAsString("aop.aspectory.conflictJoinpointClassLoaders", "") );
+                    configView.getAsString("aop.aspectories.conflictJoinpointClassLoaders", "") );
 
-            this.asmAutoCompute = configView.getAsBoolean("aop.aspectory.asmAutoCompute", false);
+            this.asmAutoCompute = configView.getAsBoolean("aop.aspectories.asmAutoCompute", false);
         }
     }
 
@@ -248,8 +248,8 @@ class AspectoriesContext implements Closeable {
     }
 
 
-    public Set<String> getGlobalMatchingClassLoaders() {
-        return Collections.unmodifiableSet( globalMatchingClassLoaders );
+    public Set<String> getDefaultMatchingClassLoaders() {
+        return Collections.unmodifiableSet( defaultMatchingClassLoaders );
     }
 
     public boolean isShareAspectClassLoader() {

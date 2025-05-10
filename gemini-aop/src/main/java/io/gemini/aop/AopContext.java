@@ -125,9 +125,7 @@ public class AopContext implements Closeable {
 
 
         // 2.create helper classes
-        this.configView = new ConfigView.Builder()
-                .configSource(configSource)
-                .build();
+        this.configView = createConfigView(configSource, diagnosticLevel);
         this.placeholderHelper = new PlaceholderHelper.Builder()
                 .build(this.getConfigView());
 
@@ -156,6 +154,19 @@ public class AopContext implements Closeable {
             LOGGER.info("$Took '{}' seconds to create AopContext.", time / 1e9);
         }
         aopMetrics.getBootstraperMetrics().setAopContextCreationTime(time);
+    }
+
+    private ConfigView createConfigView(ConfigSource configSource, DiagnosticLevel diagnosticLevel) {
+        ConfigView configView = new ConfigView.Builder()
+                .configSource(configSource)
+                .build();
+
+        if(diagnosticLevel.isSimpleEnabled())
+            LOGGER.info("Created ConfigView for AopContext with settings, \n"
+                    + "  LaunchArgs: {} \n  InternalConfigLoc: {} \n  UserDefinedConfigLoc: {} \n",
+                    launcherConfig.getLaunchArgs(), launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation());
+
+        return configView;
     }
 
     private void loadSettings(ConfigView configView) {

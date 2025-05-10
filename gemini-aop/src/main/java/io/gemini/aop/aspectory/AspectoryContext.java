@@ -64,12 +64,14 @@ public class AspectoryContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AspectoryContext.class);
 
-    private static final Set<ClassLoader> SYSTEM_CLASSLOADERS;
+    private static final String ASPECTORY_INTERNAL_PROPERTIES = "META-INF/aspectory-internal.properties";
 
-    private static final String ASPECTORY_MATCHER_MATCH_JOINPOINT_KEY = "aop.aspectory.matchJoinpoint";
+    private static final Set<ClassLoader> SYSTEM_CLASSLOADERS;
 
     private static final String ASPECTORY_JOINPOINT_TYPES = "aop.aspectory.joinpointTypes";
     private static final String ASPECTORY_JOINPOINT_RESOURCES = "aop.aspectory.joinpointResources";
+
+    private static final String ASPECTORY_MATCHER_MATCH_JOINPOINT_KEY = "aop.aspectory.matchJoinpoint";
 
     private static final String ASPECTORY_INCLUDED_CLASS_LOADERS_KEY = "aop.aspectory.includedClassLoaders";
     private static final String ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY = "aop.aspectory.excludedClassLoaders";
@@ -81,10 +83,6 @@ public class AspectoryContext implements Closeable {
     private static final String ASPECTORY_EXCLUDED_ASPECTS_KEY = "aop.aspectory.excludedAspects";
 
     private static final String ASPECTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY = "aop.aspectory.defaultMatchingClassLoaders";
-
-
-    private static final String ASPECTORY_INTERNAL_PROPERTIES = "META-INF/aspectory-internal.properties";
-    private static final String ASPECTORY_USER_DEFINED_PROPERTIES = "META-INF/aspectory.properties";
 
 
     private static final String AOP_CONTEXT_OBJECT = "aopContext";
@@ -103,19 +101,18 @@ public class AspectoryContext implements Closeable {
     private final PlaceholderHelper placeholderHelper;
 
 
-    private boolean matchJoinpoint;
-
-
     private final StringMatcherFactory stringMatcherFactory;
+    private TypeMatcherFactory typeMatcherFactory;
+
 
     private ElementMatcher<String> joinpointTypesMatcher;
     private ElementMatcher<String> joinpointResourcesMatcher;
 
+
+    private boolean matchJoinpoint;
+
     private ElementMatcher<String> includedClassLoadersMatcher;
     private ElementMatcher<String> excludedClassLoadersMatcher;
-
-
-    private TypeMatcherFactory typeMatcherFactory;
 
     private Collection<Pattern> excludedTypePatterns;
     private Collection<Pattern> includedTypePatterns;
@@ -124,17 +121,16 @@ public class AspectoryContext implements Closeable {
     private ElementMatcher<String> excludedAspectsMatcher;
 
 
+    private ElementMatcher<String> defaultClassLoaderMatcher;
+
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
 
 
     private final ClassScanner classScanner;
 
-    private final ObjectFactory aspectoryObjectFactory;
-    private final TypePool aspectoryTypePool;
-
-
-    private final ElementMatcher<String> defaultClassLoaderMatcher;
+    private final ObjectFactory objectFactory;
+    private final TypePool aspectTypePool;
 
 
     private final TypeWorldFactory typeWorldFactory;
@@ -172,14 +168,7 @@ public class AspectoryContext implements Closeable {
 
         // 2.load settings
         // create configView
-        Map<String, String> userDefinedConfig = new LinkedHashMap<>();
-        userDefinedConfig.put(getUserDefinedConfigName(aopContext), aspectoryName);
-        userDefinedConfig.put(ASPECTORY_USER_DEFINED_PROPERTIES, aspectoryName);
-
-        this.configView = ConfigViews.createConfigView(aopContext.getConfigView(), aspectClassLoader, 
-                ASPECTORY_INTERNAL_PROPERTIES, 
-                userDefinedConfig);
-
+        this.configView = createConfigView(aopContext, aspectClassLoader);
         this.placeholderHelper = new PlaceholderHelper.Builder().build(configView);
 
         this.stringMatcherFactory = new StringMatcherFactory();
@@ -192,145 +181,178 @@ public class AspectoryContext implements Closeable {
         // 3.create properties
         // create classScanner and objectFactory
         this.classScanner = this.createClassScanner(this.aopContext);
-        this.aspectoryObjectFactory = this.createObjectFactory(aspectClassLoader, this.classScanner);
-        this.aspectoryTypePool = this.aopContext.getTypePoolFactory().createExplicitTypePool(this.aspectClassLoader, null);
-
-        this.defaultClassLoaderMatcher = createDefaultClassLoaderMatcher(aspectoriesContext, stringMatcherFactory, configView);
+        this.objectFactory = this.createObjectFactory(aspectClassLoader, this.classScanner);
+        this.aspectTypePool = this.aopContext.getTypePoolFactory().createExplicitTypePool(this.aspectClassLoader, null);
 
         this.typeWorldFactory = new TypeWorldFactory.Prototype();
         this.aspectContextMap = new ConcurrentReferenceHashMap<>();
     }
 
-    private String getUserDefinedConfigName(AopContext aopContext) {
+    protected ConfigView createConfigView(AopContext aopContext, AspectClassLoader aspectClassLoader) {
+        Map<String, String> userDefinedConfigs = new LinkedHashMap<>();
+
+        String userDefinedConfigLocation = getUserDefinedConfigLocation(aopContext);
+        String userDefinedConfig = null;
+        if(aspectClassLoader.getResource(userDefinedConfigLocation) != null) {
+            userDefinedConfigs.put(userDefinedConfigLocation, aspectoryName);
+            userDefinedConfig = userDefinedConfigLocation;
+        }
+
+        String internalConfig = aspectClassLoader.getResource(ASPECTORY_INTERNAL_PROPERTIES) == null ? null : ASPECTORY_INTERNAL_PROPERTIES;
+        ConfigView configView = ConfigViews.createConfigView(aopContext.getConfigView(), aspectClassLoader, 
+                internalConfig, 
+                userDefinedConfigs);
+
+        if(aopContext.getDiagnosticLevel().isSimpleEnabled())
+            LOGGER.info("Created ConfigView for Aspectory '{}' with settings, \n"
+                    + "  InternalConfigLoc: {} \n  UserDefinedConfigLoc: {} \n",
+                    aspectoryName, internalConfig, userDefinedConfig);
+
+        return configView;
+    }
+
+    private String getUserDefinedConfigLocation(AopContext aopContext) {
         return "aspectory" + (aopContext.isDefaultProfile() ? "" : "-" + aopContext.getActiveProfile()) + ".properties";
     }
 
     private void loadSettings(AspectoriesContext aspectoriesContext, ConfigView configView) {
         {
+            Set<String> joinpointTypes = configView.getAsStringSet(ASPECTORY_JOINPOINT_TYPES, Collections.emptySet());
+
+            List<Pattern> joinpointTypePatterns = Parser.parsePatterns(joinpointTypes);
+            this.joinpointTypesMatcher = stringMatcherFactory.createStringMatcher(
+                    ASPECTORY_JOINPOINT_TYPES, joinpointTypePatterns, true, false);
+
+            this.aspectClassLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
+
+
+            Set<String> joinpointResources = configView.getAsStringSet(ASPECTORY_JOINPOINT_RESOURCES, Collections.emptySet());
+
+            List<Pattern> mergedResourcePatterns = new ArrayList<>(joinpointTypePatterns.size() + joinpointResources.size());
+            mergedResourcePatterns.addAll( Parser.parsePatterns(joinpointTypes, true) );
+            mergedResourcePatterns.addAll( Parser.parsePatterns(joinpointResources) );
+            this.joinpointResourcesMatcher = stringMatcherFactory.createStringMatcher(
+                    ASPECTORY_JOINPOINT_RESOURCES, mergedResourcePatterns, true, false);
+
+            this.aspectClassLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);
+        }
+
+        {
             this.matchJoinpoint = configView.getAsBoolean(ASPECTORY_MATCHER_MATCH_JOINPOINT_KEY, true);
             if(matchJoinpoint == false) {
                 LOGGER.warn("WARNING! Setting '{}' is false for aspect app '{}', and switched off aspect weaving. \n", ASPECTORY_MATCHER_MATCH_JOINPOINT_KEY, this.aspectoryName);
             }
-
-            {
-                Set<String> joinpointTypes = configView.getAsStringSet(ASPECTORY_JOINPOINT_TYPES, Collections.emptySet());
-
-                List<Pattern> joinpointTypePatterns = Parser.parsePatterns(joinpointTypes);
-                this.joinpointTypesMatcher = stringMatcherFactory.createStringMatcher(
-                        ASPECTORY_JOINPOINT_TYPES, joinpointTypePatterns, true, false);
-
-                this.aspectClassLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
-
-
-                Set<String> joinpointResources = configView.getAsStringSet(ASPECTORY_JOINPOINT_RESOURCES, Collections.emptySet());
-
-                List<Pattern> mergedResourcePatterns = new ArrayList<>(joinpointTypePatterns.size() + joinpointResources.size());
-                mergedResourcePatterns.addAll( Parser.parsePatterns(joinpointTypes, true) );
-                mergedResourcePatterns.addAll( Parser.parsePatterns(joinpointResources) );
-                this.joinpointResourcesMatcher = stringMatcherFactory.createStringMatcher(
-                        ASPECTORY_JOINPOINT_RESOURCES, mergedResourcePatterns, true, false);
-
-                this.aspectClassLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);
-            }
-
-            {
-                Set<String> includedClassLoaders = configView.getAsStringSet(ASPECTORY_INCLUDED_CLASS_LOADERS_KEY, Collections.emptySet());
-
-                if(includedClassLoaders.size() > 0) 
-                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                            includedClassLoaders.size(), ASPECTORY_INCLUDED_CLASS_LOADERS_KEY, aspectoryName,
-                            includedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
-
-                this.includedClassLoadersMatcher = stringMatcherFactory.createStringMatcher(
-                        AspectoryContext.ASPECTORY_INCLUDED_CLASS_LOADERS_KEY,
-                        Parser.parsePatterns(includedClassLoaders), 
-                        false, false );
-            }
-
-            {
-                Set<String> excludedClassLoaders = configView.getAsStringSet(ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY, Collections.emptySet());
-
-                if(excludedClassLoaders.size() > 0) 
-                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                            excludedClassLoaders.size(), ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY, aspectoryName,
-                            excludedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
-
-                this.excludedClassLoadersMatcher = stringMatcherFactory.createStringMatcher(
-                        AspectoryContext.ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY,
-                        Parser.parsePatterns(excludedClassLoaders), 
-                        true, false );
-            }
-
-            {
-                Set<String> includedTypePatterns = configView.getAsStringSet(ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY, Collections.emptySet());
-
-                if(includedTypePatterns.size() > 0) 
-                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                            includedTypePatterns.size(), ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY, aspectoryName,
-                            includedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
-
-                this.includedTypePatterns = typeMatcherFactory.validateTypePatterns(
-                        ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY,
-                        Parser.parsePatterns( includedTypePatterns ), 
-                        false, 
-                        aspectClassLoader, 
-                        null, 
-                        placeholderHelper );
-            }
-
-            {
-                Set<String> excludedTypePatterns = configView.getAsStringSet(ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY, Collections.emptySet());
-
-                if(excludedTypePatterns.size() > 0)
-                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                            excludedTypePatterns.size(), ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY, aspectoryName,
-                            excludedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
-
-                this.excludedTypePatterns = typeMatcherFactory.validateTypePatterns(
-                        ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY,
-                        Parser.parsePatterns( excludedTypePatterns ), 
-                        true, 
-                        aspectClassLoader, 
-                        null, 
-                        placeholderHelper );
-            }
-
-            {
-                Set<String> includedAspects = configView.getAsStringSet(ASPECTORY_INCLUDED_ASPECTS_KEY, Collections.emptySet());
-
-                if(includedAspects.size() > 0)
-                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                            includedAspects.size(), ASPECTORY_INCLUDED_ASPECTS_KEY, aspectoryName,
-                            includedAspects.stream().collect( Collectors.joining("\n  ") ) );
-
-                this.includedAspectsMatcher = CollectionUtils.isEmpty(includedAspects) 
-                        ? BooleanMatcher.of(true)
-                        : this.stringMatcherFactory.createStringMatcher(
-                                ASPECTORY_INCLUDED_ASPECTS_KEY,
-                                Parser.parsePatterns(includedAspects), 
-                                false, false );
-            }
-
-            {
-                Set<String> excludedAspects = configView.getAsStringSet(ASPECTORY_EXCLUDED_ASPECTS_KEY, Collections.emptySet());
-
-                if(excludedAspects.size() > 0)
-                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                            excludedAspects.size(), ASPECTORY_EXCLUDED_ASPECTS_KEY, aspectoryName,
-                            excludedAspects.stream().collect( Collectors.joining("\n  ") ) );
-
-
-                this.excludedAspectsMatcher = CollectionUtils.isEmpty(excludedAspects) 
-                        ? BooleanMatcher.of(false)
-                        : stringMatcherFactory.createStringMatcher(
-                                ASPECTORY_EXCLUDED_ASPECTS_KEY,
-                                Parser.parsePatterns(excludedAspects), 
-                                true, false );
-            }
         }
 
         {
-            // load and merge aspectory settings
+            Set<String> includedClassLoaders = configView.getAsStringSet(ASPECTORY_INCLUDED_CLASS_LOADERS_KEY, Collections.emptySet());
+
+            if(includedClassLoaders.size() > 0) 
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+                        includedClassLoaders.size(), ASPECTORY_INCLUDED_CLASS_LOADERS_KEY, aspectoryName,
+                        includedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
+
+            this.includedClassLoadersMatcher = stringMatcherFactory.createStringMatcher(
+                    AspectoryContext.ASPECTORY_INCLUDED_CLASS_LOADERS_KEY,
+                    Parser.parsePatterns(includedClassLoaders), 
+                    false, false );
+        }
+
+        {
+            Set<String> excludedClassLoaders = configView.getAsStringSet(ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY, Collections.emptySet());
+
+            if(excludedClassLoaders.size() > 0) 
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+                        excludedClassLoaders.size(), ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY, aspectoryName,
+                        excludedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
+
+            this.excludedClassLoadersMatcher = stringMatcherFactory.createStringMatcher(
+                    AspectoryContext.ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY,
+                    Parser.parsePatterns(excludedClassLoaders), 
+                    true, false );
+        }
+
+        {
+            Set<String> includedTypePatterns = configView.getAsStringSet(ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY, Collections.emptySet());
+
+            if(includedTypePatterns.size() > 0) 
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+                        includedTypePatterns.size(), ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY, aspectoryName,
+                        includedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
+
+            this.includedTypePatterns = typeMatcherFactory.validateTypePatterns(
+                    ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY,
+                    Parser.parsePatterns( includedTypePatterns ), 
+                    false, 
+                    aspectClassLoader, 
+                    null, 
+                    placeholderHelper );
+        }
+
+        {
+            Set<String> excludedTypePatterns = configView.getAsStringSet(ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY, Collections.emptySet());
+
+            if(excludedTypePatterns.size() > 0)
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+                        excludedTypePatterns.size(), ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY, aspectoryName,
+                        excludedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
+
+            this.excludedTypePatterns = typeMatcherFactory.validateTypePatterns(
+                    ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY,
+                    Parser.parsePatterns( excludedTypePatterns ), 
+                    true, 
+                    aspectClassLoader, 
+                    null, 
+                    placeholderHelper );
+        }
+
+        {
+            Set<String> includedAspects = configView.getAsStringSet(ASPECTORY_INCLUDED_ASPECTS_KEY, Collections.emptySet());
+
+            if(includedAspects.size() > 0)
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+                        includedAspects.size(), ASPECTORY_INCLUDED_ASPECTS_KEY, aspectoryName,
+                        includedAspects.stream().collect( Collectors.joining("\n  ") ) );
+
+            this.includedAspectsMatcher = CollectionUtils.isEmpty(includedAspects) 
+                    ? BooleanMatcher.of(true)
+                    : this.stringMatcherFactory.createStringMatcher(
+                            ASPECTORY_INCLUDED_ASPECTS_KEY,
+                            Parser.parsePatterns(includedAspects), 
+                            false, false );
+        }
+
+        {
+            Set<String> excludedAspects = configView.getAsStringSet(ASPECTORY_EXCLUDED_ASPECTS_KEY, Collections.emptySet());
+
+            if(excludedAspects.size() > 0)
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+                        excludedAspects.size(), ASPECTORY_EXCLUDED_ASPECTS_KEY, aspectoryName,
+                        excludedAspects.stream().collect( Collectors.joining("\n  ") ) );
+
+
+            this.excludedAspectsMatcher = CollectionUtils.isEmpty(excludedAspects) 
+                    ? BooleanMatcher.of(false)
+                    : stringMatcherFactory.createStringMatcher(
+                            ASPECTORY_EXCLUDED_ASPECTS_KEY,
+                            Parser.parsePatterns(excludedAspects), 
+                            true, false );
+        }
+
+        {
+            // load and merge aspectories settings
+            Set<String> mergedClassLoaders = new LinkedHashSet<>();
+            mergedClassLoaders.addAll(aspectoriesContext.getDefaultMatchingClassLoaders());
+            mergedClassLoaders.addAll(configView.getAsStringSet(ASPECTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY, Collections.emptySet()) );
+
+            this.defaultClassLoaderMatcher = stringMatcherFactory.createStringMatcher(
+                    AspectoriesContext.ASPECTORIES_DEFAULT_MATCHING_CLASS_LOADERS_KEY + ", " + ASPECTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY,
+                    Parser.parsePatterns(mergedClassLoaders), 
+                    true, false);
+        }
+
+        {
+            // load and merge aspectories settings
             boolean shareAspectClassLoader = configView.getAsBoolean("aop.aspectory.shareAspectClassLoader", false);
             this.shareAspectClassLoader = shareAspectClassLoader && aspectoriesContext.isShareAspectClassLoader();
 
@@ -342,7 +364,6 @@ public class AspectoryContext implements Closeable {
             this.conflictJoinpointClassLoaders = conflictJoinpointClassLoaders;
         }
     }
-
 
     private ClassScanner createClassScanner(AopContext aopContext) {
         ClassScanner aopClassScanner = aopContext.getClassScanner();
@@ -360,7 +381,7 @@ public class AspectoryContext implements Closeable {
                 .build();
     }
 
-    public ObjectFactory createObjectFactory(AspectClassLoader aspectClassLoader, ClassScanner classScanner) {
+    private ObjectFactory createObjectFactory(AspectClassLoader aspectClassLoader, ClassScanner classScanner) {
         ObjectFactory objectFactory = new ObjectFactory.Builder()
                 .classLoader(aspectClassLoader)
                 .classScanner(classScanner)
@@ -372,18 +393,6 @@ public class AspectoryContext implements Closeable {
         return objectFactory;
     }
 
-    private ElementMatcher<String> createDefaultClassLoaderMatcher(AspectoriesContext aspectoriesContext, 
-            StringMatcherFactory stringMatcherFactory, ConfigView configView) {
-        Set<String> mergedClassLoaders = new LinkedHashSet<>();
-        mergedClassLoaders.addAll(aspectoriesContext.getGlobalMatchingClassLoaders());
-        mergedClassLoaders.addAll(configView.getAsStringSet(ASPECTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY, Collections.emptySet()) );
-
-        return stringMatcherFactory.createStringMatcher(
-                AspectoriesContext.ASPECTORY_GLOBAL_MATCHING_CLASS_LOADERS_KEY + ", " + ASPECTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY,
-                Parser.parsePatterns(mergedClassLoaders), 
-                true, false);
-    }
-
 
     public String getAspectoryName() {
         return aspectoryName;
@@ -393,16 +402,8 @@ public class AspectoryContext implements Closeable {
         return aspectoriesContext;
     }
 
-    public URL[] getAspectoryResourceURLs() {
-        return aspectoryResourceURLs;
-    }
-
     public AspectClassLoader getAspectClassLoader() {
         return this.aspectClassLoader;
-    }
-
-    public ConfigView getConfigView() {
-        return configView;
     }
 
     public PlaceholderHelper getPlaceholderHelper() {
@@ -412,15 +413,6 @@ public class AspectoryContext implements Closeable {
 
     public boolean isMatchJoinpoint() {
         return matchJoinpoint;
-    }
-
-
-    public ElementMatcher<String> getJoinpointTypesMatcher() {
-        return joinpointTypesMatcher;
-    }
-
-    public ElementMatcher<String> getJoinpointResourcesMatcher() {
-        return joinpointResourcesMatcher;
     }
 
     public ElementMatcher<String> getIncludedClassLoadersMatcher() {
@@ -462,25 +454,16 @@ public class AspectoryContext implements Closeable {
     }
 
 
-    public boolean isShareAspectClassLoader() {
-        return shareAspectClassLoader;
-    }
-
-    public List<Set<String>> getConflictJoinpointClassLoaders() {
-        return Collections.unmodifiableList( conflictJoinpointClassLoaders );
-    }
-
-
     public ClassScanner getClassScanner() {
         return this.classScanner;
     }
 
     public ObjectFactory getObjectFactory() {
-        return aspectoryObjectFactory;
+        return objectFactory;
     }
 
     public TypePool getAspectTypePool() {
-        return aspectoryTypePool;
+        return aspectTypePool;
     }
 
 
@@ -488,6 +471,7 @@ public class AspectoryContext implements Closeable {
         return createAspectContext(joinpointClassLoader, javaModule, false);
     }
 
+    @SuppressWarnings("resource")
     public AspectContext createAspectContext(ClassLoader joinpointClassLoader, JavaModule javaModule, boolean validateContext) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
 
@@ -520,7 +504,7 @@ public class AspectoryContext implements Closeable {
 
 
         // 3.check shareAspectClassLoader flag
-        if(isShareAspectClassLoader() == false) 
+        if(shareAspectClassLoader == false) 
             return false;
 
 
@@ -534,14 +518,14 @@ public class AspectoryContext implements Closeable {
 
         // exist ClassLoader might conflict with the joinpintClassLoader 
         String joinpointCLClassName = ClassLoaderUtils.getClassLoaderName(joinpointClassLoader);
-        List<Set<String>> conflictJoinpointClassLoaders = getConflictJoinpointClassLoaders().stream()
+        List<Set<String>> conflictJoinpointClassLoaderList = conflictJoinpointClassLoaders.stream()
                 .filter( classLoaders -> classLoaders.contains(joinpointCLClassName) )
                 .collect( Collectors.toList() );
 
         for(ClassLoader existingCL : aspectContextMap.keySet()) {
             String existingCLClassName = ClassLoaderUtils.getClassLoaderName(existingCL);
 
-            for(Set<String> classLoaders : conflictJoinpointClassLoaders) {
+            for(Set<String> classLoaders : conflictJoinpointClassLoaderList) {
                 if(classLoaders.contains(existingCLClassName))
                     return false;
             }
@@ -555,7 +539,7 @@ public class AspectoryContext implements Closeable {
     protected AspectContext doCreateAspectContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
             boolean sharedMode, boolean validateContext) {
         AspectClassLoader aspectClassLoader = this.aspectClassLoader;
-        ObjectFactory objectFactory = this.aspectoryObjectFactory;
+        ObjectFactory objectFactory = this.objectFactory;
         // create AspectClassLoader & objectFactory per ClassLoader
         if(sharedMode == false) {
             aspectClassLoader = new AspectClassLoader.WithJoinpointCL(
@@ -573,7 +557,7 @@ public class AspectoryContext implements Closeable {
         // create typePool per ClassLoader
         AspectTypePool typePool = new AspectTypePool(
                 new CacheProvider.Simple(),
-                aspectoryTypePool,
+                aspectTypePool,
                 this.aopContext.getTypePoolFactory().getExplicitTypePool(joinpointClassLoader)
         );
         typePool.setJoinpointTypeMatcher(joinpointTypesMatcher);
@@ -602,7 +586,7 @@ public class AspectoryContext implements Closeable {
             closeable.close();
        };
 
-        this.aspectoryObjectFactory.close();
-        this.aspectoryTypePool.clear();
+        this.objectFactory.close();
+        this.aspectTypePool.clear();
     }
 }

@@ -106,8 +106,13 @@ public abstract class AspectClassLoader extends URLClassLoader {
     }
 
 
+    /*
+     * @see java.lang.ClassLoader#loadClass(java.lang.String, boolean)
+     */
     @Override
     protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        Assert.notNull(name, "'name' must not be empty.");
+
         synchronized (super.getClassLoadingLock(name)) {
             // 1.check local cache
             Class<?> type = this.findLoadedClass(name);
@@ -176,11 +181,13 @@ public abstract class AspectClassLoader extends URLClassLoader {
     protected abstract ClassLoader doFindJoinpointCL();
 
 
-    /**
-     * {@inheritDoc}
+    /*
+     * @see java.lang.ClassLoader#getResource(java.lang.String)
      */
     @Override
     public URL getResource(String name) {
+        Assert.notNull(name, "'name' must not be empty.");
+
         // 1.delegate to parent CL(AopClassLoader) to load AOP framework resources
         URL url = this.getParent().getResource(name);
         if(url != null) {

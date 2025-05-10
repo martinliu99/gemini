@@ -125,6 +125,9 @@ public class DefaultAopClassLoader extends AopClassLoader {
      */
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        if(name == null || "".equals(name.trim()))
+            throw new IllegalArgumentException("'name' must not be empty.");
+
         synchronized (super.getClassLoadingLock(name)) {
             // 1.find loaded class from local cache.
             Class<?> type = super.findLoadedClass(name);
@@ -164,6 +167,9 @@ public class DefaultAopClassLoader extends AopClassLoader {
      * @see java.lang.ClassLoader#getResource(java.lang.String)
      */
     public URL getResource(String name) {
+        if(name == null || "".equals(name.trim()))
+            throw new IllegalArgumentException("'name' must not be empty.");
+
         URL url = null;
 
         // 1.if delegation loading is required, try to load from actual parent ClassLoader.

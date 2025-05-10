@@ -460,7 +460,7 @@ public interface ConfigView {
         public <T> Builder configSource(String sourceName, Map<String, T> configSettings) {
             Assert.notNull(configSettings, "'configSettings' must not be null.");
             this.configSources.add(
-                    new MapConfigSource(sourceName, Converters.to(configSettings) ) );
+                    new MapConfigSource<T>(sourceName, configSettings) );
 
             return this;
         }
@@ -468,7 +468,7 @@ public interface ConfigView {
         public Builder configSource(String sourceName, OrderedProperties configSettings) {
             Assert.notNull(configSettings, "'configSettings' must not be null.");
             this.configSources.add(
-                    new MapConfigSource(sourceName, Converters.to(configSettings) ) );
+                    new MapConfigSource<Object>(sourceName, Converters.to(configSettings) ) );
 
             return this;
         }

@@ -61,12 +61,12 @@ public interface ConfigSource {
 
     }
 
-    class MapConfigSource extends AbstractBase {
+    class MapConfigSource<T> extends AbstractBase {
 
         private final String sourceName;
-        private final Map<String, Object> settings;
+        private final Map<String, T> settings;
 
-        protected MapConfigSource(String sourceName, Map<String, Object> settings) {
+        protected MapConfigSource(String sourceName, Map<String, T> settings) {
             this.sourceName = StringUtils.hasText(sourceName) ? sourceName : "";
 
             Assert.notNull(settings, "'settings' must not be null");
@@ -163,7 +163,7 @@ public interface ConfigSource {
          public <T> Builder configSource(String sourceName, Map<String, T> configSettings) {
             Assert.notNull(configSettings, "'configSettings' must not be null.");
             this.configSources.add(
-                    new MapConfigSource(sourceName, Converters.to(configSettings) ) );
+                    new MapConfigSource<T>(sourceName, configSettings ) );
 
             return this;
         }
@@ -171,7 +171,7 @@ public interface ConfigSource {
         public Builder configSource(String sourceName, OrderedProperties configSettings) {
             Assert.notNull(configSettings, "'configSettings' must not be null.");
             this.configSources.add(
-                    new MapConfigSource(sourceName, Converters.to(configSettings) ) );
+                    new MapConfigSource<Object>(sourceName, Converters.to(configSettings) ) );
 
             return this;
         }

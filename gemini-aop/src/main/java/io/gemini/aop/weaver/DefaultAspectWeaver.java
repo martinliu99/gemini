@@ -27,7 +27,6 @@ import java.security.ProtectionDomain;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +44,6 @@ import io.gemini.aop.weaver.WeaverCache.TypeCache;
 import io.gemini.aop.weaver.advice.DescriptorOffset;
 import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.pool.ExplicitTypePool;
-import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CollectionUtils;
 import net.bytebuddy.ClassFileVersion;
@@ -122,7 +120,7 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
         };
 
         // 3.initialize properties
-        this.weaverCache = new WeaverCache(weaverContext);
+        this.weaverCache = new WeaverCache(aopContext, weaverContext);
     }
 
 
@@ -179,17 +177,6 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
 
             if(CollectionUtils.isEmpty(methodDescriptionAspects) == false) {
                 typeCache.setMethodDescriptionAspects(methodDescriptionAspects);
-                Map<String, List<? extends Aspect>> aspectChain = typeCache.getMethodSignatureAspectsMap();
-
-                LOGGER.info("Matched type '{}' loaded by ClassLoader '{}' with below methods and advices. \n{}\n", 
-                        typeName, joinpointClassLoader,
-                        aspectChain.entrySet().stream()
-                            .map( 
-                                e -> "  method: " + e.getKey() + "\n" 
-                                    + e.getValue().stream().map( a -> "    advice: " + a.getAspectName() ).collect( Collectors.joining("\n")) )
-                            .collect( Collectors.joining("\n") ) 
-                );
-
                 return true;
             } else {
                 if(aopContext.isDiagnosticClass(typeName)) {
@@ -242,18 +229,6 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
         }
 
         return true;
-    }
-
-
-    @Override
-    public List<? extends Aspect> getAspectChain(ClassLoader joinpointClassLoader, String typeName, String methodSignature) {
-        Assert.hasText(typeName, "'typeName' must not be empty.");
-        Assert.hasText(methodSignature, "'methodSignature' must not be empty.");
-
-        return weaverCache
-                .getTypeCache(joinpointClassLoader, typeName)
-                .getMethodSignatureAspectsMap()
-                .get(methodSignature);
     }
 
 
@@ -343,8 +318,8 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
     }
 
 
-    /* 
-     * @see java.lang.BootstrapAdvice.Factory#createDescriptor(java.lang.invoke.MethodHandles.Lookup, java.lang.Object[])
+    /**
+     * {@inheritDoc}
      */
     @Override
     public Object createDescriptor(Lookup lookup, Object... arguments) {
@@ -353,8 +328,8 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
     }
 
 
-    /*
-     * @see java.lang.BootstrapAdvice.Factory#getDescriptorCallSite(java.lang.invoke.MethodHandles.Lookup, java.lang.String, java.lang.invoke.MethodType, java.lang.Object[])
+    /**
+     * {@inheritDoc}
      */
     @Override
     public CallSite createDescriptorCallSite(Lookup lookup, String bsmMethodName, MethodType bsmMethodType, Object... arguments) {
@@ -365,8 +340,9 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
         return new ConstantCallSite( constant );
     }
 
-    /*
-     * @see java.lang.BootstrapAdvice.Factory#dispacther(java.lang.Object, java.lang.Object, java.lang.Object[])
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public <T, E extends Throwable> Dispatcher<T, E> dispacther(Object descriptor, Object thisObject, Object[] arguments) {

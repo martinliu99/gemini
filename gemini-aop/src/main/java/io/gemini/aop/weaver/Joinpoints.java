@@ -23,6 +23,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -397,19 +398,22 @@ interface Joinpoints {
             ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
 
             Class<?> thisClass = descriptor.getThisClass();
+            String typeName = thisClass.getName();
             ClassLoader joinpointClassLoader = thisClass.getClassLoader();
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if(aopContext.isDiagnosticClass(thisClass.getName())) {
-                    LOGGER.info("^Creating joinpoint '{}' loaded by ClassLoader '{}'.", descriptor.getAccessibleName(), joinpointClassLoader);
+                if(aopContext.isDiagnosticClass(typeName)) {
+                    LOGGER.info("^Creating joinpoint for type '{}' loaded by ClassLoader '{}'. \n  {}", 
+                            typeName, joinpointClassLoader, descriptor.getAccessibleName());
                 }
 
                 joinpoint = new DefaultMutableJoinpoint<T, E>(descriptor, thisObject, arguments);
 
                 initialize(descriptor);
             } catch(Throwable t) {
-                LOGGER.warn("Failed to create joinpoint '{}' loaded by ClassLoader '{}'.", descriptor.getAccessibleName(), joinpointClassLoader, t);
+                LOGGER.warn("Failed to create joinpoint for type '{}' loaded by ClassLoader '{}'. \n  {}", 
+                        typeName, joinpointClassLoader, descriptor.getAccessibleName(), t);
             } finally {
                 ThreadContext.setContextClassLoader(existingClassLoader);
             }
@@ -424,16 +428,21 @@ interface Joinpoints {
 
             List<Advice.Before<T, E>> beforeAdvices = new ArrayList<>();
             List<Advice.After<T, E>> afterAdvices = new ArrayList<>();
-            for(Aspect aspect : aspectChain) {
+            for(Iterator<? extends Aspect> iterator = aspectChain.iterator(); iterator.hasNext(); ) {
+                Aspect aspect = iterator.next();
                 Class<? extends Advice> adviceClass = aspect.getAdviceClass();
+                if(adviceClass == null)
+                    iterator.remove();
+
                 boolean isBeforeAdvice = Advice.Before.class.isAssignableFrom(adviceClass);
                 boolean isAfterAdvice = Advice.After.class.isAssignableFrom(adviceClass);
-
                 if(isBeforeAdvice == false && isAfterAdvice == false) {
                     continue;
                 }
 
                 Advice advice = aspect.getAdvice();
+                if(advice == null)
+                    iterator.remove();
 
                 if(isBeforeAdvice == true && isAfterAdvice == true) {
                     beforeAdvices.add( (Advice.Before<T, E>) advice );
@@ -590,15 +599,21 @@ interface Joinpoints {
                 aspectChain = CollectionUtils.isEmpty(aspectChain) ? Collections.emptyList() : aspectChain;
 
                 List<Advice.Around<T, E>> aroundAdvices = new ArrayList<>();
-                for(Aspect aspect : aspectChain) {
+                for(Iterator<? extends Aspect> iterator = aspectChain.iterator(); iterator.hasNext(); ) {
+                    Aspect aspect = iterator.next();
                     Class<? extends Advice> adviceClass = aspect.getAdviceClass();
-                    boolean isAroundAdvice = Advice.Around.class.isAssignableFrom(adviceClass);
+                    if(adviceClass == null)
+                        iterator.remove();
 
+                    boolean isAroundAdvice = Advice.Around.class.isAssignableFrom(adviceClass);
                     if(isAroundAdvice == false) {
                         continue;
                     }
 
                     Advice.Around<T, E> advice = (Advice.Around<T, E>) aspect.getAdvice();
+                    if(advice == null)
+                        iterator.remove();
+
                     aroundAdvices.add(advice);
                 }
                 this.aroundAdvices = aroundAdvices;
@@ -640,17 +655,20 @@ interface Joinpoints {
                 ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
 
                 Class<?> thisClass = descriptor.getThisClass();
+                String typeName = thisClass.getName();
                 ClassLoader joinpointClassLoader = thisClass.getClassLoader();
                 try {
                     ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                    if(aopContext.isDiagnosticClass(thisClass.getName())) {
-                        LOGGER.info("^Creating joinpoint '{}' loaded by ClassLoader '{}'.", descriptor.getAccessibleName(), joinpointClassLoader);
+                    if(aopContext.isDiagnosticClass(typeName)) {
+                        LOGGER.info("^Creating joinpoint for type '{}' loaded by ClassLoader '{}'. \n  {}", 
+                                typeName, joinpointClassLoader, descriptor.getAccessibleName());
                     }
 
                     joinpoint = new DefaultProceedingJoinpoint<T, E>(descriptor, thisObject, arguments);
                 } catch(Throwable t) {
-                    LOGGER.warn("Failed to create joinpoint '{}' loaded by ClassLoader '{}'.", descriptor.getAccessibleName(), joinpointClassLoader, t);
+                    LOGGER.warn("Failed to create joinpoint for type '{}' loaded by ClassLoader '{}'. \n  {}", 
+                            typeName, joinpointClassLoader, descriptor.getAccessibleName(), t);
                 } finally {
                     ThreadContext.setContextClassLoader(existingClassLoader);
                 }

@@ -16,8 +16,8 @@
 package io.gemini.aop.weaver.advice;
 
 import io.gemini.aop.java.lang.BootstrapAdvice;
-import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.java.lang.BootstrapAdvice.Dispatcher;
+import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
@@ -37,20 +37,21 @@ public class InstanceConstructorAdvice {
             @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
+        if(descriptor == null)
+            return;
+
         // 1.create dispatcher
         dispatcher = BootstrapAdvice.Bridger.dispacther(descriptor, null, arguments);
-        if(null == dispatcher) {
+        if(dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return;
-        }
 
         // 2.invoke BeforeAdvices
         dispatcher.dispatch();
 
         // check invocation result
-        if(dispatcher.hasAdviceThrowing()) {
+        if(dispatcher.hasAdviceThrowing())
             throw dispatcher.getAdviceThrowing();
-        }
 
         // 3.replace arguments
         arguments = dispatcher.getArguments();
@@ -66,7 +67,7 @@ public class InstanceConstructorAdvice {
 //            @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
-        if(null == dispatcher)
+        if(dispatcher == null)
             return;
 
         // 1.set target returning
@@ -77,13 +78,7 @@ public class InstanceConstructorAdvice {
         dispatcher.dispatch();
 
         // check invocation result
-        if(dispatcher.hasAdviceThrowing()) {
-            // TODO: test it
+        if(dispatcher.hasAdviceThrowing()) 
             throw dispatcher.getAdviceThrowing();
-        } 
-//        else if(dispatcher.hasAdviceReturning()) {
-            // bytebuddy will remove this assignment.
-//            thisObject = dispatcher.getAdviceReturning();
-//        }
     }
 }

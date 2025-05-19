@@ -64,8 +64,8 @@ class DefaultAspectFactory implements AspectFactory {
     private final AspectoryContext aspectoryContext;
 
 
-    private List<AspectSpecHolder<AspectSpec>> aspectSpecHolders;
-    private List<? extends AspectRepository<AspectSpec>> aspectRepositories;
+    private List<? extends AspectSpec> aspectSpecs;
+    private List<? extends AspectRepository<? extends AspectSpec>> aspectRepositories;
 
 
     // cache aspects per ClassLoader
@@ -81,8 +81,8 @@ class DefaultAspectFactory implements AspectFactory {
 
     private void initialize(AopContext aopContext, AspectoryContext aspectoryContext, AspectoriesContext aspectoriesContext) {
         // 1.create AspectRepository
-        this.aspectSpecHolders = this.scanAspectSpecs(aopContext, aspectoryContext, aspectoriesContext);
-        this.aspectRepositories = this.resolveAspectRepository(aspectoryContext, aspectoriesContext, this.aspectSpecHolders);
+        this.aspectSpecs = this.scanAspectSpecs(aopContext, aspectoryContext, aspectoriesContext);
+        this.aspectRepositories = this.resolveAspectRepository(aspectoryContext, aspectoriesContext, this.aspectSpecs);
 
         // validate AspectRepository
         AspectContext validationContext = aspectoryContext.createAspectContext(aspectoryContext.getAspectClassLoader(), null, true);
@@ -100,25 +100,23 @@ class DefaultAspectFactory implements AspectFactory {
         this.classLoaderAspectMap = new ConcurrentReferenceHashMap<>();
     }
 
-    private List<AspectSpecHolder<AspectSpec>> scanAspectSpecs(AopContext aopContext, AspectoryContext aspectoryContext, 
+    private List<? extends AspectSpec> scanAspectSpecs(AopContext aopContext, AspectoryContext aspectoryContext, 
             AspectoriesContext aspectoriesContext) {
         long startedAt = System.nanoTime();
         if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
             LOGGER.info("^Scanning AspectSpec.");
         }
 
-
-        // filter AspectSpecHolders
-        final List<AspectSpecHolder<AspectSpec>> aspectSpecHolders = new ArrayList<>();
-        for(AspectSpecScanner<AspectSpec> aspectSpecScanner : aspectoriesContext.getAspectSpecScanners()) {
-            List<AspectSpecHolder<AspectSpec>> specHolders = aspectSpecScanner.scan(aspectoryContext);
-            if(specHolders == null)
+        final List<AspectSpec> aspectSpecs = new ArrayList<>();
+        for(AspectSpecScanner<? extends AspectSpec> aspectSpecScanner : aspectoriesContext.getAspectSpecScanners()) {
+            List<? extends AspectSpec> specs = aspectSpecScanner.scan(aspectoryContext);
+            if(specs == null)
                 continue;
 
-            for(AspectSpecHolder<AspectSpec> aspectSpecHolder : specHolders) {
-                // check aspect name
-                String aspectName = aspectSpecHolder.getAspectName();
+            for(AspectSpec aspectSpec : specs) {
+                String aspectName = aspectSpec.getAspectName();
 
+                // filter scanned AspectSpecs
                 if(aspectoryContext.getIncludedAspectsMatcher().matches(aspectName) == false) {
                     continue;
                 }
@@ -126,25 +124,25 @@ class DefaultAspectFactory implements AspectFactory {
                 if(aspectoryContext.getExcludedAspectsMatcher().matches(aspectName) == true)
                     continue;
 
-                aspectSpecHolders.add(aspectSpecHolder);
+                aspectSpecs.add(aspectSpec);
             }
         }
 
         if(aopContext.getDiagnosticLevel().isSimpleEnabled() == false) 
             LOGGER.info("$Took '{}' seconds to load {} AspectSpecs under '{}' Aspectory.", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, aspectSpecHolders.size(), aspectoryContext.getAspectoryName());
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, aspectSpecs.size(), aspectoryContext.getAspectoryName());
         else
             LOGGER.info("$Took '{}' seconds to load {} AspectSpecs under '{}' Aspectory. {}", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, aspectSpecHolders.size(), aspectoryContext.getAspectoryName(),
-                    aspectSpecHolders.size() == 0 ? "" : aspectSpecHolders.stream().map( holder -> holder.getAspectName() ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, aspectSpecs.size(), aspectoryContext.getAspectoryName(),
+                    aspectSpecs.size() == 0 ? "" : aspectSpecs.stream().map( holder -> holder.getAspectName() ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
 
-        return aspectSpecHolders;
+        return aspectSpecs;
     }
 
-    private List<? extends AspectRepository<AspectSpec>> resolveAspectRepository(
+    private List<? extends AspectRepository<? extends AspectSpec>> resolveAspectRepository(
             AspectoryContext aspectoryContext,
             AspectoriesContext aspectoriesContext,
-            List<AspectSpecHolder<AspectSpec>> aspectSpecHolders) {
+            List<? extends AspectSpec> aspectSpecs) {
         long startedAt = System.nanoTime();
         if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
             LOGGER.info("^Resolving AspectSpec.");
@@ -152,15 +150,15 @@ class DefaultAspectFactory implements AspectFactory {
 
         List<AspectRepositoryResolver<AspectSpec, AspectSpec>> aspectRepositoryResolvers = aspectoriesContext.getAspectRepositoryResolvers();
         List<? extends AspectRepository<AspectSpec>> aspectRepositories = this.aopContext.getGlobalTaskExecutor().executeTasks(
-                aspectSpecHolders, 
-                specHolders ->
-                    specHolders.stream()
-                    .flatMap(aspectSpecHolder -> 
+                aspectSpecs, 
+                specs ->
+                    specs.stream()
+                    .flatMap(aspectSpec -> 
                         aspectRepositoryResolvers.stream()
-                            .filter( aspectRepositoryResolver -> 
-                                aspectRepositoryResolver.support(aspectSpecHolder) )
-                            .flatMap( r -> 
-                                r.resolve(aspectSpecHolder, aspectoryContext )
+                            .filter( resolver -> 
+                                resolver.support(aspectSpec) )
+                            .flatMap( resolver -> 
+                                resolver.resolve(aspectSpec, aspectoryContext )
                             .stream()
                         )
                     )
@@ -180,13 +178,17 @@ class DefaultAspectFactory implements AspectFactory {
     }
 
 
-    Map<String, List<AspectSpecHolder<AspectSpec>>> getAspectSpecHolders() {
-        return Collections.singletonMap(this.aspectoryContext.getAspectoryName(), this.aspectSpecHolders);
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, List<? extends AspectSpec>> getAspectSpecs() {
+        return Collections.singletonMap(this.aspectoryContext.getAspectoryName(), this.aspectSpecs);
     }
 
 
-    /*
-     * @see io.gemini.aop.aspectory.AspectFactory#getAspects(net.bytebuddy.description.type.TypeDescription, java.lang.ClassLoader, net.bytebuddy.utility.JavaModule)
+    /**
+     * {@inheritDoc}
      */
     @Override
     public Map<? extends MethodDescription, List<? extends Aspect>> getAspects(TypeDescription typeDescription, 
@@ -299,7 +301,7 @@ class DefaultAspectFactory implements AspectFactory {
             AspectContext aspectContext = aspectoryContext.createAspectContext(joinpointClassLoader, javaModule);
 
             List<Aspect> aspects = new ArrayList<>();
-            for(AspectRepository<AspectSpec> aspectRepository : this.aspectRepositories) {
+            for(AspectRepository<? extends AspectSpec> aspectRepository : this.aspectRepositories) {
                 try {
                     Aspect aspect = aspectRepository.create(aspectContext);
                     if(aspect != null)
@@ -410,19 +412,6 @@ class DefaultAspectFactory implements AspectFactory {
             }
 
             candidates.add(pointcutAspect);
-        }
-
-        // remove duplicate advice
-        for(int i = 0; i < candidates.size(); i++) {
-            for(int j=candidates.size()-1; j>i; j--) {
-                Aspect aspect = candidates.get(j);
-                if(candidates.get(i).getAdviceClass() == aspect.getAdviceClass()) {
-                    if(LOGGER.isDebugEnabled())
-                        LOGGER.debug("Removed dupplicate advice '{}'.", aspect);
-
-                    candidates.remove(j);
-                }
-            }
         }
 
         return candidates;

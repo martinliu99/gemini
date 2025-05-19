@@ -37,18 +37,17 @@ public class ClassInitializerAdvice {
             @DescriptorOffset.Descriptor Object descriptor,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
+        if(descriptor == null)
+            return false;
+
         // 1.create dispatcher
         dispatcher = BootstrapAdvice.Bridger.dispacther(descriptor, null, Dispatcher.ARGUMENTS);
-        if(null == dispatcher) {
+        if(dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return false;
-        }
 
         // 2.invoke BeforeAdvices
         dispatcher.dispatch();
-
-        // 3.replace arguments
-//        arguments = dispatcher.getArguments();
 
         return dispatcher.hasAdviceThrowing() || dispatcher.hasAdviceReturning();
     }
@@ -60,7 +59,7 @@ public class ClassInitializerAdvice {
             @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
-        if(null == dispatcher)
+        if(dispatcher == null)
             return;
 
         // 1.assign return value if BeforeAdvice marked return before execute instrumented method

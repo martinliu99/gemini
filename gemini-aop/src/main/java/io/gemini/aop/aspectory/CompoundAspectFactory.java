@@ -34,7 +34,6 @@ import io.gemini.aop.AopContext;
 import io.gemini.aop.Aspect;
 import io.gemini.aop.AspectFactory;
 import io.gemini.api.aspect.AspectSpec;
-import io.gemini.core.OrderComparator;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
@@ -116,10 +115,11 @@ class CompoundAspectFactory implements AspectFactory {
     }
 
 
-    Map<String, List<AspectSpecHolder<AspectSpec>>> getAspectSpecHolders() {
+    @Override
+    public Map<String, List<? extends AspectSpec>> getAspectSpecs() {
         return this.aspectFactoryMap.values().stream()
                 .flatMap( e -> 
-                    e.getAspectSpecHolders().entrySet().stream() )
+                    e.getAspectSpecs().entrySet().stream() )
                 .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
     }
 
@@ -131,26 +131,12 @@ class CompoundAspectFactory implements AspectFactory {
         // collect aspects per method
         for(AspectFactory aspectFactory : aspectFactoryMap.values()) {
             for(Entry<? extends MethodDescription, List<? extends Aspect>> entry : aspectFactory.getAspects(typeDescription, joinpointClassLoader, javaModule).entrySet()) {
-                MethodDescription method = entry.getKey();
-                List<Aspect> aspects = methodAspectMap.get(method);
-                if(aspects == null) {
-                    aspects = new ArrayList<>();
-                    methodAspectMap.put(method, aspects);
-                }
-
-                aspects.addAll(entry.getValue());
+                methodAspectMap.computeIfAbsent(entry.getKey(), key -> new ArrayList<>() )
+                    .addAll(entry.getValue());
             }
         }
 
-        // sort aspects
-        Map<MethodDescription, List<? extends Aspect>> results = new HashMap<>();
-        for(Entry<MethodDescription, List<Aspect>> entry : methodAspectMap.entrySet()) {
-            List<Aspect> aspects = entry.getValue();
-            OrderComparator.sort(aspects);
-            results.put(entry.getKey(), aspects);
-        }
-
-        return results;
+        return new HashMap<MethodDescription, List<? extends Aspect>>(methodAspectMap);
     }
 
     @Override

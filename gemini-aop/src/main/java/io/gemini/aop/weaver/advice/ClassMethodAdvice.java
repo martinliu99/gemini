@@ -38,12 +38,14 @@ public class ClassMethodAdvice {
             @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
+        if(descriptor == null)
+            return false;
+
         // 1.create dispatcher
         dispatcher = BootstrapAdvice.Bridger.dispacther(descriptor, null, arguments);
-        if(null == dispatcher) {
+        if(dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return false;
-        }
 
         // 2.invoke BeforeAdvices
         dispatcher.dispatch();
@@ -61,7 +63,7 @@ public class ClassMethodAdvice {
             @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
-        if(null == dispatcher)
+        if(dispatcher == null)
             return;
 
         // 1.assign return value if BeforeAdvices marked return before execute instrumented method

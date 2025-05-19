@@ -18,7 +18,6 @@ package io.gemini.aop;
 import java.io.Closeable;
 import java.io.IOException;
 import java.security.ProtectionDomain;
-import java.util.List;
 
 import net.bytebuddy.agent.builder.AgentBuilder.RawMatcher;
 import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
@@ -38,9 +37,6 @@ public interface AspectWeaver extends RawMatcher, Transformer, Closeable {
 
     Builder<?> transform(Builder<?> builder, TypeDescription typeDescription, ClassLoader joinpointClassLoader,
             JavaModule javaModule, ProtectionDomain protectionDomain);
-
-
-    List<? extends Aspect> getAspectChain(ClassLoader joinpointClassLoader, String typeName, String methodSignature);
 
 
     void close() throws IOException;

@@ -166,11 +166,20 @@ public class ClassUtils {
     }
 
 
+    /**
+     * Determines if the class or interface represented by leftType parameter 
+     * is either the same as or is a super class or super interface represented
+     * by rightType parameter.
+     * 
+     * @param leftType
+     * @param rightType
+     * @return
+     */
     public static boolean isAssignableFrom(Class<?> leftType, Class<?> rightType) {
-        if(leftType== null || rightType == null)
+        if(leftType == null || rightType == null)
             return false;
 
-        if(isAssignablePrimitive(leftType, rightType) == true) {
+        if(isAssignablePrimitiveFrom(leftType, rightType) == true) {
             return true;
         }
 
@@ -182,7 +191,7 @@ public class ClassUtils {
      * @param rightType
      * @return
      */
-    private static boolean isAssignablePrimitive(Class<?> leftType, Class<?> rightType) {
+    private static boolean isAssignablePrimitiveFrom(Class<?> leftType, Class<?> rightType) {
         if(leftType.isPrimitive() && rightType.isPrimitive()) {
             return leftType.equals(rightType);
         } else if(leftType.isPrimitive()) {
@@ -197,9 +206,9 @@ public class ClassUtils {
     }
 
     /**
-     * Determines if the class or interface represented by left parameter 
+     * Determines if the class or interface represented by leftType parameter 
      * is either the same as or is a super class or super interface represented
-     * by right parameter.
+     * by rightType parameter.
      * 
      * @param leftType
      * @param rightType
@@ -214,14 +223,14 @@ public class ClassUtils {
             return true;
 
         // 2.primitive return
-        if(isAssignablePrimitive(leftType, rightType) == true)
+        if(isAssignablePrimitiveFrom(leftType, rightType) == true)
             return true;
 
         // 3.reference return 
         return leftType.accept(TypeDescription.Generic.Visitor.Assigner.INSTANCE).isAssignableFrom(rightType);
     }
 
-    private static boolean isAssignablePrimitive(Generic leftType, Generic rightType) {
+    private static boolean isAssignablePrimitiveFrom(Generic leftType, Generic rightType) {
         if(leftType.isPrimitive() && rightType.isPrimitive()) {
             return leftType.equals(rightType);
         } else if(leftType.isPrimitive()) {
@@ -236,7 +245,7 @@ public class ClassUtils {
     }
 
     /**
-     * Determines if left parameter equals to right parameter.
+     * Determines if leftType parameter equals to rightType parameter.
      * 
      * @param leftType
      * @param rightType
@@ -268,19 +277,20 @@ public class ClassUtils {
 
 
     /**
-     * Validate rightType can access leftType
+     * Determine calleeType under different ClassLoader is visible to callerType.
      * 
-     * @param leftType
-     * @param rightType
+     * @param callerType
+     * @param calleeType
      * @return
      */
-    public static boolean isAccessibleTo(TypeDescription leftType, TypeDescription rightType) {
-        if(leftType.isPrimitive())
+    public static boolean isVisibleTo(TypeDescription calleeType, TypeDescription callerType) {
+        if(calleeType.isPrimitive())
             return true;
 
-        return leftType.isArray()
-                ? isAccessibleTo(leftType.getComponentType(), rightType)
-                : leftType.isPublic() || (leftType.isProtected() && leftType.isSamePackage(rightType));
+        // public or same package protected type
+        return calleeType.isArray()
+                ? isVisibleTo(calleeType.getComponentType(), callerType)
+                : calleeType.isPublic() || (calleeType.isProtected() && calleeType.isSamePackage(callerType));
     }
 
 

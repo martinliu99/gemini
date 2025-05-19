@@ -49,7 +49,9 @@ public class ObjectFactoryTests {
         objectFactory.createObject(InnerClass.class);
     }
 
-    public static class InnerClass {
-        
+    private static class InnerClass {
+
+        @SuppressWarnings("unused")
+        public InnerClass() {}
     }
 }

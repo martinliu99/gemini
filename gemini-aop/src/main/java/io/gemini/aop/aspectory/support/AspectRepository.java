@@ -26,13 +26,13 @@ import io.gemini.aop.Aspect;
 import io.gemini.aop.ExprPointcut;
 import io.gemini.aop.ExprPointcut.AspectJExprPointcut;
 import io.gemini.aop.aspectory.AspectContext;
-import io.gemini.aop.aspectory.AspectSpecHolder;
 import io.gemini.aop.aspectory.support.AspectJAdvice.ClassMaker;
 import io.gemini.aop.aspectory.support.AspectJAdvice.MethodSpec;
 import io.gemini.api.aspect.Advice;
 import io.gemini.api.aspect.AspectSpec;
 import io.gemini.api.aspect.Pointcut;
 import io.gemini.core.object.ObjectFactory;
+import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -52,12 +52,12 @@ public interface AspectRepository<T extends AspectSpec> {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(AspectRepository.class);
 
-        protected AspectSpecHolder<T> aspectSpecHolder;
+        protected T aspectSpec;
         protected volatile boolean isValid = true;
 
 
-        public AbstractBase(AspectSpecHolder<T> aspectSpecHolder) {
-            this.aspectSpecHolder = aspectSpecHolder;
+        public AbstractBase(T aspectSpec) {
+            this.aspectSpec = aspectSpec;
         }
 
         @Override
@@ -79,14 +79,14 @@ public interface AspectRepository<T extends AspectSpec> {
                 Supplier<? extends Advice> adviceSupplier = this.doCreateAdviceSupplier(aspectContext, adviceClassSupplier);
 
                 return new Aspect.PointcutAspect.Default(
-                        aspectSpecHolder.getAspectName(), 
-                        aspectSpecHolder.getAspectSpec().isPerInstance(),
+                        aspectSpec.getAspectName(), 
+                        aspectSpec.isPerInstance(),
                         adviceClassSupplier, adviceSupplier, 
                         pointcut,
-                        aspectSpecHolder.getAspectSpec().getOrder()
+                        aspectSpec.getOrder()
                 );
             } catch(Throwable t) {
-                LOGGER.warn("Failed to create aspect with AspectSpec '{}'.", aspectSpecHolder.getAspectName(), t);
+                LOGGER.warn("Failed to create aspect with AspectSpec '{}'.", aspectSpec.getAspectName(), t);
 
                 this.isValid = false;
                 return null;
@@ -140,16 +140,17 @@ public interface AspectRepository<T extends AspectSpec> {
                     aspectJExpressionPointcut.checkReadyToMatch();
                     return true;
                 } catch(Throwable t) {
+                    String aspectName = aspectSpec.getAspectName();
                     if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
-                        LOGGER.warn("Removed invalid AspectJExpressionPointcut: \n  pointcut expression: {} \n  aspect spec: {} \n    ClassLoader: '{}' \n", 
-                                aspectJExpressionPointcut.getPointcutExpr(), aspectSpecHolder.getAspectName(), aspectContext.getClassLoader(), t);
+                        LOGGER.warn("Ignored AspectSpec with unparsable AspectJ ExprPointcut. \n  AspectSpec: {} \n  PointcutExpression: {} \n    ClassLoader: '{}' \n", 
+                                aspectName, aspectJExpressionPointcut.getPointcutExpr(), aspectContext.getClassLoader(), t);
 
                         this.isValid = false;
                         return false;
                     } else {
                         if(aspectContext.isValidateContext() == false) {
-                            LOGGER.info("Ignored invalid AspectJExpressionPointcut: \n  pointcut expression: {} \n  aspect spec: {} \n  ClassLoader: '{}' \n", 
-                                    aspectJExpressionPointcut.getPointcutExpr(), aspectSpecHolder.getAspectName(), aspectContext.getClassLoader(), t);
+                            LOGGER.warn("Ignored AspectSpec with invalid AspectJ ExprPointcut. \n  AspectSpec: {} \n  PointcutExpression: {} \n  ClassLoader: '{}' \n", 
+                                    aspectName, aspectJExpressionPointcut.getPointcutExpr(), aspectContext.getClassLoader(), t);
                         }
 
                         return false;
@@ -161,19 +162,54 @@ public interface AspectRepository<T extends AspectSpec> {
         }
 
 
+        /**
+         * delay advice class loading to reduce aspect matching time
+         * 
+         * @param aspectContext
+         * @return
+         */
         @SuppressWarnings("unchecked")
         protected Supplier<Class<? extends Advice>> doCreateAdviceClassSupplier(AspectContext aspectContext) {
             return new Supplier<Class<? extends Advice>>() {
 
-                private Class<? extends Advice> adviceClass;
+                private boolean isResolved;
+                private Class<? extends Advice> adviceClass = null;
 
                 @Override
                 public Class<? extends Advice> get() {
-                    if(this.adviceClass == null) {
-                        this.adviceClass = (Class<? extends Advice>) aspectContext.getObjectFactory().loadClass(
-                                aspectSpecHolder.getAspectSpec().getAdviceClassName());
+                    if(isResolved)
+                        return adviceClass;
+
+                    // try to load advice class
+                    ObjectFactory objectFactory = aspectContext.getObjectFactory();
+                    String aspectName = aspectSpec.getAspectName();
+
+                    String adviceClassName = aspectSpec.getAdviceClassName();
+                    Class<?> clazz = null;
+                    try {
+                        clazz = objectFactory.loadClass(adviceClassName);
+
+                        if(objectFactory.isInstantiatable(clazz) == false) {
+                            LOGGER.warn("Ignored AspectSpec with non top-level or nested, concrete AdviceClass. \n  AspectSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
+                                    aspectName, adviceClassName, aspectContext.getClassLoader());
+                            return null;
+                        }
+
+                        if(Advice.class.isAssignableFrom(clazz) == false) {
+                            LOGGER.warn("Ignored AspectSpec with non {} AdviceClass. \n  AspectSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
+                                    Advice.class.getName(), aspectName, adviceClassName, aspectContext.getClassLoader());
+                            return null;
+                        }
+
+                        this.adviceClass = (Class<? extends Advice>) clazz;
+                        return this.adviceClass;
+                    } catch(Throwable t) {
+                        LOGGER.warn("Failed to load AdviceClass. \n  AspectSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
+                                aspectName, adviceClassName, aspectContext.getClassLoader(), t);
+                        return null;
+                    } finally {
+                        isResolved = true;
                     }
-                    return this.adviceClass;
                 }
             };
         }
@@ -186,14 +222,19 @@ public interface AspectRepository<T extends AspectSpec> {
         protected Supplier<? extends Advice> doCreateAdviceSupplier(
                 AspectContext aspectContext, Supplier<Class<? extends Advice>> adviceClassSupplier) {
             return () -> {
+                Class<? extends Advice> adviceClass = adviceClassSupplier.get();
+                if(adviceClass == null)
+                    return null;
+
+                // try to instantiate advice object
                 Advice advice = null;
                 try {
                     ObjectFactory objectFactory = aspectContext.getObjectFactory();
 
-                    advice = (Advice) objectFactory.createObject(adviceClassSupplier.get());
+                    advice = (Advice) objectFactory.createObject(adviceClass);
                 } catch (Exception e) {
-                    // TODO
-                    throw new RuntimeException(e);
+                    LOGGER.warn("Ignored AspectSpec with uninstantiable AdviceClass. \n  AspectSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
+                            aspectSpec.getAspectName(), adviceClass, aspectContext.getClassLoader(), e);
                 }
 
                 return advice;
@@ -202,28 +243,29 @@ public interface AspectRepository<T extends AspectSpec> {
 
         @Override
         public String toString() {
-            return this.aspectSpecHolder.getAspectName();
+            return this.aspectSpec.getAspectName();
         }
     }
 
 
     class ForPojoPointcut extends AbstractBase<AspectSpec.PojoPointcutSpec> {
 
-        public ForPojoPointcut(AspectSpecHolder<AspectSpec.PojoPointcutSpec> aspectSpecHolder) {
-            super(aspectSpecHolder);
+        public ForPojoPointcut(AspectSpec.PojoPointcutSpec aspectSpec) {
+            super(aspectSpec);
         }
 
         @Override
         protected Pointcut doCreatePointcut(AspectContext aspectContext) {
-            Pointcut pointcut = aspectSpecHolder.getAspectSpec().getPointcut();
+            Pointcut pointcut = aspectSpec.getPointcut();
             if(this.doValidatePointcut(aspectContext, pointcut) == false) {
                 return null;
             }
 
             TypeDescription adviceType = aspectContext.getTypePool()
-                    .describe(aspectSpecHolder.getAspectSpec().getAdviceClassName())
+                    .describe(aspectSpec.getAdviceClassName())
                     .resolve();
-            AdviceAwareMethodMatcher.PojoAdvice methodMatcher = new AdviceAwareMethodMatcher.PojoAdvice(pointcut.getMethodMatcher(), adviceType);
+            AdviceAwareMethodMatcher.PojoAdvice methodMatcher = new AdviceAwareMethodMatcher.PojoAdvice(
+                    aspectSpec.getAspectName(), pointcut.getMethodMatcher(), adviceType);
             if(methodMatcher.isValid == false)
                 return null;
 
@@ -238,22 +280,22 @@ public interface AspectRepository<T extends AspectSpec> {
 
     class ForExprPointcut extends AbstractBase<AspectSpec.ExprPointcutSpec> {
 
-        public ForExprPointcut(AspectSpecHolder<AspectSpec.ExprPointcutSpec> aspectSpecHolder) {
-            super(aspectSpecHolder);
+        public ForExprPointcut(AspectSpec.ExprPointcutSpec aspectSpec) {
+            super(aspectSpec);
         }
 
         @Override
         protected Pointcut doCreatePointcut(AspectContext aspectContext) {
-            ExprPointcut exprPointcut = this.doCreateExprPointcut(aspectContext, aspectSpecHolder.getAspectSpec().getPointcutExpression(), null, null, null);
+            ExprPointcut exprPointcut = this.doCreateExprPointcut(aspectContext, aspectSpec.getPointcutExpression(), null, null, null);
             if(this.doValidatePointcut(aspectContext, exprPointcut) == false) {
                 return null;
             }
 
             TypeDescription adviceType = aspectContext.getTypePool()
-                    .describe(aspectSpecHolder.getAspectSpec().getAdviceClassName())
+                    .describe(aspectSpec.getAdviceClassName())
                     .resolve();
-            AdviceAwareMethodMatcher.PojoAdvice methodMatcher = 
-                    new AdviceAwareMethodMatcher.PojoAdvice(exprPointcut.getMethodMatcher(), adviceType);
+            AdviceAwareMethodMatcher.PojoAdvice methodMatcher = new AdviceAwareMethodMatcher.PojoAdvice(
+                    aspectSpec.getAspectName(), exprPointcut.getMethodMatcher(), adviceType);
             if(methodMatcher.isValid() == false)
                 return null;
 
@@ -270,33 +312,19 @@ public interface AspectRepository<T extends AspectSpec> {
 
         private final ClassMaker classMaker;
 
-        public ForAspectJAdvice(AspectSpecHolder<AspectSpec.ExprPointcutSpec> aspectSpecHolder, ClassMaker classMaker) {
-            super(aspectSpecHolder);
+
+        public ForAspectJAdvice(AspectSpec.ExprPointcutSpec aspectSpec, ClassMaker classMaker) {
+            super(aspectSpec);
             this.classMaker = classMaker;
         }
 
-        @Override
-        protected Supplier<Class<? extends Advice>> doCreateAdviceClassSupplier(AspectContext aspectContext) {
-            return new Supplier<Class<? extends Advice>>() {
-
-                private Class<? extends Advice> adviceClass;
-
-                @Override
-                public Class<? extends Advice> get() {
-                    if(this.adviceClass == null) {
-                        this.adviceClass = classMaker.make(aspectContext);
-                    }
-                    return this.adviceClass;
-                }
-            };
-        }
 
         @Override
         protected Pointcut doCreatePointcut(AspectContext aspectContext) {
             MethodSpec methodSpec = classMaker.getMethodSpec();
             String[] pointcutParameterNames = methodSpec.getPointcutParameterNames().toArray(new String[] {});
             TypeDescription[] pointcutParameterTypes = methodSpec.getPointcutParameterTypes().toArray(new TypeDescription[] {});
-            String pointcutExpression = aspectSpecHolder.getAspectSpec().getPointcutExpression();
+            String pointcutExpression = aspectSpec.getPointcutExpression();
 
             ExprPointcut exprPointcut = this.doCreateExprPointcut(aspectContext, pointcutExpression, classMaker.getAspectJTypeDescription(), pointcutParameterNames, pointcutParameterTypes);
             if(this.doValidatePointcut(aspectContext, exprPointcut) == false) {
@@ -311,29 +339,73 @@ public interface AspectRepository<T extends AspectSpec> {
         }
 
         @Override
+        protected Supplier<Class<? extends Advice>> doCreateAdviceClassSupplier(AspectContext aspectContext) {
+            return new Supplier<Class<? extends Advice>>() {
+
+                private boolean isResolved;
+                private Class<? extends Advice> adviceClass = null;
+
+                @Override
+                public Class<? extends Advice> get() {
+                    if(isResolved) 
+                        return this.adviceClass;
+
+                    // try to make advice class
+                    String aspectJClassName = classMaker.getAspectJTypeDescription().getTypeName();
+                    String aspectName = aspectSpec.getAspectName();
+                    try {
+                        aspectContext.getObjectFactory().loadClass(aspectJClassName);
+                    } catch(Throwable t) {
+                        LOGGER.warn("Failed to load AspectJClass. \n  AspectSpec: {} \n  AdviceJClass: {} \n  ClassLoader: '{}' \n",
+                                aspectName, aspectJClassName, aspectContext.getClassLoader(), t);
+                        return null;
+                    } finally {
+                        this.isResolved = true;
+                    }
+
+                    try {
+                        this.adviceClass = classMaker.make(aspectContext);
+                        return this.adviceClass;
+                    } catch(Throwable t) {
+                        LOGGER.warn("Failed to generate adapter class for AspectJ advice method. \n  AspectSpec: {} \n  AdapterClass: {} \n  ClassLoader: '{}' \n",
+                                aspectName, classMaker.getAdviceClassName(), aspectContext.getClassLoader(), t);
+                        return null;
+                    } finally {
+                        this.isResolved = true;
+                    }
+                }
+            };
+        }
+
+        @Override
         protected Supplier<? extends Advice> doCreateAdviceSupplier(
                 AspectContext aspectContext, Supplier<Class<? extends Advice>> adviceClassSupplier) {
             return new Supplier<Advice>() {
 
                 private final Class<?> aspectJClass = aspectContext.getObjectFactory().loadClass(
                         classMaker.getAspectJTypeDescription().getTypeName());
-                private Class<? extends Advice> adviceClass;
 
+                private Class<? extends Advice> adviceClass;
                 private Constructor<?> adviceConstructor;
 
                 @Override
                 public Advice get() {
                     try {
-                        if(adviceClass == null) {
+                        if(adviceClass == null)
                             this.adviceClass = adviceClassSupplier.get();
-                            this.adviceConstructor = adviceClass.getConstructor(aspectJClass);
-                        }
+                        if(adviceClass == null)
+                            return null;
 
+                        this.adviceConstructor = adviceClass.getConstructor(aspectJClass);
+                        ReflectionUtils.makeAccessible(adviceClass, adviceConstructor);
+
+                        // try to instantiate advice object
                         return (Advice) this.adviceConstructor.newInstance(
                                 aspectContext.getObjectFactory().createObject(aspectJClass) );
                     } catch (Throwable t) {
-//                        TODO
-                        throw new RuntimeException(t);
+                        LOGGER.warn("Failed to instantiate adapter class for AspectJ advice method. \n  AspectSpec: {} \n  AdapterClass: {} \n  ClassLoader: '{}' \n",
+                                aspectSpec.getAspectName(), classMaker.getAdviceClassName(), aspectContext.getClassLoader(), t);
+                        return null;
                     }
                 }
             };

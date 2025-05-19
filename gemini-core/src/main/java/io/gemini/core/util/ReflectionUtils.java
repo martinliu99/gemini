@@ -16,8 +16,8 @@
 package io.gemini.core.util;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class ReflectionUtils {
@@ -37,16 +37,16 @@ public class ReflectionUtils {
         return null;
     }
  
-    public static void makeAccessible(Method method) {
-        if ((!Modifier.isPublic(method.getModifiers()) ||
-                !Modifier.isPublic(method.getDeclaringClass().getModifiers())) && !method.isAccessible()) {
-            method.setAccessible(true);
+    public static void makeAccessible(Class<?> clazz, Executable executable) {
+        if ((!Modifier.isPublic(executable.getModifiers()) ||
+                !Modifier.isPublic(clazz.getModifiers())) && !executable.isAccessible()) {
+            executable.setAccessible(true);
         }
     }
 
-    public static void makeAccessible(Field field) {
+    public static void makeAccessible(Class<?> clazz, Field field) {
         if ((!Modifier.isPublic(field.getModifiers()) ||
-                !Modifier.isPublic(field.getDeclaringClass().getModifiers()) ||
+                !Modifier.isPublic(clazz.getModifiers()) ||
                 Modifier.isFinal(field.getModifiers())) && !field.isAccessible()) {
             field.setAccessible(true);
         }

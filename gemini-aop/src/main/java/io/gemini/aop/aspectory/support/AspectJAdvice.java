@@ -92,7 +92,7 @@ import net.bytebuddy.pool.TypePool;
  * @author   martin.liu
  * @since	 1.0
  */
-public interface AspectJAdvice {
+interface AspectJAdvice {
 
     List<Class<? extends Annotation>> ADVICE_ANNOTATIONS = Arrays.asList(
             Before.class, After.class, AfterReturning.class, AfterThrowing.class, 
@@ -135,8 +135,11 @@ public interface AspectJAdvice {
         private boolean isVoidReturningOfTargetMethod = false;
 
 
-        public MethodSpec(String pointcutExpression, MethodDescription adviceMethodDescription, 
+        public MethodSpec(String aspectName, 
+                String pointcutExpression, MethodDescription adviceMethodDescription, 
                 Class<? extends Annotation> annotationType, AnnotationDescription annotationDescription) {
+            super(aspectName);
+
             this.pointcutExpression = pointcutExpression;
             this.adviceMethodDescription = adviceMethodDescription;
             this.annotationDescription = annotationDescription;
@@ -177,10 +180,11 @@ public interface AspectJAdvice {
             if(StringUtils.hasText(argNamesStr)) {
                 StringTokenizer st = new StringTokenizer(argNamesStr, ",");
                 if(st.countTokens() != parameters.size() && st.countTokens() != parameters.size() - 1) {
-                    LOGGER.warn("Ignored AspectJ advice method which parameters must be consistent with argNames. \n"
-                            + "  argNames: {} \n    Advice method: {} \n", 
-                            argNamesStr, 
-                            MethodUtils.getMethodSignature(adviceMethodDescription)
+                    LOGGER.warn("Ignored AspectJ advice method with parameters is inconsistent with 'argNames' attribute. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n  ArgNames: {} \n", 
+                            aspectName, 
+                            MethodUtils.getMethodSignature(adviceMethodDescription),
+                            argNamesStr
                     );
 
                     this.isValid = false;
@@ -200,9 +204,11 @@ public interface AspectJAdvice {
             // 2.parse parameter names in MethodParameters section
             // validate parameter name for index0 parameter
             if(index0Param.getName().equals(index0Param.getActualName()) == false) {
-                LOGGER.warn("Ignored AspectJ advice method which must explicitly provide argNames or compile with javac -parameters. \n"
-                        + "  Advice method: {} \n {} \n {} \n",
-                        MethodUtils.getMethodSignature(adviceMethodDescription), index0Param.getName(), index0Param.getActualName()
+                LOGGER.warn("Ignored AspectJ advice method without parameter reflection support and 'argNames' attribute. \n"
+                        + "  AspectSpec: {} \n  AdviceMethod: {} \n {} \n {} \n",
+                        aspectName, 
+                        MethodUtils.getMethodSignature(adviceMethodDescription), 
+                        index0Param.getName(), index0Param.getActualName()
                 );
 
                 this.isValid = false;
@@ -273,10 +279,11 @@ public interface AspectJAdvice {
                 return null;
 
             if(parameterDescriptionMap.containsKey(returningParameter) == false) { 
-                LOGGER.warn("Ignored AspectJ advice method which returning parameter must exist. \n"
-                        + "  returning parameter: {} \n  advice method: {} \n",
-                        returningParameter,
-                        MethodUtils.getMethodSignature(adviceMethodDescription)
+                LOGGER.warn("Ignored AspectJ @AfterReturning advice method without 'returning' attribute. \n"
+                        + "  AspectSpec: {} \n  AdviceMethod: {} \n    returning: {} \n",
+                        aspectName,
+                        MethodUtils.getMethodSignature(adviceMethodDescription),
+                        returningParameter
                 );
 
                 this.isValid = false;
@@ -306,10 +313,11 @@ public interface AspectJAdvice {
                 return null;
 
             if(parameterDescriptionMap.containsKey(throwingParameter) == false) {
-                LOGGER.warn("Ignored AspectJ advice method which throwing parameter must exist. \n"
-                        + "  throwing parameter: {} \n  advice method: {} \n",
-                        throwingParameter,
-                        MethodUtils.getMethodSignature(adviceMethodDescription)
+                LOGGER.warn("Ignored AspectJ @AfterThrowing advice method without 'throwing' attribute. \n"
+                        + "  AspectSpec: {} \n  AdviceMethod: {} \n    throwing: {} \n",
+                        aspectName,
+                        MethodUtils.getMethodSignature(adviceMethodDescription),
+                        throwingParameter
                 );
 
                 this.isValid = false;
@@ -362,14 +370,15 @@ public interface AspectJAdvice {
             // 2.match parameter count and type
             List<ParameterBinding> pointcutParameterBindings = shadowMatch.getParameterBindings();
             if(pointcutParameterBindings == null || pointcutParameterBindings.size() != this.pointcutParameterNames.size()) {
-                LOGGER.warn("Ignored matching since advice method's pointcut parameters must be same as target method's resolved pointcut parameters. \n" 
-                        + "  declared pointcut parameters: {} \n    advice method: {} \n  resolved pointcut parameters: {} \n    target method: {} \n",
-                        pointcutParameterNames, 
+                LOGGER.warn("Ignored advice method with advice parameters is different to target method's resolved parameters. \n" 
+                        + "  AspectSpec: {} \n  AdviceMethod: {} \n    AdviceParameters: {} \n  TargetMethod: {} \n    ResolvedParameters: {} \n",
+                        aspectName,
                         MethodUtils.getMethodSignature(adviceMethodDescription), 
+                        pointcutParameterNames,
+                        MethodUtils.getMethodSignature(targetMethodDescription), 
                         pointcutParameterBindings == null ? null : pointcutParameterBindings.stream()
                                 .map( p -> p.getName() )
-                                .collect( Collectors.toList() ),
-                                MethodUtils.getMethodSignature(targetMethodDescription)
+                                .collect( Collectors.toList() )
                 );
 
                 return false;
@@ -378,26 +387,28 @@ public interface AspectJAdvice {
             for(ParameterBinding pointcutParameterBinding : pointcutParameterBindings) {
                 String name = pointcutParameterBinding.getName();
                 if(this.pointcutParameterNames.contains(name) == false) {
-                    LOGGER.warn("Ignored matching since target method's resolved pointcut parameter {} must exist in advice method's pointcut parameters. \n" 
-                            + "  declared pointcut parameters: {} \n    advice method: {} \n  resolved pointcut parameters: {} \n    target method: {} \n",
+                    LOGGER.warn("Ignored advice method with advice parameters do not contain target method's resolved parameter '{}'. \n" 
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    AdviceParameters: {} \n  TargetMethod: {} \n    ResolvedParameters: {} \n",
                             name, 
-                            pointcutParameterNames, 
+                            aspectName,
                             MethodUtils.getMethodSignature(adviceMethodDescription), 
+                            pointcutParameterNames,
+                            MethodUtils.getMethodSignature(targetMethodDescription), 
                             pointcutParameterBindings == null ? null : pointcutParameterBindings.stream()
                                     .map( p -> p.getName() )
-                                    .collect( Collectors.toList() ),
-                            MethodUtils.getMethodSignature(targetMethodDescription)
+                                    .collect( Collectors.toList() )
                     );
 
                     return false;
                 }
 
                 TypeDescription paramType = pointcutParameterBinding.getType();
-                if(ClassUtils.isAccessibleTo(paramType, targetMethodDescription.getDeclaringType().asErasure()) == false) {
-                    LOGGER.warn("Ignored matching since advice class can not access parameter which must be public or protected in same package. \n"
-                            + "  parameter '{}': {} \n    advice method: {} \n",
-                            name, paramType,
-                            targetMethodDescription.toGenericString() );
+                if(ClassUtils.isVisibleTo(paramType, targetMethodDescription.getDeclaringType().asErasure()) == false) {
+                    LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under Joinpoint ClassLoader. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    parameter '{}': {} {} \n",
+                            aspectName,
+                            targetMethodDescription.toGenericString(),
+                            name, paramType.getVisibility(), paramType );
 
                     return false;
                 }

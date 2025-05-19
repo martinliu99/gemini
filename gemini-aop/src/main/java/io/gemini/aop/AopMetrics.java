@@ -130,10 +130,11 @@ public class AopMetrics {
             return WeaverMetrics.DUMMY;
         }
 
-        if(weaverMetricsMap.containsKey(cacheKey) == false) {
-            weaverMetricsMap.putIfAbsent(cacheKey, new WeaverMetrics(index.getAndIncrement(), classLoader));
-        }
-        return weaverMetricsMap.get(cacheKey);
+        return weaverMetricsMap
+                .computeIfAbsent(
+                        cacheKey, 
+                        cl -> new WeaverMetrics(index.getAndIncrement(), classLoader)
+                );
     }
 
     public WeaverMetrics getWeaverMetrics(ClassLoader classLoader, JavaModule javaModule) {
@@ -150,12 +151,12 @@ public class AopMetrics {
         this.launcherStartupSummary = this.newWeaverSummary();
 
         if(diagnosticLevel.isSimpleEnabled() == false) {
-            LOGGER.info("$Took '{}' seconds to launcher Gemini. \n{}\n{}\n", 
+            LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics) );
         } else {
-            LOGGER.info("$Took '{}' seconds to launcher Gemini. \n{}\n{}\n{}\n{}", 
+            LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}\n{}", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics),

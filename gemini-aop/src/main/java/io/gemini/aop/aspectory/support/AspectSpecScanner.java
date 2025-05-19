@@ -23,10 +23,11 @@ import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.aspectory.AspectSpecHolder;
 import io.gemini.aop.aspectory.AspectoryContext;
 import io.gemini.api.annotation.NoScanning;
 import io.gemini.api.aspect.AspectSpec;
+import io.gemini.api.aspect.AspectSpec.ExprPointcutSpec;
+import io.gemini.api.aspect.AspectSpec.PojoPointcutSpec;
 import io.gemini.api.aspect.Pointcut;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
@@ -43,10 +44,10 @@ import io.github.classgraph.ClassInfo;
  */
 public interface AspectSpecScanner<T extends AspectSpec> {
 
-    List<AspectSpecHolder<T>> scan(AspectoryContext aspectoryContext);
+    List<T> scan(AspectoryContext aspectoryContext);
 
 
-    abstract class AbstractBase<T extends AspectSpec> extends ClassScanner.AccessibleClassInfoFilter
+    abstract class AbstractBase<T extends AspectSpec> extends ClassScanner.InstantiableClassInfoFilter
             implements AspectSpecScanner<T> {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(AspectSpecScanner.class);
@@ -55,59 +56,57 @@ public interface AspectSpecScanner<T extends AspectSpec> {
 
 
         @Override
-        public List<AspectSpecHolder<T>> scan(AspectoryContext aspectoryContext) {
+        public List<T> scan(AspectoryContext aspectoryContext) {
             Assert.notNull(aspectoryContext, "'aspectoryContext' must not be null");
 
-            List<AspectSpecHolder<T>> aspectSpecHolders = null;
+            List<T> aspectSpecs = null;
             try {
-                aspectSpecHolders = this.doScanSpecs(aspectoryContext);
+                aspectSpecs = this.doScanSpecs(aspectoryContext);
 
-                aspectSpecHolders = aspectSpecHolders.stream()
-                .filter( aspectSpecHolder -> doValidateSpecInstance(aspectSpecHolder) )
+                aspectSpecs = aspectSpecs.stream()
+                .filter( aspectSpec -> doValidateSpecInstance(aspectSpec) )
                 .collect( Collectors.toList());
 
 
-                if(CollectionUtils.isEmpty(aspectSpecHolders)) {
+                if(CollectionUtils.isEmpty(aspectSpecs)) {
                     LOGGER.info("Did not find AspectSpec.{} via '{}'.", getSpecType(), scannerName);
                 } else {
-                    LOGGER.info("Found {} AspectSpec.{} via '{}'.", aspectSpecHolders.size(), getSpecType(), scannerName);
+                    LOGGER.info("Found {} AspectSpec.{} via '{}'.", aspectSpecs.size(), getSpecType(), scannerName);
                 }
             } catch(Throwable t) {
                 LOGGER.warn("Failed to scan AspectSpec.{} via '{}'.", getSpecType(), scannerName, t);
             }
 
-            return aspectSpecHolders;
+            return aspectSpecs;
         }
-
 
         protected abstract String getSpecType();
 
+        protected abstract List<T> doScanSpecs(AspectoryContext aspectoryContext);
 
-        protected abstract List<AspectSpecHolder<T>> doScanSpecs(AspectoryContext aspectoryContext);
-
-        /* 
-         * @see io.github.classgraph.ClassInfoList.ClassInfoFilter#accept(io.github.classgraph.ClassInfo) 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean accept(ClassInfo classInfo) {
             if(super.accept(classInfo) == true)
                 return true;
 
-            LOGGER.warn("Ignored AspectSpec since AspectSpec class must be public top-level class or public static member class (non-interface, non-abstract, non-enum, non-inner, non-local). \n  {}: {} \n"
-                    + "  Use @{} annotation to remove this AspectSpec class and this warning. \n", 
+            LOGGER.warn("Ignored AspectSpec class is NOT top-level or nested, concrete class. \n  {}: {} \n"
+                    + "  Use @{} annotation to ignore this illegal AspectSpec. \n", 
                     getSpecType(), classInfo.getName(), NoScanning.class.getName());
 
             return false;
         }
 
-        protected boolean doValidateSpecInstance(AspectSpecHolder<T> aspectSpecHolder) {
-            if(aspectSpecHolder == null)
+        protected boolean doValidateSpecInstance(T aspectSpec) {
+            if(aspectSpec == null)
                 return false;
 
             // check advice definition
-            if(StringUtils.hasText(aspectSpecHolder.getAspectSpec().getAdviceClassName()) == false) {
-                LOGGER.warn("Ignored AspectSpec since adviceClassName must not be empty. \n  {}: {} \n", 
-                        getSpecType(), aspectSpecHolder.getAspectName() );
+            if(StringUtils.hasText(aspectSpec.getAdviceClassName()) == false) {
+                LOGGER.warn("Ignored AspectSpec with empty adviceClassName. \n  {}: {} \n", 
+                        getSpecType(), aspectSpec.getAspectName() );
                 return false;
             }
 
@@ -118,8 +117,8 @@ public interface AspectSpecScanner<T extends AspectSpec> {
 
     public class ForPojoPointcut extends AbstractBase<AspectSpec.PojoPointcutSpec> {
 
-        /* 
-         * @see io.gemini.aop.aspectory.support.AspectSpecScanner.AbstractBase#getSpecType()
+        /**
+         * {@inheritDoc}
          */
         @Override
         protected String getSpecType() {
@@ -127,16 +126,16 @@ public interface AspectSpecScanner<T extends AspectSpec> {
         }
 
         @Override
-        protected List<AspectSpecHolder<AspectSpec.PojoPointcutSpec>> doScanSpecs(AspectoryContext aspectoryContext) {
-            List<AspectSpecHolder<AspectSpec.PojoPointcutSpec>> aspectSpecHolders = new ArrayList<>();
-            doScanImplementor(aspectoryContext, aspectSpecHolders);
-            doScanFactory(aspectoryContext, aspectSpecHolders);
+        protected List<AspectSpec.PojoPointcutSpec> doScanSpecs(AspectoryContext aspectoryContext) {
+            List<AspectSpec.PojoPointcutSpec> aspectSpecs = new ArrayList<>();
+            doScanImplementor(aspectoryContext, aspectSpecs);
+            doScanFactory(aspectoryContext, aspectSpecs);
 
-            return aspectSpecHolders;
+            return aspectSpecs;
         }
 
         @SuppressWarnings("unchecked")
-        protected void doScanImplementor(AspectoryContext aspectoryContext, List<AspectSpecHolder<AspectSpec.PojoPointcutSpec>> aspectSpecHolders) {
+        protected void doScanImplementor(AspectoryContext aspectoryContext, List<AspectSpec.PojoPointcutSpec> aspectSpecs) {
             List<String> classNames = aspectoryContext.getClassScanner()
                     .getClassesImplementing( AspectSpec.PojoPointcutSpec.class.getName() )
                     .filter(this)
@@ -144,41 +143,56 @@ public interface AspectSpecScanner<T extends AspectSpec> {
 
             ClassLoader classLoader = aspectoryContext.getAspectClassLoader();
             ObjectFactory objectFactory = aspectoryContext.getObjectFactory();
+            String pojoPointcutSpecClassName = AspectSpec.PojoPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
                     Class<AspectSpec.PojoPointcutSpec> clazz = (Class<AspectSpec.PojoPointcutSpec>) classLoader.loadClass(className);
 
-                    aspectSpecHolders.add( 
-                            new AspectSpecHolder<AspectSpec.PojoPointcutSpec>(
-                                    className, 
-                                    (AspectSpec.PojoPointcutSpec) objectFactory.createObject(clazz)
-                            )
-                    );
+                    AspectSpec.PojoPointcutSpec aspectSpec = (AspectSpec.PojoPointcutSpec) objectFactory.createObject(clazz);
+
+                    String aspectName = aspectSpec.getAspectName();
+                    if( !StringUtils.hasText(aspectName) || pojoPointcutSpecClassName.equals(aspectName) ) 
+                        aspectSpec = new AspectSpec.PojoPointcutSpec.Default(
+                                className, 
+                                aspectSpec.isPerInstance(), aspectSpec.getAdviceClassName(),
+                                aspectSpec.getPointcut(), aspectSpec.getOrder());
+
+                    aspectSpecs.add(aspectSpec);
                 } catch (Throwable t) {
                     LOGGER.warn("Failed to load AspectSpec. \n  {}: {}", getSpecType(), className, t);
                 }
             }
         }
 
-        protected void doScanFactory(AspectoryContext aspectoryContext, List<AspectSpecHolder<AspectSpec.PojoPointcutSpec>> aspectSpecHolders) {
+        protected void doScanFactory(AspectoryContext aspectoryContext, List<AspectSpec.PojoPointcutSpec> aspectSpecs) {
             List<String> classNames = aspectoryContext.getClassScanner()
                     .getClassesImplementing( AspectSpec.PojoPointcutSpec.Factory.class.getName() )
                     .filter(this)
                     .getNames();
             ClassLoader classLoader = aspectoryContext.getAspectClassLoader();
             ObjectFactory objectFactory = aspectoryContext.getObjectFactory();
+            String pojoPointcutSpecClassName = AspectSpec.PojoPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
                     Class<?> clazz = classLoader.loadClass(className);
                     AspectSpec.PojoPointcutSpec.Factory factory = (AspectSpec.PojoPointcutSpec.Factory) objectFactory.createObject(clazz);
 
-                    aspectSpecHolders.add(  
-                            new AspectSpecHolder<AspectSpec.PojoPointcutSpec>(
-                                    className, factory.getAspectSpec()
-                            )
-                    );
+                    PojoPointcutSpec aspectSpec = factory.getAspectSpec();
+                    if(aspectSpec == null) {
+                        LOGGER.warn("Ignored AspectSpec is null. \n  {}: {} \n", getSpecType(), className);
+                        continue;
+                    }
+
+                    String aspectName = aspectSpec.getAspectName();
+                    if( !StringUtils.hasText(aspectName) || pojoPointcutSpecClassName.equals(aspectName) ) 
+                        aspectSpec = new AspectSpec.PojoPointcutSpec.Default(
+                                className, 
+                                aspectSpec.isPerInstance(), aspectSpec.getAdviceClassName(),
+                                aspectSpec.getPointcut(), aspectSpec.getOrder());
+
+                    aspectSpecs.add(aspectSpec);
                 } catch (Throwable t) {
                     LOGGER.warn("Failed to load AspectSpec. \n  {}: {}", getSpecType(), className, t);
                 }
@@ -186,15 +200,15 @@ public interface AspectSpecScanner<T extends AspectSpec> {
         }
 
         @Override
-        protected boolean doValidateSpecInstance(AspectSpecHolder<AspectSpec.PojoPointcutSpec> aspectSpecHolder) {
-            if(super.doValidateSpecInstance(aspectSpecHolder) == false)
+        protected boolean doValidateSpecInstance(AspectSpec.PojoPointcutSpec aspectSpec) {
+            if(super.doValidateSpecInstance(aspectSpec) == false)
                 return false;
 
-            Pointcut pointcut = aspectSpecHolder.getAspectSpec().getPointcut();
+            Pointcut pointcut = aspectSpec.getPointcut();
             if(pointcut == null ||
                     (pointcut.getTypeMatcher() == null && pointcut.getMethodMatcher() == null)) {
-                LOGGER.warn("Ignored AspectSpec since pointuct must not be null. \n  {}: {} \n", 
-                        getSpecType(), aspectSpecHolder.getAspectName() );
+                LOGGER.warn("Ignored AspectSpec with null pointuct. \n  {}: {} \n", 
+                        getSpecType(), aspectSpec.getAspectName() );
                 return false;
             }
 
@@ -205,8 +219,8 @@ public interface AspectSpecScanner<T extends AspectSpec> {
 
     public class ForExprPointcut extends AbstractBase<AspectSpec.ExprPointcutSpec> {
 
-        /* 
-         * @see io.gemini.aop.aspectory.support.AspectSpecScanner.AbstractBase#getSpecType()
+        /**
+         * {@inheritDoc}
          */
         @Override
         protected String getSpecType() {
@@ -214,15 +228,15 @@ public interface AspectSpecScanner<T extends AspectSpec> {
         }
 
         @Override
-        protected List<AspectSpecHolder<AspectSpec.ExprPointcutSpec>> doScanSpecs(AspectoryContext aspectoryContext) {
-            List<AspectSpecHolder<AspectSpec.ExprPointcutSpec>> aspectSpecs = new ArrayList<>();
+        protected List<AspectSpec.ExprPointcutSpec> doScanSpecs(AspectoryContext aspectoryContext) {
+            List<AspectSpec.ExprPointcutSpec> aspectSpecs = new ArrayList<>();
             doScanImplementor(aspectoryContext, aspectSpecs);
             doScanFactory(aspectoryContext, aspectSpecs);
 
             return aspectSpecs;
         }
 
-        protected void doScanImplementor(AspectoryContext aspectoryContext, List<AspectSpecHolder<AspectSpec.ExprPointcutSpec>> aspectSpecHolders) {
+        protected void doScanImplementor(AspectoryContext aspectoryContext, List<AspectSpec.ExprPointcutSpec> aspectSpecs) {
             List<String> classNames = aspectoryContext.getClassScanner()
                     .getClassesImplementing( AspectSpec.ExprPointcutSpec.class.getName() )
                     .filter(this)
@@ -230,56 +244,73 @@ public interface AspectSpecScanner<T extends AspectSpec> {
 
             ClassLoader classLoader = aspectoryContext.getAspectClassLoader();
             ObjectFactory objectFactory = aspectoryContext.getObjectFactory();
+            String exprPointcutSpecClassName = AspectSpec.ExprPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
                     Class<?> clazz = classLoader.loadClass(className);
 
-                    aspectSpecHolders.add(
-                            new AspectSpecHolder<AspectSpec.ExprPointcutSpec>(
-                                    className, (AspectSpec.ExprPointcutSpec) objectFactory.createObject(clazz)
-                            ) 
-                    );
+                    AspectSpec.ExprPointcutSpec aspectSpec = (AspectSpec.ExprPointcutSpec) objectFactory.createObject(clazz);
+
+                    String aspectName = aspectSpec.getAspectName();
+                    if( !StringUtils.hasText(aspectName) || exprPointcutSpecClassName.equals(aspectName) ) 
+                        aspectSpec = new AspectSpec.ExprPointcutSpec.Default(
+                                className, 
+                                aspectSpec.isPerInstance(), aspectSpec.getAdviceClassName(),
+                                aspectSpec.getPointcutExpression(), aspectSpec.getOrder());
+
+                    aspectSpecs.add(aspectSpec);
                 } catch (Throwable t) {
                     LOGGER.warn("Failed to load AspectSpec. \n  {}: {}", getSpecType(), className, t);
                 }
             }
         }
 
-        protected void doScanFactory(AspectoryContext aspectoryContext, List<AspectSpecHolder<AspectSpec.ExprPointcutSpec>> aspectSpecHolders) {
+        protected void doScanFactory(AspectoryContext aspectoryContext, List<AspectSpec.ExprPointcutSpec> aspectSpecs) {
             List<String> classNames = aspectoryContext.getClassScanner()
                     .getClassesImplementing( AspectSpec.ExprPointcutSpec.Factory.class.getName() )
                     .filter(this)
                     .getNames();
             ClassLoader classLoader = aspectoryContext.getAspectClassLoader();
             ObjectFactory objectFactory = aspectoryContext.getObjectFactory();
+            String exprPointcutSpecClassName = AspectSpec.ExprPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
                     Class<?> clazz = classLoader.loadClass(className);
-
                     AspectSpec.ExprPointcutSpec.Factory factory = (AspectSpec.ExprPointcutSpec.Factory) objectFactory.createObject(clazz);
 
-                    aspectSpecHolders.add( 
-                            new AspectSpecHolder<AspectSpec.ExprPointcutSpec>(
-                                    className, 
-                                    factory.getAspectSpec()
-                            ) 
-                    );
+                    ExprPointcutSpec aspectSpec = factory.getAspectSpec();
+                    if(aspectSpec == null) {
+                        LOGGER.warn("Ignored AspectSpec is null. \n  {}: {} \n", getSpecType(), className);
+                        continue;
+                    }
+
+                    String aspectName = aspectSpec.getAspectName();
+                    if( !StringUtils.hasText(aspectName) || exprPointcutSpecClassName.equals(aspectName) ) 
+                        aspectSpec = new AspectSpec.ExprPointcutSpec.Default(
+                                className, 
+                                aspectSpec.isPerInstance(), aspectSpec.getAdviceClassName(),
+                                aspectSpec.getPointcutExpression(), aspectSpec.getOrder());
+
+                    aspectSpecs.add(aspectSpec);
                 } catch (Throwable t) {
                     LOGGER.warn("Failed to load AspectSpec. \n  {}: {}", getSpecType(), className, t);
                 }
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        protected boolean doValidateSpecInstance(AspectSpecHolder<AspectSpec.ExprPointcutSpec> aspectSpecHolder) {
-            if(super.doValidateSpecInstance(aspectSpecHolder) == false)
+        protected boolean doValidateSpecInstance(AspectSpec.ExprPointcutSpec aspectSpec) {
+            if(super.doValidateSpecInstance(aspectSpec) == false)
                 return false;
 
-            if(StringUtils.hasText(aspectSpecHolder.getAspectSpec().getPointcutExpression()) == false) {
-                LOGGER.warn("Ignored AspectSpec since pointcutExpression must not be empty. \n  {}: {} \n", 
-                        getSpecType(), aspectSpecHolder.getAspectName() );
+            if(StringUtils.hasText(aspectSpec.getPointcutExpression()) == false) {
+                LOGGER.warn("Ignored AspectSpec with empty pointcutExpression. \n  {}: {} \n", 
+                        getSpecType(), aspectSpec.getAspectName() );
                 return false;
             }
 
@@ -290,38 +321,42 @@ public interface AspectSpecScanner<T extends AspectSpec> {
 
     public class ForAspectJ extends AbstractBase<AspectSpec.AspectJSpec> {
 
-        /* 
-         * @see io.gemini.aop.aspectory.support.AspectSpecScanner.AbstractBase#getSpecType()
+        /**
+         * {@inheritDoc}
          */
         @Override
         protected String getSpecType() {
             return AspectSpec.AspectJSpec.class.getSimpleName();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        protected List<AspectSpecHolder<AspectSpec.AspectJSpec>> doScanSpecs(AspectoryContext aspectoryContext) {
-            List<AspectSpecHolder<AspectSpec.AspectJSpec>> aspectSpecHolders = new ArrayList<>();
+        protected List<AspectSpec.AspectJSpec> doScanSpecs(AspectoryContext aspectoryContext) {
+            List<AspectSpec.AspectJSpec> aspectSpecs = new ArrayList<>();
 
             List<String> classNames = aspectoryContext.getClassScanner()
                     .getClassesWithAnnotation( Aspect.class.getName() )
                     .filter(this)
                     .getNames();
+
             for(String className : classNames) {
-                aspectSpecHolders.add(
-                        new AspectSpecHolder<AspectSpec.AspectJSpec>(
-                                className, new AspectSpec.AspectJSpec.Default(false, null, className, 0)
-                        ) 
-                );
+                aspectSpecs.add(
+                        new AspectSpec.AspectJSpec.Default(className, false, className, 0));
             }
 
-            return aspectSpecHolders;
+            return aspectSpecs;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        protected boolean doValidateSpecInstance(AspectSpecHolder<AspectSpec.AspectJSpec> aspectSpecHolder) {
-            if(StringUtils.hasText(aspectSpecHolder.getAspectSpec().getAspectJClassName()) == false) {
-                LOGGER.warn("Ignored AspectSpec since aspectJClassName must not be empty. \n  {}: {} \n", 
-                        getSpecType(), aspectSpecHolder.getAspectName() );
+        protected boolean doValidateSpecInstance(AspectSpec.AspectJSpec aspectSpec) {
+            if(StringUtils.hasText(aspectSpec.getAspectJClassName()) == false) {
+                LOGGER.warn("Ignored AspectSpec with empty aspectJClassName. \n  {}: {} \n", 
+                        getSpecType(), aspectSpec.getAspectName() );
                 return false;
             }
 

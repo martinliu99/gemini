@@ -63,7 +63,7 @@ public class ClassScannerTests {
 
         {
             List<String> implementors = classScanner.getClassesImplementing(Marker.class.getName())
-                    .filter(new ClassScanner.AccessibleClassInfoFilter())
+                    .filter(new ClassScanner.InstantiableClassInfoFilter())
                     .getNames();
             assertThat(implementors).containsExactlyInAnyOrder(
                     NestedClass.class.getName()

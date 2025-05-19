@@ -45,7 +45,7 @@ public class Aspectories {
         AopMetrics.BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
         bootstraperMetrics.setAspectFactoryCreationTime(System.nanoTime() - startedAt);
 
-        Map<String, Integer> aspectSpecs = aspectFactory.getAspectSpecHolders().entrySet().stream()
+        Map<String, Integer> aspectSpecs = aspectFactory.getAspectSpecs().entrySet().stream()
                 .map( e -> 
                     new SimpleEntry<>(e.getKey(), e.getValue().size()) )
                 .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );

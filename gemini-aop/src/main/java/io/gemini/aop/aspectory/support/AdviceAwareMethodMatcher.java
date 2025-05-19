@@ -42,7 +42,7 @@ import net.bytebuddy.matcher.ElementMatcher;
  * @author   martin.liu
  * @since	 1.0
  */
-public interface AdviceAwareMethodMatcher {
+interface AdviceAwareMethodMatcher {
 
 
     public interface AdviceMethodMatcher {
@@ -56,6 +56,8 @@ public interface AdviceAwareMethodMatcher {
 
             private static final Generic RUNTIME_EXCEPTION = TypeDefinition.Sort.describe(RuntimeException.class);
 
+
+            protected final String aspectName;
 
             protected boolean isValid = true;
 
@@ -71,6 +73,10 @@ public interface AdviceAwareMethodMatcher {
             protected Generic adviceReturningParameterType;
             protected Generic adviceThrowingParameterType;
 
+
+            protected AbstractBase(String aspectName) {
+                this.aspectName = aspectName;
+            }
 
             protected MethodDescription doDiscoverAdviceMethod(TypeDescription adviceType) {
                 while(adviceType != null) {
@@ -121,10 +127,11 @@ public interface AdviceAwareMethodMatcher {
 
                 Generic returningType = typeVariables.get(0);
                 if(TypeDefinition.Sort.NON_GENERIC != returningType.getSort() && TypeDefinition.Sort.PARAMETERIZED != returningType.getSort()) { 
-                    LOGGER.warn("Ignored advice method containing illegal parameterized returning type. \n"
-                            + "  parameterized returning type: {} \n    advice method: {} \n",
-                            returningType.asErasure().getDescriptor(), 
-                            MethodUtils.getMethodSignature(adviceMethodDescription)
+                    LOGGER.warn("Ignored advice method with Generic or WildcardType ParameterizedReturning of MutableJoinpoint. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    ParameterizedReturning: {} \n",
+                            aspectName,
+                            MethodUtils.getMethodSignature(adviceMethodDescription),
+                            returningType.asErasure().getDescriptor()
                     );
 
                     this.isValid = false;
@@ -134,10 +141,11 @@ public interface AdviceAwareMethodMatcher {
 
                 Generic throwingType = typeVariables.get(1);
                 if(TypeDefinition.Sort.NON_GENERIC != throwingType.getSort() && TypeDefinition.Sort.PARAMETERIZED != throwingType.getSort()) {
-                    LOGGER.warn("Ignored advice method containing illegal parameterized throwing type. \n"
-                            + "  parameterized throwing type: {} \n    advice method: {} \n",
-                            returningType.asErasure().getDescriptor(), 
-                            MethodUtils.getMethodSignature(adviceMethodDescription)
+                    LOGGER.warn("Ignored advice method with Generic or WildcardType ParameterizedThrowing of MutableJoinpoint. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    ParameterizedThrowing: {} \n",
+                            aspectName,
+                            MethodUtils.getMethodSignature(adviceMethodDescription),
+                            returningType.asErasure().getDescriptor()
                     );
 
                     this.isValid = false;
@@ -181,14 +189,15 @@ public interface AdviceAwareMethodMatcher {
                         || TypeDefinition.Sort.GENERIC_ARRAY == adviceReturningType.getSort()
                         ? targetReturningType.asRawType() : targetReturningType;
 
-                String matchingReturningTypeMsg = parameterizedReturningType ? "parameterized returning type" : "advice returning parameter";
+                String matchingReturningTypeMsg = parameterizedReturningType ? "ParameterizedReturning" : "AdviceReturning";
 
-                if(ClassUtils.isAccessibleTo(adviceReturningType.asErasure(), adviceMethodDescription.getDeclaringType().asErasure()) == false) {
-                    LOGGER.warn("Ignored matching since advice class can not access {} which must be public or protected in same package. \n"
-                            + "  {}: {} \n    advice method: {} \n",
+                if(ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethodDescription.getDeclaringType().asErasure()) == false) {
+                    LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under Joinpoint ClassLoader. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    {}: {} {} \n",
                             matchingReturningTypeMsg,
-                            matchingReturningTypeMsg, adviceReturningType, 
-                            MethodUtils.getMethodSignature(adviceMethodDescription) 
+                            aspectName,
+                            MethodUtils.getMethodSignature(adviceMethodDescription),
+                            matchingReturningTypeMsg, adviceReturningType.getVisibility(), adviceReturningType
                     );
 
                     return false;
@@ -196,26 +205,28 @@ public interface AdviceAwareMethodMatcher {
 
                 if(parameterizedReturningType == true) {
                     if(ClassUtils.equals(adviceReturningType, targetReturningType) == false) {
-                        LOGGER.warn("Ignored matching since advice method's {} must be same as target method's returning type. \n" 
-                                + "  {}: {} \n    advice method: {} \n  actual returning type: {} \n    target method: {} \n",
+                        LOGGER.warn("Ignored advice method with {} is different to target method's returning type. \n" 
+                                + "  AspectSpec: {} \n  AdviceMethod: {} \n    {}: {} \n  TargetMethod: {} \n    ActualReturning: {} \n",
                                 matchingReturningTypeMsg,
-                                matchingReturningTypeMsg, adviceReturningType, 
+                                aspectName,
                                 MethodUtils.getMethodSignature(adviceMethodDescription), 
-                                targetReturningType,
-                                MethodUtils.getMethodSignature(targetMethodDescription)
+                                matchingReturningTypeMsg, adviceReturningType, 
+                                MethodUtils.getMethodSignature(targetMethodDescription),
+                                targetReturningType
                         );
 
                         return false;
                     }
                 } else {
                     if(ClassUtils.isAssignableFrom(adviceReturningType, targetReturningType) == false) {
-                        LOGGER.warn("Ignored matching since advice method's {} must be assignable from target method's returning type. \n" 
-                                + "  {}: {} \n    advice method: {} \n  actual returning type: {} \n    target method: {} \n",
+                        LOGGER.warn("Ignored advice method with {} is unassignable from target method's returning type. \n" 
+                                + "  AspectSpec: {} \n  AdviceMethod: {} \n    {}: {} \n  TargetMethod: {} \n    ActualReturning: {} \n ",
                                 matchingReturningTypeMsg, 
-                                matchingReturningTypeMsg, adviceReturningType, 
+                                aspectName,
                                 MethodUtils.getMethodSignature(adviceMethodDescription), 
-                                targetReturningType,
-                                MethodUtils.getMethodSignature(targetMethodDescription)
+                                matchingReturningTypeMsg, adviceReturningType, 
+                                MethodUtils.getMethodSignature(targetMethodDescription),
+                                targetReturningType
                         );
 
                         return false;
@@ -226,14 +237,15 @@ public interface AdviceAwareMethodMatcher {
 
             private boolean matchThrowingType(MethodDescription targetMethodDescription, 
                     boolean parameterizedThrowingType, Generic adviceThrowingType) {
-                String matchingThrowingTypeMsg = parameterizedThrowingType ? "parameterized throwing type" : "advice throwing parameter";
+                String matchingThrowingTypeMsg = parameterizedThrowingType ? "ParameterizedThrowing" : "AdviceThrowing";
 
-                if(ClassUtils.isAccessibleTo(adviceThrowingType.asErasure(), adviceMethodDescription.getDeclaringType().asErasure()) == false) {
-                    LOGGER.warn("Ignored matching since advice class can not access {} which must be public or protected in same package. \n"
-                            + "  {}: {} \n    advice method: {} \n",
+                if(ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), adviceMethodDescription.getDeclaringType().asErasure()) == false) {
+                    LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under Joinpoint ClassLoader. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    {}: {} {} \n",
                             matchingThrowingTypeMsg,
-                            matchingThrowingTypeMsg, adviceThrowingType, 
-                            MethodUtils.getMethodSignature(adviceMethodDescription)
+                            aspectName,
+                            MethodUtils.getMethodSignature(adviceMethodDescription),
+                            matchingThrowingTypeMsg, adviceThrowingType.getVisibility(), adviceThrowingType
                     );
 
                     return false;
@@ -242,10 +254,11 @@ public interface AdviceAwareMethodMatcher {
                 TypeList.Generic exceptionTypes = targetMethodDescription.getExceptionTypes();
                 if(exceptionTypes.size() == 0) {
                     if(ClassUtils.equals(adviceThrowingType, RUNTIME_EXCEPTION) == false) {
-                        LOGGER.warn("Ignored matching since advice method's throwing type must be RuntimeException. \n" 
-                                + "  {}: {} \n    advice method: {} \n  actual throwing types: RuntimeException \n    target method: {} \n",
-                                matchingThrowingTypeMsg, adviceThrowingType, 
+                        LOGGER.warn("Ignored advice method with non RuntimeException throwing type. \n" 
+                                + "  AspectSpec: {} \n  AdviceMethod: {} \n    {}: {} \n  TargetMethod: {} \n    ActualThrowing: RuntimeException \n",
+                                aspectName,
                                 MethodUtils.getMethodSignature(adviceMethodDescription), 
+                                matchingThrowingTypeMsg, adviceThrowingType, 
                                 MethodUtils.getMethodSignature(targetMethodDescription)
                         );
 
@@ -263,12 +276,13 @@ public interface AdviceAwareMethodMatcher {
                 }
 
                 if(matched == false) {
-                    LOGGER.warn("Ignored matching since advice method's throwing type must be assignable from target method's all throwing types. \n"
-                            + "  {}: {} \n    advice method: {} \n  actual throwing types: {} \n    target method: {} \n",
-                            matchingThrowingTypeMsg, adviceThrowingType, 
+                    LOGGER.warn("Ignored advice method with throwing type is unassignable from target method's all throwing types. \n"
+                            + "  AspectSpec: {} \n  AdviceMethod: {} \n    {}: {} \n  TargetMethod: {} \n    ActualThrowing: {} \n",
+                            aspectName,
                             MethodUtils.getMethodSignature(adviceMethodDescription), 
-                            exceptionTypes,
-                            MethodUtils.getMethodSignature(targetMethodDescription)
+                            matchingThrowingTypeMsg, adviceThrowingType, 
+                            MethodUtils.getMethodSignature(targetMethodDescription),
+                            exceptionTypes
                     );
 
                     return false;
@@ -287,7 +301,9 @@ public interface AdviceAwareMethodMatcher {
 
     public static class PojoAdvice extends AdviceMethodMatcher.AbstractBase implements ElementMatcher<MethodDescription> {
 
-        public PojoAdvice(ElementMatcher<MethodDescription> methodMatcher, TypeDescription adviceType) {
+        public PojoAdvice(String aspectName, ElementMatcher<MethodDescription> methodMatcher, TypeDescription adviceType) {
+            super(aspectName);
+
             this.methodMatcher = methodMatcher;
 
             // discover returning and throwing types

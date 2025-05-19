@@ -28,6 +28,10 @@ import net.bytebuddy.matcher.ElementMatcher;
  */
 public interface AspectSpec {
 
+    default String getAspectName() {
+        return this.getClass().getName();
+    }
+
     boolean isPerInstance();
 
     String getAdviceClassName();
@@ -37,6 +41,8 @@ public interface AspectSpec {
 
     abstract class AbstractBase implements AspectSpec {
 
+        protected final String aspectName;
+
         protected final boolean perInstance;
         protected final String adviceClassName;
 
@@ -44,9 +50,21 @@ public interface AspectSpec {
 
 
         public AbstractBase(boolean perInstance, String adviceClassName, int order) {
+            this(null, perInstance, adviceClassName, order);
+        }
+
+        public AbstractBase(String aspectName, boolean perInstance, String adviceClassName, int order) {
+            this.aspectName = aspectName == null ? AspectSpec.super.getAspectName() : aspectName;
+
             this.perInstance = perInstance;
             this.adviceClassName = adviceClassName;
+
             this.order = order;
+        }
+
+        @Override
+        public String getAspectName() {
+            return aspectName;
         }
 
         @Override
@@ -63,9 +81,16 @@ public interface AspectSpec {
         public int getOrder() {
             return order;
         }
+
+        @Override
+        public String toString() {
+            return getAspectName();
+        }
     }
 
     abstract class BaseBuilder<T extends BaseBuilder<T>> {
+
+        protected String aspectName;
 
         protected boolean perInstance = false;
         protected String adviceClassName;
@@ -76,6 +101,11 @@ public interface AspectSpec {
         @SuppressWarnings("unchecked")
         protected T self() {
             return (T) this;
+        }
+
+        public T aspectName(String aspectName) {
+            this.aspectName = aspectName;
+            return self();
         }
 
         public T perInstance(boolean perInstance) {
@@ -108,12 +138,22 @@ public interface AspectSpec {
 
             public Default(boolean perInstance, String adviceClassName, 
                     Pointcut pointcut, int order) {
-                super(perInstance, adviceClassName, order);
+                this(null, perInstance, adviceClassName, pointcut, order);
+            }
+
+            public Default(String aspectName, boolean perInstance, String adviceClassName, 
+                    Pointcut pointcut, int order) {
+                super(aspectName, perInstance, adviceClassName, order);
 
                 this.pointcut = pointcut;
             }
 
+            @Override
+            public String getAspectName() {
+                return aspectName;
+            }
 
+            @Override
             public Pointcut getPointcut() {
                 return pointcut;
             }
@@ -170,9 +210,19 @@ public interface AspectSpec {
 
             public Default(boolean perInstance, String adviceClassName, 
                     String pointcutExpression, int order) {
-                super(perInstance, adviceClassName, order);
+                this(null, perInstance, adviceClassName, pointcutExpression, order);
+            }
+
+            public Default(String aspectName, boolean perInstance, String adviceClassName, 
+                    String pointcutExpression, int order) {
+                super(aspectName, perInstance, adviceClassName, order);
 
                 this.pointcutExpression = pointcutExpression;
+            }
+
+            @Override
+            public String getAspectName() {
+                return aspectName;
             }
 
             @Override
@@ -217,11 +267,20 @@ public interface AspectSpec {
             private final String aspectJClassName;
 
 
-            public Default(boolean perInstance, String adviceClassName, 
-                    String aspectJClassName, int order) {
-                super(perInstance, adviceClassName, order);
+            public Default(boolean perInstance, String aspectJClassName, int order) {
+                this(null, perInstance, aspectJClassName, order);
+            }
+
+            public Default(String aspectName, boolean perInstance, String aspectJClassName, int order) {
+                super(aspectName == null ? aspectJClassName : aspectName,
+                        perInstance, null, order);
 
                 this.aspectJClassName = aspectJClassName;
+            }
+
+            @Override
+            public String getAspectName() {
+                return aspectName;
             }
 
             @Override

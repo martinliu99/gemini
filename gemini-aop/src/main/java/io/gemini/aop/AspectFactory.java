@@ -20,11 +20,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import io.gemini.api.aspect.AspectSpec;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
 
 public interface AspectFactory extends Closeable {
+
+    Map<String, List<? extends AspectSpec>> getAspectSpecs();
 
     Map<? extends MethodDescription, List<? extends Aspect>> getAspects(TypeDescription typeDescription, 
             ClassLoader joinpointClassLoader, JavaModule javaModule);

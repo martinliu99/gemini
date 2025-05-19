@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.aspectory.AspectSpecHolder;
 import io.gemini.aop.aspectory.AspectoryContext;
 import io.gemini.aop.aspectory.support.AspectJAdvice.MethodSpec;
 import io.gemini.api.aspect.AspectSpec;
@@ -45,10 +44,9 @@ import net.bytebuddy.description.type.TypeDescription;
  */
 public interface AspectRepositoryResolver<T extends AspectSpec, R extends AspectSpec> {
 
-    boolean support(AspectSpecHolder<T> apsectSpecHolder);
+    boolean support(AspectSpec apsectSpec);
 
-    List<? extends AspectRepository<R>> resolve(
-            AspectSpecHolder<T> apsectSpecHolder, AspectoryContext aspectoryContext);
+    List<? extends AspectRepository<R>> resolve(T apsectSpec, AspectoryContext aspectoryContext);
 
 
     abstract class AbstractBase<T extends AspectSpec, R extends AspectSpec> 
@@ -61,35 +59,35 @@ public interface AspectRepositoryResolver<T extends AspectSpec, R extends Aspect
 
         @Override
         public List<? extends AspectRepository<R>> resolve(
-                AspectSpecHolder<T> apsectSpecHolder, AspectoryContext aspectoryContext) {
+                T apsectSpec, AspectoryContext aspectoryContext) {
             List<? extends AspectRepository<R>> aspectRepositories = Collections.emptyList();
 
             try {
-                aspectRepositories = doResolve(apsectSpecHolder, aspectoryContext);
+                aspectRepositories = doResolve(apsectSpec, aspectoryContext);
             } catch(Throwable t) {
-                LOGGER.warn("Failed to resolve AspectSepc '{}' via '{}'.", apsectSpecHolder, resolverName, t);
+                LOGGER.warn("Failed to resolve AspectSepc '{}' via '{}'.", apsectSpec, resolverName, t);
             }
 
             return aspectRepositories;
         }
 
         protected abstract List<? extends AspectRepository<R>> doResolve(
-                AspectSpecHolder<T> apsectSpecHolder, AspectoryContext aspectoryContext);
+                T apsectSpec, AspectoryContext aspectoryContext);
     }
 
 
     class ForPojoPointcut extends AbstractBase<AspectSpec.PojoPointcutSpec, AspectSpec.PojoPointcutSpec> {
 
         @Override
-        public boolean support(AspectSpecHolder<AspectSpec.PojoPointcutSpec> apsectSpecHolder) {
-            return apsectSpecHolder != null && apsectSpecHolder.getAspectSpec() instanceof AspectSpec.PojoPointcutSpec;
+        public boolean support(AspectSpec apsectSpec) {
+            return apsectSpec != null && apsectSpec instanceof AspectSpec.PojoPointcutSpec;
         }
 
         @Override
         protected List<? extends AspectRepository<AspectSpec.PojoPointcutSpec>> doResolve(
-                AspectSpecHolder<AspectSpec.PojoPointcutSpec> apsectSpecHolder, AspectoryContext aspectoryContext) {
+                AspectSpec.PojoPointcutSpec apsectSpec, AspectoryContext aspectoryContext) {
             return Collections.singletonList(
-                    new AspectRepository.ForPojoPointcut(apsectSpecHolder) );
+                    new AspectRepository.ForPojoPointcut(apsectSpec) );
         }
     }
 
@@ -97,15 +95,15 @@ public interface AspectRepositoryResolver<T extends AspectSpec, R extends Aspect
     class ForExprPointcut extends AbstractBase<AspectSpec.ExprPointcutSpec, AspectSpec.ExprPointcutSpec> {
 
         @Override
-        public boolean support(AspectSpecHolder<AspectSpec.ExprPointcutSpec> apsectSpecHolder) {
-            return apsectSpecHolder != null && apsectSpecHolder.getAspectSpec() instanceof AspectSpec.ExprPointcutSpec;
+        public boolean support(AspectSpec apsectSpec) {
+            return apsectSpec != null && apsectSpec instanceof AspectSpec.ExprPointcutSpec;
         }
 
         @Override
         protected List<? extends AspectRepository<AspectSpec.ExprPointcutSpec>> doResolve(
-                AspectSpecHolder<AspectSpec.ExprPointcutSpec> apsectSpecHolder, AspectoryContext aspectoryContext) {
+                AspectSpec.ExprPointcutSpec apsectSpec, AspectoryContext aspectoryContext) {
             return Collections.singletonList(
-                    new AspectRepository.ForExprPointcut(apsectSpecHolder) );
+                    new AspectRepository.ForExprPointcut(apsectSpec) );
         }
     }
 
@@ -113,16 +111,14 @@ public interface AspectRepositoryResolver<T extends AspectSpec, R extends Aspect
     class ForAspectJ extends AbstractBase<AspectSpec.AspectJSpec, AspectSpec.ExprPointcutSpec> {
 
         @Override
-        public boolean support(AspectSpecHolder<AspectSpec.AspectJSpec> apsectSpecHolder) {
-            return apsectSpecHolder != null && apsectSpecHolder.getAspectSpec() instanceof AspectSpec.AspectJSpec;
+        public boolean support(AspectSpec apsectSpec) {
+            return apsectSpec != null && apsectSpec instanceof AspectSpec.AspectJSpec;
         }
 
         @Override
         protected List<? extends AspectRepository<AspectSpec.ExprPointcutSpec>> doResolve(
-                AspectSpecHolder<AspectSpec.AspectJSpec> apsectSpecHolder, AspectoryContext aspectoryContext) {
-            AspectSpec.AspectJSpec aspectJSpec = apsectSpecHolder.getAspectSpec();
-
-            TypeDescription aspectJTypeDescription = aspectoryContext.getAspectTypePool().describe(aspectJSpec.getAspectJClassName()).resolve();
+                AspectSpec.AspectJSpec aspectSpec, AspectoryContext aspectoryContext) {
+            TypeDescription aspectJTypeDescription = aspectoryContext.getAspectTypePool().describe(aspectSpec.getAspectJClassName()).resolve();
             if(aspectJTypeDescription == null) 
                 return Collections.emptyList();
 
@@ -136,14 +132,15 @@ public interface AspectRepositoryResolver<T extends AspectSpec, R extends Aspect
                     if(annotationDescription == null)
                         continue;
 
+                    String aspectName = aspectSpec.getAspectName();
                     if(methodDescription.isAbstract()) {
-                        LOGGER.warn("Ignored abstract AspectJ advice method. \n  advice method: {} \n",
-                                methodDescription.toGenericString());
+                        LOGGER.warn("Ignored abstract AspectJ advice method. \n  AspectSpec: {} \n  AdviceMethod: {} \n",
+                                aspectName, methodDescription.toGenericString());
                         continue;
                     }
                     if(methodDescription.isPrivate()) {
-                        LOGGER.warn("Ignored private AspectJ advice method. \n  advice method: {} \n",
-                                methodDescription.toGenericString());
+                        LOGGER.warn("Ignored private AspectJ advice method. \n  AspectSpec: {} \n  AdviceMethod: {} \n",
+                                aspectName, methodDescription.toGenericString());
                         continue;
                     }
 
@@ -155,44 +152,42 @@ public interface AspectRepositoryResolver<T extends AspectSpec, R extends Aspect
                         pointcutExpression = annotationValue.resolve(String.class).trim();
                     }
                     if(StringUtils.hasText(pointcutExpression) == false) {
-                        LOGGER.warn("Ignored empty pointcut expression AspectJ advice method. \n  advice method: {} \n", 
-                                methodDescription.toGenericString());
+                        LOGGER.warn("Ignored AspectJ advice method with empty pointcut expression. \n  AspectSpec: {} \n  AdviceMethod: {} \n", 
+                                aspectName, methodDescription.toGenericString());
                         continue;
                     }
 
                     // 2.create MethodSpec
                     MethodSpec methodSpec;
                     try {
-                        methodSpec= new MethodSpec(pointcutExpression, methodDescription, 
+                        methodSpec= new MethodSpec(aspectName,
+                                pointcutExpression, methodDescription, 
                                 annotationType, annotationDescription);
 
                         if(methodSpec.isValid() == false)
                             continue;
                     } catch(Throwable t) {
-                        LOGGER.warn("Failed to parse AspectJ advice method. \n  advice method: {} \n", 
-                                MethodUtils.getMethodSignature(methodDescription), t);
+                        LOGGER.warn("Failed to parse AspectJ advice method. \n  AspectSpec: {} \n  AdviceMethod: {} \n", 
+                                aspectName, MethodUtils.getMethodSignature(methodDescription), t);
 
                         continue;
                     }
 
-                    String adviceClassName = createAdviceClassName(aspectJSpec, adviceMethodIndex.getAndIncrement(), methodDescription);
-                    AspectSpec.ExprPointcutSpec asepctSpec = new AspectSpec.ExprPointcutSpec.Default(
-                            aspectJSpec.isPerInstance(), adviceClassName, pointcutExpression, aspectJSpec.getOrder());
+                    String adviceClassName = createAdviceClassName(aspectSpec, adviceMethodIndex.getAndIncrement(), methodDescription);
+                    AspectSpec.ExprPointcutSpec exprAspectSpec = new AspectSpec.ExprPointcutSpec.Default(
+                            adviceClassName, aspectSpec.isPerInstance(), adviceClassName, pointcutExpression, aspectSpec.getOrder());
                     AspectJAdvice.ClassMaker classMaker = new AspectJAdvice.ClassMaker(adviceClassName, aspectJTypeDescription, methodSpec);
 
                     // 3.create AspectRepository
                     aspectRepositories.add( 
-                            new AspectRepository.ForAspectJAdvice(
-                                    new AspectSpecHolder<AspectSpec.ExprPointcutSpec>(adviceClassName, asepctSpec), 
-                                    classMaker
-                            ) 
+                            new AspectRepository.ForAspectJAdvice(exprAspectSpec, classMaker) 
                     );
                 }
             }
 
             if(adviceMethodIndex.get() == 1) {
-                LOGGER.warn("Ignored AspectSpec since advice method must exist. \n  {}: {} \n", 
-                        AspectSpec.AspectJSpec.class.getSimpleName(), aspectJSpec.getAspectJClassName() );
+                LOGGER.warn("Ignored AspectSpec contains no advice methods. \n  {}: {} \n", 
+                        AspectSpec.AspectJSpec.class.getSimpleName(), aspectSpec.getAspectJClassName() );
             }
 
             return aspectRepositories;

@@ -80,8 +80,6 @@ public class AopActivator {
         try {
             callable.call();
         } catch (Throwable t) {
-            // TODO:
-//            throw new WeaverException("", t);
             System.out.println("Failed to activate Gemini at " + currentDate() + ", error reason: " + t);
             t.printStackTrace();
         }

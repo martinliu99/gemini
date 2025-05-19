@@ -69,6 +69,7 @@ public interface Aspect {
             private final String aspectName;
 
             private final boolean perInstance;
+
             private final Supplier<Class<? extends Advice>> adviceClassSupplier;
             private final Supplier<? extends Advice> adviceSupplier;
             private Advice advice;
@@ -77,7 +78,9 @@ public interface Aspect {
             private final int order;
 
             public Default(String aspectName, 
-                    boolean perInstance, Supplier<Class<? extends Advice>> adviceClassSupplier, Supplier<? extends Advice> adviceSupplier,
+                    boolean perInstance, 
+                    Supplier<Class<? extends Advice>> adviceClassSupplier, 
+                    Supplier<? extends Advice> adviceSupplier,
                     Pointcut pointcut,
                     int order) {
                 this.aspectName = StringUtils.hasText(aspectName) ? aspectName : super.toString();
@@ -100,6 +103,11 @@ public interface Aspect {
             @Override
             public String getAspectName() {
                 return aspectName;
+            }
+
+            @Override
+            public boolean isPerInstance() {
+                return perInstance;
             }
 
             @Override

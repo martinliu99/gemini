@@ -120,18 +120,15 @@ public class TypeMatcherFactory {
             ClassLoader classLoader, JavaModule module, PlaceholderHelper placeholderHelper) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
-        if(this.typePatternMatcherCache.containsKey(cacheKey) == false) {
-            this.typePatternMatcherCache.putIfAbsent(cacheKey, new ConcurrentHashMap<>());
-        }
-        ConcurrentMap<Collection<Pattern>, ElementMatcher<TypeDescription>> typeMatchers = this.typePatternMatcherCache.get(cacheKey); 
-
-        if(typeMatchers.containsKey(typePatterns) == false) {
-            typeMatchers.computeIfAbsent(
-                    typePatterns, 
-                    key -> doCreateTypeMatcher(ruleName, typePatterns, acceptMatchAllPattern, classLoader, module, placeholderHelper)
-            );
-        }
-        return typeMatchers.get(typePatterns);
+        return this.typePatternMatcherCache
+                .computeIfAbsent(
+                        cacheKey, 
+                        cl -> new ConcurrentHashMap<>() 
+                )
+                .computeIfAbsent(
+                        typePatterns, 
+                        key -> doCreateTypeMatcher(ruleName, typePatterns, acceptMatchAllPattern, classLoader, module, placeholderHelper)
+                );
     }
 
     protected ElementMatcher<TypeDescription> doCreateTypeMatcher(

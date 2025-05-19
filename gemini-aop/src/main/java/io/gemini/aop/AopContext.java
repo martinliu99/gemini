@@ -262,11 +262,13 @@ public class AopContext implements Closeable {
     }
 
     public boolean isDiagnosticClass(String typeName) {
-        return diagnosticClasses.contains(typeName);
+        return DiagnosticLevel.DEBUG == diagnosticLevel && diagnosticClasses.contains(typeName);
     }
 
     public boolean isDiagnosticClass(List<Class<?>> types) {
         if(CollectionUtils.isEmpty(types) == true)
+            return false;
+        if(DiagnosticLevel.DEBUG != diagnosticLevel)
             return false;
 
         for(Class<?> clazz : types) {

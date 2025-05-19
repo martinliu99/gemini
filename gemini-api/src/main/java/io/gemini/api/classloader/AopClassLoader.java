@@ -102,8 +102,8 @@ public abstract class AopClassLoader extends URLClassLoader {
                 return this;
             }
 
-            /* 
-             * @see io.gemini.api.activation.AopClassLoader.ParentFirstFilter#isParentFirstClass(java.lang.String)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public boolean isParentFirstClass(String name) {
@@ -115,8 +115,8 @@ public abstract class AopClassLoader extends URLClassLoader {
                 return false;
             }
 
-            /* 
-             * @see io.gemini.api.activation.AopClassLoader.ParentFirstFilter#isParentFirstResource(java.lang.String)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public boolean isParentFirstResource(String name) {
@@ -171,8 +171,8 @@ public abstract class AopClassLoader extends URLClassLoader {
                 return this;
             }
 
-            /* 
-             * @see io.gemini.api.activation.AopClassLoader.TypeFilter#filterTypeName(java.lang.String)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public String filterTypeName(String name) {
@@ -182,8 +182,8 @@ public abstract class AopClassLoader extends URLClassLoader {
                 return name;
             }
 
-            /* 
-             * @see io.gemini.api.activation.AopClassLoader.TypeFilter#filterResourceName(java.lang.String)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public String filterResourceName(String name) {

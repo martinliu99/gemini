@@ -136,7 +136,7 @@ public interface ClassScanner {
                         .enableMemoryMapping()
                         .enableClassInfo()
                         .enableAnnotationInfo()
-//                        .enableExternalClasses()
+                        .enableExternalClasses()
 //                        .enableInterClassDependencies()   // disable it for performance
                         .ignoreClassVisibility()
                         .disableNestedJarScanning()
@@ -222,15 +222,15 @@ public interface ClassScanner {
             this.diagnosticLevel = defaultSanner.diagnosticLevel;
         }
 
-
-        /*
-         * @see io.gemini.core.object.ClassScanner#getClasseNamesImplementing(java.lang.String)
+        /**
+         * {@inheritDoc}
          */
         public List<String> getClassNamesImplementing(String typeName) {
             return this.getClassesImplementing(typeName, this.filteredClasspathElementUrls).getNames();
         }
 
-        /* @see io.gemini.core.object.ClassScanner#getClassesImplementing(java.lang.String) 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public ClassInfoList getClassesImplementing(String typeName) {
@@ -247,14 +247,15 @@ public interface ClassScanner {
             return filterClasses(classInfo.getClassesImplementing(), filteredClasspathElementUrls);
         }
 
-        /*
-         * @see io.gemini.core.object.ClassScanner#getClasseNamesWithAnnotation(java.lang.String)
+        /**
+         * {@inheritDoc}
          */
         public List<String> getClassNamesWithAnnotation(String annotationName) {
             return this.getClassesWithAnnotation(annotationName, this.filteredClasspathElementUrls).getNames();
         }
 
-        /* @see io.gemini.core.object.ClassScanner#getClasseWithAnnotation(java.lang.String) 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public ClassInfoList getClassesWithAnnotation(String annotationName) {
@@ -360,19 +361,17 @@ public interface ClassScanner {
     }
 
 
-    public static class AccessibleClassInfoFilter implements ClassInfoFilter {
+    public static class InstantiableClassInfoFilter implements ClassInfoFilter {
 
-        /* 
-         * @see io.github.classgraph.ClassInfoList.ClassInfoFilter#accept(io.github.classgraph.ClassInfo) 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean accept(ClassInfo classInfo) {
-            return classInfo.isStandardClass()
-                    && !classInfo.isAbstract()
-                    && !classInfo.isEnum()
-                    && classInfo.isPublic()
-                    && !classInfo.isAnonymousInnerClass()
-                    && (!classInfo.isInnerClass() || classInfo.isStatic())
+            // top level or nested, concrete class
+            return (!classInfo.isInterface() && !classInfo.isAbstract()
+                        && !classInfo.isAnnotation() && !classInfo.isEnum() )
+                    && (!classInfo.isInnerClass() || classInfo.isStatic() )
                     ;
         }
     }

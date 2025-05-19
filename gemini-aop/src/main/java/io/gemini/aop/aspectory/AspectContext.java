@@ -120,7 +120,8 @@ public class AspectContext implements Closeable {
     }
 
 
-    /* @see java.io.Closeable#close()
+    /**
+     * {@inheritDoc}
      */
     @Override
     public void close() throws IOException {

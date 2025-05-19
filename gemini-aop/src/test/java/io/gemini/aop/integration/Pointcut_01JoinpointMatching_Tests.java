@@ -89,7 +89,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
@@ -99,7 +100,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -186,7 +188,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -196,7 +199,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -264,7 +268,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Number, RuntimeException> joinpoint) throws Throwable {
@@ -274,7 +279,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -342,7 +348,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Number[], RuntimeException> joinpoint) throws Throwable {
@@ -352,7 +359,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -422,7 +430,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<List, RuntimeException> joinpoint) throws Throwable {
@@ -432,7 +441,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -500,7 +510,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<List<String>, RuntimeException> joinpoint) throws Throwable {
@@ -510,7 +521,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -578,7 +590,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
         private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Advices.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<List<? extends Number>, RuntimeException> joinpoint) throws Throwable {
@@ -588,7 +601,8 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {

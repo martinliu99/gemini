@@ -59,9 +59,8 @@ public interface TypePoolFactory {
             this.classFileBufferStrategy = classFileBufferStrategy == null ? ClassFileBufferStrategy.Default.RETAINING : classFileBufferStrategy;
         }
 
-
-        /*
-         * @see io.gemini.core.pool.TypePoolFactory#customizeAgentBuilder(net.bytebuddy.agent.builder.AgentBuilder)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public AgentBuilder customizeAgentBuilder(AgentBuilder agentBuilder) {
@@ -75,8 +74,8 @@ public interface TypePoolFactory {
                     ;
         }
 
-        /*
-         * @see io.gemini.core.pool.TypePoolFactory#createExplicitTypePool(java.lang.ClassLoader, net.bytebuddy.utility.JavaModule)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public ExplicitTypePool createExplicitTypePool(ClassLoader classLoader, JavaModule javaModule) {
@@ -101,9 +100,8 @@ public interface TypePoolFactory {
             return classFileBufferStrategy.typePool(poolStrategy, classFileLocator, null, ClassLoaderUtils.getClassLoaderId(classLoader));
         }
 
-
-        /*
-         * @see io.gemini.core.pool.TypePoolFactory#getExplicitTypePool(java.lang.ClassLoader)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public ExplicitTypePool getExplicitTypePool(ClassLoader classLoader) {

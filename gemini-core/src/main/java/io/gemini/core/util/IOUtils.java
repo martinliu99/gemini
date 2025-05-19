@@ -164,7 +164,8 @@ public class IOUtils {
             this.byteCode = byteCode;
         }
 
-        /* @see java.net.URLStreamHandler#openConnection(java.net.URL) 
+        /**
+         * {@inheritDoc}
          */
         @Override
         protected URLConnection openConnection(URL u) throws IOException {
@@ -185,7 +186,8 @@ public class IOUtils {
             this.inputStream = inputStream;
         }
 
-        /* @see java.net.URLConnection#connect() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void connect() {

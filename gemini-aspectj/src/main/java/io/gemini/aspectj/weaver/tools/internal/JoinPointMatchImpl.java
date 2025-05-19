@@ -26,29 +26,30 @@ public class JoinPointMatchImpl implements JoinPointMatch {
 
     public static final JoinPointMatch NO_MATCH = new JoinPointMatchImpl();
     private static final PointcutParameter[] NO_BINDINGS = new PointcutParameter[0];
-    
+
     private boolean match;
     private PointcutParameter[] bindings;
-    
+
+
     public JoinPointMatchImpl(PointcutParameter[] bindings) {
         this.match = true;
         this.bindings = bindings;
     }
-    
+
     private JoinPointMatchImpl() {
         this.match = false;
         this.bindings = NO_BINDINGS;
     }
-    
-    /* (non-Javadoc)
-     * @see org.aspectj.weaver.tools.JoinPointMatch#matches()
+
+    /**
+     * {@inheritDoc}
      */
     public boolean matches() {
         return match;
     }
 
-    /* (non-Javadoc)
-     * @see org.aspectj.weaver.tools.JoinPointMatch#getParameterBindings()
+    /**
+     * {@inheritDoc}
      */
     public PointcutParameter[] getParameterBindings() {
         return bindings;

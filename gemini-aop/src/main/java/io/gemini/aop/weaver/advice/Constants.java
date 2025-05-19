@@ -15,7 +15,7 @@
  */
 package io.gemini.aop.weaver.advice;
 
-public class Constants {
+class Constants {
 
 
     public static final String LOCAL_VARIABLE_ADVICE_DISPATCHER = "_AdviceDispatcher";

@@ -125,10 +125,8 @@ public class ShadowMatchImpl implements ShadowMatch {
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.aspectj.weaver.tools.ShadowMatch#setMatchingContext(org.aspectj.weaver.tools.MatchingContext)
+    /**
+     * {@inheritDoc}
      */
     public void setMatchingContext(MatchingContext aMatchContext) {
         this.matchContext = aMatchContext;

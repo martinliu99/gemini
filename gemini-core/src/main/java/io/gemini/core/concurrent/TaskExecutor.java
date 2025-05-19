@@ -108,16 +108,16 @@ public interface TaskExecutor {
         }
 
 
-        /*
-         * @see io.gemini.core.concurrent.TaskExecutor#isParallel()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean isParallel() {
             return parallel;
         }
 
-        /*
-         * @see io.gemini.core.concurrent.TaskExecutor#executeTasks(java.util.List, java.util.function.Function, boolean, int)
+        /**
+         * {@inheritDoc}
          */
         public <T, R> List<R> executeTasks(List<T> elements, Function<List<T>, List<R>> mapper, boolean parallel, int batchSize) {
             if(elements.size() == 0 || mapper == null)
@@ -156,8 +156,8 @@ public interface TaskExecutor {
             return results;
         }
 
-        /*
-         * @see io.gemini.core.concurrent.TaskExecutor#shutdown()
+        /**
+         * {@inheritDoc}
          */
         public void shutdown() {
             if(parallel == false || terminated == true)

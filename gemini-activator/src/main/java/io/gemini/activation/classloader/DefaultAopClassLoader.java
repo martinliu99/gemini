@@ -120,8 +120,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
     }
 
 
-    /*
-     * @see java.lang.ClassLoader#loadClass(java.lang.String, boolean)
+    /**
+     * {@inheritDoc}
      */
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
@@ -154,8 +154,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
         }
     }
 
-    /*
-     * @see java.net.URLClassLoader#findClass(java.lang.String)
+    /**
+     * {@inheritDoc}
      */
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
@@ -163,8 +163,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
         return byteCode!= null ? super.defineClass(name, byteCode, 0, byteCode.length) : super.findClass(name);
     }
 
-    /*
-     * @see java.lang.ClassLoader#getResource(java.lang.String)
+    /**
+     * {@inheritDoc}
      */
     public URL getResource(String name) {
         if(name == null || "".equals(name.trim()))
@@ -184,8 +184,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
         return super.getResource( typeFilters.filterResourceName(name) );
     }
 
-    /*
-     * @see java.net.URLClassLoader#findResource(java.lang.String)
+    /**
+     * {@inheritDoc}
      */
     @Override
     public URL findResource(String name) {
@@ -194,8 +194,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
     }
 
 
-    /*
-     * @see java.lang.ClassLoader#getResources(java.lang.String)
+    /**
+     * {@inheritDoc}
      */
     public Enumeration<URL> getResources(String name) throws IOException {
         // 1.if delegation loading is required, try to load from actual parent ClassLoader.
@@ -208,8 +208,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
         return super.getResources( typeFilters.filterResourceName(name) );
     }
 
-    /*
-     * @see java.net.URLClassLoader#findResources(java.lang.String)
+    /**
+     * {@inheritDoc}
      */
     @Override
     public Enumeration<URL> findResources(final String name) throws IOException {

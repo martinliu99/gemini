@@ -63,8 +63,8 @@ public interface DescriptorOffset {
         }
 
 
-        /*
-         * @see net.bytebuddy.asm.Advice.OffsetMapping.Factory#getAnnotationType()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public Class<Descriptor> getAnnotationType() {
@@ -101,8 +101,8 @@ public interface DescriptorOffset {
             super(methodSignature, methodDescription);
         }
 
-
-        /* @see net.bytebuddy.asm.Advice.OffsetMapping.Factory#make(net.bytebuddy.description.method.ParameterDescription.InDefinedShape, net.bytebuddy.description.annotation.AnnotationDescription.Loadable, net.bytebuddy.asm.Advice.OffsetMapping.Factory.AdviceType)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public OffsetMapping make(InDefinedShape target, Loadable<Descriptor> annotation,
@@ -141,6 +141,9 @@ public interface DescriptorOffset {
             super(methodSignature, methodDescription);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public OffsetMapping make(InDefinedShape target, Loadable<Descriptor> annotation,
                 AdviceType adviceType) {

@@ -78,10 +78,9 @@ public class PointcutExpressionImpl implements PointcutExpression {
         return this.pointcut;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.aspectj.weaver.tools.PointcutExpression#setMatchingContext(org.aspectj.weaver.tools.MatchingContext)
+
+    /**
+     * {@inheritDoc}
      */
     public void setMatchingContext(MatchingContext aMatchContext) {
         this.matchContext = aMatchContext;
@@ -336,10 +335,8 @@ public class PointcutExpressionImpl implements PointcutExpression {
         return sm;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.aspectj.weaver.tools.PointcutExpression#getPointcutExpression()
+    /**
+     * {@inheritDoc}
      */
     public String getPointcutExpression() {
         return expression;

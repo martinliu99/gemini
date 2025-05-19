@@ -106,8 +106,8 @@ public abstract class AspectClassLoader extends URLClassLoader {
     }
 
 
-    /*
-     * @see java.lang.ClassLoader#loadClass(java.lang.String, boolean)
+    /**
+     * {@inheritDoc}
      */
     @Override
     protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
@@ -181,8 +181,8 @@ public abstract class AspectClassLoader extends URLClassLoader {
     protected abstract ClassLoader doFindJoinpointCL();
 
 
-    /*
-     * @see java.lang.ClassLoader#getResource(java.lang.String)
+    /**
+     * {@inheritDoc}
      */
     @Override
     public URL getResource(String name) {
@@ -291,6 +291,9 @@ public abstract class AspectClassLoader extends URLClassLoader {
             super(aspectoryName, urls, aopClassLoader);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected ClassLoader doFindJoinpointCL() {
             return ThreadContext.getContextClassLoader();
@@ -310,7 +313,8 @@ public abstract class AspectClassLoader extends URLClassLoader {
             this.joinpointClassLoader = joinpointClassLoader;
         }
 
-        /* @see io.gemini.aop.classloader.AspectClassLoader#doFindJoinpointCL() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         protected ClassLoader doFindJoinpointCL() {

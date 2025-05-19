@@ -110,16 +110,16 @@ public interface ClassRenamer {
         }
 
 
-        /* 
-         * @see io.gemini.core.object.ClassRenamer#getNameMapping() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public Map<String, String> getNameMapping() {
             return Collections.unmodifiableMap(nameMapping);
         }
 
-        /*
-         * @see io.gemini.core.object.ClassRenamer#map(java.lang.String, byte[])
+        /**
+         * {@inheritDoc}
          */
         @Override
         public byte[] map(String className, byte[] originByteCode) throws IllegalClassFormatException {

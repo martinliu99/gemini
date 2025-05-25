@@ -78,14 +78,14 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
 
 
     public DefaultAspectWeaver(AopContext aopContext, AspectFactory aspectFactory, WeaverContext weaverContext) {
-        this.aopContext = aopContext;
-        this.aspectFactory = aspectFactory;
-        this.weaverContext = weaverContext;
-
         long startedAt = System.nanoTime();
         if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
             LOGGER.info("^Creating AspectWeaver with '{}'.", weaverContext);
         }
+
+        this.aopContext = aopContext;
+        this.aspectFactory = aspectFactory;
+        this.weaverContext = weaverContext;
 
         // set bytebuddy setting to dump byte code
         if(aopContext.isDumpByteCode()) {
@@ -120,7 +120,7 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
         };
 
         // 3.initialize properties
-        this.weaverCache = new WeaverCache(aopContext, weaverContext);
+        this.weaverCache = new WeaverCache(weaverContext);
     }
 
 
@@ -346,7 +346,9 @@ class DefaultAspectWeaver implements AspectWeaver, BootstrapAdvice.Factory {
      */
     @Override
     public <T, E extends Throwable> Dispatcher<T, E> dispacther(Object descriptor, Object thisObject, Object[] arguments) {
-        return new Joinpoints.MutableJoinpointDispatcher<>( (Descriptor) descriptor, thisObject, arguments, aopContext );
+        return descriptor == null 
+                ? null
+                : new Joinpoints.MutableJoinpointDispatcher<>( (Descriptor) descriptor, thisObject, arguments, aopContext );
     }
 
 

@@ -37,9 +37,6 @@ public class InstanceConstructorAdvice {
             @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
-        if(descriptor == null)
-            return;
-
         // 1.create dispatcher
         dispatcher = BootstrapAdvice.Bridger.dispacther(descriptor, null, arguments);
         if(dispatcher == null)

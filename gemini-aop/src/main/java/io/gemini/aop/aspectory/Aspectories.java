@@ -47,8 +47,9 @@ public class Aspectories {
 
         Map<String, Integer> aspectSpecs = aspectFactory.getAspectSpecs().entrySet().stream()
                 .map( e -> 
-                    new SimpleEntry<>(e.getKey(), e.getValue().size()) )
-                .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
+                        new SimpleEntry<>(e.getKey(), e.getValue().size()) )
+                .collect( 
+                        Collectors.toMap(Entry::getKey, Entry::getValue) );
         bootstraperMetrics.setAspectSpecs(aspectSpecs);
 
         return aspectFactory;

@@ -23,8 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -61,57 +59,39 @@ class CompoundAspectFactory implements AspectFactory {
             AspectoriesContext aspectoriesContext,
             Map<String, AspectoryContext> aspectoryContextMap) {
         long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
+        if(aopContext.getDiagnosticLevel().isSimpleEnabled())
             LOGGER.info("^Creating CompoundAspectFactory.");
-        }
-        ConcurrentMap<String, Double> creationTime = new ConcurrentHashMap<>();
 
         try {
-            return aopContext.getGlobalTaskExecutor().executeTasks(
+            return aopContext.getGlobalTaskExecutor().executeTasks( 
                     aspectoryContextMap.entrySet().stream()
                         .collect( Collectors.toList() ), 
-                    contextEntries -> {
-                        List<Entry<AspectoryContext, DefaultAspectFactory>> aspectFactories = new ArrayList<>(1);
-                        for(Entry<String, AspectoryContext> entry : contextEntries) {
-                            long startedAt2 = System.nanoTime();
-
-                            String aspectoryName = entry.getKey();
-                            if(LOGGER.isDebugEnabled()) {
-                                LOGGER.debug("^Creating DefaultAspectFactory '{}'", aspectoryName);
-                            }
-
-                            // filter aspectory
-                            if(aspectoriesContext.getIncludedAspectoriesMatcher().matches(aspectoryName) == false) 
-                                continue;
-
-                            if(aspectoriesContext.getExcludedAspectoriesMatcher().matches(aspectoryName) == true) 
-                                continue;
-
-                            // create AspectFactory
-                            try {
-                                AspectoryContext value = entry.getValue();
-                                Entry<AspectoryContext, DefaultAspectFactory> aspectFactory = new SimpleEntry<>(value, 
-                                        new DefaultAspectFactory(aopContext, value) );
-                                aspectFactories.add(aspectFactory);
-                            } finally {
-                                double time = (System.nanoTime() - startedAt2) / 1e9;
-
-                                if(LOGGER.isDebugEnabled())
-                                    LOGGER.debug("$Took '{}' seconds to create AspectFactory '{}'", time, aspectoryName);
-                                creationTime.put(aspectoryName, time);
-                            }
-                        }
-                        return aspectFactories;
-                    },
-                    1
-            ).stream()
+                    entry -> 
+                        new SimpleEntry<>( entry.getValue(), 
+                                createAspectFactory(aopContext, aspectoriesContext, entry.getValue()) )
+            )
             .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
         } finally {
             if(aopContext.getDiagnosticLevel().isSimpleEnabled())
-                LOGGER.info("$Took '{}' seconds to create CompoundAspectFactory. {}", 
-                        (System.nanoTime() - startedAt) / 1e9,
-                        creationTime.size() == 0 ? "" : creationTime.entrySet().stream().map( entry -> entry.getKey() + ": " + entry.getValue() ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
+                LOGGER.info("$Took '{}' seconds to create CompoundAspectFactory. {}", (System.nanoTime() - startedAt) / 1e9);
         }
+    }
+
+    private DefaultAspectFactory createAspectFactory(AopContext aopContext,
+            AspectoriesContext aspectoriesContext, AspectoryContext aspectoryContext) {
+        String aspectoryName = aspectoryContext.getAspectoryName();
+
+        // filter aspectory
+        if(aspectoriesContext.getIncludedAspectoriesMatcher().matches(aspectoryName) == false) 
+            return null;
+
+        if(aspectoriesContext.getExcludedAspectoriesMatcher().matches(aspectoryName) == true) 
+            return null;
+
+        // create AspectFactory
+        DefaultAspectFactory aspectFactory = new DefaultAspectFactory(aopContext, aspectoryContext);
+
+        return aspectFactory;
     }
 
 
@@ -130,9 +110,11 @@ class CompoundAspectFactory implements AspectFactory {
         Map<MethodDescription, List<Aspect>> methodAspectMap = new HashMap<>();
         // collect aspects per method
         for(AspectFactory aspectFactory : aspectFactoryMap.values()) {
-            for(Entry<? extends MethodDescription, List<? extends Aspect>> entry : aspectFactory.getAspects(typeDescription, joinpointClassLoader, javaModule).entrySet()) {
-                methodAspectMap.computeIfAbsent(entry.getKey(), key -> new ArrayList<>() )
-                    .addAll(entry.getValue());
+            for(Entry<? extends MethodDescription, List<? extends Aspect>> entry : aspectFactory
+                    .getAspects(typeDescription, joinpointClassLoader, javaModule).entrySet()) {
+                methodAspectMap
+                .computeIfAbsent(entry.getKey(), key -> new ArrayList<>() )
+                .addAll(entry.getValue());
             }
         }
 

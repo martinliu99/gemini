@@ -25,20 +25,20 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.aop.AopContext;
 import io.gemini.aop.AopException;
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.AopMetrics.BootstraperMetrics;
-import io.gemini.aop.AopContext;
 import io.gemini.aop.java.lang.BootstrapClassProvider;
 import io.gemini.core.object.ClassRenamer;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.IOUtils;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.PackageDescription;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.utility.JavaModule;
@@ -91,12 +91,15 @@ public class BootstrapClassLoaderConfigurer {
             bootstraperMetrics.setBootstrapCLConfigTime(time);
             if(aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                 LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass. \n  {} \n", 
-                        time / AopMetrics.NANO_TIME, formatNameMapping(nameMapping) );
+                        time / AopMetrics.NANO_TIME, 
+                        StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  ") 
+                );
 
             return nameMapping;
         } catch (Exception e) {
             LOGGER.warn("$Failed to configure BootstrapClassLoader with renamed BootstrapClass. \n  ", 
-                    formatNameMapping(nameMapping), e);
+                    StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  "), 
+                    e);
 
             throw new AopException(e);
         }
@@ -188,12 +191,4 @@ public class BootstrapClassLoaderConfigurer {
         classInjector.injectRaw(classByteCodeMap);
     }
 
-    private String formatNameMapping(Map<String, String> nameMapping) {
-        if(nameMapping == null)
-            return null;
-
-        return nameMapping.entrySet().stream()
-                .map( e -> e.getKey() + " => " + e.getValue() )
-                .collect( Collectors.joining("\n  ") );
-    }
 }

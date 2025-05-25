@@ -31,10 +31,10 @@ import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aspect.Advice;
 import io.gemini.api.aspect.AspectSpec;
-import io.gemini.api.aspect.Pointcut;
 import io.gemini.api.aspect.AspectSpec.ExprPointcutSpec;
 import io.gemini.api.aspect.AspectSpec.PojoPointcutSpec;
 import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aspect.Pointcut;
 
 
 public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
@@ -44,26 +44,26 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         new SpecScanning_Objects().scanSpec(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcutSpec1.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcutSpec2.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcutSpec1.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcutSpec2.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
@@ -93,33 +93,36 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_PojoPointcutSpec1 implements AspectSpec.PojoPointcutSpec {
+    public static class SpecScanning_PojoPointcutSpec implements AspectSpec.PojoPointcutSpec {
 
-        static final String SCAN_SPEC_AFTER_ADVICE = ".after";//SpecScanning_PojoPointcutSpec1.class.getName() + ".after";
+        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutSpec.class.getName() + ".after";
 
-
-        /* @see io.gemini.aop.aspect.AspectSpec#isPerInstance() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean isPerInstance() {
             return false;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning#getAdviceClassName() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getAdviceClassName() {
             return SpecScanning_PojoPointcut_Advice.class.getName();
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec#getOrder() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public int getOrder() {
             return 0;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning.PojoPointcutSpec#getPointcut() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public Pointcut getPointcut() {
@@ -134,7 +137,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
-            /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -146,12 +150,13 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_PojoPointcutSpec2 extends Advice.AbstractAfter<Long, RuntimeException> 
+    public static class SpecScanning_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AspectSpec.PojoPointcutSpec.Factory {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutSpec2.class.getName() + ".after";
-        
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutAdvice.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -161,7 +166,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -179,33 +185,37 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_ExprPointcutSpec1 implements AspectSpec.ExprPointcutSpec {
+    public static class SpecScanning_ExprPointcutSpec implements AspectSpec.ExprPointcutSpec {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutSpec1.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutSpec.class.getName() + ".after";
 
 
-        /* @see io.gemini.aop.aspect.AspectSpec#isPerInstance() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean isPerInstance() {
             return false;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning#getAdviceClassName() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getAdviceClassName() {
             return SpecScanning_ExprPointcut_Advice.class.getName();
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec#getOrder() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public int getOrder() {
             return 0;
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.ExprPointcutSpec#getPointcutExpression() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getPointcutExpression() {
@@ -215,7 +225,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         public static class SpecScanning_ExprPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
-            /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -227,12 +238,13 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_ExprPointcutSpec2 extends Advice.AbstractAfter<Long, RuntimeException> 
+    public static class SpecScanning_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AspectSpec.ExprPointcutSpec.Factory {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutSpec2.class.getName() + ".after";
-        
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutAdvice.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -242,7 +254,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public ExprPointcutSpec getAspectSpec() {
@@ -260,7 +273,7 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         private static final String MATCH_ASPECT_SPEC_POINTCUT = 
                 "execution(!private long io.gemini.aop.integration.Aspect_01SpecScanning_Tests$SpecScanning_Objects.scanSpec(long))";
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_AspectJSpec.class.getName() + ".scanSpec_afterAdvice";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_AspectJSpec.class.getName() + ".after";
 
         @After(MATCH_ASPECT_SPEC_POINTCUT)
         public void scanSpec_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
@@ -275,7 +288,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_Advice_Base.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -289,7 +303,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
     public static class SpecScanning_Advice_Sub extends SpecScanning_Advice_Base
             implements AspectSpec.PojoPointcutSpec.Factory {
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -313,64 +328,127 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         new SpecScanning_Objects().ignoreIllegalSpec(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceClass_PojoPointcutSpec1.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NullAspectSpec_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceClass_PojoPointcutSpec2.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NullAspectSpec_ExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoPointcut_PojoPointcutSpec1.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceClass_PojoPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoPointcut_PojoPointcutSpec2.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceClass_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNull();
+        }
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoPointcut_PojoPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNull();
+        }
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoPointcut_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoExpr_ExprPointcutSpec1.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoExpr_ExprPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoExpr_ExprPointcutSpec2.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoExpr_ExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    public static class SpecScanning_NoAdviceClass_PojoPointcutSpec1 implements AspectSpec.PojoPointcutSpec {
+    public static class SpecScanning_NullAspectSpec_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
+            implements AspectSpec.PojoPointcutSpec.Factory {
 
-        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoAdviceClass_PojoPointcutSpec1.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullAspectSpec_PojoPointcutAdvice.class.getName() + ".after";
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(joinpoint.getReturning()) );
+        }
 
-        /* @see io.gemini.aop.aspect.AspectSpec#isPerInstance() 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public PojoPointcutSpec getAspectSpec() {
+            return null;
+        }
+    }
+
+    public static class SpecScanning_NullAspectSpec_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
+            implements AspectSpec.ExprPointcutSpec.Factory {
+
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullAspectSpec_ExprPointcutAdvice.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(joinpoint.getReturning()) );
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ExprPointcutSpec getAspectSpec() {
+            return null;
+        }
+    }
+
+    public static class SpecScanning_NoAdviceClass_PojoPointcutSpec implements AspectSpec.PojoPointcutSpec {
+
+        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoAdviceClass_PojoPointcutSpec.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean isPerInstance() {
             return false;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning#getAdviceClassName() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getAdviceClassName() {
             return null;
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec#getOrder() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public int getOrder() {
             return 0;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning.PojoPointcutSpec#getPointcut() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public Pointcut getPointcut() {
@@ -385,7 +463,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
-            /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -397,12 +476,13 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_NoAdviceClass_PojoPointcutSpec2 extends Advice.AbstractAfter<Long, RuntimeException> 
+    public static class SpecScanning_NoAdviceClass_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AspectSpec.PojoPointcutSpec.Factory {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutSpec2.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutAdvice.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -412,7 +492,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -428,33 +509,37 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_NoPointcut_PojoPointcutSpec1 implements AspectSpec.PojoPointcutSpec {
+    public static class SpecScanning_NoPointcut_PojoPointcutSpec implements AspectSpec.PojoPointcutSpec {
 
-        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoPointcut_PojoPointcutSpec1.class.getName() + ".after";
+        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoPointcut_PojoPointcutSpec.class.getName() + ".after";
 
 
-        /* @see io.gemini.aop.aspect.AspectSpec#isPerInstance() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean isPerInstance() {
             return false;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning#getAdviceClassName() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getAdviceClassName() {
             return SpecScanning_PojoPointcut_Advice.class.getName();
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec#getOrder() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public int getOrder() {
             return 0;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning.PojoPointcutSpec#getPointcut() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public Pointcut getPointcut() {
@@ -464,7 +549,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
-            /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -476,12 +562,13 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_NoPointcut_PojoPointcutSpec2 extends Advice.AbstractAfter<Long, RuntimeException> 
+    public static class SpecScanning_NoPointcut_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AspectSpec.PojoPointcutSpec.Factory {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoPointcut_PojoPointcutSpec2.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoPointcut_PojoPointcutAdvice.class.getName() + ".after";
 
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -491,7 +578,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public PojoPointcutSpec getAspectSpec() {
@@ -503,7 +591,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
-            /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -515,33 +604,37 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_NoExpr_ExprPointcutSpec1 implements AspectSpec.ExprPointcutSpec {
+    public static class SpecScanning_NoExpr_ExprPointcutSpec implements AspectSpec.ExprPointcutSpec {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoExpr_ExprPointcutSpec1.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoExpr_ExprPointcutSpec.class.getName() + ".after";
 
 
-        /* @see io.gemini.aop.aspect.AspectSpec#isPerInstance() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public boolean isPerInstance() {
             return false;
         }
 
-        /* @see io.gemini.aop.aspect.SpecScanning#getAdviceClassName() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getAdviceClassName() {
             return SpecScanning_ExprPointcut_Advice.class.getName();
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec#getOrder() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public int getOrder() {
             return 0;
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.ExprPointcutSpec#getPointcutExpression() 
+        /**
+         * {@inheritDoc}
          */
         @Override
         public String getPointcutExpression() {
@@ -551,7 +644,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
 
         public static class SpecScanning_ExprPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
-            /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+            /**
+             * {@inheritDoc}
              */
             @Override
             public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -563,12 +657,13 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-    public static class SpecScanning_NoExpr_ExprPointcutSpec2 extends Advice.AbstractAfter<Long, RuntimeException> 
+    public static class SpecScanning_NoExpr_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AspectSpec.ExprPointcutSpec.Factory {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoExpr_ExprPointcutSpec2.class.getName() + ".after";
-        
-        /* @see io.gemini.aop.aspect.Advice.After#after(io.gemini.aop.aspect.Joinpoint.MutableJoinpoint)
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoExpr_ExprPointcutAdvice.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
          */
         @Override
         public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
@@ -578,7 +673,8 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /* @see io.gemini.aop.aspect.AspectSpec.PojoPointcutSpec.Factory#getAspectSpec()
+        /**
+         * {@inheritDoc}
          */
         @Override
         public ExprPointcutSpec getAspectSpec() {
@@ -589,9 +685,7 @@ public class Aspect_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
-
     @Aspect
     public static class SpecScanning_NoAdvice_AspectJSpec {
-        
     }
 }

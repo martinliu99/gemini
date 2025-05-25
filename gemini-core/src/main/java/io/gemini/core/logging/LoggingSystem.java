@@ -18,7 +18,6 @@ package io.gemini.core.logging;
 import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -120,7 +119,8 @@ public interface LoggingSystem {
                             + "{} ",
                             defaultStatusLevel, statusLevel,
                             allLogLevel, configLocation,
-                            loggerPropertyNames.size() == 0 ? "" : loggerPropertyNames.stream().map( name -> name + ": " + configSource.getProperty(name) ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
+                            StringUtils.join(loggerPropertyNames, name -> name + ": " + configSource.getProperty(name), "\n  ", "\n  ", "\n")
+                    );
                 }
 
                 if(statusLevel != null && defaultStatusLevel.compareTo(statusLevel) < 0) {

@@ -107,6 +107,28 @@ public class KindedPointcutV2 extends KindedPointcut {
         return ret;
     }
 
+
+    @Override
+    protected FuzzyBoolean matchInternal(Shadow shadow) {
+        if (shadow.getKind() != getKind()) {
+            return FuzzyBoolean.NO;
+        }
+
+        if (shadow.getKind() == Shadow.SynchronizationLock && getKind() == Shadow.SynchronizationLock) {
+            return FuzzyBoolean.YES;
+        }
+        if (shadow.getKind() == Shadow.SynchronizationUnlock && getKind() == Shadow.SynchronizationUnlock) {
+            return FuzzyBoolean.YES;
+        }
+
+        if (!getSignature().matches(shadow.getMatchingSignature(), shadow.getIWorld(), true)) {
+            return FuzzyBoolean.NO;
+        }
+
+        return FuzzyBoolean.YES;
+    }
+
+
     @Override
     public Pointcut concretize1(ResolvedType inAspect, ResolvedType declaringType, IntMap bindings) {
         Pointcut ret = new KindedPointcutV2(this.getKind(), this.getSignature(), bindings.getEnclosingAdvice());

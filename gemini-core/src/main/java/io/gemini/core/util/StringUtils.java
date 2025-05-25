@@ -16,6 +16,9 @@
 package io.gemini.core.util;
 
 import java.util.Collection;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class StringUtils {
 
@@ -38,8 +41,8 @@ public class StringUtils {
         return false;
     }
 
-    public static String[] toStringArray(Collection<String> collection) {
-        return (collection != null ? collection.toArray(new String[0]) : new String[0]);
+    public static String[] toStringArray(Collection<String> elements) {
+        return (elements != null ? elements.toArray(new String[0]) : new String[0]);
     }
 
     public static String replace(String inString, String oldPattern, String newPattern) {
@@ -73,23 +76,43 @@ public class StringUtils {
     }
 
 
-
-    /**
-     * Check that the given {@code CharSequence} is neither {@code null} nor
-     * of length 0.
-     * <p>Note: this method returns {@code true} for a {@code CharSequence}
-     * that purely consists of whitespace.
-     * <p><pre class="code">
-     * StringUtils.hasLength(null) = false
-     * StringUtils.hasLength("") = false
-     * StringUtils.hasLength(" ") = true
-     * StringUtils.hasLength("Hello") = true
-     * </pre>
-     * @param str the {@code CharSequence} to check (may be {@code null})
-     * @return {@code true} if the {@code CharSequence} is not {@code null} and has length
-     * @see #hasText(String)
-     */
     public static boolean hasLength(CharSequence str) {
         return (str != null && str.length() > 0);
     }
+
+
+    public static <S extends CharSequence> String join(Collection<S> elements, CharSequence delimiter) {
+        return join(elements, delimiter, "", "");
+    }
+
+    public static <S extends CharSequence> String join(Collection<S> elements, 
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        Stream<S> stream = elements == null ? Stream.empty() : elements.stream();
+
+        return join(stream, delimiter, prefix, suffix);
+    }
+
+    public static <T, S extends CharSequence> String join(Collection<T> elements, 
+            Function<T, S> mapper, CharSequence delimiter) {
+        return join(elements, mapper, delimiter, "", "");
+    }
+
+    public static <T, S extends CharSequence> String join(Collection<T> elements, 
+            Function<T, S> mapper,
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        if(CollectionUtils.isEmpty(elements))
+            return "";
+
+        return join(elements.stream().map(mapper), delimiter, prefix, suffix);
+    }
+
+    protected static <S extends CharSequence> String join(Stream<S> elements, 
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        if(elements == null)
+            return "";
+
+        return elements
+                .collect( Collectors.joining(delimiter, prefix, suffix) );
+    }
+
 }

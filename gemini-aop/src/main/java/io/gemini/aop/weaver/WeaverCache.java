@@ -22,7 +22,6 @@ import java.lang.reflect.AccessibleObject;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,7 +34,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopContext;
 import io.gemini.aop.Aspect;
 import io.gemini.aop.weaver.Joinpoints.Descriptor;
 import io.gemini.api.classloader.ThreadContext;
@@ -44,20 +42,20 @@ import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.method.MethodDescription;
 
 class WeaverCache implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverCache.class);
 
-    private final AopContext aopContext;
+
     private final WeaverContext weaverContext;
 
     private final ConcurrentMap<ClassLoader, ConcurrentMap<String /* typeName */, TypeCache>> classLoaderTypeCache;
 
 
-    WeaverCache(AopContext aopContext, WeaverContext weaverContext) {
-        this.aopContext = aopContext;
+    WeaverCache(WeaverContext weaverContext) {
         this.weaverContext = weaverContext;
 
         this.classLoaderTypeCache = new ConcurrentReferenceHashMap<>();
@@ -95,28 +93,12 @@ class WeaverCache implements Closeable {
     }
 
     public Joinpoints.Descriptor getJoinpointDescriptor(Lookup lookup, String methodSignature) {
-        ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
-
         Class<?> thisClass = lookup.lookupClass();
-        String typeName = thisClass.getName();
-        ClassLoader joinpointClassLoader = thisClass.getClassLoader();
-        try {
-            ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
+        TypeCache typeCache = getTypeCache(thisClass.getClassLoader(), thisClass.getName());
 
-            if(aopContext.isDiagnosticClass(typeName)) {
-                LOGGER.info("^Creating joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  {}", 
-                        typeName, joinpointClassLoader, methodSignature);
-            }
-
-            return getTypeCache(lookup.lookupClass().getClassLoader(), lookup.lookupClass().getName())
-                    .getJoinpointDescriptor(lookup, methodSignature);
-        } catch(Throwable t) {
-            LOGGER.warn("Failed to create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  {}", 
-                    typeName, joinpointClassLoader, methodSignature, t);
-            return null;
-        } finally {
-            ThreadContext.setContextClassLoader(existingClassLoader);
-        }
+        return typeCache == null
+                ? null
+                : typeCache.getJoinpointDescriptor(lookup, methodSignature, thisClass);
     }
 
 
@@ -171,6 +153,8 @@ class WeaverCache implements Closeable {
             }
             this.methodSignatureMap = methodSignatureMap;
             this.methodSignatureAspectsMap = methodSignatureAspectMap;
+
+            this.joinpointDescriptors = new ConcurrentHashMap<>(this.methodSignatureAspectsMap.size());
         }
 
 
@@ -195,46 +179,39 @@ class WeaverCache implements Closeable {
         }
 
 
-        Joinpoints.Descriptor getJoinpointDescriptor(Lookup lookup, String methodSignature) {
-            // create or fetch from cache
-            if(this.joinpointDescriptors.size() == 0 && this.methodSignatureAspectsMap.size() > 0) {
-                initializeJoinpointDescriptors(lookup);
-            }
-
-            return joinpointDescriptors.get(methodSignature);
+        protected Joinpoints.Descriptor getJoinpointDescriptor(Lookup lookup, String methodSignature, Class<?> thisClass) {
+            return joinpointDescriptors.computeIfAbsent(
+                    methodSignature, 
+                    signature -> createJoinpointDescriptor(lookup, signature, thisClass)
+            );
         }
 
-
-        protected void initializeJoinpointDescriptors(Lookup lookup) {
-            ConcurrentMap<String /* methodSignature */, Joinpoints.Descriptor> joinpointDescriptors = new ConcurrentHashMap<>(this.methodSignatureAspectsMap.size());
-            for(Iterator<Entry<String, MethodDescription>> iterator = this.methodSignatureMap.entrySet().iterator(); iterator.hasNext(); ) {
-                Entry<String, MethodDescription> entry = iterator.next();
-                String methodSignature = entry.getKey();
+        private Joinpoints.Descriptor createJoinpointDescriptor(Lookup lookup, String methodSignature, Class<?> thisClass) {
+            ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
+            ClassLoader joinpointClassLoader = thisClass.getClassLoader();
+            try {
+                ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
                 List<? extends Aspect> aspectChain = processAspects( this.methodSignatureAspectsMap.get(methodSignature) );
-                if(CollectionUtils.isEmpty(aspectChain) == true) {
-                    iterator.remove();
-                    this.methodSignatureAspectsMap.remove(methodSignature);
-                };
 
-                Descriptor joinpointDescriptor = this.createJoinpointDescriptor(lookup, methodSignature, entry.getValue(), aspectChain);
-                if(joinpointDescriptor == null) {
-                    iterator.remove();
-                    this.methodSignatureAspectsMap.remove(methodSignature);
-                };
+                Descriptor joinpointDescriptor = CollectionUtils.isEmpty(aspectChain)
+                        ? null
+                        : this.createJoinpointDescriptor(lookup, methodSignature, thisClass, this.methodSignatureMap.get(methodSignature), aspectChain);
 
-                joinpointDescriptors.put(methodSignature, joinpointDescriptor);
+                LOGGER.info("Created joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  {} \n{} \n", 
+                        typeName, lookup.lookupClass().getClassLoader(),
+                        methodSignature,
+                        StringUtils.join(aspectChain, a -> "    " + a.getAspectName(), "\n")
+                );
+
+                return joinpointDescriptor;
+            } catch(Throwable t) {
+                LOGGER.warn("Failed to create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  Method: {}", 
+                        typeName, joinpointClassLoader, methodSignature, t);
+                return null;
+            } finally {
+                ThreadContext.setContextClassLoader(existingClassLoader);
             }
-
-            this.joinpointDescriptors = joinpointDescriptors;
-            LOGGER.info("Matched type '{}' loaded by ClassLoader '{}' with below methods and advices. \n{}\n", 
-                    typeName, lookup.lookupClass().getClassLoader(),
-                    this.methodSignatureAspectsMap.entrySet().stream()
-                        .map( 
-                            e -> "  " + e.getKey() + "\n" 
-                                + e.getValue().stream().map( a -> "    " + a.getAspectName() ).collect( Collectors.joining("\n")) )
-                        .collect( Collectors.joining("\n") ) 
-            );
         }
 
         private List<? extends Aspect> processAspects(List<? extends Aspect> candidates) {
@@ -255,28 +232,15 @@ class WeaverCache implements Closeable {
         }
 
         private Joinpoints.Descriptor createJoinpointDescriptor(Lookup lookup, 
-                String methodSignature, MethodDescription methodDescription,
-                List<? extends Aspect> aspectChain) {
+                String methodSignature, Class<?> thisClass, MethodDescription methodDescription,
+                List<? extends Aspect> aspectChain) throws ClassNotFoundException, NoSuchMethodException, SecurityException {
             if(methodDescription.isTypeInitializer()) {
                 return new Joinpoints.Descriptor(lookup, methodSignature, null, aspectChain);
             }
 
-            try {
-                Class<?> thisClass = lookup.lookupClass();
-                AccessibleObject accessibleObject = ClassUtils.getAccessibleObject(thisClass, methodDescription);
-
-                String accessibleName = thisClass.getName() 
-                        + "."
-                        + ( methodDescription.isTypeInitializer() ? MethodDescription.TYPE_INITIALIZER_INTERNAL_NAME
-                                : methodDescription.isConstructor() 
-                                ? MethodDescription.CONSTRUCTOR_INTERNAL_NAME : methodDescription.getName() )
-                        + "(..)";
-
-                return new Joinpoints.Descriptor(lookup, accessibleName, accessibleObject, aspectChain);
-            } catch (Exception e) {
-                LOGGER.warn("Failed to create Joinpoint.Descriptor for '{}'.", methodSignature, e);
-                return null;
-            }
+            AccessibleObject accessibleObject = ClassUtils.getAccessibleObject(thisClass, methodDescription);
+            String accessibleName = methodSignature;
+            return new Joinpoints.Descriptor(lookup, accessibleName, accessibleObject, aspectChain);
         }
 
         void clear() {

@@ -25,23 +25,23 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopException;
 import io.gemini.aop.AopContext;
+import io.gemini.aop.AopException;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.matcher.Pattern;
 import io.gemini.aop.matcher.Pattern.Parser;
-import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.aop.matcher.StringMatcherFactory;
+import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.object.ClassRenamer;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.SingleEnumeration;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -101,8 +101,8 @@ public class AopClassLoaderConfigurer {
             LOGGER.info("$Took '{}' seconds to configure AopClassLoader. \n"
                     + "  parentFirstTypePatterns: {}  parentFirstResourcePatterns: {}", 
                     (System.nanoTime() - startedAt) / 1e9,
-                    parentFirstTypePatternExprs.stream().collect( Collectors.joining("\n    ", "\n    ", "\n") ), 
-                    parentFirstResourcePatterns.stream().map( p -> p.toString() ).collect( Collectors.joining("\n    ", "\n    ", "\n") )
+                    StringUtils.join(parentFirstTypePatternExprs, "\n    ", "\n    ", "\n"), 
+                    StringUtils.join(parentFirstResourcePatterns, p -> p.toString(), "\n    ", "\n    ", "\n")
             );
     }
 

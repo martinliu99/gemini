@@ -47,7 +47,7 @@ public class Aspect_21JoinpointVisibility_Tests extends AbstractIntegrationTests
         }
     }
 
-    static class TargetObjectVisibility_Objects {
+    private static class TargetObjectVisibility_Objects {
 
         public long accessTargetObject() {
             return 1l;
@@ -210,35 +210,35 @@ public class Aspect_21JoinpointVisibility_Tests extends AbstractIntegrationTests
 
 
     @Test
-    public void testParametrizedReturninggVisibility() {
-        ParametrizedReturninggVisibility_Objects objects = new ParametrizedReturninggVisibility_Objects();
-        objects.accessParametrizedReturningg();
+    public void testParametrizedReturningVisibility() {
+        ParametrizedReturningVisibility_Objects objects = new ParametrizedReturningVisibility_Objects();
+        objects.accessParametrizedReturning();
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParametrizedReturninggVisibility_Aspects.ACCESS_TARGET_RETURNING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParametrizedReturningVisibility_Aspects.ACCESS_TARGET_RETURNING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    private static class ParametrizedReturninggVisibility_Objects {
+    private static class ParametrizedReturningVisibility_Objects {
 
-        public Returning accessParametrizedReturningg() {
+        public Returning accessParametrizedReturning() {
             return new Returning();
         }
 
-        static class Returning {}
+        private static class Returning {}
     }
 
     @Aspect
-    public static class ParametrizedReturninggVisibility_Aspects {
+    public static class ParametrizedReturningVisibility_Aspects {
 
         private static final String ACCESS_TARGET_RETURNING_POINTCUT = 
-                "execution(!private io.gemini.aop.integration.Aspect_21JoinpointVisibility_Tests$ParametrizedReturninggVisibility_Objects$Returning io.gemini.aop.integration.Aspect_21JoinpointVisibility_Tests$ParametrizedReturninggVisibility_Objects.accessParametrizedReturningg())";
+                "execution(!private io.gemini.aop.integration.Aspect_21JoinpointVisibility_Tests$ParametrizedReturningVisibility_Objects$Returning io.gemini.aop.integration.Aspect_21JoinpointVisibility_Tests$ParametrizedReturningVisibility_Objects.accessParametrizedReturning())";
 
-        private static final String ACCESS_TARGET_RETURNING_AFTER_ADVICE = ParametrizedReturninggVisibility_Aspects.class.getName() + ".accessParametrizedReturningg_afterAdvice";
+        private static final String ACCESS_TARGET_RETURNING_AFTER_ADVICE = ParametrizedReturningVisibility_Aspects.class.getName() + ".accessParametrizedReturning_afterAdvice";
 
         @After(value = ACCESS_TARGET_RETURNING_POINTCUT)
-        public void accessParametrizedReturningg_afterAdvice(MutableJoinpoint<ParametrizedReturninggVisibility_Objects.Returning, RuntimeException> joinpoint) {
+        public void accessParametrizedReturning_afterAdvice(MutableJoinpoint<ParametrizedReturningVisibility_Objects.Returning, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_RETURNING_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -275,7 +275,7 @@ public class Aspect_21JoinpointVisibility_Tests extends AbstractIntegrationTests
         }
 
 
-        static class ExceptionA_Objects extends Exception {
+        private static class ExceptionA_Objects extends Exception {
 
             /**
              * 

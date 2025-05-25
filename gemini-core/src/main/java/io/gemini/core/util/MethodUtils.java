@@ -15,13 +15,13 @@
  */
 package io.gemini.core.util;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.pool.TypePool.Resolution.NoSuchTypeException;
+import net.bytebuddy.utility.CompoundList;
 
 public class MethodUtils {
 
@@ -33,13 +33,14 @@ public class MethodUtils {
     public static List<MethodDescription.InDefinedShape> getAllMethodDescriptions(TypeDescription typeDescription) {
         Assert.notNull(typeDescription, "'typeDescription' must not be null.");
 
-        MethodList<MethodDescription.InDefinedShape> methodList= typeDescription.getDeclaredMethods();
-        List<MethodDescription.InDefinedShape> methodDescriptions = new ArrayList<>(methodList.size() + 1);
-
-        methodDescriptions.addAll(methodList);
-        methodDescriptions.add(new MethodDescription.Latent.TypeInitializer(typeDescription));
-
-        return methodDescriptions;
+        try {
+            return CompoundList.<MethodDescription.InDefinedShape>of(
+                    typeDescription.getDeclaredMethods(), 
+                    new MethodDescription.Latent.TypeInitializer(typeDescription)
+            );
+        } catch(NoClassDefFoundError e) {
+            return Collections.emptyList();
+        }
     }
 
     /**

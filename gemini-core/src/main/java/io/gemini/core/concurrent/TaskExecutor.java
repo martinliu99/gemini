@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,29 +43,30 @@ public interface TaskExecutor {
      */
     boolean isParallel();
 
+
+    <T> List<List<T>> splitTasks(List<T> elements, int batchSize);
+
+    default <T> List<List<T>> splitTasks(List<T> elements) {
+        return splitTasks(elements, Default.BATCH_SIZE);
+    }
+
+
     /**
-     * Executes task sequentially or in parallel.
+     * Executes task sequentially or in parallel
+     * 
      * @param <T>
-     * @param <R>
-     * @param mapper
+     * @param <M>
      * @param elements
+     * @param elementMapper
      * @param parallel
-     * @param batchSize
      * @return
      */
-    <T, R> List<R> executeTasks(List<T> elements, Function<List<T>, List<R>> mapper, boolean parallel, int batchSize);
+    <T, M> Stream<M> executeTasks(List<T> elements, Function<T, M> elementMapper, boolean parallel);
 
-    default <T, R> List<R> executeTasks(List<T> elements, Function<List<T>, List<R>> mapper) {
-        return executeTasks(elements, mapper, isParallel(), Default.BATCH_SIZE);
+    default <T, M> Stream<M> executeTasks(List<T> elements, Function<T, M> elementMapper) {
+        return executeTasks(elements, elementMapper, isParallel());
     }
 
-    default <T, R> List<R> executeTasks(List<T> elements, Function<List<T>, List<R>> mapper, boolean parallel) {
-        return executeTasks(elements, mapper, parallel, Default.BATCH_SIZE);
-    }
-
-    default <T, R> List<R> executeTasks(List<T> elements, Function<List<T>, List<R>> mapper, int batchSize) {
-        return executeTasks(elements, mapper, isParallel(), batchSize);
-    }
 
     /**
      * 
@@ -116,45 +118,66 @@ public interface TaskExecutor {
             return parallel;
         }
 
-        /**
+
+        /** 
          * {@inheritDoc}
          */
-        public <T, R> List<R> executeTasks(List<T> elements, Function<List<T>, List<R>> mapper, boolean parallel, int batchSize) {
-            if(elements.size() == 0 || mapper == null)
+        @Override
+        public <T> List<List<T>> splitTasks(List<T> elements, int batchSize) {
+            if(elements.size() == 0)
                 return Collections.emptyList();
 
-            // 1.execute sequentially
-            if(parallel == false || terminated == true || elements.size() < batchSize || parallel == false)
-                return mapper.apply(elements);
-
-            // 2.execute in parallel
             int batchCount = elements.size() / batchSize;
             if(elements.size() % batchSize != 0)  batchCount++;
 
-            // submit tasks
-            List<Future<List<R>>> futures = new ArrayList<>(batchCount);
+            List<List<T>> splitedTasks = new ArrayList<>(batchCount);
             for(int batch = 0; batch < batchCount; batch++) {
                 int endIndex = Math.min((batch + 1) * batchSize, elements.size());
-                List<T> subElements = elements.subList(batch * batchSize, endIndex );
-                Future<List<R>> future = executorService.submit( () -> mapper.apply(subElements) );
 
-                futures.add(future);
+                splitedTasks.add( elements.subList(batch * batchSize, endIndex) );
+            }
+            return splitedTasks;
+        }
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public <T, M> Stream<M> executeTasks(List<T> elements, Function<T, M> elementMapper, boolean parallel) {
+            if(elements.size() == 0 || elementMapper == null)
+                return Stream.empty();
+
+            // execute sequentially or in parallel
+            return parallel == false || terminated == true || parallel == false
+                    ? elements.stream().map(elementMapper).filter( e -> e != null)
+                    : executeInParallel(elements, elementMapper);
+        }
+
+
+        protected <T, M> Stream<M> executeInParallel(List<T> elements, Function<T, M> elementMapper) {
+            // submit tasks
+            List<Future<M>> futures = new ArrayList<>(elements.size());
+            for(T element : elements) {
+                futures.add( 
+                        executorService.submit( 
+                                () -> elementMapper.apply(element) ) );
             }
 
             // collect result
-            List<R> results = new ArrayList<>(elements.size());
-            for(Future<List<R>> future : futures) {
-                try {
-                    List<R> result = future.get();
-                    results.addAll(result);
-                } catch(InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } catch(ExecutionException e) {
-                    LOGGER.warn("Failed to execute task {} with TaskExecutor '{}'.", mapper, executorName, e);
-                }
-            }
-            return results;
+            return futures.stream().map( future -> {
+                        try {
+                            return future.get();
+                        } catch(InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        } catch(ExecutionException e) {
+                            LOGGER.warn("Failed to execute task {} with TaskExecutor '{}'.", elementMapper, executorName, e);
+                        }
+                        return null;
+                } )
+                .filter( e -> e != null)
+                ;
         }
+
 
         /**
          * {@inheritDoc}
@@ -184,5 +207,6 @@ public interface TaskExecutor {
                 LOGGER.info("Shut down TaskExecutor '{}'.", executorName);
             }
         }
+
     }
 }

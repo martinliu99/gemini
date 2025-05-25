@@ -560,32 +560,22 @@ interface AspectJAdvice {
                     .name(adviceClassName)
                     .modifiers(aspectJTypeDescription.getModifiers() | Opcodes.ACC_SYNTHETIC)
                     .implement(implementTypeDefinitions)
+                    .visit( new AsmVisitorWrapper.AbstractBase() {
+                        @Override
+                        public int mergeWriter(int flags) {
+                            // auto-calculate stack frame map flag if needed
+                            return aspectContext.isASMAutoCompute() ? flags | ClassWriter.COMPUTE_FRAMES : flags;
+                        }
+
+                        @Override
+                        public ClassVisitor wrap(TypeDescription instrumentedType, ClassVisitor classVisitor,
+                                net.bytebuddy.implementation.Implementation.Context implementationContext, TypePool typePool,
+                                FieldList<FieldDescription.InDefinedShape> fields,
+                                MethodList<?> methods, int writerFlags, int readerFlags) {
+                            return classVisitor;
+                        }
+                    } )
                     ;
-
-            // auto-calculate stack frame map flag if needed
-            if(aspectContext.isASMAutoCompute()) {
-                builder = builder.visit(new AsmVisitorWrapper() {
-
-                    @Override
-                    public int mergeWriter(int flags) {
-                        return flags | ClassWriter.COMPUTE_FRAMES;
-                    }
-
-                    @Override
-                    public int mergeReader(int flags) {
-                        return flags;
-                    }
-
-                    @Override
-                    public ClassVisitor wrap(TypeDescription instrumentedType, ClassVisitor classVisitor,
-                            net.bytebuddy.implementation.Implementation.Context implementationContext, TypePool typePool,
-                            FieldList<FieldDescription.InDefinedShape> fields,
-                            MethodList<?> methods, int writerFlags, int readerFlags) {
-                        return classVisitor;
-                    }
-                })
-                ;
-            }
 
 
             // 2.define field

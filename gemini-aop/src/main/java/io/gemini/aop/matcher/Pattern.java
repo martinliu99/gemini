@@ -96,6 +96,7 @@ public class Pattern {
             if(StringUtils.hasText(patternExpression) == false)
                 return null;
 
+            patternExpression = patternExpression.trim();
             if(isStar(patternExpression)) {
                 return new Pattern(Type.MATCH_ALL_PATTERN, STAR);
             }
@@ -133,9 +134,11 @@ public class Pattern {
                     expression = expression.substring(0, length - 2); // "charsss." or "char.rss." etc
                     length = expression.length();
 
-                    return expression.endsWith("$.") && length > 2 
+                    return expression.endsWith("$.") && length > 2    // nested class under "char.rss$"
                         ? expression.substring(0, length - 1) : expression;
                 }
+            } else if (expression.endsWith("*")) {
+                return expression.substring(0, expression.length()-1);
             }
             return null;
         }

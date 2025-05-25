@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -127,7 +125,8 @@ class AspectoriesContext implements Closeable {
             if(includedAspectories.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
                         includedAspectories.size(), ASPECTORIES_INCLUDED_ASPECTORIES_KEY,
-                        includedAspectories.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(includedAspectories, "\n  ")
+                );
 
             this.includedAspectoriesMatcher = CollectionUtils.isEmpty(includedAspectories) 
                     ? BooleanMatcher.of(true)
@@ -143,7 +142,8 @@ class AspectoriesContext implements Closeable {
             if(excludedAspectories.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
                         excludedAspectories.size(), ASPECTORIES_EXCLUDED_ASPECTORIES_KEY,
-                        excludedAspectories.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(excludedAspectories, "\n  ")
+                );
 
             this.excludedAspectoriesMatcher = CollectionUtils.isEmpty(excludedAspectories) 
                     ? BooleanMatcher.of(false)
@@ -199,42 +199,18 @@ class AspectoriesContext implements Closeable {
         }
 
         Map<String, URL[]> aspectsResourceURLs = aopContext.getAspectoryResourceMap();
-        ConcurrentMap<String, Double> creationTime = new ConcurrentHashMap<>();
         try {
             return aopContext.getGlobalTaskExecutor().executeTasks(
                     aspectsResourceURLs.entrySet().stream()
                         .collect( Collectors.toList() ),
-                    appResources -> {
-                        List<Entry<String, AspectoryContext>> aspectoryContextEntries = new ArrayList<>(1);
-                        for(Entry<String, URL[]> entry : appResources) {
-                            long startedAt2 = System.nanoTime();
-
-                            String aspectoryName = entry.getKey();
-                            if(LOGGER.isDebugEnabled())
-                                LOGGER.debug("^Creating AspectoryContext '{}'", aspectoryName);
-
-                            try {
-                                Entry<String, AspectoryContext> aspectoryContextEntry = new SimpleEntry<>(aspectoryName, 
-                                        new AspectoryContext(aopContext, AspectoriesContext.this, aspectoryName, entry.getValue()) );
-                                aspectoryContextEntries.add(aspectoryContextEntry);
-                            } finally {
-                                double time = (System.nanoTime() - startedAt2) / 1e9;
-    
-                                if(LOGGER.isDebugEnabled())
-                                    LOGGER.debug("$Took '{}' seconds to create AspectoryContext '{}'", time, aspectoryName);
-                                creationTime.put(aspectoryName, time);
-                            }
-                        }
-                        return aspectoryContextEntries;
-                    },
-                    1
-            ).stream()
-           .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
+                    entry -> new SimpleEntry<>(entry.getKey(), 
+                            new AspectoryContext(aopContext, AspectoriesContext.this, entry.getKey(), entry.getValue() ) )
+            )
+           .collect( 
+                   Collectors.toMap(Entry::getKey, Entry::getValue) );
         } finally {
             if(aopContext.getDiagnosticLevel().isSimpleEnabled())
-                LOGGER.info("$Took '{}' seconds to create AspectoryContexts. {}", 
-                        (System.nanoTime() - startedAt) / 1e9,
-                        creationTime.size() == 0 ? "" : creationTime.entrySet().stream().map( entry -> entry.getKey() + ": " + entry.getValue() ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
+                LOGGER.info("$Took '{}' seconds to create AspectoryContexts.", (System.nanoTime() - startedAt) / 1e9);
         }
     }
 

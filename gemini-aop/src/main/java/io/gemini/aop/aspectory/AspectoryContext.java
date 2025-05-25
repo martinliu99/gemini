@@ -53,6 +53,7 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.PlaceholderHelper;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.BooleanMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -152,6 +153,11 @@ public class AspectoryContext implements Closeable {
     public AspectoryContext(AopContext aopContext, 
             AspectoriesContext aspectoriesContext,
             String aspectoryName, URL[] aspectoryResourceURLs) {
+        long startedAt = System.nanoTime();
+        if(LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating AspectoryContext '{}'", aspectoryName);
+
+
         // 1.check input arguments and initialize properties
         this.aopContext = aopContext;
         this.aspectoriesContext = aspectoriesContext;
@@ -186,6 +192,11 @@ public class AspectoryContext implements Closeable {
 
         this.typeWorldFactory = new TypeWorldFactory.Prototype();
         this.aspectContextMap = new ConcurrentReferenceHashMap<>();
+
+
+        if(LOGGER.isDebugEnabled())
+            LOGGER.debug("$Took '{}' seconds to create AspectoryContext '{}'", 
+                    (System.nanoTime() - startedAt) / 1e9, aspectoryName);
     }
 
     protected ConfigView createConfigView(AopContext aopContext, AspectClassLoader aspectClassLoader) {
@@ -250,7 +261,8 @@ public class AspectoryContext implements Closeable {
             if(includedClassLoaders.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
                         includedClassLoaders.size(), ASPECTORY_INCLUDED_CLASS_LOADERS_KEY, aspectoryName,
-                        includedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(includedClassLoaders, "\n  ")
+                );
 
             this.includedClassLoadersMatcher = stringMatcherFactory.createStringMatcher(
                     AspectoryContext.ASPECTORY_INCLUDED_CLASS_LOADERS_KEY,
@@ -264,7 +276,8 @@ public class AspectoryContext implements Closeable {
             if(excludedClassLoaders.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
                         excludedClassLoaders.size(), ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY, aspectoryName,
-                        excludedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(excludedClassLoaders, "\n  ")
+                );
 
             this.excludedClassLoadersMatcher = stringMatcherFactory.createStringMatcher(
                     AspectoryContext.ASPECTORY_EXCLUDED_CLASS_LOADERS_KEY,
@@ -278,7 +291,8 @@ public class AspectoryContext implements Closeable {
             if(includedTypePatterns.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
                         includedTypePatterns.size(), ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY, aspectoryName,
-                        includedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(includedTypePatterns, "\n  ")
+                );
 
             this.includedTypePatterns = typeMatcherFactory.validateTypePatterns(
                     ASPECTORY_INCLUDED_TYPE_PATTERNS_KEY,
@@ -295,7 +309,8 @@ public class AspectoryContext implements Closeable {
             if(excludedTypePatterns.size() > 0)
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
                         excludedTypePatterns.size(), ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY, aspectoryName,
-                        excludedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(excludedTypePatterns, "\n  ")
+                );
 
             this.excludedTypePatterns = typeMatcherFactory.validateTypePatterns(
                     ASPECTORY_EXCLUDED_TYPE_PATTERNS_KEY,
@@ -312,7 +327,8 @@ public class AspectoryContext implements Closeable {
             if(includedAspects.size() > 0)
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
                         includedAspects.size(), ASPECTORY_INCLUDED_ASPECTS_KEY, aspectoryName,
-                        includedAspects.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(includedAspects, "\n  ")
+                );
 
             this.includedAspectsMatcher = CollectionUtils.isEmpty(includedAspects) 
                     ? BooleanMatcher.of(true)
@@ -328,7 +344,8 @@ public class AspectoryContext implements Closeable {
             if(excludedAspects.size() > 0)
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
                         excludedAspects.size(), ASPECTORY_EXCLUDED_ASPECTS_KEY, aspectoryName,
-                        excludedAspects.stream().collect( Collectors.joining("\n  ") ) );
+                        StringUtils.join(excludedAspects, "\n  ")
+                );
 
 
             this.excludedAspectsMatcher = CollectionUtils.isEmpty(excludedAspects) 

@@ -45,6 +45,8 @@ import net.bytebuddy.matcher.ElementMatcher;
  */
 public interface AspectRepository<T extends AspectSpec> {
 
+    String getAspectName();
+
     Aspect create(AspectContext aspectContext);
 
 
@@ -58,6 +60,11 @@ public interface AspectRepository<T extends AspectSpec> {
 
         public AbstractBase(T aspectSpec) {
             this.aspectSpec = aspectSpec;
+        }
+
+        @Override
+        public String getAspectName() {
+            return aspectSpec.getAspectName();
         }
 
         @Override

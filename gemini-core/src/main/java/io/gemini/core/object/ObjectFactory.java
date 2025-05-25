@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ReflectionUtils;
+import io.gemini.core.util.StringUtils;
 
 /**
  * 
@@ -130,7 +130,9 @@ public interface ObjectFactory extends Closeable {
             LOGGER.info("Created '{}' objects implemeting '{}'. {}", 
                     objects.size(),
                     clazz.getName(),
-                    objects.size() == 0 ? "0" : objects.stream().map( obj -> obj.toString() ).collect( Collectors.joining("\n  ", "\n  ", "\n") ) );
+                    StringUtils.join(objects, obj -> obj.toString(), "\n  ", "\n  ", "\n")
+            );
+
             return objects;
         }
 

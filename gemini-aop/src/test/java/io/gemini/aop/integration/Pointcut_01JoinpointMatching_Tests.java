@@ -239,7 +239,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class GenericMatching_Objects<T extends Number> {
+    private static class GenericMatching_Objects<T extends Number & Comparable<T>> {
 
         public T matchGeneric(T input) {
             return input;

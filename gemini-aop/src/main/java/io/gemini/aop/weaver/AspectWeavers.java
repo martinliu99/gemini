@@ -23,9 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
+import io.gemini.aop.AopMetrics.BootstraperMetrics;
 import io.gemini.aop.AspectFactory;
 import io.gemini.aop.AspectWeaver;
-import io.gemini.aop.AopMetrics.BootstraperMetrics;
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.weaver.support.DefaultRedefinitionListener;
@@ -33,6 +33,7 @@ import io.gemini.aop.weaver.support.DefaultTransformationListener;
 import io.gemini.aop.weaver.support.DefaultTransformerInstallationListener;
 import io.gemini.aop.weaver.support.DiscoveryStrategyAdapter;
 import io.gemini.core.util.Assert;
+import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.agent.builder.AgentBuilder.DescriptionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.FallbackStrategy;
@@ -40,6 +41,7 @@ import net.bytebuddy.agent.builder.AgentBuilder.InitializationStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.InjectionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.TypeStrategy;
+import net.bytebuddy.dynamic.scaffold.MethodGraph;
 
 
 /**
@@ -87,7 +89,7 @@ public class AspectWeavers {
         // 2.initialize BootstrapAdvice.Bridger
         BootstrapAdvice.Bridger.setFactory(aspectWeaver);
         if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-            LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'", 
+            LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
                     aspectWeaver, AspectWeavers.class.getClassLoader());
         }
 
@@ -127,6 +129,9 @@ public class AspectWeavers {
 
         //        ResettableClassFileTransformer resettableClassFileTransformer = 
         aopContext.getTypePoolFactory().customizeAgentBuilder( new AgentBuilder.Default() )
+            .with( new ByteBuddy()
+                    .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )
+            )
             .ignore( aspectWeaver.getIgnoreMatcher() )
             // better performance than REDEFINE or REDEFINE_FROZEN
             .with( TypeStrategy.Default.DECORATE )

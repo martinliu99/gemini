@@ -15,7 +15,10 @@
  */
 package io.gemini.core.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class CollectionUtils {
@@ -30,5 +33,18 @@ public class CollectionUtils {
     
     public static boolean isEmpty(Map<?, ?> map) {
         return (map == null || map.isEmpty());
+    }
+
+
+
+    public static <T> List<T> merge(List<? extends T> list1, List<? extends T> list2) {
+        list1 = list1 == null ? Collections.emptyList() : list1;
+        list2 = list2 == null ? Collections.emptyList() : list2;
+
+        List<T> all = new ArrayList<>(list1.size() + list2.size());
+        all.addAll(list1);
+        all.addAll(list2);
+
+        return all;
     }
 }

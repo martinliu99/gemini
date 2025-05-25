@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +37,7 @@ import io.gemini.api.annotation.NoMatching;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigView.Converter;
+import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
@@ -123,7 +123,8 @@ class WeaverContext {
                 if(includedClassLoaders.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
                             includedClassLoaders.size(), ASPECT_WEAVER_INCLUDED_CLASS_LOADERS_KEY, 
-                            includedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
+                            StringUtils.join(includedClassLoaders, "\n  ")
+                    );
 
                 this.includedClassLoadersMatcher = classLoaderMatcherFactory.createStringMatcher(
                         ASPECT_WEAVER_INCLUDED_CLASS_LOADERS_KEY,
@@ -144,7 +145,8 @@ class WeaverContext {
                 if(excludedClassLoaders.size() > 0) 
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
                             excludedClassLoaders.size(), ASPECT_WEAVER_EXCLUDED_CLASS_LOADERS_KEY, 
-                            excludedClassLoaders.stream().collect( Collectors.joining("\n  ") ) );
+                            StringUtils.join(excludedClassLoaders, "\n  ")
+                    );
 
                 this.excludedClassLoadersMatcher = classLoaderMatcherFactory.createStringMatcher(
                         ASPECT_WEAVER_EXCLUDED_CLASS_LOADERS_KEY,
@@ -160,7 +162,8 @@ class WeaverContext {
                 if(includedTypePatterns.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
                             includedTypePatterns.size(), ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY,
-                            includedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
+                            StringUtils.join(includedTypePatterns, "\n  ") 
+                    );
 
                 this.includedTypePatterns = typeMatcherFactory.validateTypePatterns(
                         WeaverContext.ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY,
@@ -185,7 +188,8 @@ class WeaverContext {
                 if(excludedTypePatterns.size() > 0) 
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
                             excludedTypePatterns.size(), ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY,
-                            excludedTypePatterns.stream().collect( Collectors.joining("\n  ") ) );
+                            StringUtils.join(excludedTypePatterns, "\n  ")
+                    );
 
                 this.excludedTypePatterns = typeMatcherFactory.validateTypePatterns(
                         WeaverContext.ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY,

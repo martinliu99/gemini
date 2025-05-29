@@ -26,12 +26,12 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics.BootstraperMetrics;
-import io.gemini.aop.AspectFactory;
-import io.gemini.aop.AspectWeaver;
+import io.gemini.aop.AdvisorFactory;
+import io.gemini.aop.AopWeaver;
 import io.gemini.aop.activation.support.AopClassLoaderConfigurer;
 import io.gemini.aop.activation.support.BootstrapClassLoaderConfigurer;
-import io.gemini.aop.aspectory.Aspectories;
-import io.gemini.aop.weaver.AspectWeavers;
+import io.gemini.aop.factory.AdvisorFactories;
+import io.gemini.aop.weaver.AopWeavers;
 import io.gemini.api.activation.AopLauncher;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
@@ -47,8 +47,8 @@ public class DefaultAopLauncher implements AopLauncher {
 
 
     private AopContext aopContext;
-    private AspectFactory aspectFactory;
-    private AspectWeaver aspectWeaver;
+    private AdvisorFactory advisorFactory;
+    private AopWeaver aopWeaver;
 
 
     public DefaultAopLauncher() {
@@ -60,7 +60,7 @@ public class DefaultAopLauncher implements AopLauncher {
             AopClassLoader aopClassLoader) {
         ClassLoader existingClassLoader = Thread.currentThread().getContextClassLoader();
 
-        AspectWeaver aspectWeaver = null;
+        AopWeaver aopWeaver = null;
         BootstraperMetrics bootstraperMetrics = null;
         try {
             // set AopClassLoader as T.C. ClassLoader
@@ -101,13 +101,13 @@ public class DefaultAopLauncher implements AopLauncher {
             configureClassLoader(instrumentation, builtinSettings, aopContext);
 
 
-            // 5.create AspectFactory
-            this.aspectFactory = Aspectories.createAspectFactory(aopContext);
+            // 5.create AdvisorFactory
+            this.advisorFactory = AdvisorFactories.createAdvisorFactory(aopContext);
 
 
-            // 6.create AspectWeaver
-            aspectWeaver = AspectWeavers.createAspectWeaver(instrumentation, aopContext, aspectFactory);
-            this.aspectWeaver = aspectWeaver;
+            // 6.create AopWeaver
+            aopWeaver = AopWeavers.createAopWeaver(instrumentation, aopContext, advisorFactory);
+            this.aopWeaver = aopWeaver;
 
 
             // 7.register shutdown hook
@@ -175,8 +175,8 @@ public class DefaultAopLauncher implements AopLauncher {
     @Override
     public void stop() {
         try {
-            this.aspectWeaver.close();
-            this.aspectFactory.close();
+            this.aopWeaver.close();
+            this.advisorFactory.close();
             this.aopContext.close();;
         } catch (IOException e) {/* ignored */}
     }

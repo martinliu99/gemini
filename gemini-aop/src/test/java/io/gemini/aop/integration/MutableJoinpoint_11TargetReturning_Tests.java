@@ -28,7 +28,7 @@ import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
  *
@@ -41,52 +41,52 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     @Test
     public void testTypeInitilizer() {
         {
-            new TypeInitilizer_BeforeAdvice_Objects();
+            new TypeInitilizer_BeforeAdvice_Object();
 
-            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
             assertThat(adviceMethodInvoker.getThrowing()).isInstanceOf(IllegalStateException.class);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Objects.class.getName());
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            new TypeInitilizer_AfterAdvice_Objects();
+            new TypeInitilizer_AfterAdvice_Object();
 
-            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
             assertThat(adviceMethodInvoker.getReturning()).isNull();
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_AfterAdvice_Objects.class.getName());
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
         }
     }
 
-    public static class TypeInitilizer_BeforeAdvice_Objects {
+    public static class TypeInitilizer_BeforeAdvice_Object {
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Objects.class.getName(), 
+            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName(), 
                     new TargetMethod().withInvoked(true) );
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_BeforeAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitilizer_BeforeAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitilizer_BeforeAdvice_Aspects {
+    public static class TypeInitilizer_BeforeAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$TypeInitilizer_BeforeAdvice_Objects)")
+        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$TypeInitilizer_BeforeAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             try {
                 joinpoint.getReturning();
@@ -100,26 +100,26 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     }
 
 
-    public static class TypeInitilizer_AfterAdvice_Objects {
+    public static class TypeInitilizer_AfterAdvice_Object {
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Objects.class.getName(), 
+            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName(), 
                     new TargetMethod().withInvoked(true) );
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitilizer_AfterAdvice_Aspects {
+    public static class TypeInitilizer_AfterAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @After("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$TypeInitilizer_AfterAdvice_Objects)")
+        @After("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$TypeInitilizer_AfterAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -132,26 +132,26 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     @Test
     public void testClassMethod() {
         {
-            int expected = ClassMethod_Objects.targetReturning();
+            int expected = ClassMethod_Object.targetReturning();
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.TARGET_RETURNING_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_RETURNING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getReturning()).isInstanceOf(IllegalStateException.class);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.TARGET_RETURNING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_RETURNING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Objects.TARGET_RETURNING);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Object.TARGET_RETURNING);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getReturning()).isEqualTo(expected);
         }
     }
 
-    public static class ClassMethod_Objects {
+    public static class ClassMethod_Object {
 
         private static final String TARGET_RETURNING = "targetReturning";
 
@@ -166,10 +166,10 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     }
 
     @Aspect
-    public static class ClassMethod_Advices {
+    public static class ClassMethod_Aspect {
 
         private static final String TARGET_RETURNING_POINTCUT = 
-                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$ClassMethod_Objects.targetReturning())";
+                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$ClassMethod_Object.targetReturning())";
 
         private static final String TARGET_RETURNING_BEFORE_ADVICE = "targetReturning_before";
         private static final String TARGET_RETURNING_AFTER_ADVICE = "targetReturning_after";
@@ -200,30 +200,30 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     public void testInstanceConstructor() {
 
         {
-            InstanceConstructor_Objects expected = new InstanceConstructor_Objects(1);
+            InstanceConstructor_Object expected = new InstanceConstructor_Object(1);
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.TARGET_RETURNING_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_RETURNING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getReturning()).isInstanceOf(IllegalStateException.class);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.TARGET_RETURNING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_RETURNING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Objects.TARGET_RETURNING);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Object.TARGET_RETURNING);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getReturning()).isEqualTo(expected);
         }
     }
 
-    public static class InstanceConstructor_Objects {
+    public static class InstanceConstructor_Object {
 
         private static final String TARGET_RETURNING = "targetReturning";
 
-        public InstanceConstructor_Objects(int returning) {
+        public InstanceConstructor_Object(int returning) {
             ExecutionMemento.putTargetMethodInvoker(TARGET_RETURNING, 
                     new TargetMethod()
                         .withInvoked(true)
@@ -232,10 +232,10 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     }
 
     @Aspect
-    public static class InstanceConstructor_Advices {
+    public static class InstanceConstructor_Aspect {
 
         private static final String TARGET_RETURNING_POINTCUT = 
-                "execution(public io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$InstanceConstructor_Objects.new(int))";
+                "execution(public io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$InstanceConstructor_Object.new(int))";
 
         private static final String TARGET_RETURNING_BEFORE_ADVICE = "targetReturning_before";
         private static final String TARGET_RETURNING_AFTER_ADVICE = "targetReturning_after";
@@ -266,29 +266,29 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Objects thisObject = new InstanceMethod_Objects();
+        InstanceMethod_Object thisObject = new InstanceMethod_Object();
 
         {
             int expected = thisObject.targetReturning();
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.TARGET_RETURNING_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_RETURNING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getReturning()).isInstanceOf(IllegalStateException.class);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.TARGET_RETURNING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_RETURNING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Objects.TARGET_RETURNING);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Object.TARGET_RETURNING);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getReturning()).isEqualTo(expected);
         }
     }
 
-    public static class InstanceMethod_Objects {
+    public static class InstanceMethod_Object {
 
         private static final String TARGET_RETURNING = "targetReturning";
 
@@ -303,10 +303,10 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
     }
 
     @Aspect
-    public static class InstanceMethod_Aspects {
+    public static class InstanceMethod_Aspect {
 
         private static final String TARGET_RETURNING_POINTCUT = 
-                "execution(public * io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$InstanceMethod_Objects.targetReturning())";
+                "execution(public * io.gemini.aop.integration.MutableJoinpoint_11TargetReturning_Tests$InstanceMethod_Object.targetReturning())";
 
         private static final String TARGET_RETURNING_BEFORE_ADVICE = "targetReturning_before";
         private static final String TARGET_RETURNING_AFTER_ADVICE = "targetReturning_after";

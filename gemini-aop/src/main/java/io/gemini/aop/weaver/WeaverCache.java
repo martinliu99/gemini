@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.Aspect;
+import io.gemini.aop.Advisor;
 import io.gemini.aop.weaver.Joinpoints.Descriptor;
 import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.OrderComparator;
@@ -121,7 +121,7 @@ class WeaverCache implements Closeable {
 
         // cache matching result per ClassLoader and Type in local storage for future transformation
         private Map<String /* methodSignature */, MethodDescription> methodSignatureMap;
-        private Map<String /* methodSignature */, List<? extends Aspect>> methodSignatureAspectsMap;
+        private Map<String /* methodSignature */, List<? extends Advisor>> methodSignatureAdvisorsMap;
 
         // cache transformation result per ClassLoader and Type in local storage
         private AtomicBoolean transformed;
@@ -134,7 +134,7 @@ class WeaverCache implements Closeable {
             this.typeName = typeName;
 
             this.methodSignatureMap = Collections.emptyMap();
-            this.methodSignatureAspectsMap = Collections.emptyMap();
+            this.methodSignatureAdvisorsMap = Collections.emptyMap();
 
             this.transformed = new AtomicBoolean(false);
 
@@ -142,19 +142,19 @@ class WeaverCache implements Closeable {
         }
 
 
-        public void setMethodDescriptionAspects(Map<? extends MethodDescription, List<? extends Aspect>> methodDescriptionAspects) {
-            Map<String /* methodSignature */, MethodDescription> methodSignatureMap = new HashMap<>(methodDescriptionAspects.size());
-            Map<String /* methodSignature */, List<? extends Aspect>> methodSignatureAspectMap = new HashMap<>(methodDescriptionAspects.size());
-            for(Entry<? extends MethodDescription, List<? extends Aspect>> e : methodDescriptionAspects.entrySet()) {
+        public void setMethodDescriptionAdvisors(Map<? extends MethodDescription, List<? extends Advisor>> methodDescriptionAdvisors) {
+            Map<String /* methodSignature */, MethodDescription> methodSignatureMap = new HashMap<>(methodDescriptionAdvisors.size());
+            Map<String /* methodSignature */, List<? extends Advisor>> methodSignatureAdvisorMap = new HashMap<>(methodDescriptionAdvisors.size());
+            for(Entry<? extends MethodDescription, List<? extends Advisor>> e : methodDescriptionAdvisors.entrySet()) {
                 String methodSignature = e.getKey().toGenericString();
 
                 methodSignatureMap.put(methodSignature, e.getKey());
-                methodSignatureAspectMap.put(methodSignature, e.getValue());
+                methodSignatureAdvisorMap.put(methodSignature, e.getValue());
             }
             this.methodSignatureMap = methodSignatureMap;
-            this.methodSignatureAspectsMap = methodSignatureAspectMap;
+            this.methodSignatureAdvisorsMap = methodSignatureAdvisorMap;
 
-            this.joinpointDescriptors = new ConcurrentHashMap<>(this.methodSignatureAspectsMap.size());
+            this.joinpointDescriptors = new ConcurrentHashMap<>(this.methodSignatureAdvisorsMap.size());
         }
 
 
@@ -192,16 +192,16 @@ class WeaverCache implements Closeable {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                List<? extends Aspect> aspectChain = processAspects( this.methodSignatureAspectsMap.get(methodSignature) );
+                List<? extends Advisor> advisorChain = processAdvisors( this.methodSignatureAdvisorsMap.get(methodSignature) );
 
-                Descriptor joinpointDescriptor = CollectionUtils.isEmpty(aspectChain)
+                Descriptor joinpointDescriptor = CollectionUtils.isEmpty(advisorChain)
                         ? null
-                        : this.createJoinpointDescriptor(lookup, methodSignature, thisClass, this.methodSignatureMap.get(methodSignature), aspectChain);
+                        : this.createJoinpointDescriptor(lookup, methodSignature, thisClass, this.methodSignatureMap.get(methodSignature), advisorChain);
 
                 LOGGER.info("Created joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  {} \n{} \n", 
                         typeName, lookup.lookupClass().getClassLoader(),
                         methodSignature,
-                        StringUtils.join(aspectChain, a -> "    " + a.getAspectName(), "\n")
+                        StringUtils.join(advisorChain, a -> "    " + a.getAdvisorName(), "\n")
                 );
 
                 return joinpointDescriptor;
@@ -214,38 +214,38 @@ class WeaverCache implements Closeable {
             }
         }
 
-        private List<? extends Aspect> processAspects(List<? extends Aspect> candidates) {
+        private List<? extends Advisor> processAdvisors(List<? extends Advisor> candidates) {
             // remove null, or duplicate advice classes
             Set<Class<?>> adviceClasses = new HashSet<>();
-            List<Aspect> aspects = candidates.stream()
-            .filter( aspect -> 
-                    aspect.getAdviceClass() != null 
-                    && adviceClasses.add(aspect.getAdviceClass()) 
-                    && (aspect.isPerInstance() || aspect.getAdvice() != null)
+            List<Advisor> advisors = candidates.stream()
+            .filter( advisor -> 
+                    advisor.getAdviceClass() != null 
+                    && adviceClasses.add(advisor.getAdviceClass()) 
+                    && (advisor.isPerInstance() || advisor.getAdvice() != null)
             )
             .collect( Collectors.toList() );
 
-            // sort aspect
-            OrderComparator.sort(aspects);
+            // sort advisor
+            OrderComparator.sort(advisors);
 
-            return aspects;
+            return advisors;
         }
 
         private Joinpoints.Descriptor createJoinpointDescriptor(Lookup lookup, 
                 String methodSignature, Class<?> thisClass, MethodDescription methodDescription,
-                List<? extends Aspect> aspectChain) throws ClassNotFoundException, NoSuchMethodException, SecurityException {
+                List<? extends Advisor> advisorChain) throws ClassNotFoundException, NoSuchMethodException, SecurityException {
             if(methodDescription.isTypeInitializer()) {
-                return new Joinpoints.Descriptor(lookup, methodSignature, null, aspectChain);
+                return new Joinpoints.Descriptor(lookup, methodSignature, null, advisorChain);
             }
 
             AccessibleObject accessibleObject = ClassUtils.getAccessibleObject(thisClass, methodDescription);
             String accessibleName = methodSignature;
-            return new Joinpoints.Descriptor(lookup, accessibleName, accessibleObject, aspectChain);
+            return new Joinpoints.Descriptor(lookup, accessibleName, accessibleObject, advisorChain);
         }
 
         void clear() {
             this.methodSignatureMap.clear();
-            this.methodSignatureAspectsMap.clear();
+            this.methodSignatureAdvisorsMap.clear();
             this.joinpointDescriptors.clear();
         }
     }

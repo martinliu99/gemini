@@ -32,7 +32,7 @@ import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
  *
@@ -45,44 +45,44 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
     @Test
     public void testTypeInitilizer() {
         {
-            new TypeInitilizer_BeforeAdvice_Objects();
+            new TypeInitilizer_BeforeAdvice_Object();
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEmpty();
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEmpty();
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Objects.class.getName());
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
         }
     }
 
-    public static class TypeInitilizer_BeforeAdvice_Objects {
+    public static class TypeInitilizer_BeforeAdvice_Object {
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Objects.class.getName(), 
+            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName(), 
                     new TargetMethod().withInvoked(true) );
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_BeforeAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitilizer_BeforeAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitilizer_BeforeAdvice_Aspects {
+    public static class TypeInitilizer_BeforeAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$TypeInitilizer_BeforeAdvice_Objects)")
+        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$TypeInitilizer_BeforeAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -91,26 +91,26 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
         }
     }
 
-    public static class TypeInitilizer_AfterAdvice_Objects {
+    public static class TypeInitilizer_AfterAdvice_Object {
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Objects.class.getName(), 
+            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName(), 
                     new TargetMethod().withInvoked(true) );
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitilizer_AfterAdvice_Aspects {
+    public static class TypeInitilizer_AfterAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @After("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$TypeInitilizer_AfterAdvice_Objects)")
+        @After("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$TypeInitilizer_AfterAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -124,21 +124,21 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
     public void testClassMethod() {
         {
             List<Integer> input = Lists.list(1, 2, 3);
-            ClassMethod_Objects.targetArguments(input);
+            ClassMethod_Object.targetArguments(input);
 
             Object[] expected = new Object[] {input};
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.TARGET_ARGUEMTNS_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_ARGUEMTNS_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.TARGET_ARGUEMTNS_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_ARGUEMTNS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Objects.TAGRET_ARGUMENTS);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Object.TAGRET_ARGUMENTS);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getArguments()).isEqualTo(expected);
@@ -147,30 +147,30 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
         {
             List<Long> input = Lists.list(1L, 2L, 3L);
             long l = 0L;
-            ClassMethod_Objects.modifyTargetArguments(l, input);
+            ClassMethod_Object.modifyTargetArguments(l, input);
 
             List<Long> input2 = new ArrayList<>(input);
             input2.add(0, l);
             Object[] expected = new Object[] {l, input2};
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Objects.MODIFY_TARGET_ARGUMENTS);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Object.MODIFY_TARGET_ARGUMENTS);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getArguments()).isEqualTo(expected);
         }
     }
 
-    public static class ClassMethod_Objects {
+    public static class ClassMethod_Object {
 
         private static final String TAGRET_ARGUMENTS = "targetArguments";
         private static final String MODIFY_TARGET_ARGUMENTS = "modifyTargetArguments";
@@ -193,10 +193,10 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class ClassMethod_Advices {
+    public static class ClassMethod_Aspect {
 
         private static final String TARGET_ARGUMENTS_POINTCUT = 
-                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$ClassMethod_Objects.targetArguments(..))";
+                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$ClassMethod_Object.targetArguments(..))";
 
         private static final String TARGET_ARGUEMTNS_BEFORE_ADVICE = "targetArguments_before";
         private static final String TARGET_ARGUEMTNS_AFTER_ADVICE = "targetArguments_after";
@@ -221,7 +221,7 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
 
 
         private static final String MODIFY_TARGET_ARGUMENTS_POINTCUT = 
-                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$ClassMethod_Objects.modifyTargetArguments(..))";
+                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$ClassMethod_Object.modifyTargetArguments(..))";
 
         private static final String MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE = "modifyTargetArguments_before";
         private static final String MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE = "modifyTargetArguments_after";
@@ -255,21 +255,21 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
     public void testInstanceConstructor() {
         {
             List<Integer> input = Lists.list(1, 2, 3);
-            new InstanceConstructor_Objects(input);
+            new InstanceConstructor_Object(input);
 
             Object[] expected = new Object[] {input};
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.TARGET_ARGUEMTNS_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_ARGUEMTNS_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.TARGET_ARGUEMTNS_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_ARGUEMTNS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Objects.TAGRET_ARGUMENTS);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Object.TAGRET_ARGUMENTS);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getArguments()).isEqualTo(expected);
@@ -278,42 +278,42 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
         {
             List<Long> input = Lists.list(1L, 2L, 3L);
             long l = 0L;
-            new InstanceConstructor_Objects(l, input);
+            new InstanceConstructor_Object(l, input);
 
             List<Long> input2 = new ArrayList<>(input);
             input2.add(0, l);
             Object[] expected = new Object[] {l, input2};
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Objects.MODIFY_TARGET_ARGUMENTS);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Object.MODIFY_TARGET_ARGUMENTS);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getArguments()).isEqualTo(expected);
         }
     }
 
-    public static class InstanceConstructor_Objects {
+    public static class InstanceConstructor_Object {
 
         private static final String TAGRET_ARGUMENTS = "targetArguments";
         private static final String MODIFY_TARGET_ARGUMENTS = "modifyTargetArguments";
 
-        public InstanceConstructor_Objects(List<Integer> targetArguments) {
+        public InstanceConstructor_Object(List<Integer> targetArguments) {
             ExecutionMemento.putTargetMethodInvoker(TAGRET_ARGUMENTS, 
                     new TargetMethod()
                         .withInvoked(true)
                         .withVArgumnts(targetArguments) );
         }
 
-        public InstanceConstructor_Objects(long l, List<Long> modifyTargetArguments) {
+        public InstanceConstructor_Object(long l, List<Long> modifyTargetArguments) {
             ExecutionMemento.putTargetMethodInvoker(MODIFY_TARGET_ARGUMENTS, 
                     new TargetMethod()
                         .withInvoked(true)
@@ -322,10 +322,10 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class InstanceConstructor_Advices {
+    public static class InstanceConstructor_Aspect {
 
         private static final String TARGET_ARGUMENTS_POINTCUT = 
-                "execution(public io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceConstructor_Objects.new(java.util.List<java.lang.Integer>))";
+                "execution(public io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceConstructor_Object.new(java.util.List<java.lang.Integer>))";
 
         private static final String TARGET_ARGUEMTNS_BEFORE_ADVICE = "targetArguments_before";
         private static final String TARGET_ARGUEMTNS_AFTER_ADVICE = "targetArguments_after";
@@ -350,7 +350,7 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
 
 
         private static final String MODIFY_TARGET_ARGUMENTS_POINTCUT = 
-                "execution(public io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceConstructor_Objects.new(long, java.util.List<java.lang.Long>))";
+                "execution(public io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceConstructor_Object.new(long, java.util.List<java.lang.Long>))";
 
         private static final String MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE = "modifyTargetArguments_before";
         private static final String MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE = "modifyTargetArguments_after";
@@ -382,7 +382,7 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Objects thisObject = new InstanceMethod_Objects();
+        InstanceMethod_Object thisObject = new InstanceMethod_Object();
 
         {
             List<Integer> input = Lists.list(1, 2, 3);
@@ -390,17 +390,17 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
 
             Object[] expected = new Object[] {input};
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.TARGET_ARGUEMTNS_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_ARGUEMTNS_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.TARGET_ARGUEMTNS_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_ARGUEMTNS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Objects.TAGRET_ARGUMENTS);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Object.TAGRET_ARGUMENTS);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getArguments()).isEqualTo(expected);
@@ -415,24 +415,24 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
             input2.add(0, l);
             Object[] expected = new Object[] {l, input2};
 
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Objects.MODIFY_TARGET_ARGUMENTS);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Object.MODIFY_TARGET_ARGUMENTS);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getArguments()).isEqualTo(expected);
         }
     }
 
-    public static class InstanceMethod_Objects {
+    public static class InstanceMethod_Object {
 
         private static final String TAGRET_ARGUMENTS = "targetArguments";
         private static final String MODIFY_TARGET_ARGUMENTS = "modifyTargetArguments";
@@ -455,10 +455,10 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class InstanceMethod_Aspects {
+    public static class InstanceMethod_Aspect {
 
         private static final String TARGET_ARGUMENTS_POINTCUT = 
-                "execution(public * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceMethod_Objects.targetArguments(..))";
+                "execution(public * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceMethod_Object.targetArguments(..))";
 
         private static final String TARGET_ARGUEMTNS_BEFORE_ADVICE = "targetArguments_before";
         private static final String TARGET_ARGUEMTNS_AFTER_ADVICE = "targetArguments_after";
@@ -483,7 +483,7 @@ public class MutableJoinpoint_03TargetArgument_Tests extends AbstractIntegration
 
 
         private static final String MODIFY_TARGET_ARGUMENTS_POINTCUT = 
-                "execution(public * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceMethod_Objects.modifyTargetArguments(..))";
+                "execution(public * io.gemini.aop.integration.MutableJoinpoint_03TargetArgument_Tests$InstanceMethod_Object.modifyTargetArguments(..))";
 
         private static final String MODIFY_TARGET_ARGUMENTS_BEFORE_ADVICE = "modifyTargetArguments_before";
         private static final String MODIFY_TARGET_ARGUMENTS_AFTER_ADVICE = "modifyTargetArguments_after";

@@ -57,18 +57,18 @@ class WeaverContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverContext.class);
 
-    private static final String JOINPOINT_MATCHER_MATCH_JOINPOINT_KEY = "aop.joinpointMatcher.matchJoinpoint";
+    private static final String WEAVER_MATCH_JOINPOINT_KEY = "aop.weaver.matchJoinpoint";
 
-    private static final String ASPECT_WEAVER_INCLUDED_CLASS_LOADERS_KEY = "aop.joinpointMatcher.includedClassLoaders";
-    private static final String ASPECT_WEAVER_EXCLUDED_CLASS_LOADERS_KEY = "aop.joinpointMatcher.excludedClassLoaders";
+    private static final String WEAVER_INCLUDED_CLASS_LOADERS_KEY = "aop.weaver.includedClassLoaders";
+    private static final String WEAVER_EXCLUDED_CLASS_LOADERS_KEY = "aop.weaver.excludedClassLoaders";
 
-    private static final String ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY = "aop.joinpointMatcher.includedTypePatterns";
-    private static final String ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY = "aop.joinpointMatcher.excludedTypePatterns";
+    private static final String WEAVER_INCLUDED_TYPE_PATTERNS_KEY = "aop.weaver.includedTypePatterns";
+    private static final String WEAVER_EXCLUDED_TYPE_PATTERNS_KEY = "aop.weaver.excludedTypePatterns";
 
 
     private final AopContext aopContext;
 
-    // JoinpointMatcher settings
+    // weaver settings
     private boolean matchJoinpoint;
 
     private StringMatcherFactory classLoaderMatcherFactory;
@@ -83,7 +83,6 @@ class WeaverContext {
     private Collection<Pattern> excludedTypePatterns;
 
 
-    // JoinpointTransformer settings
     private Class<?> classInitializerAdvice;
     private Class<?> classMethodAdvice;
     private Class<?> instanceConstructorAdvice;
@@ -112,22 +111,22 @@ class WeaverContext {
 
         // load joinpoint matcher settings
         {
-            this.matchJoinpoint = configView.getAsBoolean(JOINPOINT_MATCHER_MATCH_JOINPOINT_KEY, true);
+            this.matchJoinpoint = configView.getAsBoolean(WEAVER_MATCH_JOINPOINT_KEY, true);
             if(matchJoinpoint == false) {
-                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aspect weaving.\n", JOINPOINT_MATCHER_MATCH_JOINPOINT_KEY);
+                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_MATCH_JOINPOINT_KEY);
             }
 
             {
-                Set<String> includedClassLoaders = configView.getAsStringSet(ASPECT_WEAVER_INCLUDED_CLASS_LOADERS_KEY, new LinkedHashSet<>());
+                Set<String> includedClassLoaders = configView.getAsStringSet(WEAVER_INCLUDED_CLASS_LOADERS_KEY, new LinkedHashSet<>());
 
                 if(includedClassLoaders.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            includedClassLoaders.size(), ASPECT_WEAVER_INCLUDED_CLASS_LOADERS_KEY, 
+                            includedClassLoaders.size(), WEAVER_INCLUDED_CLASS_LOADERS_KEY, 
                             StringUtils.join(includedClassLoaders, "\n  ")
                     );
 
                 this.includedClassLoadersMatcher = classLoaderMatcherFactory.createStringMatcher(
-                        ASPECT_WEAVER_INCLUDED_CLASS_LOADERS_KEY,
+                        WEAVER_INCLUDED_CLASS_LOADERS_KEY,
                         Parser.parsePatterns( includedClassLoaders ), 
                         false, false);
             }
@@ -135,21 +134,21 @@ class WeaverContext {
             {
                 Set<String> excludedClassLoaders = new LinkedHashSet<>();
                 excludedClassLoaders.addAll(
-                        configView.getAsStringList("aop.joinpointMatcher.builtinExcludedClassLoaders", Collections.emptyList()) );
+                        configView.getAsStringList("aop.weaver.builtinExcludedClassLoaders", Collections.emptyList()) );
                 excludedClassLoaders.addAll(
                         noMatchingClassInfoList.filter( this::isClassLoader ).getNames() );
 
                 excludedClassLoaders.addAll(
-                        configView.getAsStringList(ASPECT_WEAVER_EXCLUDED_CLASS_LOADERS_KEY, Collections.emptyList()) );
+                        configView.getAsStringList(WEAVER_EXCLUDED_CLASS_LOADERS_KEY, Collections.emptyList()) );
 
                 if(excludedClassLoaders.size() > 0) 
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            excludedClassLoaders.size(), ASPECT_WEAVER_EXCLUDED_CLASS_LOADERS_KEY, 
+                            excludedClassLoaders.size(), WEAVER_EXCLUDED_CLASS_LOADERS_KEY, 
                             StringUtils.join(excludedClassLoaders, "\n  ")
                     );
 
                 this.excludedClassLoadersMatcher = classLoaderMatcherFactory.createStringMatcher(
-                        ASPECT_WEAVER_EXCLUDED_CLASS_LOADERS_KEY,
+                        WEAVER_EXCLUDED_CLASS_LOADERS_KEY,
                         Parser.parsePatterns( excludedClassLoaders ), 
                         true, false );
 
@@ -157,16 +156,16 @@ class WeaverContext {
             }
 
             {
-                Set<String> includedTypePatterns = configView.getAsStringSet(ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY, Collections.emptySet());
+                Set<String> includedTypePatterns = configView.getAsStringSet(WEAVER_INCLUDED_TYPE_PATTERNS_KEY, Collections.emptySet());
 
                 if(includedTypePatterns.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            includedTypePatterns.size(), ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY,
+                            includedTypePatterns.size(), WEAVER_INCLUDED_TYPE_PATTERNS_KEY,
                             StringUtils.join(includedTypePatterns, "\n  ") 
                     );
 
                 this.includedTypePatterns = typeMatcherFactory.validateTypePatterns(
-                        WeaverContext.ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY,
+                        WeaverContext.WEAVER_INCLUDED_TYPE_PATTERNS_KEY,
                         Parser.parsePatterns( includedTypePatterns ), 
                         false, 
                         aopClassLoader, 
@@ -177,22 +176,22 @@ class WeaverContext {
             {
                 Set<String> excludedTypePatterns = new LinkedHashSet<>();
                 excludedTypePatterns.addAll(
-                        configView.getAsStringList("aop.joinpointMatcher.builtinExcludedTypePatterns", Collections.emptyList()) );
+                        configView.getAsStringList("aop.weaver.builtinExcludedTypePatterns", Collections.emptyList()) );
                 excludedTypePatterns.addAll(
                         noMatchingClassInfoList.filter( this::isClass ).getNames() );
                 excludedTypePatterns.addAll( aopContext.getBootstrapClassNameMapping().keySet() );
 
                 excludedTypePatterns.addAll(
-                        configView.getAsStringList(ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY, Collections.emptyList()) );
+                        configView.getAsStringList(WEAVER_EXCLUDED_TYPE_PATTERNS_KEY, Collections.emptyList()) );
 
                 if(excludedTypePatterns.size() > 0) 
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            excludedTypePatterns.size(), ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY,
+                            excludedTypePatterns.size(), WEAVER_EXCLUDED_TYPE_PATTERNS_KEY,
                             StringUtils.join(excludedTypePatterns, "\n  ")
                     );
 
                 this.excludedTypePatterns = typeMatcherFactory.validateTypePatterns(
-                        WeaverContext.ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY,
+                        WeaverContext.WEAVER_EXCLUDED_TYPE_PATTERNS_KEY,
                         Parser.parsePatterns( excludedTypePatterns ), 
                         true, 
                         aopClassLoader, 
@@ -203,19 +202,19 @@ class WeaverContext {
 
         // load joinpoint transformer settings
         {
-            String settingkey = "aop.joinpointTransformer.classInitializerAdvice";
+            String settingkey = "aop.weaver.classInitializerAdvice";
             this.classInitializerAdvice = configView.<Class<?>>getValue(settingkey, ClassInitializerAdvice.class, 
                     new ToClass(settingkey, aopClassLoader));
 
-            settingkey = "aop.joinpointTransformer.classMethodAdvice";
+            settingkey = "aop.weaver.classMethodAdvice";
             this.classMethodAdvice = configView.<Class<?>>getValue(settingkey, ClassMethodAdvice.class,
                     new ToClass(settingkey, aopClassLoader));
 
-            settingkey = "aop.joinpointTransformer.instanceConstructorAdvice";
+            settingkey = "aop.weaver.instanceConstructorAdvice";
             this.instanceConstructorAdvice = configView.<Class<?>>getValue(settingkey, InstanceConstructorAdvice.class,
                     new ToClass(settingkey, aopClassLoader));
 
-            settingkey = "aop.joinpointTransformer.instanceMethodAdvice";
+            settingkey = "aop.weaver.instanceMethodAdvice";
             this.instanceMethodAdvice = configView.<Class<?>>getValue(settingkey, InstanceMethodAdvice.class,
                     new ToClass(settingkey, aopClassLoader));
         }
@@ -263,7 +262,7 @@ class WeaverContext {
 
     public ElementMatcher<TypeDescription> createIncludedTypesMatcher(ClassLoader joinpointClassLoader, JavaModule javaModule) {
         return typeMatcherFactory.createTypeMatcher(
-                ASPECT_WEAVER_INCLUDED_TYPE_PATTERNS_KEY, 
+                WEAVER_INCLUDED_TYPE_PATTERNS_KEY, 
                 includedTypePatterns, 
                 false, 
                 joinpointClassLoader, 
@@ -273,7 +272,7 @@ class WeaverContext {
 
     public ElementMatcher<TypeDescription> createExcludedTypesMatcher(ClassLoader joinpointClassLoader, JavaModule javaModule) {
         return typeMatcherFactory.createTypeMatcher(
-                ASPECT_WEAVER_EXCLUDED_TYPE_PATTERNS_KEY, 
+                WEAVER_EXCLUDED_TYPE_PATTERNS_KEY, 
                 excludedTypePatterns, 
                 false, 
                 joinpointClassLoader, 

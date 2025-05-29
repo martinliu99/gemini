@@ -97,7 +97,7 @@ public class DemoServiceRunner {
     private static URL[] loadResource() {
         List<URL> urls = new ArrayList<>();
         try {
-            String pathname = "../../gemini-releases/demoapps/gemini-demo-service";
+            String pathname = "../../gemini-release/demoapps/gemini-demo-service";
             File lib = new File(pathname + "/lib").getCanonicalFile();;
             if(lib.exists() == false) {
                 throw new RuntimeException("unexisted dir: " + lib.getAbsolutePath());

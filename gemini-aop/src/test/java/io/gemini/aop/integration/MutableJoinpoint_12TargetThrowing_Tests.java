@@ -30,7 +30,7 @@ import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
  *
@@ -43,61 +43,61 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     @Test
     public void testTypeInitilizer() {
         {
-            new TypeInitilizer_BeforeAdvice_Objects();
+            new TypeInitilizer_BeforeAdvice_Object();
 
-            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
             assertThat(adviceMethodInvoker.getThrowing()).isInstanceOf(IllegalStateException.class);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Objects.class.getName());
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
         }
 
         {
             try {
-                new TypeInitilizer_AfterAdvice_Objects();
+                new TypeInitilizer_AfterAdvice_Object();
             } catch(ExceptionInInitializerError e) {
-                AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdviceAspect.ADVICE_TYPE_INITIALIZER);
+                AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
                 assertThat(adviceMethodInvoker).isNotNull();
                 assertThat(adviceMethodInvoker.isInvoked()).isTrue();
                 assertThat(adviceMethodInvoker.getThrowing()).isEqualTo(e.getCause());
 
-                TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_AfterAdvice_Objects.class.getName());
+                TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName());
                 assertThat(targetMethodInvoker).isNotNull();
                 assertThat(targetMethodInvoker.isInvoked()).isTrue();
                 assertThat(targetMethodInvoker.getThrowing()).isEqualTo(e.getCause());
             }
 
             try {
-                new TypeInitilizer_AfterAdvice_Objects();
+                new TypeInitilizer_AfterAdvice_Object();
             } catch(Throwable t) {
                 assertThat(t).isInstanceOf(NoClassDefFoundError.class);
             }
         }
     }
 
-    public static class TypeInitilizer_BeforeAdvice_Objects {
+    public static class TypeInitilizer_BeforeAdvice_Object {
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Objects.class.getName(), 
+            ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName(), 
                     new TargetMethod().withInvoked(true) );
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_BeforeAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitilizer_BeforeAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitilizer_BeforeAdvice_Aspects {
+    public static class TypeInitilizer_BeforeAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$TypeInitilizer_BeforeAdvice_Objects)")
+        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$TypeInitilizer_BeforeAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             try {
                 joinpoint.getThrowing();
@@ -111,12 +111,12 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     }
 
 
-    public static class TypeInitilizer_AfterAdvice_Objects {
+    public static class TypeInitilizer_AfterAdvice_Object {
         static {
             try {
                 throwing();
             } catch(RuntimeException e) {
-                ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Objects.class.getName(), 
+                ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName(), 
                         new TargetMethod()
                             .withInvoked(true)
                             .withThrowing(e) );
@@ -127,7 +127,7 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Object.class);
         }
 
         private static void throwing() {
@@ -136,12 +136,12 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class TypeInitilizer_AfterAdviceAspect {
+    public static class TypeInitilizer_AfterAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @After("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$TypeInitilizer_AfterAdvice_Objects)")
+        @After("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$TypeInitilizer_AfterAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -154,27 +154,27 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     @Test
     public void testClassMethod() {
         try {
-            ClassMethod_Objects.targetThrowing();
+            ClassMethod_Object.targetThrowing();
             assertThat(false).isTrue();
         } catch(IOException expected) {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.TARGET_THROWING_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getThrowing()).isInstanceOf(IllegalStateException.class);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.TARGET_THROWING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_THROWING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getThrowing()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Objects.TARGET_THROWING);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Object.TARGET_THROWING);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getThrowing()).isEqualTo(expected);
         }
     }
 
-    public static class ClassMethod_Objects {
+    public static class ClassMethod_Object {
 
         private static final String TARGET_THROWING = "targetThrowing";
 
@@ -189,10 +189,10 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class ClassMethod_Advices {
+    public static class ClassMethod_Aspect {
 
         private static final String TARGET_THROWING_POINTCUT = 
-                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$ClassMethod_Objects.targetThrowing())";
+                "execution(public static * io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$ClassMethod_Object.targetThrowing())";
 
         private static final String TARGET_THROWING_BEFORE_ADVICE = "targetThrowing_before";
         private static final String TARGET_THROWING_AFTER_ADVICE = "targetThrowing_after";
@@ -222,29 +222,29 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     @Test
     public void testInstanceConstructor() {
         try {
-            new InstanceConstructor_Objects(1l);
+            new InstanceConstructor_Object(1l);
             assertThat(false).isTrue();
         } catch(IOException expected) {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.TARGET_THROWING_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getThrowing()).isInstanceOf(IllegalStateException.class);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.TARGET_THROWING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_THROWING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Objects.TARGET_THROWING);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Object.TARGET_THROWING);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getThrowing()).isEqualTo(expected);
         }
     }
 
-    public static class InstanceConstructor_Objects {
+    public static class InstanceConstructor_Object {
 
         private static final String TARGET_THROWING = "targetThrowing";
 
-        public InstanceConstructor_Objects(long throwing) throws IOException {
+        public InstanceConstructor_Object(long throwing) throws IOException {
             IOException exp = new IOException();
             ExecutionMemento.putTargetMethodInvoker(TARGET_THROWING, 
                     new TargetMethod()
@@ -256,10 +256,10 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class InstanceConstructor_Advices {
+    public static class InstanceConstructor_Aspect {
 
         private static final String TARGET_THROWING_POINTCUT = 
-                "execution(public io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$InstanceConstructor_Objects.new(long))";
+                "execution(public io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$InstanceConstructor_Object.new(long))";
 
         private static final String TARGET_THROWING_BEFORE_ADVICE = "targetThrowing_before";
         private static final String TARGET_THROWING_AFTER_ADVICE = "targetThrowing_after";
@@ -290,30 +290,30 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Objects thisObject = new InstanceMethod_Objects();
+        InstanceMethod_Object thisObject = new InstanceMethod_Object();
 
         try {
             thisObject.targetThrowing();
             assertThat(false).isTrue();
         } catch(IOException expected) {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.TARGET_THROWING_BEFORE_ADVICE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getThrowing()).isInstanceOf(IllegalStateException.class);
 
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.TARGET_THROWING_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_THROWING_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getThrowing()).isEqualTo(expected);
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Objects.TARGET_THROWING);
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Object.TARGET_THROWING);
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getThrowing()).isEqualTo(expected);
         }
     }
 
-    public static class InstanceMethod_Objects {
+    public static class InstanceMethod_Object {
 
         private static final String TARGET_THROWING = "targetThrowing";
 
@@ -328,10 +328,10 @@ public class MutableJoinpoint_12TargetThrowing_Tests extends AbstractIntegration
     }
 
     @Aspect
-    public static class InstanceMethod_Aspects {
+    public static class InstanceMethod_Aspect {
 
         private static final String TARGET_THROWING_POINTCUT = 
-                "execution(public * io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$InstanceMethod_Objects.targetThrowing())";
+                "execution(public * io.gemini.aop.integration.MutableJoinpoint_12TargetThrowing_Tests$InstanceMethod_Object.targetThrowing())";
 
         private static final String TARGET_THROWING_BEFORE_ADVICE = "targetThrowing_before";
         private static final String TARGET_THROWING_AFTER_ADVICE = "targetThrowing_after";

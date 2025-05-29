@@ -33,20 +33,20 @@ import org.junit.jupiter.api.Test;
 import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
-import io.gemini.api.aspect.Advice;
-import io.gemini.api.aspect.AspectSpec;
-import io.gemini.api.aspect.AspectSpec.PojoPointcutSpec;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Advice;
+import io.gemini.api.aop.AdvisorSpec;
+import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 
 public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests {
 
     @Test
     public void testVoidMatching() {
-        new VoidMatching_Objects().matchVoid();
+        new VoidMatching_Object().matchVoid();
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidMatching_Aspects.MATCH_VOID_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidMatching_Aspect.MATCH_VOID_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isNull();
@@ -60,7 +60,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class VoidMatching_Objects {
+    private static class VoidMatching_Object {
 
         private void matchVoid() {
             return;
@@ -68,12 +68,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class VoidMatching_Aspects {
+    public static class VoidMatching_Aspect {
 
         private static final String MATCH_VOID_POINTCUT = 
-                "execution(void io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Objects.matchVoid())";
+                "execution(void io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Object.matchVoid())";
 
-        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Aspects.class.getName() + ".matchVoid_afterAdvice";
+        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Aspect.class.getName() + ".matchVoid_afterAdvice";
 
         @After(MATCH_VOID_POINTCUT)
         public void matchVoid_afterAdvice(MutableJoinpoint<Void, RuntimeException> joinpoint) {
@@ -85,7 +85,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     public static class VoidMatching_Advices extends Advice.AbstractAfter<Void, RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advices.class.getName() + ".after";
 
@@ -104,12 +104,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             VoidMatching_Advices.class.getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Object") )
                     .methodMatcher(
                             named("matchVoid")
                                 .and(isPrivate())
@@ -122,18 +122,18 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     @Test
     public void testPrimitiveMatching() {
         long expectReturning = 1l;
-        PrimitiveMatching_Objects objects = new PrimitiveMatching_Objects();
-        objects.matchPrimitive(expectReturning);
+        PrimitiveMatching_Object object = new PrimitiveMatching_Object();
+        object.matchPrimitive(expectReturning);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Aspects.MATCH_PRIMITIVE_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Aspect.MATCH_PRIMITIVE_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Aspects.MATCH_PRIMITIVE2_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Aspect.MATCH_PRIMITIVE2_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
@@ -145,7 +145,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class PrimitiveMatching_Objects {
+    private static class PrimitiveMatching_Object {
 
         public long matchPrimitive(long input) {
             return input;
@@ -153,12 +153,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class PrimitiveMatching_Aspects {
+    public static class PrimitiveMatching_Aspect {
 
         private static final String MATCH_PRIMITIVE_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Objects.matchPrimitive(long))";
+                "execution(!private long io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Object.matchPrimitive(long))";
 
-        private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Aspects.class.getName() + ".matchPrimitive_afterAdvice";
+        private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Aspect.class.getName() + ".matchPrimitive_afterAdvice";
 
         @After(MATCH_PRIMITIVE_POINTCUT)
         public void matchPrimitive_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
@@ -170,9 +170,9 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
 
         private static final String MATCH_PRIMITIVE2_POINTCUT = 
-                "execution(!private java.lang.Long io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Objects.matchPrimitive(java.lang.Long))";
+                "execution(!private java.lang.Long io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Object.matchPrimitive(java.lang.Long))";
 
-        private static final String MATCH_PRIMITIVE2_AFTER_ADVICE = PrimitiveMatching_Aspects.class.getName() + ".matchPrimitive2_afterAdvice";
+        private static final String MATCH_PRIMITIVE2_AFTER_ADVICE = PrimitiveMatching_Aspect.class.getName() + ".matchPrimitive2_afterAdvice";
 
         @After(MATCH_PRIMITIVE2_POINTCUT)
         public void matchPrimitive2_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
@@ -184,7 +184,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     public static class PrimitiveMatching_Advices extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advices.class.getName() + ".after";
 
@@ -203,12 +203,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             this.getClass().getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Object") )
                     .methodMatcher(
                             named("matchPrimitive")
                                 .and(isPublic())
@@ -222,10 +222,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     @Test
     public void testGenericMatching() {
         long expectReturning = 1l;
-        new GenericMatching_Objects<Long>().matchGeneric(expectReturning);
+        new GenericMatching_Object<Long>().matchGeneric(expectReturning);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericMatching_Aspects.MATCH_GENERIC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericMatching_Aspect.MATCH_GENERIC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -239,7 +239,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class GenericMatching_Objects<T extends Number & Comparable<T>> {
+    private static class GenericMatching_Object<T extends Number & Comparable<T>> {
 
         public T matchGeneric(T input) {
             return input;
@@ -247,12 +247,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class GenericMatching_Aspects {
+    public static class GenericMatching_Aspect {
 
         private static final String MATCH_GENERIC_POINTCUT = 
-                "execution(java.lang.Number io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Objects.matchGeneric(java.lang.Number))";
+                "execution(java.lang.Number io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Object.matchGeneric(java.lang.Number))";
 
-        private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Aspects.class.getName() + ".matchGeneric_afterAdvice";
+        private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Aspect.class.getName() + ".matchGeneric_afterAdvice";
 
         @After(MATCH_GENERIC_POINTCUT)
         public void matchGeneric_afterAdvice(MutableJoinpoint<Number, RuntimeException> joinpoint) {
@@ -264,7 +264,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     public static class GenericMatching_Advices extends Advice.AbstractAfter<Number, RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advices.class.getName() + ".after";
 
@@ -283,12 +283,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             GenericMatching_Advices.class.getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Object") )
                     .methodMatcher(
                             named("matchGeneric")
                                 .and(isPublic())
@@ -302,10 +302,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     @Test
     public void testGenericArrayMatching() {
         Long[] expectReturning = new Long[] {1l, 2l};
-        new GenericArrayMatching_Objects<Long>().matchGenericArray(expectReturning);
+        new GenericArrayMatching_Object<Long>().matchGenericArray(expectReturning);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayMatching_Aspects.MATCH_GENERIC_ARRAY_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayMatching_Aspect.MATCH_GENERIC_ARRAY_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -319,7 +319,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class GenericArrayMatching_Objects<T extends Number> {
+    private static class GenericArrayMatching_Object<T extends Number> {
 
         public T[] matchGenericArray(T[] input) {
             return input;
@@ -327,12 +327,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class GenericArrayMatching_Aspects {
+    public static class GenericArrayMatching_Aspect {
 
         private static final String MATCH_GENERIC_ARRAY_POINTCUT = 
-                "execution(java.lang.Number[] io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Objects.matchGenericArray(java.lang.Number[]))";
+                "execution(java.lang.Number[] io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Object.matchGenericArray(java.lang.Number[]))";
 
-        private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Aspects.class.getName() + ".matchGenericArray_afterAdvice";
+        private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Aspect.class.getName() + ".matchGenericArray_afterAdvice";
 
         @After(MATCH_GENERIC_ARRAY_POINTCUT)
         public void matchGenericArray_afterAdvice(MutableJoinpoint<Number[], RuntimeException> joinpoint) {
@@ -344,7 +344,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     public static class GenericArrayMatching_Advices extends Advice.AbstractAfter<Number[], RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advices.class.getName() + ".after";
 
@@ -363,12 +363,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             GenericArrayMatching_Advices.class.getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Object") )
                     .methodMatcher(
                             named("matchGenericArray")
                                 .and(isPublic())
@@ -382,10 +382,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     @Test
     public void testGenericCollectionMatching() {
         List<Long> expectReturning = Arrays.asList(1l, 2l);
-        new GenericCollectionMatching_Objects<Long>().matchGenericCollection(expectReturning);
+        new GenericCollectionMatching_Object<Long>().matchGenericCollection(expectReturning);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionMatching_Aspects.MATCH_GENERIC_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionMatching_Aspect.MATCH_GENERIC_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -399,7 +399,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class GenericCollectionMatching_Objects<T extends Number> {
+    private static class GenericCollectionMatching_Object<T extends Number> {
 
         public List<T> matchGenericCollection(List<T> input) {
             return input;
@@ -407,12 +407,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class GenericCollectionMatching_Aspects {
+    public static class GenericCollectionMatching_Aspect {
 
         private static final String MATCH_GENERIC_COLLECTION_POINTCUT = 
-                "execution(java.util.List io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Objects.matchGenericCollection(java.util.List))";
+                "execution(java.util.List io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Object.matchGenericCollection(java.util.List))";
 
-        private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Aspects.class.getName() + ".matchGenericCollection_afterAdvice";
+        private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Aspect.class.getName() + ".matchGenericCollection_afterAdvice";
 
         @SuppressWarnings("rawtypes")
         @After(MATCH_GENERIC_COLLECTION_POINTCUT)
@@ -426,7 +426,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
 
     @SuppressWarnings("rawtypes")
     public static class GenericCollectionMatching_Advices extends Advice.AbstractAfter<List, RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advices.class.getName() + ".after";
 
@@ -445,12 +445,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             GenericCollectionMatching_Advices.class.getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Object") )
                     .methodMatcher(
                             named("matchGenericCollection")
                                 .and(isPublic())
@@ -464,10 +464,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     @Test
     public void testParameterizedCollectionMatching() {
         List<String> expectReturning = Arrays.asList("1", "2");
-        new ParameterizedCollectionMatching_Objects().matchParameterizedCollection(expectReturning);
+        new ParameterizedCollectionMatching_Object().matchParameterizedCollection(expectReturning);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionMatching_Aspects.MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionMatching_Aspect.MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -481,7 +481,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class ParameterizedCollectionMatching_Objects {
+    private static class ParameterizedCollectionMatching_Object {
 
         public List<String> matchParameterizedCollection(List<String> input) {
             return input;
@@ -489,12 +489,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class ParameterizedCollectionMatching_Aspects {
+    public static class ParameterizedCollectionMatching_Aspect {
 
         private static final String MATCH_PARAMETERIZED_COLLECTION_POINTCUT = 
-                "execution(java.util.List<java.lang.String> io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Objects.matchParameterizedCollection(java.util.List<java.lang.String>))";
+                "execution(java.util.List<java.lang.String> io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Object.matchParameterizedCollection(java.util.List<java.lang.String>))";
 
-        private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Aspects.class.getName() + ".matchParameterizedCollection_afterAdvice";
+        private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Aspect.class.getName() + ".matchParameterizedCollection_afterAdvice";
 
         @After(MATCH_PARAMETERIZED_COLLECTION_POINTCUT)
         public void matchParameterizedCollection_afterAdvice(MutableJoinpoint<List<String>, RuntimeException> joinpoint) {
@@ -506,7 +506,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     public static class ParameterizedCollectionMatching_Advices extends Advice.AbstractAfter<List<String>, RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advices.class.getName() + ".after";
 
@@ -525,12 +525,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             ParameterizedCollectionMatching_Advices.class.getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Object") )
                     .methodMatcher(
                             named("matchParameterizedCollection")
                                 .and(isPublic())
@@ -544,10 +544,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     @Test
     public void testWildCardCollectionMatching() {
         List<? extends Number> expectReturning = Arrays.asList(1l, 2l);
-        new WildCardCollectionMatching_Objects().matchWildCardCollection(expectReturning);
+        new WildCardCollectionMatching_Object().matchWildCardCollection(expectReturning);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionMatching_Aspects.MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionMatching_Aspect.MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -561,7 +561,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class WildCardCollectionMatching_Objects {
+    private static class WildCardCollectionMatching_Object {
 
         public List<? extends Number> matchWildCardCollection(List<? extends Number> input) {
             return input;
@@ -569,12 +569,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @Aspect
-    public static class WildCardCollectionMatching_Aspects {
+    public static class WildCardCollectionMatching_Aspect {
 
         private static final String MATCH_WILD_CARD_COLLECTION_POINTCUT = 
-                "execution(java.util.List<? extends java.lang.Number> io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Objects.matchWildCardCollection(java.util.List<? extends java.lang.Number>))";
+                "execution(java.util.List<? extends java.lang.Number> io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Object.matchWildCardCollection(java.util.List<? extends java.lang.Number>))";
 
-        private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Aspects.class.getName() + ".matchWildCardCollection_afterAdvice";
+        private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Aspect.class.getName() + ".matchWildCardCollection_afterAdvice";
 
         @After(MATCH_WILD_CARD_COLLECTION_POINTCUT)
         public void matchWildCardCollection_afterAdvice(MutableJoinpoint<List<? extends Number>, RuntimeException> joinpoint) {
@@ -586,7 +586,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     public static class WildCardCollectionMatching_Advices extends Advice.AbstractAfter<List<? extends Number>, RuntimeException> 
-            implements AspectSpec.PojoPointcutSpec.Factory {
+            implements AdvisorSpec.PojoPointcutSpec.Factory {
 
         private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Advices.class.getName() + ".after";
 
@@ -605,12 +605,12 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAspectSpec() {
-            return new AspectSpec.PojoPointcutSpec.Builder()
+        public PojoPointcutSpec getAdvisorSpec() {
+            return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             WildCardCollectionMatching_Advices.class.getName() )
                     .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Objects") )
+                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Object") )
                     .methodMatcher(
                             named("matchWildCardCollection")
                                 .and(isPublic())

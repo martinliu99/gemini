@@ -62,7 +62,7 @@ public class AopMetrics {
     private String weaverSummrayDetailTemplate;
     private String weaverSummrayPerCLTemplate;
 
-    private String aopWeavingDetailPerAspect;
+    private String aopWeavingDetailPerAdvisor;
 
     private boolean summarizeMetricsDetail = false;
     private final BootstraperMetrics bootstraperMetrics;
@@ -200,8 +200,8 @@ public class AopMetrics {
         valueMap.put("bootstrapCLConfigTime", bootstraperMetrics.getBootstrapCLConfigTime() / NANO_TIME);
         valueMap.put("aopCLConfigTime", bootstraperMetrics.getAopCLConfigTime() / NANO_TIME);
 
-        valueMap.put("aspectFactoryCreationTime", bootstraperMetrics.getAspectFactoryCreationTime() / NANO_TIME);
-        valueMap.put("aspectWeaverCreationTime", bootstraperMetrics.getAspectWeaverCreationTime() / NANO_TIME);
+        valueMap.put("advisorFactoryCreationTime", bootstraperMetrics.getAdvisorFactoryCreationTime() / NANO_TIME);
+        valueMap.put("aopWeaverCreationTime", bootstraperMetrics.getAopWeaverCreationTime() / NANO_TIME);
 
         valueMap.put("bytebuddyInstallationTime", bootstraperMetrics.getBytebuddyInstallationTime() / NANO_TIME);
 
@@ -213,15 +213,15 @@ public class AopMetrics {
 
         valueMap = format(valueMap);
 
-        StringBuilder aspectSepcs = new StringBuilder();
-        if(CollectionUtils.isEmpty(bootstraperMetrics.getAspectSpecs()) == false) {
-            for(Entry<String, Integer> entry : bootstraperMetrics.getAspectSpecs().entrySet()) {
-                aspectSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
+        StringBuilder advisorSepcs = new StringBuilder();
+        if(CollectionUtils.isEmpty(bootstraperMetrics.getAdvisorSpecs()) == false) {
+            for(Entry<String, Integer> entry : bootstraperMetrics.getAdvisorSpecs().entrySet()) {
+                advisorSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
             }
-            aspectSepcs.delete(aspectSepcs.length()-2, aspectSepcs.length());
+            advisorSepcs.delete(advisorSepcs.length()-2, advisorSepcs.length());
         } else
-            aspectSepcs.append(0);
-        valueMap.put("aspectSpecs", aspectSepcs.toString());
+            advisorSepcs.append(0);
+        valueMap.put("advisorSpecs", advisorSepcs.toString());
 
         valueMap.put("typeRedefiningCount", bootstraperMetrics.getTypeRedefiningCount());
 
@@ -262,8 +262,8 @@ public class AopMetrics {
             valueMap.put("typeAcceptingCount", weaverStats.getTypeAcceptingCount());
             valueMap.put("typeAcceptingTime", weaverStats.getTypeAcceptingTime());
 
-            valueMap.put("aspectCreationCount", weaverStats.getAspectCreationCount());
-            valueMap.put("aspectCreationTime", weaverStats.getAspectCreationTime());
+            valueMap.put("advisorCreationCount", weaverStats.getAdvisorCreationCount());
+            valueMap.put("advisorCreationTime", weaverStats.getAdvisorCreationTime());
 
             valueMap.put("typeFastMatchingCount", weaverStats.getTypeFastMatchingCount());
             valueMap.put("typeFastMatchingTime", weaverStats.getTypeFastMatchingTime());
@@ -283,9 +283,9 @@ public class AopMetrics {
             renderResult.append( new PlaceholderHelper.Builder().build(valueMap).replace(weaverSummrayDetailTemplate) );
         }
 
-        // 2.render detail metrics per ClassLoader and Aspect
+        // 2.render detail metrics per ClassLoader and Advisor
         for(WeaverMetrics weaverMetrics : weaverStats.getWeaverMetricsList()) {
-            if(weaverMetrics.getTypeLoadingCount() <= 1 && weaverMetrics.getAspectCreationCount() == 0)
+            if(weaverMetrics.getTypeLoadingCount() <= 1 && weaverMetrics.getAdvisorCreationCount() == 0)
                 continue;
 
             Map<String, Object> valueMap = new HashMap<>();
@@ -299,8 +299,8 @@ public class AopMetrics {
             valueMap.put("typeAcceptingCount", weaverMetrics.getTypeAcceptingCount());
             valueMap.put("typeAcceptingTime", weaverMetrics.getTypeAcceptingTime() / NANO_TIME);
 
-            valueMap.put("aspectCreationCount", weaverMetrics.getAspectCreationCount());
-            valueMap.put("aspectCreationTime", weaverMetrics.getAspectCreationTime() / NANO_TIME);
+            valueMap.put("advisorCreationCount", weaverMetrics.getAdvisorCreationCount());
+            valueMap.put("advisorCreationTime", weaverMetrics.getAdvisorCreationTime() / NANO_TIME);
 
             valueMap.put("typeFastMatchingCount", weaverMetrics.getTypeFastMatchingCount());
             valueMap.put("typeFastMatchingTime", weaverMetrics.getTypeFastMatchingTime() / NANO_TIME);
@@ -320,18 +320,18 @@ public class AopMetrics {
                     .replace(weaverSummrayPerCLTemplate) );
 
             if(this.summarizeMetricsDetail) {
-                Map<Aspect, AtomicLong> aspectMethodMatchingType = weaverMetrics.getAspectTypeMatchingTimeMap();
-                for(Entry<Aspect, AtomicLong> aspectEntry : weaverMetrics.getAspectTypeFastMatchingTimeMap().entrySet()) {
+                Map<Advisor, AtomicLong> advisorMethodMatchingType = weaverMetrics.getAdvisorTypeMatchingTimeMap();
+                for(Entry<Advisor, AtomicLong> advisorEntry : weaverMetrics.getAdvisorTypeFastMatchingTimeMap().entrySet()) {
                     // TODO: just top 10
-                    if(aspectEntry.getValue().get() != 0) {
+                    if(advisorEntry.getValue().get() != 0) {
                         valueMap = new HashMap<>();
-                        Aspect aspectName = aspectEntry.getKey();
-                        valueMap.put("aspectName", aspectName);
-                        valueMap.put("aspectTypeFastMatchingTime", aspectEntry.getValue().get() / NANO_TIME);
-                        valueMap.put("aspectTypeMatchingTime", aspectMethodMatchingType.get(aspectName).get() / NANO_TIME);
+                        Advisor advisorName = advisorEntry.getKey();
+                        valueMap.put("advisorName", advisorName);
+                        valueMap.put("advisorTypeFastMatchingTime", advisorEntry.getValue().get() / NANO_TIME);
+                        valueMap.put("advisorTypeMatchingTime", advisorMethodMatchingType.get(advisorName).get() / NANO_TIME);
 
                         renderResult.append(
-                                new PlaceholderHelper.Builder().build(valueMap).replace(aopWeavingDetailPerAspect) );
+                                new PlaceholderHelper.Builder().build(valueMap).replace(aopWeavingDetailPerAdvisor) );
                     }
                 }
             }
@@ -414,9 +414,9 @@ public class AopMetrics {
         private long bootstrapCLConfigTime;
         private long aopCLConfigTime;
 
-        private long aspectFactoryCreationTime;
-        private Map<String, Integer> aspectSpecs;
-        private long aspectWeaverCreationTime;
+        private long advisorFactoryCreationTime;
+        private Map<String, Integer> advisorSpecs;
+        private long aopWeaverCreationTime;
 
         private long bytebuddyInstallationTime;
 
@@ -473,28 +473,28 @@ public class AopMetrics {
             this.aopCLConfigTime = aopCLConfigTime;
         }
 
-        protected long getAspectFactoryCreationTime() {
-            return aspectFactoryCreationTime;
+        protected long getAdvisorFactoryCreationTime() {
+            return advisorFactoryCreationTime;
         }
 
-        public void setAspectFactoryCreationTime(long aspectFactoryCreationTime) {
-            this.aspectFactoryCreationTime = aspectFactoryCreationTime;
+        public void setAdvisorFactoryCreationTime(long advisorFactoryCreationTime) {
+            this.advisorFactoryCreationTime = advisorFactoryCreationTime;
         }
 
-        protected Map<String, Integer> getAspectSpecs() {
-            return aspectSpecs;
+        protected Map<String, Integer> getAdvisorSpecs() {
+            return advisorSpecs;
         }
 
-        public void setAspectSpecs(Map<String, Integer> aspectSpecs) {
-            this.aspectSpecs = aspectSpecs;
+        public void setAdvisorSpecs(Map<String, Integer> advisorSpecs) {
+            this.advisorSpecs = advisorSpecs;
         }
 
-        protected long getAspectWeaverCreationTime() {
-            return aspectWeaverCreationTime;
+        protected long getAopWeaverCreationTime() {
+            return aopWeaverCreationTime;
         }
 
-        public void setAspectWeaverCreationTime(long aspectDefinitionLoadingTime) {
-            this.aspectWeaverCreationTime = aspectDefinitionLoadingTime;
+        public void setAopWeaverCreationTime(long aopWeaverCreationTime) {
+            this.aopWeaverCreationTime = aopWeaverCreationTime;
         }
 
         protected long getBytebuddyInstallationTime() {
@@ -537,7 +537,7 @@ public class AopMetrics {
             return this.launcherStartupTime 
                     - loggerCreationTime - aopContextCreationTime
                     - bootstrapCLConfigTime - aopCLConfigTime
-                    - aspectFactoryCreationTime - aspectWeaverCreationTime 
+                    - advisorFactoryCreationTime - aopWeaverCreationTime 
                     - bytebuddyInstallationTime - typeRedefiningTime;
         }
     }
@@ -557,8 +557,8 @@ public class AopMetrics {
         private final AtomicInteger typeAcceptingCount;
         private final AtomicLong typeAcceptingTime;
 
-        private final AtomicInteger aspectCreationCount;
-        private final AtomicLong aspectCreationTime;
+        private final AtomicInteger advisorCreationCount;
+        private final AtomicLong advisorCreationTime;
 
         private final AtomicInteger typeFastMatchingCount;
         private final AtomicLong typeFastMatchingTime;
@@ -569,8 +569,8 @@ public class AopMetrics {
         private final AtomicInteger typeTransformationCount;
         private final AtomicLong typeTransformationTime;
 
-        private final ConcurrentMap<Aspect, AtomicLong> aspectTypeFastMatchingTimeMap;
-        private final ConcurrentMap<Aspect, AtomicLong> aspectTypeMatchingTimeMap;
+        private final ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap;
+        private final ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap;
 
 
         public WeaverMetrics(int metricsIndex, ClassLoader classLoader) {
@@ -590,12 +590,12 @@ public class AopMetrics {
         private WeaverMetrics(int metrcisIndex, ClassLoader classLoader, 
                 int typeLoadingCount, long typeLoadingTime,
                 int typeAcceptingCount, long typeAcceptingTime,
-                int aspectCreationCount, long aspectCreationTime,
+                int advisorCreationCount, long advisorCreationTime,
                 int typeFastMatchingCount, long typeFastMatchingTime,
                 int typeMatchingCount, long typeMatchingTime,
                 int typeTransformationCount, long typeTransformationTime,
-                ConcurrentMap<Aspect, AtomicLong> aspectTypeFastMatchingTimeMap,
-                ConcurrentMap<Aspect, AtomicLong> aspectTypeMatchingTimeMap) {
+                ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap,
+                ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap) {
             this.metricsIndex = metrcisIndex;
             this.classLoaderRef = new WeakReference<ClassLoader>(classLoader);
 
@@ -605,8 +605,8 @@ public class AopMetrics {
             this.typeAcceptingCount = new AtomicInteger(typeAcceptingCount);
             this.typeAcceptingTime = new AtomicLong(typeAcceptingTime);
 
-            this.aspectCreationCount = new AtomicInteger(aspectCreationCount);
-            this.aspectCreationTime = new AtomicLong(aspectCreationTime);
+            this.advisorCreationCount = new AtomicInteger(advisorCreationCount);
+            this.advisorCreationTime = new AtomicLong(advisorCreationTime);
 
             this.typeFastMatchingCount = new AtomicInteger(typeFastMatchingCount);
             this.typeFastMatchingTime = new AtomicLong(typeFastMatchingTime);
@@ -617,8 +617,8 @@ public class AopMetrics {
             this.typeTransformationCount = new AtomicInteger(typeTransformationCount);
             this.typeTransformationTime = new AtomicLong(typeTransformationTime);
 
-            this.aspectTypeFastMatchingTimeMap = aspectTypeFastMatchingTimeMap;
-            this.aspectTypeMatchingTimeMap= aspectTypeMatchingTimeMap;
+            this.advisorTypeFastMatchingTimeMap = advisorTypeFastMatchingTimeMap;
+            this.advisorTypeMatchingTimeMap= advisorTypeMatchingTimeMap;
         }
 
         protected int getMetricsIndex() {
@@ -661,20 +661,20 @@ public class AopMetrics {
             typeAcceptingTime.addAndGet(time);
         }
 
-        protected int getAspectCreationCount() {
-            return aspectCreationCount.get();
+        protected int getAdvisorCreationCount() {
+            return advisorCreationCount.get();
         }
 
-        public void incrAspectCreationCount(int count) {
-            aspectCreationCount.addAndGet(count);
+        public void incrAdvisorCreationCount(int count) {
+            advisorCreationCount.addAndGet(count);
         }
 
-        protected long getAspectCreationTime() {
-            return aspectCreationTime.get();
+        protected long getAdvisorCreationTime() {
+            return advisorCreationTime.get();
         }
 
-        public void incrAspectCreationTime(long time) {
-            this.aspectCreationTime.addAndGet(time);
+        public void incrAdvisorCreationTime(long time) {
+            this.advisorCreationTime.addAndGet(time);
         }
 
         protected int getTypeFastMatchingCount() {
@@ -693,12 +693,12 @@ public class AopMetrics {
             typeFastMatchingTime.addAndGet(time);
         }
 
-        protected Map<Aspect, AtomicLong> getAspectTypeFastMatchingTimeMap() {
-            return this.aspectTypeFastMatchingTimeMap;
+        protected Map<Advisor, AtomicLong> getAdvisorTypeFastMatchingTimeMap() {
+            return this.advisorTypeFastMatchingTimeMap;
         }
 
-        public void incrAspectTypeFastMatchingTime(Aspect aspect, long time) {
-            AtomicLong totalTime = this.aspectTypeFastMatchingTimeMap.get(aspect);
+        public void incrAdvisorTypeFastMatchingTime(Advisor advisor, long time) {
+            AtomicLong totalTime = this.advisorTypeFastMatchingTimeMap.get(advisor);
             if(totalTime == null)
                 return;
             totalTime.addAndGet(time);
@@ -712,12 +712,12 @@ public class AopMetrics {
             typeMatchingCount.incrementAndGet();
         }
 
-        protected Map<Aspect, AtomicLong> getAspectTypeMatchingTimeMap() {
-            return this.aspectTypeMatchingTimeMap;
+        protected Map<Advisor, AtomicLong> getAdvisorTypeMatchingTimeMap() {
+            return this.advisorTypeMatchingTimeMap;
         }
 
-        public void incrAspectTypeMatchingTime(Aspect aspect, long time) {
-            AtomicLong totalTime = this.aspectTypeMatchingTimeMap.get(aspect);
+        public void incrAdvisorTypeMatchingTime(Advisor advisor, long time) {
+            AtomicLong totalTime = this.advisorTypeMatchingTimeMap.get(advisor);
             if(totalTime == null)
                 return;
             totalTime.addAndGet(time);
@@ -748,7 +748,7 @@ public class AopMetrics {
         }
 
         protected long getUncategorizedTime() {
-            return typeLoadingTime.get() - typeAcceptingTime.get() - aspectCreationTime.get()
+            return typeLoadingTime.get() - typeAcceptingTime.get() - advisorCreationTime.get()
                     - typeFastMatchingTime.get() - typeMatchingTime.get() - typeTransformationTime.get();
         }
     }
@@ -764,8 +764,8 @@ public class AopMetrics {
         private final int typeAcceptingCount;
         private final double typeAcceptingTime;
 
-        private final int aspectCreationCount;
-        private final double aspectCreationTime;
+        private final int advisorCreationCount;
+        private final double advisorCreationTime;
 
         private final int typeFastMatchingCount;
         private final double typeFastMatchingTime;
@@ -778,8 +778,8 @@ public class AopMetrics {
 
         private final double uncategorizedTime;
 
-        private final ConcurrentMap<Aspect, AtomicLong> aspectTypeFastMatchingTimeMap;
-        private final ConcurrentMap<Aspect, AtomicLong> aspectTypeMatchingTimeMap;
+        private final ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap;
+        private final ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap;
 
         public WeaverSummary(Map<ClassLoader, WeaverMetrics> weaverMetricsMap) {
             weaverMetricsList = weaverMetricsMap.values().stream()
@@ -801,11 +801,11 @@ public class AopMetrics {
                     .mapToLong( e -> e.getTypeAcceptingTime() )
                     .sum() / NANO_TIME;
 
-            this.aspectCreationCount = weaverMetricsList.stream()
-                    .mapToInt( e -> e.getAspectCreationCount() )
+            this.advisorCreationCount = weaverMetricsList.stream()
+                    .mapToInt( e -> e.getAdvisorCreationCount() )
                     .sum();
-            this.aspectCreationTime = weaverMetricsList.stream()
-                    .mapToLong( e -> e.getAspectCreationTime() )
+            this.advisorCreationTime = weaverMetricsList.stream()
+                    .mapToLong( e -> e.getAdvisorCreationTime() )
                     .sum() / NANO_TIME;
 
             this.typeFastMatchingCount = weaverMetricsList.stream()
@@ -833,8 +833,8 @@ public class AopMetrics {
                     .mapToLong( e -> e.getUncategorizedTime() )
                     .sum() / NANO_TIME;
 
-            this.aspectTypeFastMatchingTimeMap = new ConcurrentHashMap<>();
-            this.aspectTypeMatchingTimeMap = new ConcurrentHashMap<>();
+            this.advisorTypeFastMatchingTimeMap = new ConcurrentHashMap<>();
+            this.advisorTypeMatchingTimeMap = new ConcurrentHashMap<>();
         }
 
         public List<WeaverMetrics> getWeaverMetricsList() {
@@ -857,12 +857,12 @@ public class AopMetrics {
             return typeAcceptingTime;
         }
 
-        public int getAspectCreationCount() {
-            return aspectCreationCount;
+        public int getAdvisorCreationCount() {
+            return advisorCreationCount;
         }
 
-        public double getAspectCreationTime() {
-            return aspectCreationTime;
+        public double getAdvisorCreationTime() {
+            return advisorCreationTime;
         }
 
         public int getTypeFastMatchingCount() {
@@ -893,12 +893,12 @@ public class AopMetrics {
             return uncategorizedTime;
         }
 
-        public ConcurrentMap<Aspect, AtomicLong> getAspectTypeFastMatchingTimeMap() {
-            return aspectTypeFastMatchingTimeMap;
+        public ConcurrentMap<Advisor, AtomicLong> getAdvisorTypeFastMatchingTimeMap() {
+            return advisorTypeFastMatchingTimeMap;
         }
 
-        public ConcurrentMap<Aspect, AtomicLong> getAspectTypeMatchingTimeMap() {
-            return aspectTypeMatchingTimeMap;
+        public ConcurrentMap<Advisor, AtomicLong> getAdvisorTypeMatchingTimeMap() {
+            return advisorTypeMatchingTimeMap;
         }
     }
 

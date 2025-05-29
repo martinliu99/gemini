@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.activation.AopActivator;
 import io.gemini.activation.classloader.DefaultAopClassLoader;
-import io.gemini.activation.support.AspectoryScanner;
+import io.gemini.activation.support.AspectAppScanner;
 import io.gemini.activation.support.UnpackedArchiveConfig;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
@@ -62,7 +62,7 @@ public abstract class AbstractIntegrationTests {
 
     @BeforeAll
     public static void beforeAllTests() throws Exception {
-        // launch AopLauncher and load all aspects
+        // launch AopLauncher and load all advisors
         if(LAUNCHED == false) {
             launch();
             LAUNCHED = true;
@@ -93,7 +93,7 @@ public abstract class AbstractIntegrationTests {
             LauncherConfig launcherConfig = new UnpackedArchiveConfig(launchPath, null, "",
                     () -> classPathURLs.toArray( new URL[0]),
                     true,
-                    new AspectoryScanner.ClassesFolder() );
+                    new AspectAppScanner.ClassesFolder() );
 
             AopClassLoader aopClassLoader = new DefaultAopClassLoader(classPathURLs.toArray(new URL[0]),  AbstractIntegrationTests.class.getClassLoader());
             aopClassLoader.addTypeFinder( new AopClassLoader.TypeFinder() {

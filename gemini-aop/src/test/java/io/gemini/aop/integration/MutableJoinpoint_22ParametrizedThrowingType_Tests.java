@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
  *
@@ -38,28 +38,28 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
 
     @Test
     public void testNoException() {
-        new NoException_Objects().throwNothing();
+        new NoException_Object().throwNothing();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NoException_Aspects.THROW_NOTHING_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NoException_Aspect.THROW_NOTHING_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NoException_Aspects.THROW_NOTHING_SUPER_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NoException_Aspect.THROW_NOTHING_SUPER_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getThrowing()).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NoException_Aspects.THROW_NOTHING_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NoException_Aspect.THROW_NOTHING_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class NoException_Objects {
+    static class NoException_Object {
 
         String throwNothing() {
             return "";
@@ -67,10 +67,10 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
     }
 
     @Aspect
-    public static class NoException_Aspects {
+    public static class NoException_Aspect {
 
         private static final String THROW_NOTHING_POINTCUT = 
-                "execution(java.lang.String io.gemini.aop.integration.MutableJoinpoint_22ParametrizedThrowingType_Tests$NoException_Objects.throwNothing())";
+                "execution(java.lang.String io.gemini.aop.integration.MutableJoinpoint_22ParametrizedThrowingType_Tests$NoException_Object.throwNothing())";
 
         private static final String THROW_NOTHING_RAW_TYPE = "throwNothing_rawType";
         private static final String THROW_NOTHING_SUPER_TYPE = "throwNothing_superType";
@@ -99,35 +99,35 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
     @Test
     public void testRuntimeException() {
         try {
-            new RuntimeException_Objects(new RuntimeException("expected")).throwRuntimeException();
+            new RuntimeException_Object(new RuntimeException("expected")).throwRuntimeException();
             assertThat(false).isTrue();
         } catch(Throwable actualException) {
             {
-                AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspects.THROW_RUNTIME_EXCEPTION_RAW_TYPE);
+                AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspect.THROW_RUNTIME_EXCEPTION_RAW_TYPE);
                 assertThat(beforeAdviceMethodInvoker).isNotNull();
                 assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             }
 
             {
-                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspects.THROW_RUNTIME_EXCEPTION_SUPER_TYPE);
+                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspect.THROW_RUNTIME_EXCEPTION_SUPER_TYPE);
                 assertThat(afterAdviceMethodInvoker).isNotNull();
                 assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
                 assertThat(afterAdviceMethodInvoker.getThrowing()).isEqualTo(actualException);
             }
 
             {
-                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspects.THROW_RUNTIME_EXCEPTION_WRONG_TYPE);
+                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspect.THROW_RUNTIME_EXCEPTION_WRONG_TYPE);
                 assertThat(afterAdviceMethodInvoker).isNull();
             }
         }
     }
 
-    static class RuntimeException_Objects {
+    static class RuntimeException_Object {
 
         private RuntimeException cause;
 
 
-        public RuntimeException_Objects(RuntimeException cause) {
+        public RuntimeException_Object(RuntimeException cause) {
             this.cause = cause;
         }
 
@@ -137,10 +137,10 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
     }
 
     @Aspect
-    public static class RuntimeException_Aspects {
+    public static class RuntimeException_Aspect {
 
         private static final String THROW_RUNTIME_EXCEPTION_POINTCUT = 
-                "execution(java.lang.String io.gemini.aop.integration.MutableJoinpoint_22ParametrizedThrowingType_Tests$RuntimeException_Objects.throwRuntimeException())";
+                "execution(java.lang.String io.gemini.aop.integration.MutableJoinpoint_22ParametrizedThrowingType_Tests$RuntimeException_Object.throwRuntimeException())";
 
         private static final String THROW_RUNTIME_EXCEPTION_RAW_TYPE = "throwRuntimeException_rawType";
         private static final String THROW_RUNTIME_EXCEPTION_SUPER_TYPE = "throwRuntimeException_superType";
@@ -169,72 +169,72 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
     @Test
     public void testMultiException() {
         try {
-            new MultiException_Objects(new MultiException_Objects.ExceptionA_Objects("expected")).throwMultiExceptions();
+            new MultiException_Object(new MultiException_Object.ExceptionA_Object("expected")).throwMultiExceptions();
             assertThat(false).isTrue();
         } catch(Throwable actualException) {
             {
-                AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspects.THROW_RUNTIME_EXCEPTION_RAW_TYPE);
+                AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspect.THROW_RUNTIME_EXCEPTION_RAW_TYPE);
                 assertThat(beforeAdviceMethodInvoker).isNotNull();
                 assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             }
 
             {
-                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspects.THROW_RUNTIME_EXCEPTION_SUPER_TYPE);
+                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspect.THROW_RUNTIME_EXCEPTION_SUPER_TYPE);
                 assertThat(afterAdviceMethodInvoker).isNotNull();
                 assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
                 assertThat(afterAdviceMethodInvoker.getThrowing()).isEqualTo(actualException);
             }
 
             {
-                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspects.THROW_RUNTIME_EXCEPTION_WRONG_TYPE);
+                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspect.THROW_RUNTIME_EXCEPTION_WRONG_TYPE);
                 assertThat(afterAdviceMethodInvoker).isNull();
             }
         }
     }
 
-    static class MultiException_Objects {
+    static class MultiException_Object {
 
-        private ExceptionA_Objects cause;
+        private ExceptionA_Object cause;
 
 
-        public MultiException_Objects(ExceptionA_Objects cause) {
+        public MultiException_Object(ExceptionA_Object cause) {
             this.cause = cause;
         }
 
-        String throwMultiExceptions() throws ExceptionA_Objects, ExceptionB_Objects {
+        String throwMultiExceptions() throws ExceptionA_Object, ExceptionB_Object {
             throw cause;
         }
 
-        static class ExceptionA_Objects extends Exception {
+        static class ExceptionA_Object extends Exception {
 
             /**
              * 
              */
             private static final long serialVersionUID = 1107049581013249689L;
 
-            public ExceptionA_Objects(String message) {
+            public ExceptionA_Object(String message) {
                 super(message);
             }
         }
 
-        static class ExceptionB_Objects extends Exception {
+        static class ExceptionB_Object extends Exception {
 
             /**
              * 
              */
             private static final long serialVersionUID = -5207248475132102808L;
 
-            public ExceptionB_Objects(String message) {
+            public ExceptionB_Object(String message) {
                 super(message);
             }
         }
     }
 
     @Aspect
-    public static class MultiException_Aspects {
+    public static class MultiException_Aspect {
 
         private static final String THROW_RUNTIME_EXCEPTION_POINTCUT = 
-                "execution(java.lang.String io.gemini.aop.integration.MutableJoinpoint_22ParametrizedThrowingType_Tests$MultiException_Objects.throwMultiExceptions())";
+                "execution(java.lang.String io.gemini.aop.integration.MutableJoinpoint_22ParametrizedThrowingType_Tests$MultiException_Object.throwMultiExceptions())";
 
         private static final String THROW_RUNTIME_EXCEPTION_RAW_TYPE = "throwMultiException_rawType";
         private static final String THROW_RUNTIME_EXCEPTION_SUPER_TYPE = "throwMultiException_superType";
@@ -253,7 +253,7 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
         }
 
         @After(THROW_RUNTIME_EXCEPTION_POINTCUT)
-        public void throwMultiException_wrongType(MutableJoinpoint<String, MultiException_Objects.ExceptionA_Objects> joinpoint) {
+        public void throwMultiException_wrongType(MutableJoinpoint<String, MultiException_Object.ExceptionA_Object> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(THROW_RUNTIME_EXCEPTION_WRONG_TYPE, 
                     new AdviceMethod().withInvoked(true).withReturning(joinpoint.getReturning()) );
         }

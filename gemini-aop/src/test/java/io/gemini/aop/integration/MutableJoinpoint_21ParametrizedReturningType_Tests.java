@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
  *
@@ -41,29 +41,29 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testVoidReturning() {
-        new VoidReturning_Objects().returnVoid();
+        new VoidReturning_Object().returnVoid();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidReturning_Aspects.RETURN_VOID_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidReturning_Aspect.RETURN_VOID_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(beforeAdviceMethodInvoker.getReturning()).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidReturning_Aspects.RETURN_VOID_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidReturning_Aspect.RETURN_VOID_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidReturning_Aspects.RETURN_VOID_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidReturning_Aspect.RETURN_VOID_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class VoidReturning_Objects {
+    static class VoidReturning_Object {
 
         void returnVoid() {
             return;
@@ -72,10 +72,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class VoidReturning_Aspects {
+    public static class VoidReturning_Aspect {
 
         private static final String RETURN_VOID_POINTCUT = 
-                "execution(void io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$VoidReturning_Objects.returnVoid())";
+                "execution(void io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$VoidReturning_Object.returnVoid())";
 
         private static final String RETURN_VOID_RAW_TYPE = "returnVoid_rawType";
         private static final String RETURN_VOID_SAME_TYPE = "returnVoid_sameType";
@@ -104,33 +104,33 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testPrimitiveReturning() {
-        long actualReturning = new PrimitiveReturning_Objects(1l).returnPrimitive();
+        long actualReturning = new PrimitiveReturning_Object(1l).returnPrimitive();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveReturning_Aspects.RETURN_PRIMITIVE_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveReturning_Aspect.RETURN_PRIMITIVE_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveReturning_Aspects.RETURN_PRIMITIVE_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveReturning_Aspect.RETURN_PRIMITIVE_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(actualReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveReturning_Aspects.RETURN_PRIMITIVE_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveReturning_Aspect.RETURN_PRIMITIVE_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class PrimitiveReturning_Objects {
+    static class PrimitiveReturning_Object {
 
         private long counter;
 
 
-        public PrimitiveReturning_Objects(long counter) {
+        public PrimitiveReturning_Object(long counter) {
             this.counter = counter;
         }
 
@@ -141,10 +141,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class PrimitiveReturning_Aspects {
+    public static class PrimitiveReturning_Aspect {
 
         private static final String RETURN_PRIMITIVE_POINTCUT = 
-                "execution(long io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$PrimitiveReturning_Objects.returnPrimitive())";
+                "execution(long io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$PrimitiveReturning_Object.returnPrimitive())";
 
         private static final String RETURN_PRIMITIVE_RAW_TYPE = "returnPrimitive_rawType";
         private static final String RETURN_PRIMITIVE_SAME_TYPE = "returnPrimitive_sameType";
@@ -176,33 +176,33 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testGenericReturning() {
-        Long actualReturning = new GenericReturning_Objects<Long>(1l).returnGeneric();
+        Long actualReturning = new GenericReturning_Object<Long>(1l).returnGeneric();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericReturning_Aspects.RETURN_GENERIC_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericReturning_Aspect.RETURN_GENERIC_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericReturning_Aspects.RETURN_GENERIC_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericReturning_Aspect.RETURN_GENERIC_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(actualReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericReturning_Aspects.RETURN_GENERIC_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericReturning_Aspect.RETURN_GENERIC_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class GenericReturning_Objects<T extends Number> {
+    static class GenericReturning_Object<T extends Number> {
 
         T counter;
 
 
-        public GenericReturning_Objects(T counter) {
+        public GenericReturning_Object(T counter) {
             this.counter = counter;
         }
 
@@ -212,10 +212,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class GenericReturning_Aspects {
+    public static class GenericReturning_Aspect {
 
         private static final String RETURN_GENERIC_POINTCUT = 
-                "execution(java.lang.Number io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$GenericReturning_Objects.returnGeneric())";
+                "execution(java.lang.Number io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$GenericReturning_Object.returnGeneric())";
 
         private static final String RETURN_GENERIC_RAW_TYPE = "returnGeneric_rawType";
         private static final String RETURN_GENERIC_SAME_TYPE = "returnGeneric_genericType";
@@ -250,34 +250,34 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testGenericArrayReturning() {
-        Long[] actualReturning = new GenericArrayReturning_Objects<Long>(new Long[] {1l, 2l})
+        Long[] actualReturning = new GenericArrayReturning_Object<Long>(new Long[] {1l, 2l})
                 .returnGenericArray();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayReturning_Aspects.RETURN_GENERIC_ARRAY_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayReturning_Aspect.RETURN_GENERIC_ARRAY_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayReturning_Aspects.RETURN_GENERIC_ARRAY_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayReturning_Aspect.RETURN_GENERIC_ARRAY_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(actualReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayReturning_Aspects.RETURN_GENERIC_ARRAY_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayReturning_Aspect.RETURN_GENERIC_ARRAY_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class GenericArrayReturning_Objects<T extends Number> {
+    static class GenericArrayReturning_Object<T extends Number> {
 
         T[] counters;
 
 
-        public GenericArrayReturning_Objects(T[] counters) {
+        public GenericArrayReturning_Object(T[] counters) {
             this.counters = counters;
         }
 
@@ -287,10 +287,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class GenericArrayReturning_Aspects {
+    public static class GenericArrayReturning_Aspect {
 
         private static final String RETURN_GENERIC_ARRAY_POINTCUT = 
-                "execution(java.lang.Number[] io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$GenericArrayReturning_Objects.returnGenericArray())";
+                "execution(java.lang.Number[] io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$GenericArrayReturning_Object.returnGenericArray())";
 
         private static final String RETURN_GENERIC_ARRAY_RAW_TYPE = "returnGenericArray_rawType";
         private static final String RETURN_GENERIC_ARRAY_SAME_TYPE = "returnGenericArray_genericType";
@@ -331,34 +331,34 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testGenericCollectionReturning() {
-        List<Long> actualReturning = new GenericCollectionReturning_Objects<Long>(Arrays.asList(1l, 2l, 3l))
+        List<Long> actualReturning = new GenericCollectionReturning_Object<Long>(Arrays.asList(1l, 2l, 3l))
                 .returnGenericCollection();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionReturning_Aspects.RETURN_GENERIC_COLLECTION_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionReturning_Aspect.RETURN_GENERIC_COLLECTION_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionReturning_Aspects.RETURN_GENERIC_COLLECTION_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionReturning_Aspect.RETURN_GENERIC_COLLECTION_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(actualReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionReturning_Aspects.RETURN_GENERIC_COLLECTION_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionReturning_Aspect.RETURN_GENERIC_COLLECTION_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class GenericCollectionReturning_Objects<T extends Number> {
+    static class GenericCollectionReturning_Object<T extends Number> {
 
         List<T> counters;
 
 
-        public GenericCollectionReturning_Objects(List<T> counters) {
+        public GenericCollectionReturning_Object(List<T> counters) {
             this.counters = counters;
         }
 
@@ -368,10 +368,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class GenericCollectionReturning_Aspects {
+    public static class GenericCollectionReturning_Aspect {
 
         private static final String RETURN_GENERIC_COLLECTION_POINTCUT = 
-                "execution(java.util.List io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$GenericCollectionReturning_Objects.returnGenericCollection())";
+                "execution(java.util.List io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$GenericCollectionReturning_Object.returnGenericCollection())";
 
         private static final String RETURN_GENERIC_COLLECTION_SAME_TYPE = "returnGenericCollection_genericType";
         private static final String RETURN_GENERIC_COLLECTION_RAW_TYPE = "returnGenericCollection_rawType";
@@ -406,34 +406,34 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testParameterizedCollectionReturning() {
-        List<String> actualReturning = new ParameterizedCollectionReturning_Objects(Arrays.asList("1", "2", "3"))
+        List<String> actualReturning = new ParameterizedCollectionReturning_Object(Arrays.asList("1", "2", "3"))
                 .returnParameterizedCollection();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionReturning_Aspects.RETURN_PARAMETERIZED_COLLECTION_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionReturning_Aspect.RETURN_PARAMETERIZED_COLLECTION_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionReturning_Aspects.RETURN_PARAMETERIZED_COLLECTION_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionReturning_Aspect.RETURN_PARAMETERIZED_COLLECTION_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(actualReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionReturning_Aspects.RETURN_PARAMETERIZED_COLLECTION_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionReturning_Aspect.RETURN_PARAMETERIZED_COLLECTION_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class ParameterizedCollectionReturning_Objects {
+    static class ParameterizedCollectionReturning_Object {
 
         private List<String> counters;
 
 
-        public ParameterizedCollectionReturning_Objects(List<String> counters) {
+        public ParameterizedCollectionReturning_Object(List<String> counters) {
             this.counters = counters;
         }
 
@@ -443,10 +443,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class ParameterizedCollectionReturning_Aspects {
+    public static class ParameterizedCollectionReturning_Aspect {
 
         private static final String RETURN_PARAMETERIZED_COLLECTION_POINTCUT = 
-                "execution(java.util.List<java.lang.String> io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$ParameterizedCollectionReturning_Objects.returnParameterizedCollection())";
+                "execution(java.util.List<java.lang.String> io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$ParameterizedCollectionReturning_Object.returnParameterizedCollection())";
 
         private static final String RETURN_PARAMETERIZED_COLLECTION_SAME_TYPE = "returnParameterizedCollection_genericType";
         private static final String RETURN_PARAMETERIZED_COLLECTION_RAW_TYPE = "returnParameterizedCollection_rawType";
@@ -480,34 +480,34 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
 
     @Test
     public void testWildCardCollectionReturning() {
-        List<? extends Number> actualReturning = new WildCardCollectionReturning_Objects(Arrays.asList(1, 2, 3))
+        List<? extends Number> actualReturning = new WildCardCollectionReturning_Object(Arrays.asList(1, 2, 3))
                 .returnWildCardCollection();
 
         {
-            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionReturning_Aspects.RETURN_WILD_CARD_COLLECTION_RAW_TYPE);
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionReturning_Aspect.RETURN_WILD_CARD_COLLECTION_RAW_TYPE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionReturning_Aspects.RETURN_WILD_CARD_COLLECTION_SAME_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionReturning_Aspect.RETURN_WILD_CARD_COLLECTION_SAME_TYPE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(actualReturning);
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionReturning_Aspects.RETURN_WILD_CARD_COLLECTION_WRONG_TYPE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionReturning_Aspect.RETURN_WILD_CARD_COLLECTION_WRONG_TYPE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
     }
 
-    static class WildCardCollectionReturning_Objects {
+    static class WildCardCollectionReturning_Object {
 
         private List<? extends Number> counters;
 
 
-        public WildCardCollectionReturning_Objects(List<? extends Number> counters) {
+        public WildCardCollectionReturning_Object(List<? extends Number> counters) {
             this.counters = counters;
         }
 
@@ -517,10 +517,10 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
     }
 
     @Aspect
-    public static class WildCardCollectionReturning_Aspects {
+    public static class WildCardCollectionReturning_Aspect {
 
         private static final String RETURN_WILD_CARD_COLLECTION_POINTCUT = 
-                "execution(java.util.List<? extends java.lang.Number> io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$WildCardCollectionReturning_Objects.returnWildCardCollection())";
+                "execution(java.util.List<? extends java.lang.Number> io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$WildCardCollectionReturning_Object.returnWildCardCollection())";
 
         private static final String RETURN_WILD_CARD_COLLECTION_SAME_TYPE = "returnWildCardCollection_genericType";
         private static final String RETURN_WILD_CARD_COLLECTION_RAW_TYPE = "returnWildCardCollection_rawType";

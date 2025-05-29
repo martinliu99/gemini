@@ -47,7 +47,7 @@
         <module>gemini-activator</module>
 
         <module>gemini-toolkit</module>
-        <module>gemini-aspectories</module>
+        <module>gemini-aspect</module>
 
         <module>gemini-demo</module>
     </modules>
@@ -55,14 +55,14 @@
 
     <properties>
         <!-- project settings -->
-        <revision>0.12.0</revision>
+        <revision>0.13.0-SNAPSHOT</revision>
 
         <license.root.dir>${maven.multiModuleProjectDirectory}/docs/license</license.root.dir>
 
-        <release.root.dir>${maven.multiModuleProjectDirectory}/gemini-releases</release.root.dir>
+        <release.root.dir>${maven.multiModuleProjectDirectory}/gemini-release</release.root.dir>
         <release.lib.dir>${release.root.dir}/lib</release.lib.dir>
         <release.conf.dir>${release.root.dir}/conf</release.conf.dir>
-        <release.aspectories.dir>${release.root.dir}/aspectories</release.aspectories.dir>
+        <release.aspectapps.dir>${release.root.dir}/aspectapps</release.aspectapps.dir>
         <release.demoapps.dir>${release.root.dir}/demoapps</release.demoapps.dir>
 
         <resource.userconf.folder>userconf</resource.userconf.folder>

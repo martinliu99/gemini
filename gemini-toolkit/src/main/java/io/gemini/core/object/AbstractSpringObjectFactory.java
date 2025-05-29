@@ -39,7 +39,7 @@ public abstract class AbstractSpringObjectFactory extends AbstractBase {
 
     @Override
     public void start() {
-        this.applicationContext = new AnnotationConfigApplicationContext("io.gemini.aspects");
+        this.applicationContext = new AnnotationConfigApplicationContext("io.gemini.aspect");
         this.beanFactory = (ConfigurableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
     }
 

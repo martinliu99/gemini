@@ -37,7 +37,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     private static final String AOP_LAUNCH_ACTIVEPROFILE_DEFAULT = ""; 
     private static final String AOP_INTERNAL_PROPERTIES = "META-INF/aop-internal.properties";
 
-    private static final String FOLDER_ASPECTORIES = "aspectories";
+    private static final String FOLDER_ASPECTAPPS = "aspectapps";
 
     private final long launchedAt;
 
@@ -49,18 +49,18 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     private URL[] launchResourceURLs;
 
     private final boolean scanClassesFolder;
-    private Map<String /* AspectoryName */, URL[]> aspectoryResourceURLs;
+    private Map<String /* AspectAppName */, URL[]> aspectAppResourceURLs;
 
 
     public UnpackedArchiveConfig(Path launchPath, Path launchFile, String launchArgsStr) throws IOException {
         this(launchPath, launchFile, launchArgsStr, 
                 new LauncherScanner.Default(launchPath, launchFile), 
                 false,
-                new AspectoryScanner.Default( launchPath.resolve(FOLDER_ASPECTORIES) ) );
+                new AspectAppScanner.Default( launchPath.resolve(FOLDER_ASPECTAPPS) ) );
     }
 
     public UnpackedArchiveConfig(Path launchPath, Path launchFile, String launchArgsStr, 
-            LauncherScanner launcherScanner, boolean scanClassesFolder, AspectoryScanner aspectoryScanner) throws IOException {
+            LauncherScanner launcherScanner, boolean scanClassesFolder, AspectAppScanner aspectAppScanner) throws IOException {
         this.launchedAt = System.nanoTime();
 
         this.launchPath = launchPath;
@@ -78,9 +78,9 @@ public class UnpackedArchiveConfig implements LauncherConfig {
 
         this.scanClassesFolder = scanClassesFolder;
 
-        if(aspectoryScanner == null)
-            aspectoryScanner = new AspectoryScanner.Default( launchPath.resolve(FOLDER_ASPECTORIES) );
-        this.aspectoryResourceURLs = aspectoryScanner.scanClassPathURLs();
+        if(aspectAppScanner == null)
+            aspectAppScanner = new AspectAppScanner.Default( launchPath.resolve(FOLDER_ASPECTAPPS) );
+        this.aspectAppResourceURLs = aspectAppScanner.scanClassPathURLs();
     }
 
     private Map<String, String> parseLaunchArgs(String launchArgsStr) {
@@ -152,7 +152,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     }
 
     @Override
-    public Map<String, URL[]> getAspectoryClassPathURLs() {
-        return this.aspectoryResourceURLs;
+    public Map<String, URL[]> getAspectAppClassPathURLs() {
+        return this.aspectAppResourceURLs;
     }
 }

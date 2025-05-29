@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.matcher.MethodMatcher;
 import io.gemini.aop.matcher.TypeMatcher;
-import io.gemini.api.aspect.Pointcut;
+import io.gemini.api.aop.Pointcut;
 import io.gemini.aspectj.weaver.ParameterBinding;
 import io.gemini.aspectj.weaver.tools.JoinPointMatch;
 import io.gemini.aspectj.weaver.tools.PointcutExpression;

@@ -31,7 +31,7 @@ import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
  *
@@ -44,57 +44,57 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
     @Test
     public void testTypeInitializer() {
         {
-            new TypeInitializer_BeforeAdvice_Objects();
+            new TypeInitializer_BeforeAdvice_Object();
 
-            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitializer_BeforeAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitializer_BeforeAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
             assertThat(adviceMethodInvoker.getThisLookup()).isNotNull();
-            assertThat(adviceMethodInvoker.getThisClass()).isEqualTo(TypeInitializer_BeforeAdvice_Objects.class);
+            assertThat(adviceMethodInvoker.getThisClass()).isEqualTo(TypeInitializer_BeforeAdvice_Object.class);
             assertThat(adviceMethodInvoker.getStaticPart()).isNull();
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitializer_BeforeAdvice_Objects.class.getName());
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitializer_BeforeAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            new TypeInitializer_AfterAdvice_Objects();
+            new TypeInitializer_AfterAdvice_Object();
 
-            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitializer_AfterAdvice_Aspects.ADVICE_TYPE_INITIALIZER);
+            AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitializer_AfterAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
             assertThat(adviceMethodInvoker.getThisLookup()).isNotNull();
-            assertThat(adviceMethodInvoker.getThisClass()).isEqualTo(TypeInitializer_AfterAdvice_Objects.class);
+            assertThat(adviceMethodInvoker.getThisClass()).isEqualTo(TypeInitializer_AfterAdvice_Object.class);
             assertThat(adviceMethodInvoker.getStaticPart()).isNull();
 
-            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitializer_AfterAdvice_Objects.class.getName());
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitializer_AfterAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
         }
     }
 
 
-    public static class TypeInitializer_BeforeAdvice_Objects {
+    public static class TypeInitializer_BeforeAdvice_Object {
 
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitializer_BeforeAdvice_Objects.class.getName(), new TargetMethod().withInvoked(true));
+            ExecutionMemento.putTargetMethodInvoker(TypeInitializer_BeforeAdvice_Object.class.getName(), new TargetMethod().withInvoked(true));
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitializer_BeforeAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitializer_BeforeAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitializer_BeforeAdvice_Aspects {
+    public static class TypeInitializer_BeforeAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$TypeInitializer_BeforeAdvice_Objects)")
+        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$TypeInitializer_BeforeAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -106,26 +106,26 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
     }
 
 
-    public static class TypeInitializer_AfterAdvice_Objects {
+    public static class TypeInitializer_AfterAdvice_Object {
         static {
-            ExecutionMemento.putTargetMethodInvoker(TypeInitializer_AfterAdvice_Objects.class.getName(), 
+            ExecutionMemento.putTargetMethodInvoker(TypeInitializer_AfterAdvice_Object.class.getName(), 
                     new TargetMethod().withInvoked(true) );
         }
 
         static final Logger LOGGER;
 
         static {
-            LOGGER = LoggerFactory.getLogger(TypeInitializer_AfterAdvice_Objects.class);
+            LOGGER = LoggerFactory.getLogger(TypeInitializer_AfterAdvice_Object.class);
         }
     }
 
     @Aspect
-    public static class TypeInitializer_AfterAdvice_Aspects {
+    public static class TypeInitializer_AfterAdvice_Aspect {
 
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$TypeInitializer_AfterAdvice_Objects)")
+        @Before("staticinitialization(io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$TypeInitializer_AfterAdvice_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -139,29 +139,29 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
 
     @Test
     public void testClassMethod() {
-        ClassMethod_Objects.descriptor();
+        ClassMethod_Object.descriptor();
 
-        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.DESCRIPTOR_BEFORE_ADVICE);
+        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.DESCRIPTOR_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(ClassMethod_Objects.class);
-        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(ClassMethod_Objects.DESCRIPTOR_METHOD);
+        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(ClassMethod_Object.class);
+        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(ClassMethod_Object.DESCRIPTOR_METHOD);
 
-        AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Advices.DESCRIPTOR_AFTER_ADVICE);
+        AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.DESCRIPTOR_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(ClassMethod_Objects.class);
-        assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(ClassMethod_Objects.DESCRIPTOR_METHOD);
+        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(ClassMethod_Object.class);
+        assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(ClassMethod_Object.DESCRIPTOR_METHOD);
     }
 
-    public static class ClassMethod_Objects {
+    public static class ClassMethod_Object {
 
         public static final Method DESCRIPTOR_METHOD;
 
         static {
             Method method = null;
             try {
-                method = ClassMethod_Objects.class.getMethod(ClassMethod_Objects.DESCRIPTOR);
+                method = ClassMethod_Object.class.getMethod(ClassMethod_Object.DESCRIPTOR);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -176,10 +176,10 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
     }
 
     @Aspect
-    public static class ClassMethod_Advices {
+    public static class ClassMethod_Aspect {
 
         private static final String DESCRIPTOR_POINTCUT = 
-                "execution(public static void io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$ClassMethod_Objects.descriptor())";
+                "execution(public static void io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$ClassMethod_Object.descriptor())";
 
         private static final String DESCRIPTOR_BEFORE_ADVICE = "descriptor_before";
         private static final String DESCRIPTOR_AFTER_ADVICE = "descriptor_after";
@@ -210,38 +210,38 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
 
     @Test
     public void testInstanceConstructor() {
-        new InstanceConstructor_Objects( (byte)1);
+        new InstanceConstructor_Object( (byte)1);
 
-        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.DESCRIPTOR_BEFORE_ADVICE);
+        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.DESCRIPTOR_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceConstructor_Objects.class);
-        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceConstructor_Objects.DESCRIPTOR_CONSTRUCTOR);
+        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceConstructor_Object.class);
+        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceConstructor_Object.DESCRIPTOR_CONSTRUCTOR);
 
-        AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Advices.DESCRIPTOR_AFTER_ADVICE);
+        AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.DESCRIPTOR_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceConstructor_Objects.class);
-        assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceConstructor_Objects.DESCRIPTOR_CONSTRUCTOR);
+        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceConstructor_Object.class);
+        assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceConstructor_Object.DESCRIPTOR_CONSTRUCTOR);
     }
 
-    public static class InstanceConstructor_Objects {
+    public static class InstanceConstructor_Object {
 
         public static final Constructor<?> DESCRIPTOR_CONSTRUCTOR;
 
         static {
             Constructor<?> method = null;
             try {
-                method = InstanceConstructor_Objects.class.getConstructor(byte.class);
+                method = InstanceConstructor_Object.class.getConstructor(byte.class);
             } catch (Exception e) {
                 e.printStackTrace();
             }
             DESCRIPTOR_CONSTRUCTOR = method;
         }
 
-        private static final String DESCRIPTOR = "InstanceConstructor_Objects";
+        private static final String DESCRIPTOR = "InstanceConstructor_Object";
 
-        public InstanceConstructor_Objects(byte descriptor) {
+        public InstanceConstructor_Object(byte descriptor) {
             ExecutionMemento.putTargetMethodInvoker(DESCRIPTOR, 
                     new TargetMethod()
                         .withInvoked(true)
@@ -250,10 +250,10 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
     }
 
     @Aspect
-    public static class InstanceConstructor_Advices {
+    public static class InstanceConstructor_Aspect {
 
         private static final String DESCRIPTOR_POINTCUT = 
-                "execution(public io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$InstanceConstructor_Objects.new(byte))";
+                "execution(public io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$InstanceConstructor_Object.new(byte))";
 
         private static final String DESCRIPTOR_BEFORE_ADVICE = "descriptor_before";
         private static final String DESCRIPTOR_AFTER_ADVICE = "descriptor_after";
@@ -284,30 +284,30 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Objects expected = new InstanceMethod_Objects();
+        InstanceMethod_Object expected = new InstanceMethod_Object();
         expected.descriptor();
 
-        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.DESCRIPTOR_BEFORE_ADVICE);
+        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.DESCRIPTOR_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceMethod_Objects.class);
-        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceMethod_Objects.DESCRIPTOR_METHOD);
+        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceMethod_Object.class);
+        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceMethod_Object.DESCRIPTOR_METHOD);
 
-        AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspects.DESCRIPTOR_AFTER_ADVICE);
+        AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.DESCRIPTOR_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceMethod_Objects.class);
-        assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceMethod_Objects.DESCRIPTOR_METHOD);
+        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceMethod_Object.class);
+        assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceMethod_Object.DESCRIPTOR_METHOD);
     }
 
-    public static class InstanceMethod_Objects {
+    public static class InstanceMethod_Object {
 
         public static final Method DESCRIPTOR_METHOD;
 
         static {
             Method method = null;
             try {
-                method = InstanceMethod_Objects.class.getMethod(InstanceMethod_Objects.DESCRIPTOR);
+                method = InstanceMethod_Object.class.getMethod(InstanceMethod_Object.DESCRIPTOR);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -321,10 +321,10 @@ public class MutableJoinpoint_01Descriptor_Tests extends AbstractIntegrationTest
     }
 
     @Aspect
-    public static class InstanceMethod_Aspects {
+    public static class InstanceMethod_Aspect {
 
         private static final String DESCRIPTOR_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$InstanceMethod_Objects.descriptor())";
+                "execution(public void io.gemini.aop.integration.MutableJoinpoint_01Descriptor_Tests$InstanceMethod_Object.descriptor())";
 
         private static final String DESCRIPTOR_BEFORE_ADVICE = "descriptor_before";
         private static final String DESCRIPTOR_AFTER_ADVICE = "descriptor_after";

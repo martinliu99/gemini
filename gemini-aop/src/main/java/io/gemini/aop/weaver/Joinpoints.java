@@ -32,16 +32,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
-import io.gemini.aop.Aspect;
+import io.gemini.aop.Advisor;
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
-import io.gemini.api.aspect.Advice;
-import io.gemini.api.aspect.Advice.After;
-import io.gemini.api.aspect.Advice.Around;
-import io.gemini.api.aspect.Advice.Before;
-import io.gemini.api.aspect.Joinpoint;
-import io.gemini.api.aspect.Joinpoint.MutableJoinpoint;
-import io.gemini.api.aspect.Joinpoint.ProceedingJoinpoint;
+import io.gemini.api.aop.Advice;
+import io.gemini.api.aop.Joinpoint;
+import io.gemini.api.aop.Advice.After;
+import io.gemini.api.aop.Advice.Around;
+import io.gemini.api.aop.Advice.Before;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Joinpoint.ProceedingJoinpoint;
 import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
@@ -65,11 +65,11 @@ interface Joinpoints {
         private final boolean isVoidReturning;
 
         // refresh at runtime
-        private List<? extends Aspect> aspectChain;
+        private List<? extends Advisor> advisorChain;
 
 
         public Descriptor(Lookup thisLookup, String accessibleName, AccessibleObject accessibleObject, 
-                List<? extends Aspect> aspectChain) {
+                List<? extends Advisor> advisorChain) {
             this.thisLookup = thisLookup;
 
             this.accessibleName = accessibleName;
@@ -97,7 +97,7 @@ interface Joinpoints {
                 }
             }
 
-            this.aspectChain = aspectChain;
+            this.advisorChain = advisorChain;
         }
 
 
@@ -141,8 +141,8 @@ interface Joinpoints {
             return isVoidReturning;
         }
 
-        public List<? extends Aspect> getAspectChain() {
-            return aspectChain;
+        public List<? extends Advisor> getAdvisorChain() {
+            return advisorChain;
         }
     }
 
@@ -422,15 +422,15 @@ interface Joinpoints {
 
         @SuppressWarnings("unchecked")
         protected void initialize(Descriptor descriptor) {
-            // initialize aspectChain
-            List<? extends Aspect> aspectChain = descriptor.getAspectChain();
-            aspectChain = CollectionUtils.isEmpty(aspectChain) ? Collections.emptyList() : aspectChain;
+            // initialize advisorChain
+            List<? extends Advisor> advisorChain = descriptor.getAdvisorChain();
+            advisorChain = CollectionUtils.isEmpty(advisorChain) ? Collections.emptyList() : advisorChain;
 
             List<Advice.Before<T, E>> beforeAdvices = new ArrayList<>();
             List<Advice.After<T, E>> afterAdvices = new ArrayList<>();
-            for(Iterator<? extends Aspect> iterator = aspectChain.iterator(); iterator.hasNext(); ) {
-                Aspect aspect = iterator.next();
-                Class<? extends Advice> adviceClass = aspect.getAdviceClass();
+            for(Iterator<? extends Advisor> iterator = advisorChain.iterator(); iterator.hasNext(); ) {
+                Advisor advisor = iterator.next();
+                Class<? extends Advice> adviceClass = advisor.getAdviceClass();
                 if(adviceClass == null)
                     iterator.remove();
 
@@ -440,7 +440,7 @@ interface Joinpoints {
                     continue;
                 }
 
-                Advice advice = aspect.getAdvice();
+                Advice advice = advisor.getAdvice();
                 if(advice == null)
                     iterator.remove();
 
@@ -594,14 +594,14 @@ interface Joinpoints {
             public DefaultProceedingJoinpoint(Descriptor descriptor, Object thisObject, Object[] arguments) {
                 super(descriptor, thisObject, arguments);
 
-                // initialize aspectChain
-                List<? extends Aspect> aspectChain = descriptor.getAspectChain();
-                aspectChain = CollectionUtils.isEmpty(aspectChain) ? Collections.emptyList() : aspectChain;
+                // initialize advisorChain
+                List<? extends Advisor> advisorChain = descriptor.getAdvisorChain();
+                advisorChain = CollectionUtils.isEmpty(advisorChain) ? Collections.emptyList() : advisorChain;
 
                 List<Advice.Around<T, E>> aroundAdvices = new ArrayList<>();
-                for(Iterator<? extends Aspect> iterator = aspectChain.iterator(); iterator.hasNext(); ) {
-                    Aspect aspect = iterator.next();
-                    Class<? extends Advice> adviceClass = aspect.getAdviceClass();
+                for(Iterator<? extends Advisor> iterator = advisorChain.iterator(); iterator.hasNext(); ) {
+                    Advisor advisor = iterator.next();
+                    Class<? extends Advice> adviceClass = advisor.getAdviceClass();
                     if(adviceClass == null)
                         iterator.remove();
 
@@ -610,7 +610,7 @@ interface Joinpoints {
                         continue;
                     }
 
-                    Advice.Around<T, E> advice = (Advice.Around<T, E>) aspect.getAdvice();
+                    Advice.Around<T, E> advice = (Advice.Around<T, E>) advisor.getAdvice();
                     if(advice == null)
                         iterator.remove();
 

@@ -198,7 +198,7 @@ public class AopContext implements Closeable {
                 ;
 
         builder = builder.overrideClasspaths( aopClassLoader.getUrls() );
-        for(URL[] URLs : this.launcherConfig.getAspectoryClassPathURLs().values()) {
+        for(URL[] URLs : this.launcherConfig.getAspectAppClassPathURLs().values()) {
             builder = builder.overrideClasspaths( URLs );
         }
 
@@ -337,8 +337,8 @@ public class AopContext implements Closeable {
         return (Map<String, String>) this.builtinSettings.get(BOOTSTRAP_CLASS_NAME_MAPPING_KEY);
     }
 
-    public Map<String, URL[]> getAspectoryResourceMap() {
-        return this.launcherConfig.getAspectoryClassPathURLs();
+    public Map<String, URL[]> getAspectAppResourceMap() {
+        return this.launcherConfig.getAspectAppClassPathURLs();
     }
 
 

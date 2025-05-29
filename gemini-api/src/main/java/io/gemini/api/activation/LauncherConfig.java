@@ -48,5 +48,5 @@ public interface LauncherConfig {
 
     boolean isScanClassesFolder();
 
-    Map<String /* AspectoryName */, URL[]> getAspectoryClassPathURLs();
+    Map<String /* AspectAppName */, URL[]> getAspectAppClassPathURLs();
 }

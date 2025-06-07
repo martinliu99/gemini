@@ -49,9 +49,6 @@ public class DemoServiceAspect_process {
         Request request = (Request) joinpoint.getArguments()[0];
         List<String> input = new ArrayList<>(request.getInput());
         input.add("DemoServiceAspect_process");
-        Request modified = new Request(input);
-
-// TODO
     }
 
 

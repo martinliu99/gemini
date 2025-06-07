@@ -42,6 +42,7 @@ import io.gemini.aop.matcher.Pattern;
 import io.gemini.aop.matcher.Pattern.Parser;
 import io.gemini.aop.matcher.StringMatcherFactory;
 import io.gemini.aop.matcher.TypeMatcherFactory;
+import io.gemini.api.aop.condition.Condition;
 import io.gemini.aspectj.weaver.world.TypeWorld;
 import io.gemini.aspectj.weaver.world.TypeWorldFactory;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
@@ -121,8 +122,7 @@ public class FactoryContext implements Closeable {
     private ElementMatcher<String> includedAdvisorsMatcher;
     private ElementMatcher<String> excludedAdvisorsMatcher;
 
-
-    private ElementMatcher<String> defaultClassLoaderMatcher;
+    private Condition defaultCondition;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
@@ -362,10 +362,18 @@ public class FactoryContext implements Closeable {
             mergedClassLoaders.addAll(factoriesContext.getDefaultMatchingClassLoaders());
             mergedClassLoaders.addAll(configView.getAsStringSet(FACTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY, Collections.emptySet()) );
 
-            this.defaultClassLoaderMatcher = stringMatcherFactory.createStringMatcher(
+            ElementMatcher<String> defaultClassLoaderMatcher = stringMatcherFactory.createStringMatcher(
                     FactoriesContext.FACTORIES_DEFAULT_MATCHING_CLASS_LOADERS_KEY + ", " + FACTORY_DEFAULT_MATCHING_CLASS_LOADERS_KEY,
                     Parser.parsePatterns(mergedClassLoaders), 
                     true, false);
+
+            this.defaultCondition = new Condition() {
+
+                @Override
+                public boolean match(ConditionContext context) {
+                    return defaultClassLoaderMatcher.matches(context.getClassLoaderName());
+                }
+            };
         }
 
         {
@@ -470,6 +478,10 @@ public class FactoryContext implements Closeable {
         return excludedAdvisorsMatcher;
     }
 
+
+    public Condition getDefaultCondition() {
+        return defaultCondition;
+    }
 
     public ClassScanner getClassScanner() {
         return this.classScanner;
@@ -587,7 +599,6 @@ public class FactoryContext implements Closeable {
                 ClassLoaderUtils.getClassLoaderName(joinpointClassLoader), javaModule,
                 aspectClassLoader, objectFactory, 
                 aspectTypePool, aspectTypeWorld,
-                defaultClassLoaderMatcher,
                 validateContext);
     }
 

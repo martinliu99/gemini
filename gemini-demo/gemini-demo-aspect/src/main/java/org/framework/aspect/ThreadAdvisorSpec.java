@@ -19,18 +19,16 @@ import io.gemini.aop.matcher.MethodMatcher;
 import io.gemini.aop.matcher.TypeMatcher;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
-import io.gemini.core.util.ClassLoaderUtils;
-import net.bytebuddy.matcher.StringMatcher;
-import net.bytebuddy.matcher.StringMatcher.Mode;
 
 public class ThreadAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
 
     /**
      */
     public ThreadAdvisorSpec() {
-        super(false, ThreadAdvice.class.getName(), 
+        super(
+                context -> context.isBootstrapClassLoader(),
+                false, ThreadAdvice.class.getName(), 
                 new Pointcut.Default(
-                        new StringMatcher(ClassLoaderUtils.BOOTSTRAP_CLASSLOADER_NAME, Mode.EQUALS_FULLY),
                         TypeMatcher.nameEquals("java.lang.Thread"),
                         MethodMatcher.nameEquals("start") ), 1);
     }

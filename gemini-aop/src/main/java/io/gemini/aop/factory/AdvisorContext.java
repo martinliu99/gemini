@@ -19,10 +19,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URLClassLoader;
 
+import io.gemini.api.aop.condition.Condition.ConditionContext;
 import io.gemini.aspectj.weaver.world.TypeWorld;
 import io.gemini.core.object.ObjectFactory;
+import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
-import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.JavaModule;
 
@@ -45,9 +46,9 @@ public class AdvisorContext implements Closeable {
 
     private final PlaceholderHelper placeholderHelper;
 
-    private final ElementMatcher<String> defaultClassLoaderMatcher;
-
     private final boolean validateContext;
+
+    private final ConditionContext conditionContext;
 
     private final boolean asmAutoCompute;
 
@@ -56,7 +57,6 @@ public class AdvisorContext implements Closeable {
             String joinpointClassLoaderName, JavaModule javaModule,
             URLClassLoader classLoader, ObjectFactory objectFactory, 
             TypePool typePool, TypeWorld typeWorld,
-            ElementMatcher<String> defaultClassLoaderMatcher,
             boolean validateContext) {
         this.joinpointClassLoaderName = joinpointClassLoaderName;
         this.javaModule = javaModule;
@@ -68,9 +68,9 @@ public class AdvisorContext implements Closeable {
 
         this.placeholderHelper = factoryContext.getPlaceholderHelper();
 
-        this.defaultClassLoaderMatcher = defaultClassLoaderMatcher;
-
         this.validateContext = validateContext;
+
+        this.conditionContext = new DefultConditionContext();
 
         this.asmAutoCompute = factoryContext.getFactoriesContext().isAsmAutoCompute();
     }
@@ -107,13 +107,14 @@ public class AdvisorContext implements Closeable {
     }
 
 
-    public ElementMatcher<String> getDefaultClassLoaderMatcher() {
-        return defaultClassLoaderMatcher;
+    public ConditionContext getConditionContext() {
+        return conditionContext;
     }
 
     public boolean isValidateContext() {
         return validateContext;
     }
+
 
     public boolean isASMAutoCompute() {
         return asmAutoCompute;
@@ -129,5 +130,24 @@ public class AdvisorContext implements Closeable {
         this.objectFactory.close();
 
         this.classLoader.close();
+    }
+
+
+    class DefultConditionContext implements ConditionContext {
+
+        @Override
+        public String getClassLoaderName() {
+            return joinpointClassLoaderName;
+        }
+
+        @Override
+        public TypePool getTypePool() {
+            return typePool;
+        }
+
+        @Override
+        public boolean isBootstrapClassLoader() {
+            return ClassLoaderUtils.isBootstrapClassLoader(classLoader);
+        }
     }
 }

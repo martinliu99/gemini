@@ -19,9 +19,6 @@ import io.gemini.aop.matcher.MethodMatcher;
 import io.gemini.aop.matcher.TypeMatcher;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
-import io.gemini.core.util.ClassLoaderUtils;
-import net.bytebuddy.matcher.StringMatcher;
-import net.bytebuddy.matcher.StringMatcher.Mode;
 
 public class ThreadPoolAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
 
@@ -29,9 +26,10 @@ public class ThreadPoolAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default 
     /**
      */
     public ThreadPoolAdvisorSpec() {
-        super(false, ThreadPoolAdvice.class.getName(), 
+        super(
+                context -> context.isBootstrapClassLoader(),
+                false, ThreadPoolAdvice.class.getName(), 
                 new Pointcut.Default(
-                        new StringMatcher(ClassLoaderUtils.BOOTSTRAP_CLASSLOADER_NAME, Mode.EQUALS_FULLY),
                         TypeMatcher.nameEquals("java.util.concurrent.ThreadPoolExecutor"),
                         MethodMatcher.nameEquals("execute").or( MethodMatcher.nameEquals("") ) ), 1);
     }

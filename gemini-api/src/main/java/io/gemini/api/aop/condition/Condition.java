@@ -13,25 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.api.annotation;
+package io.gemini.api.aop.condition;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
+import net.bytebuddy.pool.TypePool;
 
 /**
  * 
- * Exclude annotated Class from class scanning.
- *
+ * 
  * @author   martin.liu
- * @since	 1.0
+ * @since    1.0
  */
-@Target( {ElementType.TYPE} )
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface NoScanning {
-    
+public interface Condition {
+
+    boolean match(ConditionContext conditionContext);
+
+
+    interface ConditionContext {
+
+        String getClassLoaderName();
+
+        TypePool getTypePool();
+
+        boolean isBootstrapClassLoader();
+    }
+
+    enum AlwaysTrue implements Condition {
+
+        INSTANCE;
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean match(ConditionContext conditionContext) {
+            return true;
+        }
+    }
 }

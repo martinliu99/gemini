@@ -35,7 +35,6 @@ import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  *
@@ -122,9 +121,6 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             expressionPointcut.setPointcutExpr(pointcutExpression);
             expressionPointcut.setTypeWorld(advisorContext.getTypeWorld());
 
-            // TODO: now just use defaultClassLoaderMatcher definition
-            expressionPointcut.setClassLoaderMatcher(advisorContext.getDefaultClassLoaderMatcher());
-
             return expressionPointcut;
         }
 
@@ -134,10 +130,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                 return false;
             }
 
-            ElementMatcher<String> classLoaderMatcher = pointcut.getClassLoaderMatcher() == null 
-                    ? advisorContext.getDefaultClassLoaderMatcher() 
-                    : pointcut.getClassLoaderMatcher();
-            if(classLoaderMatcher.matches(advisorContext.getJoinpointClassLoaderName()) == false) {
+            if(this.advisorSpec.getCondition().match(advisorContext.getConditionContext()) == false) {
                 return false;
             }
 
@@ -277,7 +270,6 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                 return null;
 
             return new Pointcut.Default(
-                    pointcut.getClassLoaderMatcher() != null ? pointcut.getClassLoaderMatcher() : advisorContext.getDefaultClassLoaderMatcher(), 
                     pointcut.getTypeMatcher(), 
                     methodMatcher
             );
@@ -307,7 +299,6 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                 return null;
 
             return new Pointcut.Default(
-                    exprPointcut.getClassLoaderMatcher(),
                     exprPointcut.getTypeMatcher(),
                     methodMatcher
             );
@@ -339,7 +330,6 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             }
 
             return new Pointcut.Default(
-                    exprPointcut.getClassLoaderMatcher(),
                     exprPointcut.getTypeMatcher(),
                     new AdviceAwareMethodMatcher.AspectJAdvice(exprPointcut, methodSpec) 
             );

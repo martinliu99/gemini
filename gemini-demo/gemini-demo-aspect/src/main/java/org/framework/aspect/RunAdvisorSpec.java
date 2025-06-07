@@ -19,9 +19,6 @@ import io.gemini.aop.matcher.MethodMatcher;
 import io.gemini.aop.matcher.TypeMatcher;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
-import io.gemini.core.util.ClassLoaderUtils;
-import net.bytebuddy.matcher.StringMatcher;
-import net.bytebuddy.matcher.StringMatcher.Mode;
 
 
 public class RunAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
@@ -30,9 +27,10 @@ public class RunAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
     /**
      */
     public RunAdvisorSpec() {
-        super(false, RunAdvice.class.getName(), 
+        super(
+                context -> context.isBootstrapClassLoader(),
+                false, RunAdvice.class.getName(), 
                 new Pointcut.Default(
-                        new StringMatcher(ClassLoaderUtils.BOOTSTRAP_CLASSLOADER_NAME, Mode.EQUALS_FULLY),
                         TypeMatcher.nameStartsWith("io.gemini.weaver.transformer").and( TypeMatcher.isExtendedFrom("java.lang.Runnable")),
                         MethodMatcher.nameEquals("run") ), 1);
     }

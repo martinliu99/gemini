@@ -175,7 +175,13 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
 
                     String adviceClassName = createAdviceClassName(advisorSpec, adviceMethodIndex.getAndIncrement(), methodDescription);
                     AdvisorSpec.ExprPointcutSpec exprAdvisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
-                            adviceClassName, advisorSpec.isPerInstance(), adviceClassName, pointcutExpression, advisorSpec.getOrder());
+                            adviceClassName, 
+                            factoryContext.getDefaultCondition(),
+                            advisorSpec.isPerInstance(), 
+                            adviceClassName, 
+                            pointcutExpression, 
+                            advisorSpec.getOrder());
+
                     AspectJAdvice.ClassMaker classMaker = new AspectJAdvice.ClassMaker(adviceClassName, aspectJTypeDescription, methodSpec);
 
                     // 3.create AdvisorRepository

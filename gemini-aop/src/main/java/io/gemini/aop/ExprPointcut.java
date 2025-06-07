@@ -105,8 +105,6 @@ public interface ExprPointcut extends Pointcut {
         private String pointcutExpr;
         private transient PointcutExpression pointcutExpression;
 
-        private ElementMatcher<String> classLoaderMatcher;
-
         private final Object lock = new Object();
         private transient ConcurrentMap<MethodDescription, ShadowMatch> shadowMatchCache = new ConcurrentHashMap<>(32);
 
@@ -157,15 +155,6 @@ public interface ExprPointcut extends Pointcut {
             return this.pointcutExpression;
         }
 
-
-        @Override
-        public ElementMatcher<String> getClassLoaderMatcher() {
-            return this.classLoaderMatcher;
-        }
-
-        public void setClassLoaderMatcher(ElementMatcher<String> classLoaderMatcher) {
-            this.classLoaderMatcher = classLoaderMatcher;
-        }
 
         @Override
         public ElementMatcher.Junction<TypeDescription> getTypeMatcher() {

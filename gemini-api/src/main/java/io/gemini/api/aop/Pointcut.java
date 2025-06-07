@@ -21,25 +21,13 @@ import net.bytebuddy.matcher.ElementMatcher;
 
 public interface Pointcut {
 
-    ElementMatcher<String> getClassLoaderMatcher();
-
     ElementMatcher<TypeDescription> getTypeMatcher();
 
     ElementMatcher<MethodDescription> getMethodMatcher();
 
 
-    abstract class AbstractBase implements Pointcut {
+    class Default implements Pointcut {
 
-        @Override
-        public ElementMatcher<String> getClassLoaderMatcher() {
-            return null;
-        }
-
-    }
-
-    class Default extends AbstractBase {
-
-        private final ElementMatcher<String> classLoaderMatcher;
         private final ElementMatcher<TypeDescription> typeMatcher;
         private final ElementMatcher<MethodDescription> methodMatcher;
 
@@ -47,20 +35,8 @@ public interface Pointcut {
         public Default(
                 ElementMatcher<TypeDescription> typeMatcher,
                 ElementMatcher<MethodDescription> methodMatcher) {
-            this(null, typeMatcher, methodMatcher);
-        }
-
-        public Default(ElementMatcher<String> classLoaderMatcher,
-                ElementMatcher<TypeDescription> typeMatcher,
-                ElementMatcher<MethodDescription> methodMatcher) {
-            this.classLoaderMatcher = classLoaderMatcher;
             this.typeMatcher = typeMatcher;
             this.methodMatcher = methodMatcher;
-        }
-
-        @Override
-        public ElementMatcher<String> getClassLoaderMatcher() {
-            return classLoaderMatcher;
         }
 
         @Override

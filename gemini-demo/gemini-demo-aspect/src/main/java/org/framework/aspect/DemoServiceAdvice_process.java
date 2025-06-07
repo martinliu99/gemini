@@ -40,9 +40,6 @@ public class DemoServiceAdvice_process extends Advice.AbstractBeforeAfter<Respon
         Request request = (Request) joinpoint.getArguments()[0];
         List<String> input = new ArrayList<>(request.getInput());
         input.add(DEMO_SERVICE_ADVICE);
-        Request modified = new Request(input);
-        
-        // TODO:
     }
 
     @Override

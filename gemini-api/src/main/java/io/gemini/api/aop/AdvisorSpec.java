@@ -16,6 +16,7 @@
 package io.gemini.api.aop;
 
 import io.gemini.api.annotation.NoScanning;
+import io.gemini.api.aop.condition.Condition;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -32,6 +33,10 @@ public interface AdvisorSpec {
         return this.getClass().getName();
     }
 
+    default Condition getCondition() {
+        return Condition.AlwaysTrue.INSTANCE;
+    }
+
     boolean isPerInstance();
 
     String getAdviceClassName();
@@ -39,9 +44,12 @@ public interface AdvisorSpec {
     int getOrder();
 
 
+
     abstract class AbstractBase implements AdvisorSpec {
 
         protected final String advisorName;
+
+        private final Condition condition;
 
         protected final boolean perInstance;
         protected final String adviceClassName;
@@ -49,12 +57,15 @@ public interface AdvisorSpec {
         protected final int order;
 
 
-        public AbstractBase(boolean perInstance, String adviceClassName, int order) {
-            this(null, perInstance, adviceClassName, order);
+        public AbstractBase(Condition condition, boolean perInstance, String adviceClassName, int order) {
+            this(null, condition, perInstance, adviceClassName, order);
         }
 
-        public AbstractBase(String advisor, boolean perInstance, String adviceClassName, int order) {
-            this.advisorName = advisor == null ? AdvisorSpec.super.getAdvisorName() : advisor;
+        public AbstractBase(String advisorName, Condition condition, 
+                boolean perInstance, String adviceClassName, int order) {
+            this.advisorName = advisorName == null ? AdvisorSpec.super.getAdvisorName() : advisorName;
+
+            this.condition = condition == null ? Condition.AlwaysTrue.INSTANCE : condition;
 
             this.perInstance = perInstance;
             this.adviceClassName = adviceClassName;
@@ -65,6 +76,11 @@ public interface AdvisorSpec {
         @Override
         public String getAdvisorName() {
             return advisorName;
+        }
+
+        @Override
+        public Condition getCondition() {
+            return condition;
         }
 
         @Override
@@ -92,6 +108,8 @@ public interface AdvisorSpec {
 
         protected String advisorName;
 
+        protected Condition condition;
+
         protected boolean perInstance = false;
         protected String adviceClassName;
 
@@ -105,6 +123,11 @@ public interface AdvisorSpec {
 
         public T advisorName(String advisorName) {
             this.advisorName = advisorName;
+            return self();
+        }
+
+        public T condition(Condition condition) {
+            this.condition = condition;
             return self();
         }
 
@@ -136,14 +159,18 @@ public interface AdvisorSpec {
             private final Pointcut pointcut;
 
 
-            public Default(boolean perInstance, String adviceClassName, 
-                    Pointcut pointcut, int order) {
-                this(null, perInstance, adviceClassName, pointcut, order);
+            public Default(boolean perInstance, String adviceClassName, Pointcut pointcut, int order) {
+                this(null, null, perInstance, adviceClassName, pointcut, order);
             }
 
-            public Default(String advisorName, boolean perInstance, String adviceClassName, 
-                    Pointcut pointcut, int order) {
-                super(advisorName, perInstance, adviceClassName, order);
+            public Default(Condition condition, boolean perInstance, 
+                    String adviceClassName, Pointcut pointcut, int order) {
+                this(null, condition, perInstance, adviceClassName, pointcut, order);
+            }
+
+            public Default(String advisorName, Condition condition, boolean perInstance, 
+                    String adviceClassName, Pointcut pointcut, int order) {
+                super(advisorName, condition, perInstance, adviceClassName, order);
 
                 this.pointcut = pointcut;
             }
@@ -157,15 +184,9 @@ public interface AdvisorSpec {
 
         class Builder extends AdvisorSpec.BaseBuilder<Builder> {
 
-            private ElementMatcher<String> classLoaderMatcher;
             private ElementMatcher<TypeDescription> typeMatcher;
             private ElementMatcher<MethodDescription> methodMatcher;
 
-
-            public Builder classLoaderMatcher(ElementMatcher<String> classLoaderMatcher) {
-                this.classLoaderMatcher = classLoaderMatcher;
-                return this;
-            }
 
             public Builder typeMatcher(ElementMatcher<TypeDescription> typeMatcher) {
                 this.typeMatcher = typeMatcher;
@@ -178,8 +199,10 @@ public interface AdvisorSpec {
             }
 
             public PojoPointcutSpec builder() {
-                return new Default(perInstance, adviceClassName, 
-                        new Pointcut.Default(classLoaderMatcher, typeMatcher, methodMatcher), order);
+                return new Default(condition,
+                        perInstance, 
+                        adviceClassName, 
+                        new Pointcut.Default(typeMatcher, methodMatcher), order);
             }
         }
 
@@ -203,14 +226,18 @@ public interface AdvisorSpec {
             private final String pointcutExpression;
 
 
-            public Default(boolean perInstance, String adviceClassName, 
-                    String pointcutExpression, int order) {
-                this(null, perInstance, adviceClassName, pointcutExpression, order);
+            public Default(boolean perInstance, String adviceClassName, String pointcutExpression, int order) {
+                this(null, null, perInstance, adviceClassName, pointcutExpression, order);
             }
 
-            public Default(String advisorName, boolean perInstance, String adviceClassName, 
-                    String pointcutExpression, int order) {
-                super(advisorName, perInstance, adviceClassName, order);
+            public Default(Condition condition, boolean perInstance, 
+                    String adviceClassName, String pointcutExpression, int order) {
+                this(null, condition, perInstance, adviceClassName, pointcutExpression, order);
+            }
+
+            public Default(String advisorName, Condition condition, boolean perInstance, 
+                    String adviceClassName, String pointcutExpression, int order) {
+                super(advisorName, condition, perInstance, adviceClassName, order);
 
                 this.pointcutExpression = pointcutExpression;
             }
@@ -233,7 +260,9 @@ public interface AdvisorSpec {
             }
 
             public ExprPointcutSpec builder() {
-                return new Default(perInstance, adviceClassName, 
+                return new Default(condition,
+                        perInstance, 
+                        adviceClassName, 
                         pointcutExpression, order);
             }
         }
@@ -258,11 +287,17 @@ public interface AdvisorSpec {
 
 
             public Default(boolean perInstance, String aspectJClassName, int order) {
-                this(null, perInstance, aspectJClassName, order);
+                this(null, null, perInstance, aspectJClassName, order);
             }
 
-            public Default(String advisorName, boolean perInstance, String aspectJClassName, int order) {
-                super(advisorName == null ? aspectJClassName : advisorName,
+            public Default(Condition condition, boolean perInstance, 
+                    String aspectJClassName, int order) {
+                this(null, condition, perInstance, aspectJClassName, order);
+            }
+
+            public Default(String advisorName, Condition condition, boolean perInstance, 
+                    String aspectJClassName, int order) {
+                super(advisorName == null ? aspectJClassName : advisorName, condition, 
                         perInstance, null, order);
 
                 this.aspectJClassName = aspectJClassName;

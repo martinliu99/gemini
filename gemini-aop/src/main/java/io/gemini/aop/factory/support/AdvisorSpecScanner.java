@@ -26,9 +26,10 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.factory.FactoryContext;
 import io.gemini.api.annotation.NoScanning;
 import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.Pointcut;
 import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
+import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.condition.Condition;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
@@ -143,7 +144,7 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
             ClassLoader classLoader = factoryContext.getClassLoader();
             ObjectFactory objectFactory = factoryContext.getObjectFactory();
-            String pojoPointcutSpecClassName = AdvisorSpec.PojoPointcutSpec.Default.class.getName();
+            String defaultSpecClassName = AdvisorSpec.PojoPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
@@ -152,9 +153,14 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     AdvisorSpec.PojoPointcutSpec advisorSpec = (AdvisorSpec.PojoPointcutSpec) objectFactory.createObject(clazz);
 
                     String advisorName = advisorSpec.getAdvisorName();
-                    if( !StringUtils.hasText(advisorName) || pojoPointcutSpecClassName.equals(advisorName) ) 
+                    boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
+                    Condition condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    if(noAdvisorName || noCondition)
                         advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
-                                className, 
+                                noAdvisorName ? className : advisorName,
+                                noCondition ? factoryContext.getDefaultCondition() : condition,
                                 advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                                 advisorSpec.getPointcut(), advisorSpec.getOrder());
 
@@ -172,7 +178,7 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     .getNames();
             ClassLoader classLoader = factoryContext.getClassLoader();
             ObjectFactory objectFactory = factoryContext.getObjectFactory();
-            String pojoPointcutSpecClassName = AdvisorSpec.PojoPointcutSpec.Default.class.getName();
+            String defaultSpecClassName = AdvisorSpec.PojoPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
@@ -186,9 +192,14 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     }
 
                     String advisorName = advisorSpec.getAdvisorName();
-                    if( !StringUtils.hasText(advisorName) || pojoPointcutSpecClassName.equals(advisorName) ) 
+                    boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
+                    Condition condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    if(noAdvisorName || noCondition) 
                         advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
-                                className, 
+                                noAdvisorName ? className : advisorName,
+                                noCondition ? factoryContext.getDefaultCondition() : condition,
                                 advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                                 advisorSpec.getPointcut(), advisorSpec.getOrder());
 
@@ -244,7 +255,7 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
             ClassLoader classLoader = factoryContext.getClassLoader();
             ObjectFactory objectFactory = factoryContext.getObjectFactory();
-            String exprPointcutSpecClassName = AdvisorSpec.ExprPointcutSpec.Default.class.getName();
+            String defaultSpecClassName = AdvisorSpec.ExprPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
@@ -253,9 +264,14 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     AdvisorSpec.ExprPointcutSpec advisorSpec = (AdvisorSpec.ExprPointcutSpec) objectFactory.createObject(clazz);
 
                     String advisorName = advisorSpec.getAdvisorName();
-                    if( !StringUtils.hasText(advisorName) || exprPointcutSpecClassName.equals(advisorName) ) 
+                    boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
+                    Condition condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    if(noAdvisorName || noCondition) 
                         advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
-                                className, 
+                                noAdvisorName ? className : advisorName,
+                                noCondition ? factoryContext.getDefaultCondition() : condition,
                                 advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                                 advisorSpec.getPointcutExpression(), advisorSpec.getOrder());
 
@@ -273,7 +289,7 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     .getNames();
             ClassLoader classLoader = factoryContext.getClassLoader();
             ObjectFactory objectFactory = factoryContext.getObjectFactory();
-            String exprPointcutSpecClassName = AdvisorSpec.ExprPointcutSpec.Default.class.getName();
+            String defaultSpecClassName = AdvisorSpec.ExprPointcutSpec.Default.class.getName();
 
             for(String className : classNames) {
                 try {
@@ -287,9 +303,14 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     }
 
                     String advisorName = advisorSpec.getAdvisorName();
-                    if( !StringUtils.hasText(advisorName) || exprPointcutSpecClassName.equals(advisorName) ) 
+                    boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
+                    Condition condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    if(noAdvisorName || noCondition) 
                         advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
-                                className, 
+                                noAdvisorName ? className : advisorName,
+                                noCondition ? factoryContext.getDefaultCondition() : condition,
                                 advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                                 advisorSpec.getPointcutExpression(), advisorSpec.getOrder());
 
@@ -343,7 +364,10 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
             for(String className : classNames) {
                 advisorSpecs.add(
-                        new AdvisorSpec.AspectJSpec.Default(className, false, className, 0));
+                        new AdvisorSpec.AspectJSpec.Default(
+                                className, 
+                                factoryContext.getDefaultCondition(), 
+                                false, className, 0) );
             }
 
             return advisorSpecs;

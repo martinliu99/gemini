@@ -13,22 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aspectj.weaver.world;
+package io.gemini.aop.integration;
+public class TargetArgumentBinding_Object {
 
-import net.bytebuddy.description.ByteCodeElement.Member;
-
-/**
- * @author Adrian
- *
- */
-public interface ArgNameFinder {
-
-    /**
-     * Attempt to discover the parameter names for a reflectively obtained member
-     * @param forMember
-     * @return null if names can't be determined
-     */
-    String[] getParameterNames(Member forMember);
-
-
+    public long bindTargetArgument(long _long, String string) {
+        return _long + Long.valueOf(string);
+    }
 }

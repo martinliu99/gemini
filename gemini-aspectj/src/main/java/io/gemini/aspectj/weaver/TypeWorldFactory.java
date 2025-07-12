@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aspectj.weaver.world;
+package io.gemini.aspectj.weaver;
 
 import java.util.concurrent.ConcurrentMap;
 
+import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
@@ -43,26 +44,26 @@ public interface TypeWorldFactory {
 
     abstract class AbstractBase implements TypeWorldFactory {
 
-        protected TypeWorld doCreateTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
+        protected BytebuddyWorld doCreateTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
                 TypePool typePool, PlaceholderHelper placeholderHelper) {
-            return new TypeWorld(typePool, placeholderHelper);
+            return new BytebuddyWorld(typePool, placeholderHelper);
         }
     }
 
 
     class Singleton extends AbstractBase {
 
-        private final ConcurrentMap<ClassLoader, TypeWorld> typeWorldCache = new ConcurrentReferenceHashMap<>();
+        private final ConcurrentMap<ClassLoader, BytebuddyWorld> typeWorldCache = new ConcurrentReferenceHashMap<>();
 
 
         public Singleton() {
         }
 
-        /*
-         * @see io.gemini.aspectj.weaver.world.TypeWorldFactory#createTypeWorld(java.lang.ClassLoader, net.bytebuddy.utility.JavaModule, net.bytebuddy.pool.TypePool, io.gemini.core.util.PlaceholderHelper)
+        /**
+         * {@inheritDoc}
          */
         @Override
-        public TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
+        public BytebuddyWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
                 TypePool typePool, PlaceholderHelper placeholderHelper) {
             ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
@@ -84,11 +85,11 @@ public interface TypeWorldFactory {
         }
 
 
-        /*
-         * @see io.gemini.aspectj.weaver.world.TypeWorldFactory#createTypeWorld(java.lang.ClassLoader, net.bytebuddy.utility.JavaModule, net.bytebuddy.pool.TypePool, io.gemini.core.util.PlaceholderHelper)
+        /**
+         * {@inheritDoc}
          */
         @Override
-        public TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
+        public BytebuddyWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
                 TypePool typePool, PlaceholderHelper placeholderHelper) {
             return doCreateTypeWorld(classLoader, javaModule, typePool, placeholderHelper);
         }

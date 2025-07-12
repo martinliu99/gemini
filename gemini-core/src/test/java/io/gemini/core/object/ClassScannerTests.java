@@ -66,7 +66,8 @@ public class ClassScannerTests {
                     .filter(new ClassScanner.InstantiableClassInfoFilter())
                     .getNames();
             assertThat(implementors).containsExactlyInAnyOrder(
-                    NestedClass.class.getName()
+                    NestedClass.class.getName(),
+                    PrivateNestedClass.class.getName()
             );
         }
     }

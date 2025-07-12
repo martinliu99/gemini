@@ -43,8 +43,8 @@ import io.gemini.aop.matcher.Pattern.Parser;
 import io.gemini.aop.matcher.StringMatcherFactory;
 import io.gemini.aop.matcher.TypeMatcherFactory;
 import io.gemini.api.aop.condition.Condition;
-import io.gemini.aspectj.weaver.world.TypeWorld;
-import io.gemini.aspectj.weaver.world.TypeWorldFactory;
+import io.gemini.aspectj.weaver.TypeWorld;
+import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
@@ -587,7 +587,7 @@ public class FactoryContext implements Closeable {
         AspectTypePool aspectTypePool = new AspectTypePool(
                 new CacheProvider.Simple(),
                 typePool,
-                this.aopContext.getTypePoolFactory().getExplicitTypePool(joinpointClassLoader)
+                this.aopContext.getTypePoolFactory().createExplicitTypePool(joinpointClassLoader, javaModule)
         );
         aspectTypePool.setJoinpointTypeMatcher(joinpointTypesMatcher);
 

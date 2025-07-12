@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.net.URLClassLoader;
 
 import io.gemini.api.aop.condition.Condition.ConditionContext;
-import io.gemini.aspectj.weaver.world.TypeWorld;
+import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;

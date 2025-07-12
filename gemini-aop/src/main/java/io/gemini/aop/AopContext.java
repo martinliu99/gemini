@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.AopMetrics.BootstraperMetrics;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
-import io.gemini.aspectj.weaver.world.TypeWorldFactory;
+import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.TaskExecutor;
 import io.gemini.core.config.ConfigSource;

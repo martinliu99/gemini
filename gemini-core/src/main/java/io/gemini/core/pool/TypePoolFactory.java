@@ -34,8 +34,6 @@ public interface TypePoolFactory {
 
     ExplicitTypePool createExplicitTypePool(ClassLoader classLoader, JavaModule javaModule);
 
-    ExplicitTypePool getExplicitTypePool(ClassLoader classLoader);
-
 
     class Default implements TypePoolFactory {
 
@@ -98,15 +96,6 @@ public interface TypePoolFactory {
             ClassFileLocator classFileLocator = new ClassFileLocator.Compound(classFileLocators);
 
             return classFileBufferStrategy.typePool(poolStrategy, classFileLocator, null, ClassLoaderUtils.getClassLoaderId(classLoader));
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ExplicitTypePool getExplicitTypePool(ClassLoader classLoader) {
-            ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
-            return this.explicitTypePoolCache.get(cacheKey);
         }
     }
 }

@@ -67,7 +67,7 @@ public class DefaultTransformationListener implements Listener {
 
     @Override
     public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        ExplicitTypePool explicitTypePool = typePoolFactory.getExplicitTypePool(classLoader);
+        ExplicitTypePool explicitTypePool = typePoolFactory.createExplicitTypePool(classLoader, javaModule);
         if(explicitTypePool != null)
             explicitTypePool.removeTypeDescription(typeName);
 

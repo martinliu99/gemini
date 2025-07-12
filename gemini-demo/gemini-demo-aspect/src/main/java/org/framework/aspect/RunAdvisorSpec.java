@@ -15,10 +15,12 @@
  */
 package org.framework.aspect;
 
-import io.gemini.aop.matcher.MethodMatcher;
-import io.gemini.aop.matcher.TypeMatcher;
+import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.matcher.TypeMatchers;
 
 
 public class RunAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
@@ -29,10 +31,12 @@ public class RunAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
     public RunAdvisorSpec() {
         super(
                 context -> context.isBootstrapClassLoader(),
-                false, RunAdvice.class.getName(), 
+                false, 
+                RunAdvice.class.getName(), 
                 new Pointcut.Default(
-                        TypeMatcher.nameStartsWith("io.gemini.weaver.transformer").and( TypeMatcher.isExtendedFrom("java.lang.Runnable")),
-                        MethodMatcher.nameEquals("run") ), 1);
+                         nameStartsWith("io.gemini.weaver.transformer").and( TypeMatchers.isExtendedFrom("java.lang.Runnable")),
+                        named("run") ), 
+                1);
     }
 
 }

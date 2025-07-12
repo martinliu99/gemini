@@ -15,14 +15,14 @@
  */
 package org.framework.aspect;
 
+import static net.bytebuddy.matcher.ElementMatchers.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import org.framework.demo.api.Request;
 import org.framework.demo.api.Response;
 
-import io.gemini.aop.matcher.MethodMatcher;
-import io.gemini.aop.matcher.TypeMatcher;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
@@ -51,8 +51,8 @@ public class DemoServiceAdvice_process extends Advice.AbstractBeforeAfter<Respon
     public AdvisorSpec.PojoPointcutSpec getAdvisorSpec() {
         return new AdvisorSpec.PojoPointcutSpec.Builder()
                 .adviceClassName(this.getClass().getName())
-                .typeMatcher( TypeMatcher.nameEquals("org.framework.demo.service.DemoServiceImpl") )
-                .methodMatcher( MethodMatcher.nameEquals("process") )
+                .typeMatcher( named("org.framework.demo.service.DemoServiceImpl") )
+                .methodMatcher( named("process") )
                 .builder();
     }
 }

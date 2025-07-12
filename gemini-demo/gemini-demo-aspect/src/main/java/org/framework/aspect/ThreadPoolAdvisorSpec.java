@@ -15,8 +15,8 @@
  */
 package org.framework.aspect;
 
-import io.gemini.aop.matcher.MethodMatcher;
-import io.gemini.aop.matcher.TypeMatcher;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
 
@@ -30,7 +30,7 @@ public class ThreadPoolAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default 
                 context -> context.isBootstrapClassLoader(),
                 false, ThreadPoolAdvice.class.getName(), 
                 new Pointcut.Default(
-                        TypeMatcher.nameEquals("java.util.concurrent.ThreadPoolExecutor"),
-                        MethodMatcher.nameEquals("execute").or( MethodMatcher.nameEquals("") ) ), 1);
+                        named("java.util.concurrent.ThreadPoolExecutor"),
+                        named("execute").or( named("") ) ), 1);
     }
 }

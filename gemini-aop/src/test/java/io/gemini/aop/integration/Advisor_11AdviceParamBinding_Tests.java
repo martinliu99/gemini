@@ -99,7 +99,7 @@ public class Advisor_11AdviceParamBinding_Tests extends AbstractIntegrationTests
     @Test
     public void testTargetArgumentBinding() {
         long arg1 = 1l;
-        String arg2 = "2";
+        long arg2 = 2l;
         TargetArgumentBinding_Object object = new TargetArgumentBinding_Object();
         object.bindTargetArgument(arg1, arg2);
 
@@ -133,9 +133,9 @@ public class Advisor_11AdviceParamBinding_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class TargetArgumentBinding_Object {
+    public static class TargetArgumentBinding_Object {
 
-        public long bindTargetArgument(long _long, String string) {
+        public long bindTargetArgument(long _long, Long string) {
             return _long + Long.valueOf(string);
         }
     }
@@ -143,13 +143,13 @@ public class Advisor_11AdviceParamBinding_Tests extends AbstractIntegrationTests
     @Aspect
     public static class TargetArgumentBinding_Aspect {
 
-        private static final String BIND_TARGET_ARGUMENT_POINTCUT = 
+        public static final String BIND_TARGET_ARGUMENT_POINTCUT = 
                 "execution(!private long io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, string)";
 
         private static final String BIND_TARGET_ARGUMENT_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindTargetArgument_afterAdvice";
 
         @After(value = BIND_TARGET_ARGUMENT_POINTCUT, argNames = "_long, string")
-        public void bindTargetArgument_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long _long, String string) {
+        public void bindTargetArgument_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long _long, Number string) {
             ExecutionMemento.putAdviceMethodInvoker(BIND_TARGET_ARGUMENT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -160,10 +160,10 @@ public class Advisor_11AdviceParamBinding_Tests extends AbstractIntegrationTests
         private static final String REFERENCE_POINTCUT_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".reference_pointcut_afterAdvice";
 
         @Pointcut(BIND_TARGET_ARGUMENT_POINTCUT)
-        public void bindTargetArgument(long _long, String string) {  }
+        public void bindTargetArgument(long _long, long string) {  }
 
         @After(value = "bindTargetArgument(_long, string)", argNames = "string, _long")
-        public void reference_pointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, String string, long _long) {
+        public void reference_pointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long string, long _long) {
             ExecutionMemento.putAdviceMethodInvoker(REFERENCE_POINTCUT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -177,7 +177,7 @@ public class Advisor_11AdviceParamBinding_Tests extends AbstractIntegrationTests
         private static final String BIND_INCONSISTENT_PARAMS_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindInconsistentParams_afterAdvice";
 
         @After(value = BIND_INCONSISTENT_PARAMS_POINTCUT, argNames = "string, _long, integer")
-        public void bindInconsistentParams_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, String string, long _long, int integer) {
+        public void bindInconsistentParams_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long string, long _long, int integer) {
             ExecutionMemento.putAdviceMethodInvoker(BIND_INCONSISTENT_PARAMS_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true) );

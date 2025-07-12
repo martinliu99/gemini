@@ -15,8 +15,8 @@
  */
 package org.framework.aspect;
 
-import io.gemini.aop.matcher.MethodMatcher;
-import io.gemini.aop.matcher.TypeMatcher;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
 
@@ -29,8 +29,9 @@ public class ThreadAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
                 context -> context.isBootstrapClassLoader(),
                 false, ThreadAdvice.class.getName(), 
                 new Pointcut.Default(
-                        TypeMatcher.nameEquals("java.lang.Thread"),
-                        MethodMatcher.nameEquals("start") ), 1);
+                        named("java.lang.Thread"),
+                        named("start") ), 
+                1);
     }
 
 }

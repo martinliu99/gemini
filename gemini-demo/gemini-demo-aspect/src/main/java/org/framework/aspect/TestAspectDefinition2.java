@@ -15,8 +15,8 @@
  */
 package org.framework.aspect;
 
-import io.gemini.aop.matcher.MethodMatcher;
-import io.gemini.aop.matcher.TypeMatcher;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
 
@@ -28,8 +28,9 @@ public class TestAspectDefinition2 extends AdvisorSpec.PojoPointcutSpec.Default 
     public TestAspectDefinition2() {
         super(false, "org.framework.aspects.TestAdvice2", 
                 new Pointcut.Default(
-                        TypeMatcher.nameEquals("org.framework.test.Test"),
-                        MethodMatcher.nameEquals("doTest") ), 1);
+                        named("org.framework.test.Test"),
+                        named("doTest") ),
+                1);
     }
 
 }

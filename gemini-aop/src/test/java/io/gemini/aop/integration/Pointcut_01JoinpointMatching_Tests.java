@@ -53,7 +53,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidMatching_Advices.MATCH_VOID_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidMatching_Advice.MATCH_VOID_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isNull();
@@ -84,10 +84,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    public static class VoidMatching_Advices extends Advice.AbstractAfter<Void, RuntimeException> 
+    public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -107,7 +107,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         public PojoPointcutSpec getAdvisorSpec() {
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
-                            VoidMatching_Advices.class.getName() )
+                            VoidMatching_Advice.class.getName() )
                     .typeMatcher(
                             named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Object") )
                     .methodMatcher(
@@ -138,7 +138,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Advices.MATCH_PRIMITIVE_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Advice.MATCH_PRIMITIVE_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -183,10 +183,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    public static class PrimitiveMatching_Advices extends Advice.AbstractAfter<Long, RuntimeException> 
+    public static class PrimitiveMatching_Advice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -232,7 +232,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericMatching_Advices.MATCH_GENERIC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericMatching_Advice.MATCH_GENERIC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -263,10 +263,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    public static class GenericMatching_Advices extends Advice.AbstractAfter<Number, RuntimeException> 
+    public static class GenericMatching_Advice extends Advice.AbstractAfter<Number, RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -286,7 +286,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         public PojoPointcutSpec getAdvisorSpec() {
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
-                            GenericMatching_Advices.class.getName() )
+                            GenericMatching_Advice.class.getName() )
                     .typeMatcher(
                             named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Object") )
                     .methodMatcher(
@@ -312,7 +312,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayMatching_Advices.MATCH_GENERIC_ARRAY_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayMatching_Advice.MATCH_GENERIC_ARRAY_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -343,10 +343,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    public static class GenericArrayMatching_Advices extends Advice.AbstractAfter<Number[], RuntimeException> 
+    public static class GenericArrayMatching_Advice extends Advice.AbstractAfter<Number[], RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -366,7 +366,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         public PojoPointcutSpec getAdvisorSpec() {
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
-                            GenericArrayMatching_Advices.class.getName() )
+                            GenericArrayMatching_Advice.class.getName() )
                     .typeMatcher(
                             named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Object") )
                     .methodMatcher(
@@ -392,7 +392,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionMatching_Advices.MATCH_GENERIC_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionMatching_Advice.MATCH_GENERIC_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -425,10 +425,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
     }
 
     @SuppressWarnings("rawtypes")
-    public static class GenericCollectionMatching_Advices extends Advice.AbstractAfter<List, RuntimeException> 
+    public static class GenericCollectionMatching_Advice extends Advice.AbstractAfter<List, RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -448,7 +448,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         public PojoPointcutSpec getAdvisorSpec() {
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
-                            GenericCollectionMatching_Advices.class.getName() )
+                            GenericCollectionMatching_Advice.class.getName() )
                     .typeMatcher(
                             named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Object") )
                     .methodMatcher(
@@ -474,7 +474,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionMatching_Advices.MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionMatching_Advice.MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -505,10 +505,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    public static class ParameterizedCollectionMatching_Advices extends Advice.AbstractAfter<List<String>, RuntimeException> 
+    public static class ParameterizedCollectionMatching_Advice extends Advice.AbstractAfter<List<String>, RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -528,7 +528,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         public PojoPointcutSpec getAdvisorSpec() {
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
-                            ParameterizedCollectionMatching_Advices.class.getName() )
+                            ParameterizedCollectionMatching_Advice.class.getName() )
                     .typeMatcher(
                             named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Object") )
                     .methodMatcher(
@@ -554,7 +554,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionMatching_Advices.MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(WildCardCollectionMatching_Advice.MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
@@ -585,10 +585,10 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    public static class WildCardCollectionMatching_Advices extends Advice.AbstractAfter<List<? extends Number>, RuntimeException> 
+    public static class WildCardCollectionMatching_Advice extends Advice.AbstractAfter<List<? extends Number>, RuntimeException> 
             implements AdvisorSpec.PojoPointcutSpec.Factory {
 
-        private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Advices.class.getName() + ".after";
+        private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Advice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -608,7 +608,7 @@ public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests
         public PojoPointcutSpec getAdvisorSpec() {
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
-                            WildCardCollectionMatching_Advices.class.getName() )
+                            WildCardCollectionMatching_Advice.class.getName() )
                     .typeMatcher(
                             named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Object") )
                     .methodMatcher(

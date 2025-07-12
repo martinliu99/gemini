@@ -26,8 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.matcher.Pattern.Type;
-import io.gemini.aspectj.weaver.world.TypeWorld;
-import io.gemini.aspectj.weaver.world.TypeWorldFactory;
+import io.gemini.aspectj.weaver.Expression;
+import io.gemini.aspectj.weaver.Expression.TypeExpr;
+import io.gemini.aspectj.weaver.TypeWorld;
+import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.pool.TypePoolFactory;
 import io.gemini.core.util.Assert;
@@ -68,9 +70,9 @@ public class TypeMatcherFactory {
 
     public Collection<Pattern> validateTypePatterns(
             String ruleName, Collection<Pattern> typePatterns, boolean acceptMatchAllPattern, 
-            ClassLoader classLoader, JavaModule module, PlaceholderHelper placeholderHelper) {
-        TypePool typePool = this.typePoolFactory.getExplicitTypePool(classLoader);
-        TypeWorld typeWorld = this.typeWorldFactory.createTypeWorld(classLoader, module, typePool, placeholderHelper);
+            ClassLoader classLoader, JavaModule javaModule, PlaceholderHelper placeholderHelper) {
+        TypePool typePool = this.typePoolFactory.createExplicitTypePool(classLoader, javaModule);
+        TypeWorld typeWorld = this.typeWorldFactory.createTypeWorld(classLoader, javaModule, typePool, placeholderHelper);
 
         List<Pattern> patterns = new ArrayList<>(typePatterns.size());
         for(Pattern pattern : typePatterns) {
@@ -90,10 +92,10 @@ public class TypeMatcherFactory {
         return patterns;
     }
 
-    private TypeMatcher createMatchAllMatcher(
+    private ElementMatcher.Junction<TypeDescription> createMatchAllMatcher(
             String ruleName, Collection<Pattern> typePatterns, boolean acceptMatchAllPattern) {
         if(acceptMatchAllPattern == true) {
-            return TypeMatcher.TRUE;
+            return TypeMatchers.TRUE;
         } else {
             LOGGER.warn("Ignored {} '{}' in rule '{}', patterns: {}.\n", 
                     Pattern.Type.MATCH_ALL_PATTERN, Pattern.STAR, ruleName, typePatterns);
@@ -101,12 +103,12 @@ public class TypeMatcherFactory {
         }
     }
 
-    private TypeMatcher createTypeMatcher(
+    private ElementMatcher.Junction<TypeDescription> createTypeMatcher(
             String ruleName, Collection<Pattern> typePatterns, TypeWorld typeWorld, 
             String expression) {
         try {
             // validate type pattern
-            return new AspectJExprTypeMatcher(typeWorld, expression);
+            return new TypeExprMatcher(typeWorld, expression);
         } catch(Throwable t) {
             LOGGER.warn("Ignored illegal typePattern '{}' in rule '{}', patterns: {}.", 
                     expression, ruleName, typePatterns, t);
@@ -117,7 +119,7 @@ public class TypeMatcherFactory {
 
     public ElementMatcher<TypeDescription> createTypeMatcher(
             String ruleName, Collection<Pattern> typePatterns, boolean acceptMatchAllPattern,
-            ClassLoader classLoader, JavaModule module, PlaceholderHelper placeholderHelper) {
+            ClassLoader classLoader, JavaModule javaModule, PlaceholderHelper placeholderHelper) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
         return this.typePatternMatcherCache
@@ -127,19 +129,19 @@ public class TypeMatcherFactory {
                 )
                 .computeIfAbsent(
                         typePatterns, 
-                        key -> doCreateTypeMatcher(ruleName, typePatterns, acceptMatchAllPattern, classLoader, module, placeholderHelper)
+                        key -> doCreateTypeMatcher(ruleName, typePatterns, acceptMatchAllPattern, classLoader, javaModule, placeholderHelper)
                 );
     }
 
-    protected ElementMatcher<TypeDescription> doCreateTypeMatcher(
+    protected ElementMatcher.Junction<TypeDescription> doCreateTypeMatcher(
             String ruleName, Collection<Pattern> typePatterns, boolean acceptMatchAllPattern,
-            ClassLoader classLoader, JavaModule module, PlaceholderHelper placeholderHelper) {
+            ClassLoader classLoader, JavaModule javaModule, PlaceholderHelper placeholderHelper) {
         if(CollectionUtils.isEmpty(typePatterns)) {
             return ElementMatchers.none();
         }
 
-        TypePool typePool = this.typePoolFactory.getExplicitTypePool(classLoader);
-        TypeWorld typeWorld = this.typeWorldFactory.createTypeWorld(classLoader, module, typePool, placeholderHelper);
+        TypePool typePool = this.typePoolFactory.createExplicitTypePool(classLoader, javaModule);
+        TypeWorld typeWorld = this.typeWorldFactory.createTypeWorld(classLoader, javaModule, typePool, placeholderHelper);
 
         List<ElementMatcher<? super TypeDescription>> typeMatchers = new ArrayList<>();
         for(Pattern pattern : typePatterns) {
@@ -151,20 +153,53 @@ public class TypeMatcherFactory {
                     return ElementMatchers.any();
             } else if(Pattern.Type.STARTS_WITH_PATTERN == type) {
                 typeMatchers.add( 
-                        TypeMatcher.nameStartsWith(expression) );
+                        TypeMatchers.nameStartsWith(expression) );
             } else if(Pattern.Type.EQUALS_PATTERN == type) {
                 typeMatchers.add( 
-                        TypeMatcher.nameEquals(expression) );
+                        TypeMatchers.nameEquals(expression) );
             } else if(Pattern.Type.ENDS_WITH_PATTERN == type) {
                 typeMatchers.add( 
-                        TypeMatcher.nameEndsWith(expression) );
+                        TypeMatchers.nameEndsWith(expression) );
             } else if(Pattern.Type.COMPLEX_PATTERN == type) {
-                TypeMatcher typeMatcher = createTypeMatcher(ruleName, typePatterns, typeWorld, expression);
+                ElementMatcher<? super TypeDescription> typeMatcher = createTypeMatcher(ruleName, typePatterns, typeWorld, expression);
                 if(typeMatcher != null)
                     typeMatchers.add(typeMatcher);
             }
         }
 
         return new ElementMatcher.Junction.Disjunction<>(typeMatchers);
+    }
+
+
+    public static class TypeExprMatcher extends ElementMatcher.Junction.ForNonNullValues<TypeDescription> {
+
+        private final TypeWorld typeWorld;
+        private final String typeExpression;
+        private final TypeExpr typeExpr;
+
+        public TypeExprMatcher(TypeWorld typeWorld, String typeExpression) {
+            this.typeWorld = typeWorld;
+            this.typeExpression = typeExpression;
+            this.typeExpr = Expression.Parser.INSTACE.parseTypeExpression(typeWorld, typeExpression);
+        }
+
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        protected boolean doMatch(TypeDescription typeDescription) {
+            try {
+                return this.typeExpr.matches( typeWorld.resolve(typeDescription, true) );
+            } catch(Throwable t) {
+                return false;
+            }
+        }
+
+
+        @Override
+        public String toString() {
+            return typeExpression;
+        }
     }
 }

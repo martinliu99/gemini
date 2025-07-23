@@ -148,7 +148,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
                 referenceType);
     }
 
-    protected TypeDescription describeType(String typeName) {
+    public TypeDescription describeType(String typeName) {
         return this.typePool.describe(typeName).resolve();
     }
 

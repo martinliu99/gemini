@@ -33,6 +33,7 @@ public interface TypeWorld {
 
     World getWorld();
 
+    TypeDescription describeType(String typeName);
 
     default ResolvedType resolve(TypeDescription typeDescription) {
         return resolve(typeDescription, false);

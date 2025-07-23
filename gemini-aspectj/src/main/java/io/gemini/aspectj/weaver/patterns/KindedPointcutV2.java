@@ -30,11 +30,8 @@ import org.aspectj.weaver.patterns.FastMatchInfo;
 import org.aspectj.weaver.patterns.KindedPointcut;
 import org.aspectj.weaver.patterns.Pointcut;
 import org.aspectj.weaver.patterns.SignaturePattern;
-import org.aspectj.weaver.patterns.TypePattern;
-import org.aspectj.weaver.patterns.WildTypePattern;
 
 public class KindedPointcutV2 extends KindedPointcut {
-
 
     public KindedPointcutV2(KindedPointcut kindedPointcut) {
         this(kindedPointcut.getKind(), kindedPointcut.getSignature());
@@ -45,66 +42,31 @@ public class KindedPointcutV2 extends KindedPointcut {
     }
 
     public KindedPointcutV2(Kind kind, SignaturePattern signature, ShadowMunger munger) {
-        // TODO: might break in future aspectj version
-        // TODO: try to fetch ShadowMunger
-
         super(kind, signature);
     }
 
-    @Override
+//    @Override
     public FuzzyBoolean fastMatch(FastMatchInfo info) {
+        Kind infoKind = info.getKind();
         Kind kind = this.getKind();
-        if (info.world.optimizedMatching) {
+        if(infoKind != null && infoKind != kind)
+            return FuzzyBoolean.NO;
 
-            // For now, just consider MethodExecution and Initialization
-            if ((kind == Shadow.MethodExecution || kind == Shadow.ConstructorExecution
-                    || kind == Shadow.Initialization || kind == Shadow.StaticInitialization) && info.getKind() == null) {
-                if (this.getSignature().isExactDeclaringTypePattern()) {
-                    ExactTypePattern typePattern = (ExactTypePattern) this.getSignature().getDeclaringType();
-                    // Interface checks are more expensive, they could be anywhere...
-//                    ResolvedType patternExactType = typePattern.getResolvedExactType(info.world);
+        if (this.getSignature().isExactDeclaringTypePattern()) {
+            ExactTypePattern typePattern = (ExactTypePattern) this.getSignature().getDeclaringType();
 
-//                    ResolvedType type=  info.world.resolve(typePattern.getExactType().getName());
-                    if(typePattern.getType().equals(info.getType()) == false) {
-                        return FuzzyBoolean.NO;
-                    }
-//                    if (patternExactType.isInterface()) {
-//                        ResolvedType curr = info.getType();
-//                        Iterator<ResolvedType> hierarchyWalker = curr.getHierarchy(true, true);
-//                        boolean found = false;
-//                        while (hierarchyWalker.hasNext()) {
-//                            curr = hierarchyWalker.next();
-//                            if (typePattern.matchesStatically(curr)) {
-//                                found = true;
-//                                break;
-//                            }
-//                        }
-//                        if (!found) {
-//                            return FuzzyBoolean.NO;
-//                        }
-//                    } else if (patternExactType.isClass()) {
-//                        ResolvedType curr = info.getType();
-//                        do {
-//                            if (typePattern.matchesStatically(curr)) {
-//                                break;
-//                            }
-//                            curr = curr.getSuperclass();
-//                        } while (curr != null);
-//                        if (curr == null) {
-//                            return FuzzyBoolean.NO;
-//                        }
-//                    }
-                } else if (this.getSignature().getDeclaringType() instanceof WildTypePattern) {
-                    final WildTypePattern pattern = (WildTypePattern) this.getSignature().getDeclaringType();
-                    final ResolvedType type = info.getType();
-                    return pattern.matches(type, TypePattern.STATIC);
-                }
+            boolean traverseTypeHierarchy = true;
+            if(typePattern.isIncludeSubtypes() == true) {
+                traverseTypeHierarchy = false;
+            }
+
+            if( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
+                    || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
+                return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
             }
         }
 
-        FuzzyBoolean ret = super.fastMatch(info);
-
-        return ret;
+        return super.fastMatch(info);
     }
 
 
@@ -121,6 +83,7 @@ public class KindedPointcutV2 extends KindedPointcut {
             return FuzzyBoolean.YES;
         }
 
+        // allow bridge method
         if (!getSignature().matches(shadow.getMatchingSignature(), shadow.getIWorld(), true)) {
             return FuzzyBoolean.NO;
         }
@@ -131,16 +94,16 @@ public class KindedPointcutV2 extends KindedPointcut {
 
     @Override
     public Pointcut concretize1(ResolvedType inAspect, ResolvedType declaringType, IntMap bindings) {
-        Pointcut ret = new KindedPointcutV2(this.getKind(), this.getSignature(), bindings.getEnclosingAdvice());
-        ret.copyLocationFrom(this);
-        return ret;
+        Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature(), bindings.getEnclosingAdvice());
+        pointcut.copyLocationFrom(this);
+        return pointcut;
     }
 
     @Override
     public Pointcut parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
-        Pointcut ret = new KindedPointcutV2(this.getKind(), this.getSignature().parameterizeWith(typeVariableMap, w), null);
-        ret.copyLocationFrom(this);
-        return ret;
+        Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature().parameterizeWith(typeVariableMap, w), null);
+        pointcut.copyLocationFrom(this);
+        return pointcut;
     }
 
 }

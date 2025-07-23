@@ -23,11 +23,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.Advisor;
-import io.gemini.aop.ExprPointcut;
-import io.gemini.aop.ExprPointcut.AspectJExprPointcut;
 import io.gemini.aop.factory.AdvisorContext;
-import io.gemini.aop.factory.support.AspectJAdvice.ClassMaker;
-import io.gemini.aop.factory.support.AspectJAdvice.MethodSpec;
+import io.gemini.aop.factory.support.AdviceMethodMatcher.AspectJMethodMatcher;
+import io.gemini.aop.factory.support.AdviceMethodMatcher.PojoMethodMatcher;
+import io.gemini.aop.factory.support.AdviceMethodSpec.AspectJMethodSpec;
+import io.gemini.aop.factory.support.AdviceMethodSpec.PojoMethodSpec;
+import io.gemini.aop.factory.support.AdviceClassMaker.ByteBuddyMaker;
+import io.gemini.aop.factory.support.ExprPointcut.AspectJExprPointcut;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
@@ -264,14 +266,13 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             TypeDescription adviceType = advisorContext.getTypePool()
                     .describe(advisorSpec.getAdviceClassName())
                     .resolve();
-            AdviceAwareMethodMatcher.PojoAdvice methodMatcher = new AdviceAwareMethodMatcher.PojoAdvice(
-                    advisorSpec.getAdvisorName(), pointcut.getMethodMatcher(), adviceType);
-            if(methodMatcher.isValid == false)
+            PojoMethodSpec pojoMethodSpec = new PojoMethodSpec( advisorSpec.getAdvisorName(), adviceType );
+            if(pojoMethodSpec.isValid() == false)
                 return null;
 
             return new Pointcut.Default(
                     pointcut.getTypeMatcher(), 
-                    methodMatcher
+                    new PojoMethodMatcher( pojoMethodSpec, pointcut.getMethodMatcher() )
             );
         }
     }
@@ -293,14 +294,13 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             TypeDescription adviceType = advisorContext.getTypePool()
                     .describe(advisorSpec.getAdviceClassName())
                     .resolve();
-            AdviceAwareMethodMatcher.PojoAdvice methodMatcher = new AdviceAwareMethodMatcher.PojoAdvice(
-                    advisorSpec.getAdvisorName(), exprPointcut.getMethodMatcher(), adviceType);
-            if(methodMatcher.isValid() == false)
+            PojoMethodSpec pojoMethodSpec = new PojoMethodSpec( advisorSpec.getAdvisorName(), adviceType );
+            if(pojoMethodSpec.isValid() == false)
                 return null;
 
             return new Pointcut.Default(
                     exprPointcut.getTypeMatcher(),
-                    methodMatcher
+                    new PojoMethodMatcher( pojoMethodSpec, exprPointcut.getMethodMatcher() )
             );
         }
     }
@@ -308,30 +308,32 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
     class ForAspectJAdvice extends AbstractBase<AdvisorSpec.ExprPointcutSpec> {
 
-        private final ClassMaker classMaker;
+        private final AspectJMethodSpec aspectJMethodSpec;
+        private final ByteBuddyMaker classMaker;
 
 
-        public ForAspectJAdvice(AdvisorSpec.ExprPointcutSpec advisorSpec, ClassMaker classMaker) {
+        public ForAspectJAdvice(AdvisorSpec.ExprPointcutSpec advisorSpec, AspectJMethodSpec aspectJMethodSpec) {
             super(advisorSpec);
-            this.classMaker = classMaker;
+
+            this.aspectJMethodSpec = aspectJMethodSpec;
+            this.classMaker = new AdviceClassMaker.ByteBuddyMaker(advisorSpec.getAdviceClassName(), aspectJMethodSpec);
         }
 
 
         @Override
         protected Pointcut doCreatePointcut(AdvisorContext advisorContext) {
-            MethodSpec methodSpec = classMaker.getMethodSpec();
-            String[] pointcutParameterNames = methodSpec.getPointcutParameterNames().toArray(new String[] {});
-            TypeDescription[] pointcutParameterTypes = methodSpec.getPointcutParameterTypes().toArray(new TypeDescription[] {});
+            String[] pointcutParameterNames = aspectJMethodSpec.getPointcutParameterNames().toArray(new String[] {});
+            TypeDescription[] pointcutParameterTypes = aspectJMethodSpec.getPointcutParameterTypes().toArray(new TypeDescription[] {});
             String pointcutExpression = advisorSpec.getPointcutExpression();
 
-            ExprPointcut exprPointcut = this.doCreateExprPointcut(advisorContext, pointcutExpression, classMaker.getAspectJTypeDescription(), pointcutParameterNames, pointcutParameterTypes);
+            ExprPointcut exprPointcut = this.doCreateExprPointcut(advisorContext, pointcutExpression, aspectJMethodSpec.getAdviceTypeDescription(), pointcutParameterNames, pointcutParameterTypes);
             if(this.doValidatePointcut(advisorContext, exprPointcut) == false) {
                 return null;
             }
 
             return new Pointcut.Default(
                     exprPointcut.getTypeMatcher(),
-                    new AdviceAwareMethodMatcher.AspectJAdvice(exprPointcut, methodSpec) 
+                    new AspectJMethodMatcher(exprPointcut, aspectJMethodSpec) 
             );
         }
 
@@ -348,7 +350,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                         return this.adviceClass;
 
                     // try to make advice class
-                    String aspectJClassName = classMaker.getAspectJTypeDescription().getTypeName();
+                    String aspectJClassName = aspectJMethodSpec.getAdviceTypeDescription().getTypeName();
                     String advisorName = advisorSpec.getAdvisorName();
                     try {
                         advisorContext.getObjectFactory().loadClass(aspectJClassName);
@@ -380,7 +382,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             return new Supplier<Advice>() {
 
                 private final Class<?> aspectJClass = advisorContext.getObjectFactory().loadClass(
-                        classMaker.getAspectJTypeDescription().getTypeName());
+                        aspectJMethodSpec.getAdviceTypeDescription().getTypeName());
 
                 private Class<? extends Advice> adviceClass;
                 private Constructor<?> adviceConstructor;

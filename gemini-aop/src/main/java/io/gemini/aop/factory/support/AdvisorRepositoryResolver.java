@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.factory.FactoryContext;
-import io.gemini.aop.factory.support.AspectJAdvice.MethodSpec;
+import io.gemini.aop.factory.support.AdviceMethodSpec.AspectJMethodSpec;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
@@ -44,9 +44,9 @@ import net.bytebuddy.description.type.TypeDescription;
  */
 public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends AdvisorSpec> {
 
-    boolean support(AdvisorSpec apsectSpec);
+    boolean support(AdvisorSpec advisorSpec);
 
-    List<? extends AdvisorRepository<R>> resolve(T apsectSpec, FactoryContext factoryContext);
+    List<? extends AdvisorRepository<R>> resolve(T advisorSpec, FactoryContext factoryContext);
 
 
     abstract class AbstractBase<T extends AdvisorSpec, R extends AdvisorSpec> 
@@ -72,22 +72,22 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
         }
 
         protected abstract List<? extends AdvisorRepository<R>> doResolve(
-                T apsectSpec, FactoryContext factoryContext);
+                T advisorSpec, FactoryContext factoryContext);
     }
 
 
     class ForPojoPointcut extends AbstractBase<AdvisorSpec.PojoPointcutSpec, AdvisorSpec.PojoPointcutSpec> {
 
         @Override
-        public boolean support(AdvisorSpec apsectSpec) {
-            return apsectSpec != null && apsectSpec instanceof AdvisorSpec.PojoPointcutSpec;
+        public boolean support(AdvisorSpec advisorSpec) {
+            return advisorSpec != null && advisorSpec instanceof AdvisorSpec.PojoPointcutSpec;
         }
 
         @Override
         protected List<? extends AdvisorRepository<AdvisorSpec.PojoPointcutSpec>> doResolve(
-                AdvisorSpec.PojoPointcutSpec apsectSpec, FactoryContext factoryContext) {
+                AdvisorSpec.PojoPointcutSpec advisorSpec, FactoryContext factoryContext) {
             return Collections.singletonList(
-                    new AdvisorRepository.ForPojoPointcut(apsectSpec) );
+                    new AdvisorRepository.ForPojoPointcut(advisorSpec) );
         }
     }
 
@@ -95,15 +95,15 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
     class ForExprPointcut extends AbstractBase<AdvisorSpec.ExprPointcutSpec, AdvisorSpec.ExprPointcutSpec> {
 
         @Override
-        public boolean support(AdvisorSpec apsectSpec) {
-            return apsectSpec != null && apsectSpec instanceof AdvisorSpec.ExprPointcutSpec;
+        public boolean support(AdvisorSpec advisorSpec) {
+            return advisorSpec != null && advisorSpec instanceof AdvisorSpec.ExprPointcutSpec;
         }
 
         @Override
         protected List<? extends AdvisorRepository<AdvisorSpec.ExprPointcutSpec>> doResolve(
-                AdvisorSpec.ExprPointcutSpec apsectSpec, FactoryContext factoryContext) {
+                AdvisorSpec.ExprPointcutSpec advisorSpec, FactoryContext factoryContext) {
             return Collections.singletonList(
-                    new AdvisorRepository.ForExprPointcut(apsectSpec) );
+                    new AdvisorRepository.ForExprPointcut(advisorSpec) );
         }
     }
 
@@ -111,23 +111,23 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
     class ForAspectJ extends AbstractBase<AdvisorSpec.AspectJSpec, AdvisorSpec.ExprPointcutSpec> {
 
         @Override
-        public boolean support(AdvisorSpec apsectSpec) {
-            return apsectSpec != null && apsectSpec instanceof AdvisorSpec.AspectJSpec;
+        public boolean support(AdvisorSpec advisorSpec) {
+            return advisorSpec != null && advisorSpec instanceof AdvisorSpec.AspectJSpec;
         }
 
         @Override
         protected List<? extends AdvisorRepository<AdvisorSpec.ExprPointcutSpec>> doResolve(
                 AdvisorSpec.AspectJSpec advisorSpec, FactoryContext factoryContext) {
-            TypeDescription aspectJTypeDescription = factoryContext.getTypePool().describe(advisorSpec.getAspectJClassName()).resolve();
-            if(aspectJTypeDescription == null) 
+            TypeDescription adviceTypeDescription = factoryContext.getTypePool().describe(advisorSpec.getAspectJClassName()).resolve();
+            if(adviceTypeDescription == null) 
                 return Collections.emptyList();
 
             List<AdvisorRepository<AdvisorSpec.ExprPointcutSpec>> advisorRepositories = new ArrayList<>();
             AtomicInteger adviceMethodIndex = new AtomicInteger(1);
-            for(MethodDescription.InDefinedShape methodDescription : aspectJTypeDescription.getDeclaredMethods()) {
+            for(MethodDescription.InDefinedShape methodDescription : adviceTypeDescription.getDeclaredMethods()) {
                 AnnotationList annotations = methodDescription.getDeclaredAnnotations();
 
-                for(Class<? extends Annotation> annotationType : AspectJAdvice.ADVICE_ANNOTATIONS) {
+                for(Class<? extends Annotation> annotationType : AdviceClassMaker.ADVICE_ANNOTATIONS) {
                     AnnotationDescription annotationDescription = annotations.ofType(annotationType);
                     if(annotationDescription == null)
                         continue;
@@ -157,14 +157,14 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
                         continue;
                     }
 
-                    // 2.create MethodSpec
-                    MethodSpec methodSpec;
+                    // 2.create AspectJMethodSpec
+                    AspectJMethodSpec aspectJMethodSpec;
                     try {
-                        methodSpec= new MethodSpec(advisorName,
-                                pointcutExpression, methodDescription, 
+                        aspectJMethodSpec= new AspectJMethodSpec(advisorName, 
+                                adviceTypeDescription, methodDescription, 
                                 annotationType, annotationDescription);
 
-                        if(methodSpec.isValid() == false)
+                        if(aspectJMethodSpec.isValid() == false)
                             continue;
                     } catch(Throwable t) {
                         LOGGER.warn("Failed to parse AspectJ advice method. \n  AdvisorSpec: {} \n  AdviceMethod: {} \n", 
@@ -182,11 +182,9 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
                             pointcutExpression, 
                             advisorSpec.getOrder());
 
-                    AspectJAdvice.ClassMaker classMaker = new AspectJAdvice.ClassMaker(adviceClassName, aspectJTypeDescription, methodSpec);
-
                     // 3.create AdvisorRepository
                     advisorRepositories.add( 
-                            new AdvisorRepository.ForAspectJAdvice(exprAdvisorSpec, classMaker) 
+                            new AdvisorRepository.ForAspectJAdvice(exprAdvisorSpec, aspectJMethodSpec) 
                     );
                 }
             }

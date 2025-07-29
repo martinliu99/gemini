@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aop;
+package io.gemini.aop.factory.support;
 
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.ExprPointcut.AspectJExprPointcut;
-import io.gemini.aspectj.weaver.world.TypeWorld;
+import io.gemini.aop.factory.support.ExprPointcut.AspectJExprPointcut;
+import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import net.bytebuddy.agent.builder.AgentBuilder.PoolStrategy;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -43,15 +43,16 @@ public class AspectJExprPointcutTests {
             AspectJExprPointcut pointcut = new AspectJExprPointcut();
 
             TypePool typePool = doCreateTypePools();
-            pointcut.setTypeWorld(new TypeWorld(typePool, null));
+            BytebuddyWorld typeWorld = new BytebuddyWorld(typePool, null);
+            pointcut.setTypeWorld(typeWorld);
 
             // 
             //"execution(java.util.List<java.lang.String> io.gemini..*.PointcutParserTests.replace(..))";
-            String expression = "execution(* io.gemini.aop.aspectj.AspectJExprPointcutTests.replace(..)) || exists(io.gemini.aop.aspectj.AspectJExprPointcutTests.replace(..))";
+            String expression = "execution(* io.gemini.aop.AspectJExprPointcutTests.replace(..))";
             pointcut.setPointcutExpr(expression);
 
             TypeDescription type = TypeDescription.ForLoadedType.of(AspectJExprPointcutTests.class);
-            boolean result = pointcut.getTypeMatcher().matches(type);
+            boolean result = pointcut.matches(type);
             LOGGER.info("Matched '{}' for type {}", result, type);
             
             for(MethodDescription.InDefinedShape method : type.getDeclaredMethods()) {

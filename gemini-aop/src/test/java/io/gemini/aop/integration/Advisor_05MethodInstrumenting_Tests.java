@@ -194,7 +194,9 @@ public class Advisor_05MethodInstrumenting_Tests extends AbstractIntegrationTest
             expected.interfaceMethod();
 
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InterfaceImplementor_Aspect.INTERFACE_METHOD_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InterfaceImplementor_Object.IMPLEMENTOR_INTERFACE_METHOD);
 
             AdviceMethod afterAdviceMethodInvoker2 = ExecutionMemento.getAdviceMethodInvoker(InterfaceImplementor_Aspect.IMPLEMENTOR_INTERFACE_METHOD_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker2).isNotNull();
@@ -243,7 +245,7 @@ public class Advisor_05MethodInstrumenting_Tests extends AbstractIntegrationTest
             try {
                 implementorInterfaceMethod = InterfaceImplementor_Object.class.getDeclaredMethod(IMPLEMENTOR_INTERFACE_METHOD_NAME);
 
-                defaultMethod = Interface_Object.class.getDeclaredMethod(DEFAULT_METHOD_NAME);
+                defaultMethod = InterfaceImplementor_Object.class.getDeclaredMethod(DEFAULT_METHOD_NAME);
                 implementorDefaultMethod = InterfaceImplementor_Object.class.getDeclaredMethod(IMPLEMENTOR_DEFAULT_METHOD_NAME);
             } catch (Exception e) {
                 e.printStackTrace();

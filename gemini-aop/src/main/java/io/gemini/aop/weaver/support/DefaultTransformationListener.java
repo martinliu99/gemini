@@ -18,10 +18,6 @@ package io.gemini.aop.weaver.support;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopContext;
-import io.gemini.core.pool.ExplicitTypePool;
-import io.gemini.core.pool.TypePoolFactory;
-import io.gemini.core.util.Assert;
 import net.bytebuddy.agent.builder.AgentBuilder.Listener;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
@@ -31,14 +27,8 @@ public class DefaultTransformationListener implements Listener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultTransformationListener.class);
 
-    private final AopContext aopContext;
-    private final TypePoolFactory typePoolFactory;
 
-    public DefaultTransformationListener(AopContext aopContext) {
-        Assert.notNull(aopContext, "'aopContext' must not be null.");
-        this.aopContext = aopContext;
-
-        this.typePoolFactory = this.aopContext.getTypePoolFactory();
+    public DefaultTransformationListener() {
     }
 
     @Override
@@ -67,10 +57,6 @@ public class DefaultTransformationListener implements Listener {
 
     @Override
     public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        ExplicitTypePool explicitTypePool = typePoolFactory.createExplicitTypePool(classLoader, javaModule);
-        if(explicitTypePool != null)
-            explicitTypePool.removeTypeDescription(typeName);
-
         if(LOGGER.isTraceEnabled())
             LOGGER.trace("Type '{}' is on complete and loaded '{}' by ClassLoader '{}'.", typeName, loaded, classLoader);
     }

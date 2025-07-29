@@ -21,10 +21,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.AopMetrics.BootstraperMetrics;
-import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
@@ -35,6 +35,7 @@ import io.gemini.aop.weaver.support.DiscoveryStrategyAdapter;
 import io.gemini.core.util.Assert;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.builder.AgentBuilder;
+import net.bytebuddy.agent.builder.AgentBuilder.ClassFileBufferStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.DescriptionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.FallbackStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.InitializationStrategy;
@@ -128,7 +129,7 @@ public class AopWeavers {
         };
 
         //        ResettableClassFileTransformer resettableClassFileTransformer = 
-        aopContext.getTypePoolFactory().customizeAgentBuilder( new AgentBuilder.Default() )
+        new AgentBuilder.Default()
             .with( new ByteBuddy()
                     .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )
             )
@@ -139,13 +140,16 @@ public class AopWeavers {
             // support lambda, for debug only
 //              .with( AgentBuilder.LambdaInstrumentationStrategy.ENABLED )
             .with( DescriptionStrategy.Default.HYBRID )
+            .with( ClassFileBufferStrategy.Default.RETAINING )
+            .with( aopContext.getTypePoolFactory().getPoolStrategy() )
+            .with( aopContext.getTypePoolFactory().getLocationStrategy() )
             .with( InitializationStrategy.NoOp.INSTANCE )
             // re-transform loaded classes, and only work with Advice and disableClassFormatChanges
             .with( RedefinitionStrategy.DISABLED != weaverContext.getRedefinitionStrategy()
                     ? weaverContext.getRedefinitionStrategy() 
                     : RedefinitionStrategy.RETRANSFORMATION )
             .with( new DiscoveryStrategyAdapter(
-                    RedefinitionStrategy.DiscoveryStrategy.SinglePass.INSTANCE, 
+                    RedefinitionStrategy.DiscoveryStrategy.Reiterating.INSTANCE, 
                     discoveryStrategyListern,
                     RedefinitionStrategy.DISABLED == weaverContext.getRedefinitionStrategy() ) ) 
             .with( new DefaultRedefinitionListener(aopContext.getAopMetrics()) )
@@ -153,7 +157,7 @@ public class AopWeavers {
             // warn up bootstrap ClassLoader
             .warmUp( System.class )
             .with( new DefaultTransformerInstallationListener() )
-            .with( new DefaultTransformationListener(aopContext) )
+            .with( new DefaultTransformationListener() )
             .disableClassFormatChanges()
             .type( aopWeaver )
             .transform( aopWeaver )

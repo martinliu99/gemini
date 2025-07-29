@@ -13,58 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * 
+ */
 package io.gemini.aop.factory.classloader;
 
-import io.gemini.core.util.Assert;
+import io.gemini.core.pool.TypePoolFactory;
+import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
 import net.bytebuddy.matcher.ElementMatcher;
-import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.pool.TypePool;
 
-public class AspectTypePool extends TypePool.AbstractBase {
+/**
+ * 
+ */
+public class AspectTypePool extends TypePool.Default.WithLazyResolution {
 
-    private final TypePool aspectTypePool;
-    private final TypePool joinpointTypePool;
+    private final AspectClassLoader aspectClassLoader;
+    private final TypePoolFactory typePoolFactory;
+    private final ElementMatcher<String> joinpointTypeMatcher;
 
-    private ElementMatcher<String> joinpointTypeMatcher = ElementMatchers.none();
 
+    /**
+     * @param cacheProvider
+     * @param classFileLocator
+     * @param readerMode
+     * @param parentPool
+     */
+    public AspectTypePool(AspectClassLoader aspectClassLoader, TypePoolFactory typePoolFactory, ElementMatcher<String> joinpointTypeMatcher) {
+        super(CacheProvider.Simple.withObjectType(), 
+                LocationStrategy.ForClassLoader.WEAK.classFileLocator(aspectClassLoader, null), 
+                ReaderMode.FAST, 
+                typePoolFactory.createTypePool(aspectClassLoader.getParent(), null));
 
-    public AspectTypePool(CacheProvider cacheProvider, TypePool aspectTypePool, TypePool joinpointTypePool) {
-        super(cacheProvider);
-
-        Assert.notNull(aspectTypePool, "'aspectTypePool' must not be null.");
-        this.aspectTypePool = aspectTypePool;
-
-        Assert.notNull(joinpointTypePool, "'joinpointTypePool' must not be null.");
-        this.joinpointTypePool = joinpointTypePool;
-    }
-
-    public void setJoinpointTypeMatcher(ElementMatcher<String> joinpointTypeMatcher) {
+        this.aspectClassLoader = aspectClassLoader;
+        this.typePoolFactory = typePoolFactory;
         this.joinpointTypeMatcher = joinpointTypeMatcher;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+//    public Resolution doDescribe(String name) {
+//        if(this.joinpointTypeMatcher.matches(name) == true) {
+//            return describeViaJoinpointTypePool(name);
+//        }
+//
+//        Resolution resolution = super.doDescribe(name);
+//        return resolution.isResolved() ? resolution : describeViaJoinpointTypePool(name);
+//    }
+//
+//    /**
+//     * @param name
+//     */
+//    private Resolution describeViaJoinpointTypePool(String name) {
+//        ClassLoader joinpointCL = aspectClassLoader.doFindJoinpointCL();
+//        if(joinpointCL == null)
+//            return new Resolution.Illegal(name);
+//
+//        TypePool typePool = this.typePoolFactory.createTypePool(joinpointCL, null);
+//        return typePool.describe(name);
+//    }
 
-    @Override
-    protected Resolution doDescribe(String name) {
-        if(joinpointTypeMatcher.matches(name) == false) {
-            Resolution resolution = aspectTypePool.describe(name);
-            if(resolution.isResolved()) {
-                return resolution;
-            }
-
-            return joinpointTypePool.describe(name);
-        } else {
-            Resolution resolution = joinpointTypePool.describe(name);
-            if(resolution.isResolved()) {
-                return resolution;
-            }
-
-            return aspectTypePool.describe(name);
+    protected Resolution doResolve(String name) {
+        if(this.joinpointTypeMatcher.matches(name) == true) {
+            return doResolveViaJoinpointTypePool(name);
         }
+
+        return super.doResolve(name);
     }
 
+    private Resolution doResolveViaJoinpointTypePool(String name) {
+        ClassLoader joinpointCL = aspectClassLoader.doFindJoinpointCL();
+        if(joinpointCL == null)
+            return new Resolution.Illegal(name);
 
-    public void clear() {
-        aspectTypePool.clear();
-        joinpointTypePool.clear();
+        TypePool typePool = this.typePoolFactory.createTypePool(joinpointCL, null);
+        return typePool.describe(name);
     }
+
 }

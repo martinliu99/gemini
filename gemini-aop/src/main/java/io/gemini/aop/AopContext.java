@@ -37,14 +37,10 @@ import io.gemini.core.config.ConfigView;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.pool.TypePoolFactory;
-import io.gemini.core.pool.TypePoolFactory.Default;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.PlaceholderHelper;
-import net.bytebuddy.agent.builder.AgentBuilder.ClassFileBufferStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
-import net.bytebuddy.agent.builder.AgentBuilder.PoolStrategy;
-import net.bytebuddy.dynamic.ClassFileLocator;
 
 
 /**
@@ -222,12 +218,8 @@ public class AopContext implements Closeable {
                 .build(true);
     }
 
-    private Default createTypePoolFactory() {
-        return new TypePoolFactory.Default(
-                ClassFileLocator.NoOp.INSTANCE, 
-                LocationStrategy.ForClassLoader.WEAK, 
-                PoolStrategy.Default.FAST, 
-                ClassFileBufferStrategy.Default.RETAINING);
+    private TypePoolFactory createTypePoolFactory() {
+        return new TypePoolFactory.Default(LocationStrategy.ForClassLoader.WEAK);
     }
 
     private TypeWorldFactory createTypeWorldFactory(TypePoolFactory typePoolFactory, ConfigView configView) {
@@ -236,7 +228,7 @@ public class AopContext implements Closeable {
         try {
             workMode = TypeWorldFactory.WorkMode.valueOf(mode);
         } catch(Exception e) {
-            LOGGER.warn("Ignored illegal setting '{}', and useTypeWorldFactory.WorkMode.PROTOTYPE. \n", mode);
+            LOGGER.warn("Ignored illegal setting '{}', and use TypeWorldFactory.WorkMode. \n", mode);
         }
 
         if(workMode == TypeWorldFactory.WorkMode.PROTOTYPE)

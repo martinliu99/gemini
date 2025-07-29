@@ -118,7 +118,7 @@ public interface AdvisorRepositoryResolver<T extends AdvisorSpec, R extends Advi
         @Override
         protected List<? extends AdvisorRepository<AdvisorSpec.ExprPointcutSpec>> doResolve(
                 AdvisorSpec.AspectJSpec advisorSpec, FactoryContext factoryContext) {
-            TypeDescription adviceTypeDescription = factoryContext.getTypePool().describe(advisorSpec.getAspectJClassName()).resolve();
+            TypeDescription adviceTypeDescription = factoryContext.getAspectTypePool().describe(advisorSpec.getAspectJClassName()).resolve();
             if(adviceTypeDescription == null) 
                 return Collections.emptyList();
 

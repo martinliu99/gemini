@@ -31,10 +31,10 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopContext;
-import io.gemini.aop.AopMetrics.WeaverMetrics;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AdvisorFactory;
+import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics.WeaverMetrics;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapAdvice.Dispatcher;
@@ -43,7 +43,6 @@ import io.gemini.aop.weaver.Joinpoints.Descriptor;
 import io.gemini.aop.weaver.WeaverCache.TypeCache;
 import io.gemini.aop.weaver.advice.DescriptorOffset;
 import io.gemini.api.classloader.ThreadContext;
-import io.gemini.core.pool.ExplicitTypePool;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CollectionUtils;
 import net.bytebuddy.ClassFileVersion;
@@ -205,25 +204,22 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain, WeaverMetrics weaverMetrics) {
         String joinpointClassLoaderName = ClassLoaderUtils.getClassLoaderName(joinpointClassLoader);
 
-        // 1.check included joinpointClassLoader
+        // 1.check included joinpointClassLoaders
         if(weaverContext.getIncludedClassLoadersMatcher().matches(joinpointClassLoaderName) == true) {
             return true;
         }
 
-        // 2.check excluded joinpointClassLoader
+        // 2.check excluded joinpointClassLoaders
         if(weaverContext.getExcludedClassLoadersMatcher().matches(joinpointClassLoaderName) == true) {
             return false;
         }
 
-        ExplicitTypePool explicitTypePool = aopContext.getTypePoolFactory().createExplicitTypePool(joinpointClassLoader, javaModule);
-        explicitTypePool.addTypeDescription(typeDescription);
-
-        // 3.check included type
+        // 3.check included types
         if(weaverContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
             return true;
         }
 
-        // 4.check excluded type
+        // 4.check excluded types
         if(weaverContext.createExcludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
             return false;
         }

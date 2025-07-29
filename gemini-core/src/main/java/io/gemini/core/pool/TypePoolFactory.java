@@ -17,85 +17,146 @@ package io.gemini.core.pool;
 
 import java.util.concurrent.ConcurrentMap;
 
+import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
-import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
-import net.bytebuddy.agent.builder.AgentBuilder;
-import net.bytebuddy.agent.builder.AgentBuilder.ClassFileBufferStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.PoolStrategy;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
+import net.bytebuddy.pool.TypePool.CacheProvider;
+import net.bytebuddy.pool.TypePool.Default.ReaderMode;
 import net.bytebuddy.utility.JavaModule;
 
 public interface TypePoolFactory {
 
-    AgentBuilder customizeAgentBuilder(AgentBuilder agentBuilder);
+    PoolStrategy getPoolStrategy();
 
-    ExplicitTypePool createExplicitTypePool(ClassLoader classLoader, JavaModule javaModule);
+    LocationStrategy getLocationStrategy();
+
+    TypePool createTypePool(ClassLoader classLoader, JavaModule javaModule);
 
 
-    class Default implements TypePoolFactory {
+    class Default implements TypePoolFactory, PoolStrategy {
 
-        private ClassFileLocator classFileLocator;
         private LocationStrategy locationStrategy;
-        private PoolStrategy poolStrategy;
-        private ClassFileBufferStrategy classFileBufferStrategy;
 
-        private final ConcurrentMap<ClassLoader, ExplicitTypePool> explicitTypePoolCache = new ConcurrentReferenceHashMap<>();
+        private final ConcurrentMap<ClassLoader, TypePool> typePoolCache = new ConcurrentReferenceHashMap<>();
 
 
         public Default() {
-            this(null, null, null, null);
+            this(null);
         }
 
-        public Default(ClassFileLocator classFileLocator, LocationStrategy locationStrategy, 
-                PoolStrategy poolStrategy, ClassFileBufferStrategy classFileBufferStrategy) {
-            this.classFileLocator = classFileLocator == null ? ClassFileLocator.NoOp.INSTANCE : classFileLocator;
+        public Default(LocationStrategy locationStrategy) {
             this.locationStrategy = locationStrategy == null ? LocationStrategy.ForClassLoader.WEAK : locationStrategy;
-            this.poolStrategy = poolStrategy == null ? PoolStrategy.Default.FAST : poolStrategy;
-            this.classFileBufferStrategy = classFileBufferStrategy == null ? ClassFileBufferStrategy.Default.RETAINING : classFileBufferStrategy;
+        }
+
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public PoolStrategy getPoolStrategy() {
+            return this;
+        }
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public LocationStrategy getLocationStrategy() {
+            return this.locationStrategy;
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public AgentBuilder customizeAgentBuilder(AgentBuilder agentBuilder) {
-            Assert.notNull(agentBuilder, "'agentBuilder' must not be null.");
-
-            return agentBuilder
-                    .with(poolStrategy)
-                    .with(locationStrategy)
-                    .with(classFileLocator)
-                    .with(classFileBufferStrategy)
-                    ;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ExplicitTypePool createExplicitTypePool(ClassLoader classLoader, JavaModule javaModule) {
+        public TypePool createTypePool(ClassLoader classLoader, JavaModule javaModule) {
             ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
-            if(this.explicitTypePoolCache.containsKey(cacheKey) == false) {
-                this.explicitTypePoolCache.computeIfAbsent(
+            if(this.typePoolCache.containsKey(cacheKey) == false) {
+                this.typePoolCache.computeIfAbsent(
                         cacheKey, 
-                        key -> new ExplicitTypePool(this.doCreateTypePool(classLoader, javaModule))
+                        key -> doCreateTypePool(classLoader, javaModule)
                 );
             }
 
-            return this.explicitTypePoolCache.get(cacheKey);
+            return this.typePoolCache.get(cacheKey);
         }
 
         protected TypePool doCreateTypePool(ClassLoader classLoader, JavaModule javaModule) {
-            ClassFileLocator[] classFileLocators = new ClassFileLocator[2];
-            classFileLocators[0] = this.classFileLocator;
-            classFileLocators[1] = this.locationStrategy.classFileLocator(classLoader, javaModule);
-            ClassFileLocator classFileLocator = new ClassFileLocator.Compound(classFileLocators);
+            TypePool parentTypePool = null;
+            if(classLoader != null)
+                parentTypePool = createTypePool(classLoader.getParent(), null);
 
-            return classFileBufferStrategy.typePool(poolStrategy, classFileLocator, null, ClassLoaderUtils.getClassLoaderId(classLoader));
+            if(classLoader instanceof AopClassLoader)
+                // reuse loaded Aop framework classes for better performance
+                return parentTypePool != null 
+                        ? TypePool.ClassLoading.of(classLoader, parentTypePool)
+                        : TypePool.ClassLoading.of(classLoader);
+            else {
+                // load cached type from parent type pool if existing
+                return parentTypePool != null
+                        ? new TypePool.Default(
+                            CacheProvider.Simple.withObjectType(), 
+                            this.locationStrategy.classFileLocator(classLoader, javaModule), 
+                            ReaderMode.FAST,
+                            parentTypePool)
+                        : new TypePool.Default(
+                            CacheProvider.Simple.withObjectType(), 
+                            this.locationStrategy.classFileLocator(classLoader, javaModule), 
+                            ReaderMode.FAST);
+            }
+        }
+
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public TypePool typePool(ClassFileLocator classFileLocator, ClassLoader classLoader) {
+            return this.typePool(classFileLocator, classLoader, null);
+        }
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public TypePool typePool(ClassFileLocator classFileLocator, ClassLoader classLoader, String name) {
+            TypePool typePool = this.createTypePool(classLoader, null);
+
+            // share cached type between AgentBuilder transformer and Pointcut matcher if possible
+            CacheProvider cacheProvider = typePool instanceof LazyTypePool 
+                    ? ((LazyTypePool) typePool).getCacheProvider() : CacheProvider.Simple.withObjectType();
+
+            return new TypePool.LazyFacade(
+                    new TypePool.Default.WithLazyResolution(
+                            cacheProvider,
+                            classFileLocator,
+                            ReaderMode.FAST) );
+        }
+
+
+        static class LazyTypePool extends TypePool.Default.WithLazyResolution {
+
+            /**
+             * @param cacheProvider
+             * @param classFileLocator
+             * @param readerMode
+             */
+            public LazyTypePool(CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
+                super(cacheProvider, classFileLocator, readerMode);
+            }
+
+            public LazyTypePool(CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
+                super(cacheProvider, classFileLocator, readerMode, parentPool);
+            }
+
+            public CacheProvider getCacheProvider() {
+                return this.cacheProvider;
+            }
         }
     }
 }

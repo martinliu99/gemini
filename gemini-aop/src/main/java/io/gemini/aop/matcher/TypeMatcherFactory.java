@@ -71,7 +71,7 @@ public class TypeMatcherFactory {
     public Collection<Pattern> validateTypePatterns(
             String ruleName, Collection<Pattern> typePatterns, boolean acceptMatchAllPattern, 
             ClassLoader classLoader, JavaModule javaModule, PlaceholderHelper placeholderHelper) {
-        TypePool typePool = this.typePoolFactory.createExplicitTypePool(classLoader, javaModule);
+        TypePool typePool = this.typePoolFactory.createTypePool(classLoader, javaModule);
         TypeWorld typeWorld = this.typeWorldFactory.createTypeWorld(classLoader, javaModule, typePool, placeholderHelper);
 
         List<Pattern> patterns = new ArrayList<>(typePatterns.size());
@@ -140,7 +140,7 @@ public class TypeMatcherFactory {
             return ElementMatchers.none();
         }
 
-        TypePool typePool = this.typePoolFactory.createExplicitTypePool(classLoader, javaModule);
+        TypePool typePool = this.typePoolFactory.createTypePool(classLoader, javaModule);
         TypeWorld typeWorld = this.typeWorldFactory.createTypeWorld(classLoader, javaModule, typePool, placeholderHelper);
 
         List<ElementMatcher<? super TypeDescription>> typeMatchers = new ArrayList<>();

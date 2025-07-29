@@ -58,8 +58,6 @@ import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.BooleanMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
-import net.bytebuddy.pool.TypePool;
-import net.bytebuddy.pool.TypePool.CacheProvider;
 import net.bytebuddy.utility.JavaModule;
 
 public class FactoryContext implements Closeable {
@@ -131,7 +129,7 @@ public class FactoryContext implements Closeable {
     private final ClassScanner classScanner;
 
     private final ObjectFactory objectFactory;
-    private final TypePool typePool;
+    private final AspectTypePool aspectTypePool;
 
 
     private final TypeWorldFactory typeWorldFactory;
@@ -188,7 +186,8 @@ public class FactoryContext implements Closeable {
         // create classScanner and objectFactory
         this.classScanner = this.createClassScanner(this.aopContext);
         this.objectFactory = this.createObjectFactory(classLoader, this.classScanner);
-        this.typePool = this.aopContext.getTypePoolFactory().createExplicitTypePool(this.classLoader, null);
+        this.aspectTypePool = new AspectTypePool(classLoader, aopContext.getTypePoolFactory(), joinpointTypesMatcher);
+                //this.aopContext.getTypePoolFactory().createTypePool(this.classLoader, null);
 
         this.typeWorldFactory = new TypeWorldFactory.Prototype();
         this.advisorContextMap = new ConcurrentReferenceHashMap<>();
@@ -491,8 +490,8 @@ public class FactoryContext implements Closeable {
         return objectFactory;
     }
 
-    public TypePool getTypePool() {
-        return typePool;
+    public AspectTypePool getAspectTypePool() {
+        return aspectTypePool;
     }
 
 
@@ -560,7 +559,6 @@ public class FactoryContext implements Closeable {
             }
         }
 
-
         // 5.no conflict, used shared AspectClassLoader
         return true;
     }
@@ -582,14 +580,6 @@ public class FactoryContext implements Closeable {
 
             objectFactory = createObjectFactory(aspectClassLoader, classScanner);
         }
-
-        // create typePool per ClassLoader
-        AspectTypePool aspectTypePool = new AspectTypePool(
-                new CacheProvider.Simple(),
-                typePool,
-                this.aopContext.getTypePoolFactory().createExplicitTypePool(joinpointClassLoader, javaModule)
-        );
-        aspectTypePool.setJoinpointTypeMatcher(joinpointTypesMatcher);
 
         TypeWorld aspectTypeWorld = typeWorldFactory.createTypeWorld(
                 joinpointClassLoader, javaModule,
@@ -615,6 +605,6 @@ public class FactoryContext implements Closeable {
        };
 
         this.objectFactory.close();
-        this.typePool.clear();
+        this.aspectTypePool.clear();
     }
 }

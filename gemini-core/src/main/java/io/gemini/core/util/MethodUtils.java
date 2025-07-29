@@ -20,7 +20,6 @@ import java.util.List;
 
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.pool.TypePool.Resolution.NoSuchTypeException;
 import net.bytebuddy.utility.CompoundList;
 
 public class MethodUtils {
@@ -63,8 +62,13 @@ public class MethodUtils {
 
         try {
             return methodDescription.toGenericString();
-        } catch(NoSuchTypeException e) {
-            return methodDescription.getGenericSignature();
+        } catch(Exception e) {
+            // get generic signature from LazyMethodDescription
+            try {
+                return methodDescription.getGenericSignature();
+            } catch(Exception e2) {
+                return methodDescription.getDeclaringType().getTypeName() + "." + methodDescription.getName() + "(...)";
+            }
         }
     }
 }

@@ -62,8 +62,10 @@ public class BytebuddyWorld extends World implements TypeWorld {
     // Used to prevent recursion - we record what we are working on and return it if asked again *whilst* working on it
     private Map<TypeDefinition, TypeVariableReferenceType> typeVariablesInProgress = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<TypeDescription, Supplier<ResolvedType>> typeCache = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Member, Supplier<ResolvedMember>> memberCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, TypeDescription> typeDescriptionCache = new ConcurrentHashMap<>();
+
+    private final ConcurrentMap<TypeDescription, Supplier<ResolvedType>> resolvedTypeCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Member, Supplier<ResolvedMember>> resolvedMemberCache = new ConcurrentHashMap<>();
 
 
     public BytebuddyWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
@@ -111,7 +113,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
         if(cache == false)
             return doResolve(typeDescription);
 
-        return typeCache.computeIfAbsent(
+        return resolvedTypeCache.computeIfAbsent(
                 typeDescription, 
                 key -> new Supplier<ResolvedType>() {
 
@@ -132,11 +134,17 @@ public class BytebuddyWorld extends World implements TypeWorld {
 
     protected ResolvedType doResolve(TypeDescription typeDescription) {
         String name = typeDescription.getName();
-        if (typeDescription.isArray()) {
-            UnresolvedType ut = UnresolvedType.forSignature(name.replace('.', '/'));
-            return this.resolve(ut);
-        } else {
-            return this.resolve(name);
+        try {
+            typeDescriptionCache.put(name, typeDescription);
+
+            if (typeDescription.isArray()) {
+                UnresolvedType ut = UnresolvedType.forSignature(name.replace('.', '/'));
+                return this.resolve(ut);
+            } else {
+                return this.resolve(name);
+            }
+        } finally {
+            typeDescriptionCache.remove(name);
         }
     }
 
@@ -149,7 +157,10 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
     public TypeDescription describeType(String typeName) {
-        return this.typePool.describe(typeName).resolve();
+        // reuse existing input typeDescription to avoid possible expensive class file reloading.
+        TypeDescription typeDescription = typeDescriptionCache.get(typeName);
+
+        return typeDescription != null ? typeDescription : this.typePool.describe(typeName).resolve();
     }
 
     /** 
@@ -163,7 +174,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
         if(cache == false)
             return this.doResolve(member);
 
-        return memberCache.computeIfAbsent(
+        return resolvedMemberCache.computeIfAbsent(
                 member, 
                 key -> new Supplier<ResolvedMember>() {
 
@@ -198,7 +209,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
     @Override
     public void releaseCache(TypeDescription typeDescription) {
         if(typeDescription != null)
-            typeCache.remove(typeDescription);
+            resolvedTypeCache.remove(typeDescription);
     }
 
     /** 
@@ -207,7 +218,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
     @Override
     public void releaseCache(Member member) {
         if(member != null)
-            memberCache.remove(member);
+            resolvedMemberCache.remove(member);
     }
 
     protected ResolvedType[] convertType(TypeDefinition... typeDefinitions) {

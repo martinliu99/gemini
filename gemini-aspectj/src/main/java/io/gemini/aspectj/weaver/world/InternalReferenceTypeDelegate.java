@@ -201,7 +201,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     @Override
     public boolean isGeneric() {
-        return this.typeDescription.getTypeVariables().size() > 0;
+        return this.getDeclaredGenericSignature() != null;
     }
 
     @Override
@@ -247,9 +247,8 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     @Override
     public String getDeclaredGenericSignature() {
-        if (this.genericSignature == null && isGeneric()) {
-            // BUG? what the hell is this doing - see testcode in MemberTestCase15.testMemberSignatureCreation() and run it
-            // off a Reflection World
+        if (this.genericSignature == null) {
+            this.genericSignature = this.typeDescription.getGenericSignature();
         }
         return genericSignature;
     }

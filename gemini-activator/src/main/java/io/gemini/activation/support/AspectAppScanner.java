@@ -52,14 +52,18 @@ public interface AspectAppScanner {
 
 
         public Default(Path aspectAppsPath) {
-            if(Files.exists(aspectAppsPath) == false || Files.isDirectory(aspectAppsPath) == false)
-                throw new IllegalArgumentException("Illegal aspectAppsPath:" + aspectAppsPath);
-
-            this.aspectAppsPath = aspectAppsPath;
+            if(Files.exists(aspectAppsPath) == false || Files.isDirectory(aspectAppsPath) == false) {
+                System.err.println("Illegal aspectAppsPath: " + aspectAppsPath);
+                this.aspectAppsPath = null;
+            } else
+                this.aspectAppsPath = aspectAppsPath;
         }
 
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
+            if(aspectAppsPath == null)
+                return Collections.emptyMap();
+
             Map<Path, List<Path>> aspectClassPaths = new LinkedHashMap<>();
             for(Iterator<Path> iterator = Files.list(aspectAppsPath).filter( Files::isDirectory ).iterator(); iterator.hasNext(); ) {
                 Path aspectAppPath = iterator.next();

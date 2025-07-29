@@ -273,8 +273,8 @@ public abstract class AspectClassLoader extends URLClassLoader {
 
     private String getLoaderName() {
         return super.toString()
-                + "-" + ClassLoaderUtils.getClassLoaderName(this.doFindJoinpointCL())
-                + "-" + loaderName ;
+                + "-" + loaderName
+                + "-" + ClassLoaderUtils.getClassLoaderName(this.doFindJoinpointCL());
     }
 
     

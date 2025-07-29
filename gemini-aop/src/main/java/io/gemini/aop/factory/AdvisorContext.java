@@ -147,7 +147,7 @@ public class AdvisorContext implements Closeable {
 
         @Override
         public boolean isBootstrapClassLoader() {
-            return ClassLoaderUtils.isBootstrapClassLoader(classLoader);
+            return ClassLoaderUtils.BOOTSTRAP_CLASSLOADER_NAME.equals(joinpointClassLoaderName);
         }
     }
 }

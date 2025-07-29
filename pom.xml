@@ -160,11 +160,6 @@
                 <artifactId>gemini-toolkit</artifactId>
                 <version>${revision}</version>
             </dependency>
-            <dependency>
-                <groupId>io.gemini</groupId>
-                <artifactId>gemini-agent</artifactId>
-                <version>${revision}</version>
-            </dependency>
 
 
             <dependency>

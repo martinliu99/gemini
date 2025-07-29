@@ -26,7 +26,7 @@ public class TestAspectDefinition2 extends AdvisorSpec.PojoPointcutSpec.Default 
     /**
      */
     public TestAspectDefinition2() {
-        super(false, "org.framework.aspects.TestAdvice2", 
+        super(false, "org.framework.aspect.TestAdvice2", 
                 new Pointcut.Default(
                         named("org.framework.test.Test"),
                         named("doTest") ),

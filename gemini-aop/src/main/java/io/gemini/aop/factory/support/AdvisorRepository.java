@@ -24,11 +24,11 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.Advisor;
 import io.gemini.aop.factory.AdvisorContext;
+import io.gemini.aop.factory.support.AdviceClassMaker.ByteBuddyMaker;
 import io.gemini.aop.factory.support.AdviceMethodMatcher.AspectJMethodMatcher;
 import io.gemini.aop.factory.support.AdviceMethodMatcher.PojoMethodMatcher;
 import io.gemini.aop.factory.support.AdviceMethodSpec.AspectJMethodSpec;
 import io.gemini.aop.factory.support.AdviceMethodSpec.PojoMethodSpec;
-import io.gemini.aop.factory.support.AdviceClassMaker.ByteBuddyMaker;
 import io.gemini.aop.factory.support.ExprPointcut.AspectJExprPointcut;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
@@ -51,7 +51,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
     Advisor create(AdvisorContext advisorContext);
 
 
-    abstract class AbstractBase<T extends AdvisorSpec> implements AdvisorRepository<T> {
+    abstract class AbstractBase<T extends AdvisorSpec, P extends Pointcut> implements AdvisorRepository<T> {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(AdvisorRepository.class);
 
@@ -74,16 +74,27 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                 return null;
 
             try {
-                // try to create Pointcut
-                Pointcut pointcut = doCreatePointcut(advisorContext);
-                if(pointcut == null) {
+                // 1.validate advisor condition
+                if(this.advisorSpec.getCondition().match(advisorContext.getConditionContext()) == false) {
                     return null;
                 }
 
-                // create advice class supplier
+                // 2.try to create Pointcut
+                P originPointcut = doCreatePointcut(advisorContext);
+                if(originPointcut == null) 
+                    return null;
+
+                if(doValidatePointcut(advisorContext, originPointcut) == false) {
+                    return null;
+                }
+
+                Pointcut pointcut = doDecoratePointcut(advisorContext, originPointcut);
+
+
+                // 3.create advice class supplier
                 Supplier<Class<? extends Advice>> adviceClassSupplier = this.doCreateAdviceClassSupplier(advisorContext);
 
-                // create advice class supplier
+                // 4.create advice class supplier
                 Supplier<? extends Advice> adviceSupplier = this.doCreateAdviceSupplier(advisorContext, adviceClassSupplier);
 
                 return new Advisor.PointcutAdvisor.Default(
@@ -94,9 +105,10 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                         advisorSpec.getOrder()
                 );
             } catch(Throwable t) {
-                LOGGER.warn("Failed to create advisor with AdvisorSpec '{}'.", advisorSpec.getAdvisorName(), t);
+                LOGGER.warn("Failed to create advisor. \n  AdvisorSpec: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                        advisorSpec.getAdvisorName(), advisorContext.getJoinpointClassLoaderName(), t.getMessage(), t);
 
-                this.isValid = false;
+//                this.isValid = false;
                 return null;
             }
         }
@@ -104,7 +116,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
         /**
          * @param advisorContext
          */
-        protected abstract Pointcut doCreatePointcut(AdvisorContext advisorContext);
+        protected abstract P doCreatePointcut(AdvisorContext advisorContext);
 
 
         protected AspectJExprPointcut doCreateExprPointcut(AdvisorContext advisorContext, String pointcutExpression, 
@@ -126,13 +138,9 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             return expressionPointcut;
         }
 
-        protected boolean doValidatePointcut(AdvisorContext advisorContext, Pointcut pointcut) {
+        protected boolean doValidatePointcut(AdvisorContext advisorContext, P pointcut) {
             if(pointcut == null) {
                 this.isValid = false;
-                return false;
-            }
-
-            if(this.advisorSpec.getCondition().match(advisorContext.getConditionContext()) == false) {
                 return false;
             }
 
@@ -145,14 +153,14 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                     String advisorName = advisorSpec.getAdvisorName();
                     if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
                         LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n    ClassLoader: '{}' \n", 
-                                advisorName, aspectJExpressionPointcut.getPointcutExpr(), advisorContext.getClassLoader(), t);
+                                advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getClassLoader(), t);
 
                         this.isValid = false;
                         return false;
                     } else {
                         if(advisorContext.isValidateContext() == false) {
-                            LOGGER.warn("Ignored AdvisorSpec with invalid AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: '{}' \n", 
-                                    advisorName, aspectJExpressionPointcut.getPointcutExpr(), advisorContext.getClassLoader(), t);
+                            LOGGER.warn("Ignored AdvisorSpec with invalid AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                                    advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), t.getMessage(), t);
                         }
 
                         return false;
@@ -162,6 +170,8 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
             return true;
         }
+
+        protected abstract Pointcut doDecoratePointcut(AdvisorContext advisorContext, P pointcut);
 
 
         /**
@@ -250,7 +260,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
     }
 
 
-    class ForPojoPointcut extends AbstractBase<AdvisorSpec.PojoPointcutSpec> {
+    class ForPojoPointcut extends AbstractBase<AdvisorSpec.PojoPointcutSpec, Pointcut> {
 
         public ForPojoPointcut(AdvisorSpec.PojoPointcutSpec advisorSpec) {
             super(advisorSpec);
@@ -258,11 +268,14 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
         @Override
         protected Pointcut doCreatePointcut(AdvisorContext advisorContext) {
-            Pointcut pointcut = advisorSpec.getPointcut();
-            if(this.doValidatePointcut(advisorContext, pointcut) == false) {
-                return null;
-            }
+            return advisorSpec.getPointcut();
+        }
 
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, Pointcut pointcut) {
             TypeDescription adviceType = advisorContext.getTypePool()
                     .describe(advisorSpec.getAdviceClassName())
                     .resolve();
@@ -278,7 +291,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
     }
 
 
-    class ForExprPointcut extends AbstractBase<AdvisorSpec.ExprPointcutSpec> {
+    class ForExprPointcut extends AbstractBase<AdvisorSpec.ExprPointcutSpec, Pointcut> {
 
         public ForExprPointcut(AdvisorSpec.ExprPointcutSpec advisorSpec) {
             super(advisorSpec);
@@ -286,11 +299,14 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
         @Override
         protected Pointcut doCreatePointcut(AdvisorContext advisorContext) {
-            ExprPointcut exprPointcut = this.doCreateExprPointcut(advisorContext, advisorSpec.getPointcutExpression(), null, null, null);
-            if(this.doValidatePointcut(advisorContext, exprPointcut) == false) {
-                return null;
-            }
+            return doCreateExprPointcut(advisorContext, advisorSpec.getPointcutExpression(), null, null, null);
+        }
 
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, Pointcut pointcut) {
             TypeDescription adviceType = advisorContext.getTypePool()
                     .describe(advisorSpec.getAdviceClassName())
                     .resolve();
@@ -299,14 +315,14 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                 return null;
 
             return new Pointcut.Default(
-                    exprPointcut.getTypeMatcher(),
-                    new PojoMethodMatcher( pojoMethodSpec, exprPointcut.getMethodMatcher() )
+                    pointcut.getTypeMatcher(),
+                    new PojoMethodMatcher( pojoMethodSpec, pointcut.getMethodMatcher() )
             );
         }
     }
 
 
-    class ForAspectJAdvice extends AbstractBase<AdvisorSpec.ExprPointcutSpec> {
+    class ForAspectJAdvice extends AbstractBase<AdvisorSpec.ExprPointcutSpec, ExprPointcut> {
 
         private final AspectJMethodSpec aspectJMethodSpec;
         private final ByteBuddyMaker classMaker;
@@ -321,19 +337,22 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
 
         @Override
-        protected Pointcut doCreatePointcut(AdvisorContext advisorContext) {
+        protected ExprPointcut doCreatePointcut(AdvisorContext advisorContext) {
             String[] pointcutParameterNames = aspectJMethodSpec.getPointcutParameterNames().toArray(new String[] {});
             TypeDescription[] pointcutParameterTypes = aspectJMethodSpec.getPointcutParameterTypes().toArray(new TypeDescription[] {});
             String pointcutExpression = advisorSpec.getPointcutExpression();
 
-            ExprPointcut exprPointcut = this.doCreateExprPointcut(advisorContext, pointcutExpression, aspectJMethodSpec.getAdviceTypeDescription(), pointcutParameterNames, pointcutParameterTypes);
-            if(this.doValidatePointcut(advisorContext, exprPointcut) == false) {
-                return null;
-            }
+            return this.doCreateExprPointcut(advisorContext, pointcutExpression, aspectJMethodSpec.getAdviceTypeDescription(), pointcutParameterNames, pointcutParameterTypes);
+        }
 
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, ExprPointcut pointcut) {
             return new Pointcut.Default(
-                    exprPointcut.getTypeMatcher(),
-                    new AspectJMethodMatcher(exprPointcut, aspectJMethodSpec) 
+                    pointcut.getTypeMatcher(),
+                    new AspectJMethodMatcher(pointcut, aspectJMethodSpec) 
             );
         }
 

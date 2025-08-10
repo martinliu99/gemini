@@ -50,6 +50,7 @@ import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
+import io.gemini.core.pool.TypePoolFactory;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CollectionUtils;
@@ -58,6 +59,7 @@ import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.BooleanMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.JavaModule;
 
 public class FactoryContext implements Closeable {
@@ -101,6 +103,9 @@ public class FactoryContext implements Closeable {
     private final PlaceholderHelper placeholderHelper;
 
 
+    private final TypePoolFactory typePoolFactory;
+    private final TypeWorldFactory typeWorldFactory;
+
     private final StringMatcherFactory stringMatcherFactory;
     private TypeMatcherFactory typeMatcherFactory;
 
@@ -129,10 +134,9 @@ public class FactoryContext implements Closeable {
     private final ClassScanner classScanner;
 
     private final ObjectFactory objectFactory;
-    private final AspectTypePool aspectTypePool;
+    private final TypePool typePool;
+    private final TypeWorld typeWorld;
 
-
-    private final TypeWorldFactory typeWorldFactory;
     private final ConcurrentMap<ClassLoader, AdvisorContext> advisorContextMap;
 
 
@@ -175,8 +179,11 @@ public class FactoryContext implements Closeable {
         this.configView = createConfigView(aopContext, classLoader);
         this.placeholderHelper = new PlaceholderHelper.Builder().build(configView);
 
+        this.typePoolFactory = aopContext.getTypePoolFactory();
+        this.typeWorldFactory = aopContext.getTypeWorldFactory();
+
         this.stringMatcherFactory = new StringMatcherFactory();
-        this.typeMatcherFactory = new TypeMatcherFactory(aopContext.getTypePoolFactory(), aopContext.getTypeWorldFactory());
+        this.typeMatcherFactory = new TypeMatcherFactory(typeWorldFactory);
 
         // load factory settings
         this.loadSettings(factoriesContext, configView);
@@ -186,12 +193,11 @@ public class FactoryContext implements Closeable {
         // create classScanner and objectFactory
         this.classScanner = this.createClassScanner(this.aopContext);
         this.objectFactory = this.createObjectFactory(classLoader, this.classScanner);
-        this.aspectTypePool = new AspectTypePool(classLoader, aopContext.getTypePoolFactory(), joinpointTypesMatcher);
-                //this.aopContext.getTypePoolFactory().createTypePool(this.classLoader, null);
 
-        this.typeWorldFactory = new TypeWorldFactory.Prototype();
+        this.typePool = new AspectTypePool(classLoader, typePoolFactory);
+        this.typeWorld = typeWorldFactory.createTypeWorld(typePool, placeholderHelper);
+
         this.advisorContextMap = new ConcurrentReferenceHashMap<>();
-
 
         if(LOGGER.isDebugEnabled())
             LOGGER.debug("$Took '{}' seconds to create FactoryContext '{}'", 
@@ -298,8 +304,7 @@ public class FactoryContext implements Closeable {
                     Parser.parsePatterns( includedTypePatterns ), 
                     false, 
                     classLoader, 
-                    null, 
-                    placeholderHelper );
+                    null );
         }
 
         {
@@ -316,8 +321,7 @@ public class FactoryContext implements Closeable {
                     Parser.parsePatterns( excludedTypePatterns ), 
                     true, 
                     classLoader, 
-                    null, 
-                    placeholderHelper );
+                    null );
         }
 
         {
@@ -454,8 +458,7 @@ public class FactoryContext implements Closeable {
                 includedTypePatterns, 
                 false, 
                 joinpointClassLoader, 
-                javaModule, 
-                placeholderHelper ); 
+                javaModule ); 
     }
 
     public ElementMatcher<TypeDescription> createExcludedTypesMatcher(ClassLoader joinpointClassLoader, JavaModule javaModule) {
@@ -464,8 +467,7 @@ public class FactoryContext implements Closeable {
                 excludedTypePatterns, 
                 true, 
                 joinpointClassLoader, 
-                javaModule, 
-                placeholderHelper ); 
+                javaModule ); 
     }
 
 
@@ -490,8 +492,8 @@ public class FactoryContext implements Closeable {
         return objectFactory;
     }
 
-    public AspectTypePool getAspectTypePool() {
-        return aspectTypePool;
+    public TypePool getTypePool() {
+        return typePool;
     }
 
 
@@ -505,12 +507,10 @@ public class FactoryContext implements Closeable {
 
         boolean sharedMode = useSharedAspectClassLoader(cacheKey);
         if(sharedMode == true) {
-            if(this.advisorContextMap.containsKey(cacheKey) == false) {
-                this.advisorContextMap.computeIfAbsent(
-                        cacheKey, 
-                        key -> doCreateAdvisorContext(joinpointClassLoader, javaModule, sharedMode, validateContext)
-                );
-            }
+            this.advisorContextMap.computeIfAbsent(
+                    cacheKey, 
+                    key -> doCreateAdvisorContext(joinpointClassLoader, javaModule, sharedMode, validateContext)
+            );
         } else {
             AdvisorContext advisorContext = doCreateAdvisorContext(joinpointClassLoader, javaModule, sharedMode, validateContext);
             // memory leak?
@@ -565,33 +565,53 @@ public class FactoryContext implements Closeable {
 
     protected AdvisorContext doCreateAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
             boolean sharedMode, boolean validateContext) {
-        AspectClassLoader aspectClassLoader = this.classLoader;
-        ObjectFactory objectFactory = this.objectFactory;
         // create AspectClassLoader & objectFactory per ClassLoader
+        AspectClassLoader classLoader = this.classLoader;
+        ObjectFactory objectFactory = this.objectFactory;
         if(sharedMode == false) {
-            aspectClassLoader = new AspectClassLoader.WithJoinpointCL(
+            classLoader = new AspectClassLoader.WithJoinpointCL(
                     factoryName, 
                     factoryResourceURLs, 
                     aopContext.getAopClassLoader(),
                     joinpointClassLoader);
 
-            aspectClassLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
-            aspectClassLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);
+            classLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
+            classLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);
 
-            objectFactory = createObjectFactory(aspectClassLoader, classScanner);
+            objectFactory = createObjectFactory(classLoader, classScanner);
         }
-
-        TypeWorld aspectTypeWorld = typeWorldFactory.createTypeWorld(
-                joinpointClassLoader, javaModule,
-                aspectTypePool, placeholderHelper);
 
         return new AdvisorContext(this,
                 ClassLoaderUtils.getClassLoaderName(joinpointClassLoader), javaModule,
-                aspectClassLoader, objectFactory, 
-                aspectTypePool, aspectTypeWorld,
+                classLoader, objectFactory, 
+                typePool, typeWorld,
                 validateContext);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((factoryName == null) ? 0 : factoryName.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        FactoryContext other = (FactoryContext) obj;
+        if (factoryName == null) {
+            if (other.factoryName != null)
+                return false;
+        } else if (!factoryName.equals(other.factoryName))
+            return false;
+        return true;
+    }
 
     @Override
     public String toString() {
@@ -605,6 +625,6 @@ public class FactoryContext implements Closeable {
        };
 
         this.objectFactory.close();
-        this.aspectTypePool.clear();
+        this.typePool.clear();
     }
 }

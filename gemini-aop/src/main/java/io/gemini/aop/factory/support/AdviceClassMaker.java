@@ -128,23 +128,21 @@ interface AdviceClassMaker {
             ClassLoader cacheKey = advisorContext.getClassLoader();
 
             // 1.try to get advice class from local cache.
-            if(adviceClassRefMap.containsKey(cacheKey) == false) {
-                adviceClassRefMap.computeIfAbsent(
-                        cacheKey, 
-                        key -> {
-                            // try to generate advice class
-                            long startedAt = System.nanoTime();
-                            this.adviceClassUnloaded = ByteCodeGenerator.INSTANCE.make(advisorContext, this);
+            adviceClassRefMap.computeIfAbsent(
+                    cacheKey, 
+                    key -> {
+                        // try to generate advice class
+                        long startedAt = System.nanoTime();
+                        this.adviceClassUnloaded = ByteCodeGenerator.INSTANCE.make(advisorContext, this);
 
-                            Class<? extends Advice> adviceClass = adviceClassUnloaded
-                                    .load(cacheKey, new ClassLoadingStrategy.ForUnsafeInjection())
-                                    .getLoaded();
-                            LOGGER.info("Took '{}' seconds to inject advisorClass '{}' into classloader '{}'.", 
-                                    (System.nanoTime() - startedAt) / 1e9, adviceClassName, cacheKey);
-                            return new WeakReference<Class<? extends Advice>>(adviceClass);
-                        }
-                );
-            }
+                        Class<? extends Advice> adviceClass = adviceClassUnloaded
+                                .load(cacheKey, new ClassLoadingStrategy.ForUnsafeInjection())
+                                .getLoaded();
+                        LOGGER.info("Took '{}' seconds to inject advisorClass '{}' into classloader '{}'.", 
+                                (System.nanoTime() - startedAt) / 1e9, adviceClassName, cacheKey);
+                        return new WeakReference<Class<? extends Advice>>(adviceClass);
+                    }
+            );
 
             WeakReference<Class<? extends Advice>> adviceClassRef = adviceClassRefMap.get(cacheKey);
             Class<? extends Advice> adviceClass = adviceClassRef.get();

@@ -128,14 +128,10 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             // try to replace placeholders in expression
             pointcutExpression = advisorContext.getPlaceholderHelper().replace(pointcutExpression);
 
-            AspectJExprPointcut expressionPointcut = pointcutDeclarationScope != null 
-                    ? new AspectJExprPointcut(pointcutDeclarationScope, pointcutParameterNames, pointcutParameterTypes)
-                    : new AspectJExprPointcut();
-
-            expressionPointcut.setPointcutExpr(pointcutExpression);
-            expressionPointcut.setTypeWorld(advisorContext.getTypeWorld());
-
-            return expressionPointcut;
+            return pointcutDeclarationScope != null 
+                    ? new AspectJExprPointcut(advisorContext.getTypeWorld(), pointcutExpression, 
+                            pointcutDeclarationScope, pointcutParameterNames, pointcutParameterTypes)
+                    : new AspectJExprPointcut(advisorContext.getTypeWorld(), pointcutExpression);
         }
 
         protected boolean doValidatePointcut(AdvisorContext advisorContext, P pointcut) {
@@ -147,12 +143,12 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             if(pointcut instanceof AspectJExprPointcut) {
                 AspectJExprPointcut aspectJExpressionPointcut = (AspectJExprPointcut) pointcut;
                 try {
-                    aspectJExpressionPointcut.checkReadyToMatch();
+                    aspectJExpressionPointcut.getPointcutExpr();
                     return true;
                 } catch(Throwable t) {
                     String advisorName = advisorSpec.getAdvisorName();
                     if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
-                        LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n    ClassLoader: '{}' \n", 
+                        LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: '{}' \n", 
                                 advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getClassLoader(), t);
 
                         this.isValid = false;

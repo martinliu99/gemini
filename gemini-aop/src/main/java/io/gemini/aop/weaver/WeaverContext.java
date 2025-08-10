@@ -26,9 +26,9 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopException;
 import io.gemini.aop.matcher.Pattern;
-import io.gemini.aop.matcher.Pattern.Parser;
 import io.gemini.aop.matcher.StringMatcherFactory;
 import io.gemini.aop.matcher.TypeMatcherFactory;
+import io.gemini.aop.matcher.Pattern.Parser;
 import io.gemini.aop.weaver.advice.ClassInitializerAdvice;
 import io.gemini.aop.weaver.advice.ClassMethodAdvice;
 import io.gemini.aop.weaver.advice.InstanceConstructorAdvice;
@@ -66,8 +66,6 @@ class WeaverContext {
     private static final String WEAVER_EXCLUDED_TYPE_PATTERNS_KEY = "aop.weaver.excludedTypePatterns";
 
 
-    private final AopContext aopContext;
-
     // weaver settings
     private boolean matchJoinpoint;
 
@@ -94,11 +92,9 @@ class WeaverContext {
 
 
     public WeaverContext(AopContext aopContext) {
-        this.aopContext = aopContext;
-
         // 1.load weaver settings
         this.classLoaderMatcherFactory = new StringMatcherFactory();
-        this.typeMatcherFactory = new TypeMatcherFactory(aopContext.getTypePoolFactory(), aopContext.getTypeWorldFactory());
+        this.typeMatcherFactory = new TypeMatcherFactory(aopContext.getTypeWorldFactory());
 
         this.loadSettings(aopContext);
     }
@@ -169,8 +165,7 @@ class WeaverContext {
                         Parser.parsePatterns( includedTypePatterns ), 
                         false, 
                         aopClassLoader, 
-                        null, 
-                        aopContext.getPlaceholderHelper() );
+                        null );
             }
 
             {
@@ -195,8 +190,7 @@ class WeaverContext {
                         Parser.parsePatterns( excludedTypePatterns ), 
                         true, 
                         aopClassLoader, 
-                        null, 
-                        aopContext.getPlaceholderHelper() );
+                        null );
             }
         }
 
@@ -266,8 +260,7 @@ class WeaverContext {
                 includedTypePatterns, 
                 false, 
                 joinpointClassLoader, 
-                javaModule, 
-                aopContext.getPlaceholderHelper()); 
+                javaModule ); 
     }
 
     public ElementMatcher<TypeDescription> createExcludedTypesMatcher(ClassLoader joinpointClassLoader, JavaModule javaModule) {
@@ -276,8 +269,7 @@ class WeaverContext {
                 excludedTypePatterns, 
                 false, 
                 joinpointClassLoader, 
-                javaModule, 
-                aopContext.getPlaceholderHelper()); 
+                javaModule ); 
     }
 
 

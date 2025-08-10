@@ -13,73 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
 package io.gemini.aop.factory.classloader;
 
 import io.gemini.core.pool.TypePoolFactory;
-import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
-import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.pool.TypePool;
 
-/**
- * 
- */
-public class AspectTypePool extends TypePool.Default.WithLazyResolution {
+public class AspectTypePool implements TypePool {
 
     private final AspectClassLoader aspectClassLoader;
+    private final TypePool aspectTypePool;
     private final TypePoolFactory typePoolFactory;
-    private final ElementMatcher<String> joinpointTypeMatcher;
 
 
-    /**
-     * @param cacheProvider
-     * @param classFileLocator
-     * @param readerMode
-     * @param parentPool
-     */
-    public AspectTypePool(AspectClassLoader aspectClassLoader, TypePoolFactory typePoolFactory, ElementMatcher<String> joinpointTypeMatcher) {
-        super(CacheProvider.Simple.withObjectType(), 
-                LocationStrategy.ForClassLoader.WEAK.classFileLocator(aspectClassLoader, null), 
-                ReaderMode.FAST, 
-                typePoolFactory.createTypePool(aspectClassLoader.getParent(), null));
-
+    public AspectTypePool(AspectClassLoader aspectClassLoader, TypePoolFactory typePoolFactory) {
         this.aspectClassLoader = aspectClassLoader;
+
         this.typePoolFactory = typePoolFactory;
-        this.joinpointTypeMatcher = joinpointTypeMatcher;
+        this.aspectTypePool = typePoolFactory.createTypePool(aspectClassLoader, null);
     }
+
 
     /**
      * {@inheritDoc}
      */
-//    public Resolution doDescribe(String name) {
-//        if(this.joinpointTypeMatcher.matches(name) == true) {
-//            return describeViaJoinpointTypePool(name);
-//        }
-//
-//        Resolution resolution = super.doDescribe(name);
-//        return resolution.isResolved() ? resolution : describeViaJoinpointTypePool(name);
-//    }
-//
-//    /**
-//     * @param name
-//     */
-//    private Resolution describeViaJoinpointTypePool(String name) {
-//        ClassLoader joinpointCL = aspectClassLoader.doFindJoinpointCL();
-//        if(joinpointCL == null)
-//            return new Resolution.Illegal(name);
-//
-//        TypePool typePool = this.typePoolFactory.createTypePool(joinpointCL, null);
-//        return typePool.describe(name);
-//    }
+    @Override
+    public Resolution describe(String name) {
+        Resolution resolution = doResolveViaJoinpointTypePool(name);
+        if(resolution != null && resolution.isResolved())
+            return resolution;
 
-    protected Resolution doResolve(String name) {
-        if(this.joinpointTypeMatcher.matches(name) == true) {
-            return doResolveViaJoinpointTypePool(name);
-        }
-
-        return super.doResolve(name);
+        return aspectTypePool.describe(name);
     }
 
     private Resolution doResolveViaJoinpointTypePool(String name) {
@@ -91,4 +54,10 @@ public class AspectTypePool extends TypePool.Default.WithLazyResolution {
         return typePool.describe(name);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void clear() {
+    }
 }

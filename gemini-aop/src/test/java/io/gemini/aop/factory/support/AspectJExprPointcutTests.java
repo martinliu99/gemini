@@ -40,16 +40,13 @@ public class AspectJExprPointcutTests {
 
     public void testKindedExpression() {
         try {
-            AspectJExprPointcut pointcut = new AspectJExprPointcut();
-
             TypePool typePool = doCreateTypePools();
             BytebuddyWorld typeWorld = new BytebuddyWorld(typePool, null);
-            pointcut.setTypeWorld(typeWorld);
 
-            // 
             //"execution(java.util.List<java.lang.String> io.gemini..*.PointcutParserTests.replace(..))";
-            String expression = "execution(* io.gemini.aop.AspectJExprPointcutTests.replace(..))";
-            pointcut.setPointcutExpr(expression);
+            String expression = "execution(* io.gemini.aop.factory.support.AspectJExprPointcutTests.replace(..))";
+
+            AspectJExprPointcut pointcut = new AspectJExprPointcut(typeWorld, expression);
 
             TypeDescription type = TypeDescription.ForLoadedType.of(AspectJExprPointcutTests.class);
             boolean result = pointcut.matches(type);

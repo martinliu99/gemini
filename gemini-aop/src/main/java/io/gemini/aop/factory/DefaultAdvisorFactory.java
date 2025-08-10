@@ -38,7 +38,6 @@ import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
 import io.gemini.api.classloader.ThreadContext;
-import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.concurrent.TaskExecutor;
 import io.gemini.core.util.ClassLoaderUtils;
@@ -224,6 +223,9 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
         // 1.filter type by excluding and including rules in Advisor level
+        // create advisors per ClassLoader
+        AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
+
         try {
             if(this.acceptType(typeDescription, joinpointClassLoader, javaModule, weaverMetrics) == false)
                 return Collections.emptyMap();
@@ -233,26 +235,59 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
         // 2.create advisors
-        // create advisors per ClassLoader
-        AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
-
         List<? extends Advisor> candidateAdvisors = getOrCreateAdvisorPerClassLoader(typeName,  
                 joinpointClassLoaderId, joinpointClassLoader, javaModule, advisorContext, weaverMetrics);
         if(CollectionUtils.isEmpty(candidateAdvisors))
             return Collections.emptyMap();
 
 
-        // 3.match advisors
+        // 3. fast match advisors for given type
+        List<Advisor.PointcutAdvisor> pointcutAdvisors = null;
         try {
-            return matchAdvisors(typeDescription, joinpointClassLoader, javaModule, candidateAdvisors, weaverMetrics);
-        } finally {
-            TypeWorld typeWorld = advisorContext.getTypeWorld();
+            startedAt = System.nanoTime();
+            weaverMetrics.incrTypeFastMatchingCount();
 
-            typeWorld.releaseCache(typeDescription);
+            pointcutAdvisors = this.doFastMatchAdvisors(typeDescription, joinpointClassLoader, javaModule, 
+                    candidateAdvisors, weaverMetrics);
+
+            if(CollectionUtils.isEmpty(pointcutAdvisors)) {
+                return Collections.emptyMap();
+            }
+        } finally {
+             weaverMetrics.incrTypeFastMatchingTime(System.nanoTime() - startedAt);
+        }
+
+
+        // 4. match advisors for given type's methods
+        Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new HashMap<>();
+        try {
+            startedAt = System.nanoTime();
+            weaverMetrics.incrTypeMatchingCount();
+
+            MethodGraph.Linked methodGraph = null;
             for(InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
-                typeWorld.releaseCache(methodDescription);
+                List<Advisor> advisorChain = this.doMatchAdvisors(typeDescription, methodDescription, joinpointClassLoader, 
+                        pointcutAdvisors, weaverMetrics);
+                if(CollectionUtils.isEmpty(advisorChain)) continue;
+
+                // convert matched bridge method to overridden method
+                if(methodDescription.isBridge()) {
+                    if(methodGraph == null)
+                        methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) typeDescription);
+
+                    MethodGraph.Node locatedNode = methodGraph.locate(methodDescription.asSignatureToken());
+                    if(locatedNode != null)
+                        methodDescription = locatedNode.getRepresentative().asDefined();
+                }
+
+                methodAdvisorsMap.merge(methodDescription, advisorChain, 
+                        (oldValue, value) -> CollectionUtils.merge(oldValue, value) 
+                );
             }
 
+            return methodAdvisorsMap;
+        } finally {
+            weaverMetrics.incrTypeMatchingTime(System.nanoTime() - startedAt);
         }
     }
 
@@ -325,61 +360,6 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             return advisors;
         } finally {
             weaverMetrics.incrAdvisorCreationTime(System.nanoTime() - startedAt);
-        }
-    }
-
-    private Map<? extends MethodDescription, List<? extends Advisor>> matchAdvisors(
-            TypeDescription typeDescription, ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            List<? extends Advisor> candidateAdvisors, WeaverMetrics weaverMetrics) {
-        long startedAt = System.nanoTime();
-
-        // 1. fast match advisors for given type
-        List<Advisor.PointcutAdvisor> pointcutAdvisors = null;
-        try {
-            startedAt = System.nanoTime();
-            weaverMetrics.incrTypeFastMatchingCount();
-
-            pointcutAdvisors = this.doFastMatchAdvisors(typeDescription, joinpointClassLoader, javaModule, 
-                    candidateAdvisors, weaverMetrics);
-        } finally {
-            weaverMetrics.incrTypeFastMatchingTime(System.nanoTime() - startedAt);
-        }
-
-        if(CollectionUtils.isEmpty(pointcutAdvisors)) {
-            return Collections.emptyMap();
-        }
-
-
-        // 2. match advisors for given type's methods
-        try {
-            startedAt = System.nanoTime();
-            weaverMetrics.incrTypeMatchingCount();
-
-            Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new HashMap<>();
-            MethodGraph.Linked methodGraph = null;
-            for(InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
-                List<Advisor> advisorChain = this.doMatchAdvisors(typeDescription, methodDescription, joinpointClassLoader, 
-                        pointcutAdvisors, weaverMetrics);
-                if(CollectionUtils.isEmpty(advisorChain)) continue;
-
-                // convert matched bridge method to overridden method
-                if(methodDescription.isBridge()) {
-                    if(methodGraph == null)
-                        methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) typeDescription);
-
-                    MethodGraph.Node locatedNode = methodGraph.locate(methodDescription.asSignatureToken());
-                    if(locatedNode != null)
-                        methodDescription = locatedNode.getRepresentative().asDefined();
-                }
-
-                methodAdvisorsMap.merge(methodDescription, advisorChain, 
-                        (oldValue, value) -> CollectionUtils.merge(oldValue, value) 
-                );
-            }
-
-            return methodAdvisorsMap;
-        } finally {
-            weaverMetrics.incrTypeMatchingTime(System.nanoTime() - startedAt);
         }
     }
 

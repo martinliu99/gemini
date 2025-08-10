@@ -215,16 +215,19 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
         }
 
         // 3.check included types
-        if(weaverContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
-            return true;
-        }
+        aopContext.getTypePoolFactory().createTypePool(joinpointClassLoader, javaModule).addTypeDescription(typeDescription);
+
+//        if(weaverContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
+//            return true;
+//        }
+        return weaverContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription);
 
         // 4.check excluded types
-        if(weaverContext.createExcludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
-            return false;
-        }
-
-        return true;
+//        if(weaverContext.createExcludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
+//            return false;
+//        }
+//
+//        return true;
     }
 
 

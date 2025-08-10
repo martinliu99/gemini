@@ -19,8 +19,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
 
 import org.aspectj.bridge.AbortException;
 import org.aspectj.bridge.IMessage;
@@ -54,23 +52,18 @@ import net.bytebuddy.pool.TypePool;
 
 public class BytebuddyWorld extends World implements TypeWorld {
 
-    private TypePool typePool;
-    private PlaceholderHelper placeholderHelper;
+    private final static TypeDescription  OBJECT_DESCRIPTION = TypeDescription.ForLoadedType.of(Object.class);
+
+    private final TypePool typePool;
+    private final PlaceholderHelper placeholderHelper;
 
     private final ResolvedType objectType;
 
     // Used to prevent recursion - we record what we are working on and return it if asked again *whilst* working on it
     private Map<TypeDefinition, TypeVariableReferenceType> typeVariablesInProgress = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<String, TypeDescription> typeDescriptionCache = new ConcurrentHashMap<>();
-
-    private final ConcurrentMap<TypeDescription, Supplier<ResolvedType>> resolvedTypeCache = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Member, Supplier<ResolvedMember>> resolvedMemberCache = new ConcurrentHashMap<>();
-
 
     public BytebuddyWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
-        super();
-
         this.setMessageHandler(new ExceptionBasedMessageHandler());
         setBehaveInJava5Way(true);
 
@@ -81,19 +74,18 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
+    /** {@inheritDoc} 
+     */
     @Override
     public IWeavingSupport getWeavingSupport() {
         return null;
     }
 
+    /** {@inheritDoc} 
+     */
     @Override
     public boolean isLoadtimeWeaving() {
         return true;
-    }
-
-    @Override
-    public World getWorld() {
-        return this;
     }
 
     protected PlaceholderHelper getPlaceholderHelper() {
@@ -105,91 +97,63 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
+    /** 
+     * {@inheritDoc}
+     */
     @Override
-    public ResolvedType resolve(TypeDescription typeDescription, boolean cache) {
+    public World getWorld() {
+        return this;
+    }
+
+    @Override
+    public ResolvedType resolve(TypeDescription typeDescription) {
         if(typeDescription == null)
             return null;
 
-        if(cache == false)
-            return doResolve(typeDescription);
-
-        return resolvedTypeCache.computeIfAbsent(
-                typeDescription, 
-                key -> new Supplier<ResolvedType>() {
-
-                    private ResolvedType resolvedType;
-
-                    @Override
-                    public ResolvedType get() {
-                        if(resolvedType == null)
-                            resolvedType = BytebuddyWorld.this.doResolve(key);
-
-                        return resolvedType;
-                    }
-                }
-        )
-        .get();
-
-    }
-
-    protected ResolvedType doResolve(TypeDescription typeDescription) {
-        String name = typeDescription.getName();
-        try {
-            typeDescriptionCache.put(name, typeDescription);
-
-            if (typeDescription.isArray()) {
-                UnresolvedType ut = UnresolvedType.forSignature(name.replace('.', '/'));
-                return this.resolve(ut);
-            } else {
-                return this.resolve(name);
-            }
-        } finally {
-            typeDescriptionCache.remove(name);
+        String typeName = typeDescription.getName();
+        if (typeDescription.isArray()) {
+            UnresolvedType ut = UnresolvedType.forSignature(typeName.replace('.', '/'));
+            return this.resolve(ut, false);
+        } else {
+            return this.resolve(
+                    UnresolvedType.forName(typeName), false);
         }
     }
+
 
     @Override
     protected ReferenceTypeDelegate resolveDelegate(ReferenceType referenceType) {
         return new InternalReferenceTypeDelegate(
                 this, 
-                describeType( referenceType.getName() ), 
+                describeType(referenceType.getName()), 
                 referenceType);
     }
 
-    public TypeDescription describeType(String typeName) {
-        // reuse existing input typeDescription to avoid possible expensive class file reloading.
-        TypeDescription typeDescription = typeDescriptionCache.get(typeName);
+    protected TypeDescription describeType(String typeName) {
+        if("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
-        return typeDescription != null ? typeDescription : this.typePool.describe(typeName).resolve();
+        return this.typePool.describe(typeName).resolve();
     }
 
     /** 
      * {@inheritDoc}
      */
     @Override
-    public ResolvedMember resolved(Member member, boolean cache) {
+    public ReferenceType getReferenceType(String typeName) {
+        return lookupBySignature(typeName);
+    }
+
+
+    /** 
+     * {@inheritDoc}
+     */
+    @Override
+    public Shadow makeShadow(Member member) {
         if(member == null)
             return null;
 
-        if(cache == false)
-            return this.doResolve(member);
-
-        return resolvedMemberCache.computeIfAbsent(
-                member, 
-                key -> new Supplier<ResolvedMember>() {
-
-                    private ResolvedMember resolvedMember;
-
-                    @Override
-                    public ResolvedMember get() {
-                        if(resolvedMember == null)
-                            resolvedMember = BytebuddyWorld.this.doResolve(key);
-
-                        return resolvedMember;
-                    }
-                }
-        )
-        .get();
+        ResolvedMember resolvedMember = this.doResolve(member);
+        return makeExecutionShadow(resolvedMember);
     }
 
     protected ResolvedMember doResolve(Member member) {
@@ -202,23 +166,16 @@ public class BytebuddyWorld extends World implements TypeWorld {
         throw new IllegalStateException("impossible execution path, member: " + member);
     }
 
+    protected Shadow makeExecutionShadow(ResolvedMember member) {
+        Kind kind = org.aspectj.weaver.Member.CONSTRUCTOR == member.getKind()
+                ? Shadow.ConstructorExecution
+                : (org.aspectj.weaver.Member.STATIC_INITIALIZATION == member.getKind()
+                        ? Shadow.StaticInitialization
+                        : Shadow.MethodExecution);
 
-    /** 
-     * {@inheritDoc}
-     */
-    @Override
-    public void releaseCache(TypeDescription typeDescription) {
-        if(typeDescription != null)
-            resolvedTypeCache.remove(typeDescription);
-    }
+        ResolvedType enclosingType = member.getDeclaringType().resolve(this);
 
-    /** 
-     * {@inheritDoc}
-     */
-    @Override
-    public void releaseCache(Member member) {
-        if(member != null)
-            resolvedMemberCache.remove(member);
+        return new InternalShadow(this, kind, member, null, enclosingType, null);
     }
 
     protected ResolvedType[] convertType(TypeDefinition... typeDefinitions) {
@@ -303,27 +260,16 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
-    /** 
-     * {@inheritDoc}
-     */
     @Override
-    public Shadow makeExecutionShadow(ResolvedMember member) {
-        Kind kind = org.aspectj.weaver.Member.CONSTRUCTOR == member.getKind()
-                ? Shadow.ConstructorExecution
-                : (org.aspectj.weaver.Member.STATIC_INITIALIZATION == member.getKind()
-                        ? Shadow.StaticInitialization
-                        : Shadow.MethodExecution);
-
-        ResolvedType enclosingType = member.getDeclaringType().resolve(this);
-
-        return new InternalShadow(this, kind, member, null, enclosingType, null);
+    public String toString() {
+        return typePool.toString();
     }
 
 
     private static class ExceptionBasedMessageHandler implements IMessageHandler {
 
         public boolean handleMessage(IMessage message) throws AbortException {
-            throw new BytebuddyWorldException(message.toString());
+            throw new TypeWorldException(message.toString());
         }
 
         public boolean isIgnoring(org.aspectj.bridge.IMessage.Kind kind) {
@@ -345,11 +291,11 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
-    public static class BytebuddyWorldException extends RuntimeException {
+    public static class TypeWorldException extends RuntimeException {
 
         private static final long serialVersionUID = 816600136638029684L;
 
-        public BytebuddyWorldException(String message) {
+        public TypeWorldException(String message) {
             super(message);
         }
     }

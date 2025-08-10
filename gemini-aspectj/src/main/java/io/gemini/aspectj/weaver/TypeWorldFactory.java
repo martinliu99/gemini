@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
+import io.gemini.core.pool.TypePoolFactory;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.pool.TypePool;
@@ -32,66 +33,52 @@ import net.bytebuddy.utility.JavaModule;
  */
 public interface TypeWorldFactory {
 
-    TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
-            TypePool typePool, PlaceholderHelper placeholderHelper);
+    TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule);
 
-
-    enum WorkMode {
-
-        SINGLETON, PROTOTYPE;
-    }
+    TypeWorld createTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper);
 
 
     abstract class AbstractBase implements TypeWorldFactory {
 
-        protected BytebuddyWorld doCreateTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
-                TypePool typePool, PlaceholderHelper placeholderHelper) {
+        protected TypeWorld doCreateTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
             return new BytebuddyWorld(typePool, placeholderHelper);
         }
     }
 
 
-    class Singleton extends AbstractBase {
+    class Default extends AbstractBase {
 
-        private final ConcurrentMap<ClassLoader, BytebuddyWorld> typeWorldCache = new ConcurrentReferenceHashMap<>();
+        private final TypePoolFactory typePoolFactory;
+        private final ConcurrentMap<ClassLoader, TypeWorld> typeWorldCache = new ConcurrentReferenceHashMap<>();
 
 
-        public Singleton() {
+        public Default(TypePoolFactory typePoolFactory) {
+            this.typePoolFactory = typePoolFactory;
         }
 
-        /**
+        /** 
          * {@inheritDoc}
          */
         @Override
-        public BytebuddyWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
-                TypePool typePool, PlaceholderHelper placeholderHelper) {
+        public TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule) {
             ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
-            if(typeWorldCache.containsKey(cacheKey) == false) {
-                this.typeWorldCache.computeIfAbsent(
-                        cacheKey, 
-                        key -> doCreateTypeWorld(classLoader, javaModule, typePool, placeholderHelper)
-                );
-            }
+            TypePool typePool = typePoolFactory.createTypePool(classLoader, javaModule);
+            this.typeWorldCache.computeIfAbsent(
+                    cacheKey, 
+                    key -> new TypeWorld.LazyFacade(
+                            doCreateTypeWorld(typePool, null) )
+            );
 
             return typeWorldCache.get(cacheKey);
         }
-    }
 
-
-    class Prototype extends AbstractBase {
-
-        public Prototype() {
-        }
-
-
-        /**
+        /** 
          * {@inheritDoc}
          */
         @Override
-        public BytebuddyWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule, 
-                TypePool typePool, PlaceholderHelper placeholderHelper) {
-            return doCreateTypeWorld(classLoader, javaModule, typePool, placeholderHelper);
+        public TypeWorld createTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
+            return doCreateTypeWorld(typePool, placeholderHelper);
         }
     }
 }

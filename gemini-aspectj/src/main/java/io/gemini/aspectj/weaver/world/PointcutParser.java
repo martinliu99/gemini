@@ -58,8 +58,6 @@ import net.bytebuddy.description.type.TypeDescription;
 
 public class PointcutParser {
 
-    private static final TypeDescription OBJECT_DESCRIPTION = TypeDescription.ForLoadedType.of(Object.class);
-
     private TypeWorld typeWorld;
     private final Set<PointcutPrimitive> supportedPrimitives;
 
@@ -214,7 +212,7 @@ public class PointcutParser {
             Pointcut pc = parser.parsePointcut(true);
             validateAgainstSupportedPrimitives(pc, expression);
 
-            IScope resolutionScope = buildResolutionScope((inScope == null ? OBJECT_DESCRIPTION : inScope), formalParameters);
+            IScope resolutionScope = buildResolutionScope(inScope, formalParameters);
             pc = pc.resolve(resolutionScope);
             return pc;
         } catch (ParserException pEx) {
@@ -238,7 +236,7 @@ public class PointcutParser {
     protected Pointcut concretizePointcutExpression(Pointcut pc, TypeDescription inScope, Map<String, TypeDescription> formalParameters) {
         ResolvedType declaringTypeForResolution = null;
         if (inScope != null) {
-            declaringTypeForResolution = getTypeWorld().getWorld().resolve(inScope.getName());
+            declaringTypeForResolution = getTypeWorld().resolve(inScope.getName());
         } else {
             declaringTypeForResolution = getTypeWorld().getWorld().resolve(ResolvedType.OBJECT);
         }
@@ -279,7 +277,7 @@ public class PointcutParser {
         if (inScope == null) {
             return new SimpleScope(getTypeWorld().getWorld(), formalBindings);
         } else {
-            ResolvedType inType = getTypeWorld().getWorld().resolve(inScope.getName());
+            ResolvedType inType = getTypeWorld().resolve(inScope);
             ISourceContext sourceContext = new ISourceContext() {
                 public ISourceLocation makeSourceLocation(IHasPosition position) {
                     return new SourceLocation(new File(""), 0);

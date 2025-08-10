@@ -20,7 +20,6 @@ import java.util.Map;
 
 import org.aspectj.util.FuzzyBoolean;
 import org.aspectj.weaver.IHasPosition;
-import org.aspectj.weaver.ResolvedMember;
 import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.Shadow;
 import org.aspectj.weaver.ast.Literal;
@@ -32,19 +31,19 @@ import org.aspectj.weaver.patterns.Pointcut;
 import org.aspectj.weaver.patterns.TypePattern;
 import org.aspectj.weaver.reflect.ReflectionWorld;
 
-import io.gemini.aspectj.weaver.patterns.PatternParserV2;
+import io.gemini.aspectj.weaver.patterns.TypeNamePatternParser;
 import io.gemini.aspectj.weaver.world.PointcutParser;
 import net.bytebuddy.description.type.TypeDescription;
 
 
 public interface Expression {
 
-    interface TypeExpr {
+    interface TypeNameExpr {
 
         boolean matches(ResolvedType matchType);
 
 
-        class Default implements Expression.TypeExpr {
+        class Default implements Expression.TypeNameExpr {
 
             private final String expression;
             private final TypePattern typePattern;
@@ -70,7 +69,7 @@ public interface Expression {
 
         boolean fastMatch(ResolvedType matchType);
 
-        ShadowMatch matches(ResolvedMember aMethod);
+        ShadowMatch matches(Shadow shadow);
 
 
         class Default implements Expression.PointcutExpr {
@@ -97,19 +96,13 @@ public interface Expression {
                 return fastMatch.maybeTrue();
             }
 
-            public ShadowMatch matches(ResolvedMember member) {
-                Shadow shadow = typeWorld.makeExecutionShadow(member);
-
-                return getShadowMatch(shadow, member);
-            }
-
-            private ShadowMatch getShadowMatch(Shadow forShadow, ResolvedMember aMember) {
-                org.aspectj.util.FuzzyBoolean match = pointcut.match(forShadow);
+            public ShadowMatch matches(Shadow shadow) {
+                org.aspectj.util.FuzzyBoolean match = pointcut.match(shadow);
 
                 Test residueTest = Literal.TRUE;
                 ExposedState state = new ExposedState(parameters.size());
                 if (match.maybeTrue()) {
-                    residueTest = pointcut.findResidue(forShadow, state);
+                    residueTest = pointcut.findResidue(shadow, state);
                 }
 
                 return new ShadowMatch(match, residueTest, state, parameters);
@@ -136,12 +129,12 @@ public interface Expression {
         INSTACE;
 
 
-        public TypeExpr parseTypeExpression(TypeWorld typeWorld, String expression) {
+        public TypeNameExpr parseTypeNameExpression(TypeWorld typeWorld, String expression) {
             try {
-                TypePattern typePattern = new PatternParserV2(expression).parseTypePattern();
+                TypePattern typePattern = new TypeNamePatternParser(expression).parseTypePattern();
                 typePattern.resolve(typeWorld.getWorld());
 
-                return new TypeExpr.Default(expression, typePattern);
+                return new TypeNameExpr.Default(expression, typePattern);
             } catch (ParserException pEx) {
                 throw new IllegalArgumentException(buildUserMessageFromParserException(expression, pEx));
             } catch (ReflectionWorld.ReflectionWorldException rwEx) {

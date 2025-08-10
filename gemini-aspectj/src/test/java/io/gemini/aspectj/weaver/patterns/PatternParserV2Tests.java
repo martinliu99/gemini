@@ -39,6 +39,7 @@ public class PatternParserV2Tests {
     public void testSignatue() {
         try {
             BytebuddyWorld world = this.createWorld();
+            world.resolve("123");
             Pointcut pointcut = createPointcut(world, "execution(* io.gemini.*.core.JoinPointMethodInvocationFactoryImpl.of2(..))");
             boolean result = fastMatchType(world, pointcut, "io.gemini.aop.framework.DefaultAspectFactory");
             LOGGER.info("fast match result: " + result);

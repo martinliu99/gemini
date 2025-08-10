@@ -296,7 +296,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         ResolvedMember[] resolvedFields = new ResolvedMember[declaredFields.size()];
         int i = 0;
         for (FieldDescription.InDefinedShape fieldDescription : declaredFields) {
-            resolvedFields[i++] = this.typeWorld.resolved(fieldDescription);
+            resolvedFields[i++] = this.typeWorld.doResolve(fieldDescription);
         }
         return this.fields = resolvedFields;
     }
@@ -312,7 +312,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         ResolvedMember[] resolvedMethods = new ResolvedMember[declaredMethods.size()];
         int i = 0; 
         for (MethodDescription.InDefinedShape methodDescription : declaredMethods) {
-            resolvedMethods[i++] = this.typeWorld.resolved(methodDescription);
+            resolvedMethods[i++] = this.typeWorld.doResolve(methodDescription);
         }
         return this.methods = resolvedMethods;
     }

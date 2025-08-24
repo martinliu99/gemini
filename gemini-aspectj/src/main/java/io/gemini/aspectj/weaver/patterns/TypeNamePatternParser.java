@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.core.util.ReflectionUtils;
+import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  * 
@@ -54,6 +55,8 @@ public class TypeNamePatternParser extends PatternParser {
     public static class WildTypeNamePattern extends WildTypePattern {
 
         private static final Method MATCHES_EXACTLY_BY_NAME;
+
+        private final ElementMatcher<String> nameMatcher;
 
         static {
             Method method = null;
@@ -90,15 +93,19 @@ public class TypeNamePatternParser extends PatternParser {
                     typePattern.getUpperBound(), 
                     typePattern.getAdditionalIntefaceBounds(), 
                     typePattern.getLowerBound());
+
+            nameMatcher = NameMatcherParser.INSTANCE.parseMatcher( this.toString() );
         }
 
         @Override
-        protected boolean matchesExactly(ResolvedType type, ResolvedType annotatedType) {
-            if(MATCHES_EXACTLY_BY_NAME == null)
-                return false;
+        public boolean matchesStatically(ResolvedType type) {
+            String typeName = type.getName();
+
+            if(nameMatcher != null)
+                return nameMatcher.matches(typeName);
 
             try {
-                return (Boolean) MATCHES_EXACTLY_BY_NAME.invoke(this, type.getName(), false, false);
+                return (Boolean) MATCHES_EXACTLY_BY_NAME.invoke(this, typeName, false, false);
             } catch (Exception e) {
                 return false;
             }

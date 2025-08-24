@@ -38,7 +38,7 @@ import org.aspectj.weaver.patterns.SignaturePattern;
 import org.aspectj.weaver.patterns.TypePattern;
 import org.aspectj.weaver.patterns.WildTypePattern;
 
-import io.gemini.aspectj.weaver.DelegatedReferenceType;
+import io.gemini.aspectj.weaver.ReferenceTypes;
 
 public class PatternParserV2 extends PatternParser {
 
@@ -158,7 +158,7 @@ public class PatternParserV2 extends PatternParser {
                     typePattern.getTypeParameters(), 
                     typePattern.getUpperBound(), 
                     typePattern.getAdditionalIntefaceBounds(), 
-                    typePattern.getLowerBound());
+                    typePattern.getLowerBound() );
         }
 
         @Override
@@ -172,10 +172,51 @@ public class PatternParserV2 extends PatternParser {
                 return exactTypePattern;
 
             return new ExactTypePattern(
-                    new DelegatedReferenceType.Facade( (ReferenceType) exactTypePattern.getType(), scope.getWorld() ),
+                    new ReferenceTypes.Facade( (ReferenceType) exactTypePattern.getType(), scope.getWorld() ),
                     exactTypePattern.isIncludeSubtypes(), 
                     exactTypePattern.isVarArgs(), 
                     exactTypePattern.getTypeParameters());
+        }
+
+        @Override
+        public TypePattern parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
+            TypePattern typePattern = super.parameterizeWith(typeVariableMap, w);
+            if(typePattern instanceof WildTypePattern == false)
+                return typePattern;
+
+            return new WildTypePatternV2( (WildTypePattern) typePattern);
+        }
+
+        @Override
+        protected boolean matchesExactly(ResolvedType type, ResolvedType annotatedType) {
+            if(type instanceof ReferenceType == false)
+                return super.matchesExactly(type, annotatedType);
+
+            return super.matchesExactly(
+                    new TopTypeFacade( (ReferenceType) type, null), 
+                    new TopTypeFacade( (ReferenceType) annotatedType, null));
+        }
+    }
+
+
+    private static class TopTypeFacade extends ReferenceTypes.Facade {
+
+        /**
+         * @param referenceType
+         * @param world
+         */
+        public TopTypeFacade(ReferenceType referenceType, World world) {
+            super(referenceType, world);
+        }
+
+        @Override
+        public boolean isAnonymous() {
+            return false;
+        }
+
+        @Override
+        public boolean isNested() {
+            return false;
         }
     }
 }

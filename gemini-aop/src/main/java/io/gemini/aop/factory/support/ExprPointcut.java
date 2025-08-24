@@ -187,7 +187,7 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
             try {
                 return getPointcutExpr().fastMatch( typeWorld.resolve(typeDescription) );
             } catch (Throwable t) {
-                LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetType: {} \n   PointcutExpression: '{}' \n  Error reason: {} \n", 
+                LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetType: {} \n  PointcutExpression: '{}' \n  Error reason: {} \n", 
                         typeDescription.getTypeName(), pointcutExpression, t.getMessage(), t);
 
                 return false;
@@ -242,7 +242,7 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
                 return getPointcutExpr().matches( typeWorld.makeShadow(methodDescription) );
             } catch (Throwable t) {
                 // Possibly AspectJ 1.8.10 encountering an invalid signature
-                LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetMethod: {} \n   PointcutExpression: '{}' \n  Error reason: {} \n", 
+                LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetMethod: {} \n  PointcutExpression: '{}' \n  Error reason: {} \n", 
                         methodDescription.getName(), pointcutExpression, t.getMessage(), t);
 
                 return new ShadowMatch(org.aspectj.util.FuzzyBoolean.NO, null, null, null);

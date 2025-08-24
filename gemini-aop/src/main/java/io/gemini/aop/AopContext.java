@@ -139,7 +139,7 @@ public class AopContext implements Closeable {
 
 
         this.typePoolFactory = createTypePoolFactory();
-        this.typeWorldFactory = createTypeWorldFactory(typePoolFactory, configView);
+        this.typeWorldFactory = createTypeWorldFactory(typePoolFactory);
 
         boolean processInParallel = configView.getAsBoolean("aop.globalTaskExecutor.parallel", false);
         this.globalTaskExecutor = TaskExecutor.create("globalTaskExecutor", processInParallel);
@@ -222,22 +222,8 @@ public class AopContext implements Closeable {
         return new TypePoolFactory.Default(LocationStrategy.ForClassLoader.WEAK);
     }
 
-    private TypeWorldFactory createTypeWorldFactory(TypePoolFactory typePoolFactory, ConfigView configView) {
-        String mode = configView.getAsString("aop.typeWorldFactory.workMode").toUpperCase();
-        TypeWorldFactory.WorkMode workMode = TypeWorldFactory.WorkMode.PROTOTYPE;
-        try {
-            workMode = TypeWorldFactory.WorkMode.valueOf(mode);
-        } catch(Exception e) {
-            LOGGER.warn("Ignored illegal setting '{}', and use TypeWorldFactory.WorkMode. \n", mode);
-        }
-
-        if(workMode == TypeWorldFactory.WorkMode.PROTOTYPE)
-            return new TypeWorldFactory.Prototype();
-        else if(workMode == TypeWorldFactory.WorkMode.SINGLETON)
-            return new TypeWorldFactory.Singleton();
-        else 
-            // impossible
-            return null;
+    private TypeWorldFactory createTypeWorldFactory(TypePoolFactory typePoolFactory) {
+        return new TypeWorldFactory.Default(typePoolFactory);
     }
 
 

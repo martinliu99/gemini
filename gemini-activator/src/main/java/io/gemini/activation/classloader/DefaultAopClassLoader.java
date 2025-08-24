@@ -67,6 +67,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
         BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.activation.");
         BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.classloader.");
+        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("sun.reflect.MethodAccessorImpl");
 
         // TODO:  support jar mode
 //        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.");

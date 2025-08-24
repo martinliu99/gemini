@@ -24,9 +24,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics.BootstraperMetrics;
-import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.activation.support.AopClassLoaderConfigurer;
 import io.gemini.aop.activation.support.BootstrapClassLoaderConfigurer;
@@ -87,13 +87,16 @@ public class DefaultAopLauncher implements AopLauncher {
             long startedAt = System.nanoTime();
             Logger logger = createLogger(launcherConfig, aopClassLoader, configSource, diagnosticLevel);
             long loggerCreationTime = System.nanoTime() - startedAt;
+            long launcherSetupTime = System.nanoTime() - launcherConfig.getLaunchedAt();
 
 
             // 3.create helper classes
             this.aopContext = new AopContext(launcherConfig, aopClassLoader, 
                     builtinSettings, configSource, diagnosticLevel);
+
             bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
             bootstraperMetrics.setLauncherStartedAt(launcherConfig.getLaunchedAt());
+            bootstraperMetrics.setLauncherSetupTime(launcherSetupTime);
             bootstraperMetrics.setLoggerCreationTime(loggerCreationTime);
 
 

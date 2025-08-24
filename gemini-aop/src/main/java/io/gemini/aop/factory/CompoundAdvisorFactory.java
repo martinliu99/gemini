@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopContext;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AdvisorFactory;
+import io.gemini.aop.AopContext;
 import io.gemini.api.aop.AdvisorSpec;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -68,7 +68,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
                         .collect( Collectors.toList() ), 
                     entry -> 
                         new SimpleEntry<>( entry.getValue(), 
-                                createAdvisorFactory(aopContext, factoriesContext, entry.getValue()) )
+                                    createAdvisorFactory(aopContext, factoriesContext, entry.getValue()) )
             )
             .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
         } finally {
@@ -82,16 +82,11 @@ class CompoundAdvisorFactory implements AdvisorFactory {
         String factoryName = factoryContext.getFactoryName();
 
         // filter aspect
-        if(factoriesContext.getIncludedFactoriesMatcher().matches(factoryName) == false) 
-            return null;
-
-        if(factoriesContext.getExcludedFactoriesMatcher().matches(factoryName) == true) 
+        if(factoriesContext.matchFactory(factoryName) == false) 
             return null;
 
         // create AdvisorFactory
-        DefaultAdvisorFactory advisorFactory = new DefaultAdvisorFactory(aopContext, factoryContext);
-
-        return advisorFactory;
+        return new DefaultAdvisorFactory(aopContext, factoryContext);
     }
 
 

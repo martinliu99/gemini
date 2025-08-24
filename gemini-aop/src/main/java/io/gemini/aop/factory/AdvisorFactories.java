@@ -43,7 +43,6 @@ public class AdvisorFactories {
 
         // record metrics
         AopMetrics.BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
-        bootstraperMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
 
         Map<String, Integer> advisorSpecs = advisorFactory.getAdvisorSpecs().entrySet().stream()
                 .map( e -> 
@@ -51,6 +50,8 @@ public class AdvisorFactories {
                 .collect( 
                         Collectors.toMap(Entry::getKey, Entry::getValue) );
         bootstraperMetrics.setAdvisorSpecs(advisorSpecs);
+
+        bootstraperMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
 
         return advisorFactory;
     }

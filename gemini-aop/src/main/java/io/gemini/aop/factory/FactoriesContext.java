@@ -36,9 +36,8 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
-import io.gemini.aop.matcher.Pattern.Parser;
+import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.aop.matcher.StringMatcherFactory;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
@@ -46,6 +45,7 @@ import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.matcher.BooleanMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
 
 /**
  *
@@ -57,23 +57,20 @@ class FactoriesContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FactoriesContext.class);
 
-    private static final String FACTORIES_INCLUDED_FACTORIES_KEY = "aop.factories.includedFactories";
-    private static final String FACTORIES_EXCLUDED_FACTORIES_KEY = "aop.factories.excludedFactories";
+    private static final String FACTORIES_INCLUDED_FACTORY_EXPRS_KEY = "aop.factories.includedFactoryExprs";
+    private static final String FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY = "aop.factories.excludedFactoryExprs";
 
-    static final String FACTORIES_DEFAULT_MATCHING_CLASS_LOADERS_KEY = "aop.factories.defaultMatchingClassLoaders";
+    static final String FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY = "aop.factories.defaultMatchingClassLoaderExprs";
 
 
     private final AopContext aopContext;
 
 
     // global advisor factory settings
-    private final StringMatcherFactory factoriesMatcherFactory;
-
-    private ElementMatcher<String> includedFactoriesMatcher;
-    private ElementMatcher<String> excludedFactoriesMatcher;
+    private ElementMatcher<String> factoryMatcher;
 
 
-    private Set<String> defaultMatchingClassLoaders;
+    private Set<String> defaultMatchingClassLoaderExprs;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
@@ -93,8 +90,6 @@ class FactoriesContext implements Closeable {
         this.aopContext = aopContext;
 
         // 1.load global factory settings
-        this.factoriesMatcherFactory = new StringMatcherFactory();
-
         this.loadSettings(this.aopContext);
 
 
@@ -120,44 +115,42 @@ class FactoriesContext implements Closeable {
 
         // load global advisor factory settings
         {
-            Set<String> includedFactories = configView.getAsStringSet(FACTORIES_INCLUDED_FACTORIES_KEY, Collections.emptySet());
+            Set<String> includedFactoryExprs = configView.getAsStringSet(FACTORIES_INCLUDED_FACTORY_EXPRS_KEY, Collections.emptySet());
 
-            if(includedFactories.size() > 0) 
+            if(includedFactoryExprs.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        includedFactories.size(), FACTORIES_INCLUDED_FACTORIES_KEY,
-                        StringUtils.join(includedFactories, "\n  ")
+                        includedFactoryExprs.size(), FACTORIES_INCLUDED_FACTORY_EXPRS_KEY,
+                        StringUtils.join(includedFactoryExprs, "\n  ")
                 );
 
-            this.includedFactoriesMatcher = CollectionUtils.isEmpty(includedFactories) 
+            ElementMatcher.Junction<String> includedFactoryMatcher = CollectionUtils.isEmpty(includedFactoryExprs) 
                     ? BooleanMatcher.of(true)
-                    : this.factoriesMatcherFactory.createStringMatcher(
-                            FACTORIES_INCLUDED_FACTORIES_KEY,
-                            Parser.parsePatterns(includedFactories), 
-                            false, false );
-        }
+                    : ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                            FACTORIES_INCLUDED_FACTORY_EXPRS_KEY, includedFactoryExprs );
 
-        {
-            Set<String> excludedFactories = configView.getAsStringSet(FACTORIES_EXCLUDED_FACTORIES_KEY, Collections.emptySet());
 
-            if(excludedFactories.size() > 0) 
+            Set<String> excludedFactoryExprs = configView.getAsStringSet(FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, Collections.emptySet());
+
+            if(excludedFactoryExprs.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        excludedFactories.size(), FACTORIES_EXCLUDED_FACTORIES_KEY,
-                        StringUtils.join(excludedFactories, "\n  ")
+                        excludedFactoryExprs.size(), FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY,
+                        StringUtils.join(excludedFactoryExprs, "\n  ")
                 );
 
-            this.excludedFactoriesMatcher = CollectionUtils.isEmpty(excludedFactories) 
+            ElementMatcher.Junction<String> excludedFactoryMatcher = CollectionUtils.isEmpty(excludedFactoryExprs) 
                     ? BooleanMatcher.of(false)
-                    : this.factoriesMatcherFactory.createStringMatcher(
-                            FACTORIES_EXCLUDED_FACTORIES_KEY,
-                            Parser.parsePatterns(excludedFactories), 
-                            true, false );
+                    : ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                            FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, excludedFactoryExprs );
+
+
+            this.factoryMatcher = includedFactoryMatcher.or( ElementMatchers.not(excludedFactoryMatcher) );
         }
 
         {
             Set<String> classLoaders = new HashSet<>();
             classLoaders.addAll( 
-                    configView.getAsStringSet(FACTORIES_DEFAULT_MATCHING_CLASS_LOADERS_KEY, Collections.emptySet()) );
-            this.defaultMatchingClassLoaders = classLoaders;
+                    configView.getAsStringSet(FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet()) );
+            this.defaultMatchingClassLoaderExprs = classLoaders;
 
             this.shareAspectClassLoader = configView.getAsBoolean("aop.factories.shareAspectClassLoader", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
@@ -215,17 +208,13 @@ class FactoriesContext implements Closeable {
     }
 
 
-    public ElementMatcher<String> getIncludedFactoriesMatcher() {
-        return includedFactoriesMatcher;
-    }
-
-    public ElementMatcher<String> getExcludedFactoriesMatcher() {
-        return excludedFactoriesMatcher;
+    public boolean matchFactory(String factoryName) {
+        return factoryMatcher.matches(factoryName);
     }
 
 
-    public Set<String> getDefaultMatchingClassLoaders() {
-        return Collections.unmodifiableSet( defaultMatchingClassLoaders );
+    public Set<String> getDefaultMatchingClassLoaderExprs() {
+        return Collections.unmodifiableSet( defaultMatchingClassLoaderExprs );
     }
 
     public boolean isShareAspectClassLoader() {

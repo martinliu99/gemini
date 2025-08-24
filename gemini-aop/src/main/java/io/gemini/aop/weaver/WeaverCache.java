@@ -50,24 +50,19 @@ class WeaverCache implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverCache.class);
 
 
-    private final WeaverContext weaverContext;
+//    private final WeaverContext weaverContext;
 
     private final ConcurrentMap<ClassLoader, ConcurrentMap<String /* typeName */, TypeCache>> classLoaderTypeCache;
 
 
     WeaverCache(WeaverContext weaverContext) {
-        this.weaverContext = weaverContext;
+//        this.weaverContext = weaverContext;
 
         this.classLoaderTypeCache = new ConcurrentReferenceHashMap<>();
     }
 
     public TypeCache getTypeCache(ClassLoader classLoader, String typeName) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
-
-        // ignore excluded ClassLoader
-        if(weaverContext.isExcludedClassLoader(ClassLoaderUtils.getClassLoaderName(classLoader)) == true)
-            return TypeCache.DUMMY_TYPE_CACHE;
-
         return this.classLoaderTypeCache
                 .computeIfAbsent(
                         cacheKey, 

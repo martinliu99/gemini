@@ -40,7 +40,6 @@ import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import io.gemini.core.util.PlaceholderHelper.PlaceholderResolver;
-import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.utility.JavaModule;
 
 public class AopMetrics {
@@ -74,8 +73,6 @@ public class AopMetrics {
     private WeaverSummary launcherStartupSummary;
     private WeaverSummary appStartupSummary;
 
-    private ElementMatcher<String> excludedClassLoaderMatcher;
-
 
     public AopMetrics(ConfigView configView, DiagnosticLevel diagnosticLevel) {
         // 1.check input argument
@@ -108,11 +105,6 @@ public class AopMetrics {
     }
 
 
-    public void setExcludedClassLoaderMatcher(ElementMatcher<String> excludedClassLoaderMatcher) {
-        this.excludedClassLoaderMatcher = excludedClassLoaderMatcher;
-    }
-
-
     public BootstraperMetrics getBootstraperMetrics() {
         return bootstraperMetrics;
     }
@@ -125,11 +117,6 @@ public class AopMetrics {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
         // ignore excluded ClassLoader
-        if(excludedClassLoaderMatcher != null
-                && excludedClassLoaderMatcher.matches(ClassLoaderUtils.getClassLoaderName(classLoader)) == true) {
-            return WeaverMetrics.DUMMY;
-        }
-
         return weaverMetricsMap
                 .computeIfAbsent(
                         cacheKey, 
@@ -192,13 +179,16 @@ public class AopMetrics {
 
         valueMap.put("launcherStartupTime", bootstraperMetrics.getLauncherStartupTime() / NANO_TIME);
 
+        valueMap.put("launcherSetupTime", bootstraperMetrics.getLauncherSetupTime() / NANO_TIME);
+
         valueMap.put("loggerCreationTime", bootstraperMetrics.getLoggerCreationTime() / NANO_TIME);
 
         valueMap.put("aopContextCreationTime", bootstraperMetrics.getAopContextCreationTime() / NANO_TIME);
         valueMap.put("classScannerCreationTime", bootstraperMetrics.getClassScannerCreationTime() / NANO_TIME);
 
-        valueMap.put("bootstrapCLConfigTime", bootstraperMetrics.getBootstrapCLConfigTime() / NANO_TIME);
-        valueMap.put("aopCLConfigTime", bootstraperMetrics.getAopCLConfigTime() / NANO_TIME);
+        valueMap.put("classLoaderConfigTime", (bootstraperMetrics.getBootstrapCLConfigTime() + bootstraperMetrics.getAopCLConfigTime()) / NANO_TIME);
+        valueMap.put("bootstrapCL", bootstraperMetrics.getBootstrapCLConfigTime() / NANO_TIME);
+        valueMap.put("aopCL", bootstraperMetrics.getAopCLConfigTime() / NANO_TIME);
 
         valueMap.put("advisorFactoryCreationTime", bootstraperMetrics.getAdvisorFactoryCreationTime() / NANO_TIME);
         valueMap.put("aopWeaverCreationTime", bootstraperMetrics.getAopWeaverCreationTime() / NANO_TIME);
@@ -406,6 +396,7 @@ public class AopMetrics {
         private long launcherStartedAt;
         private long launcherStartupTime;
 
+        private long launcherSetupTime;
         private long loggerCreationTime;
 
         private long aopContextCreationTime;
@@ -430,6 +421,14 @@ public class AopMetrics {
 
         public void setLauncherStartedAt(long launcherStartedAt) {
             this.launcherStartedAt = launcherStartedAt;
+        }
+
+        protected long getLauncherSetupTime() {
+            return launcherSetupTime;
+        }
+
+        public void setLauncherSetupTime(long launcherSetupTime) {
+            this.launcherSetupTime = launcherSetupTime;
         }
 
         protected long getLoggerCreationTime() {
@@ -534,8 +533,9 @@ public class AopMetrics {
         }
 
         protected long getUncategorizedTime() {
-            return this.launcherStartupTime 
-                    - loggerCreationTime - aopContextCreationTime
+            return launcherStartupTime 
+                    - launcherSetupTime
+                    - aopContextCreationTime
                     - bootstrapCLConfigTime - aopCLConfigTime
                     - advisorFactoryCreationTime - aopWeaverCreationTime 
                     - bytebuddyInstallationTime - typeRedefiningTime;

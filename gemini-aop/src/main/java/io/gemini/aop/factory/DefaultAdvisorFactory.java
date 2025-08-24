@@ -38,6 +38,7 @@ import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
 import io.gemini.api.classloader.ThreadContext;
+import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.concurrent.TaskExecutor;
 import io.gemini.core.util.ClassLoaderUtils;
@@ -182,9 +183,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     if(repository == null) continue;
 
                     // filter advisorRepositry via advisorMatcher
-                    if(factoryContext.getIncludedAdvisorsMatcher().matches(repository.getAdvisorName()) == false)
-                        continue;
-                    if(factoryContext.getExcludedAdvisorsMatcher().matches(repository.getAdvisorName()) == true)
+                    if(factoryContext.matchAdvisor(repository.getAdvisorName()) == false)
                         continue;
 
                     repositories.add(repository);
@@ -222,10 +221,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
 
-        // 1.filter type by excluding and including rules in Advisor level
-        // create advisors per ClassLoader
-        AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
-
+        // 1.filter type by classLoaderMatcher and TypeMatcher in Advisor level
         try {
             if(this.acceptType(typeDescription, joinpointClassLoader, javaModule, weaverMetrics) == false)
                 return Collections.emptyMap();
@@ -234,60 +230,69 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
 
-        // 2.create advisors
+        // 2.create advisors per ClassLoader
         List<? extends Advisor> candidateAdvisors = getOrCreateAdvisorPerClassLoader(typeName,  
-                joinpointClassLoaderId, joinpointClassLoader, javaModule, advisorContext, weaverMetrics);
+                joinpointClassLoaderId, joinpointClassLoader, javaModule, weaverMetrics);
         if(CollectionUtils.isEmpty(candidateAdvisors))
             return Collections.emptyMap();
 
 
-        // 3. fast match advisors for given type
-        List<Advisor.PointcutAdvisor> pointcutAdvisors = null;
         try {
-            startedAt = System.nanoTime();
-            weaverMetrics.incrTypeFastMatchingCount();
+            // 3. fast match advisors for given type
+            List<Advisor.PointcutAdvisor> pointcutAdvisors = null;
+            try {
+                startedAt = System.nanoTime();
+                weaverMetrics.incrTypeFastMatchingCount();
 
-            pointcutAdvisors = this.doFastMatchAdvisors(typeDescription, joinpointClassLoader, javaModule, 
-                    candidateAdvisors, weaverMetrics);
+                pointcutAdvisors = this.doFastMatchAdvisors(typeDescription, joinpointClassLoader, javaModule, 
+                        candidateAdvisors, weaverMetrics);
 
-            if(CollectionUtils.isEmpty(pointcutAdvisors)) {
-                return Collections.emptyMap();
+                if(CollectionUtils.isEmpty(pointcutAdvisors)) {
+                    return Collections.emptyMap();
+                }
+            } finally {
+                 weaverMetrics.incrTypeFastMatchingTime(System.nanoTime() - startedAt);
             }
-        } finally {
-             weaverMetrics.incrTypeFastMatchingTime(System.nanoTime() - startedAt);
-        }
 
 
-        // 4. match advisors for given type's methods
-        Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new HashMap<>();
-        try {
-            startedAt = System.nanoTime();
-            weaverMetrics.incrTypeMatchingCount();
+            // 4. match advisors for given type's methods
+            Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new HashMap<>();
+            try {
+                startedAt = System.nanoTime();
+                weaverMetrics.incrTypeMatchingCount();
 
-            MethodGraph.Linked methodGraph = null;
-            for(InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
-                List<Advisor> advisorChain = this.doMatchAdvisors(typeDescription, methodDescription, joinpointClassLoader, 
-                        pointcutAdvisors, weaverMetrics);
-                if(CollectionUtils.isEmpty(advisorChain)) continue;
+                MethodGraph.Linked methodGraph = null;
+                for(InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
+                    List<Advisor> advisorChain = this.doMatchAdvisors(typeDescription, methodDescription, joinpointClassLoader, 
+                            pointcutAdvisors, weaverMetrics);
+                    if(CollectionUtils.isEmpty(advisorChain)) continue;
 
-                // convert matched bridge method to overridden method
-                if(methodDescription.isBridge()) {
-                    if(methodGraph == null)
-                        methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) typeDescription);
+                    // convert matched bridge method to overridden method
+                    if(methodDescription.isBridge()) {
+                        if(methodGraph == null)
+                            methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) typeDescription);
 
-                    MethodGraph.Node locatedNode = methodGraph.locate(methodDescription.asSignatureToken());
-                    if(locatedNode != null)
-                        methodDescription = locatedNode.getRepresentative().asDefined();
+                        MethodGraph.Node locatedNode = methodGraph.locate(methodDescription.asSignatureToken());
+                        if(locatedNode != null)
+                            methodDescription = locatedNode.getRepresentative().asDefined();
+                    }
+
+                    methodAdvisorsMap.merge(methodDescription, advisorChain, 
+                            (oldValue, value) -> CollectionUtils.merge(oldValue, value) 
+                    );
                 }
 
-                methodAdvisorsMap.merge(methodDescription, advisorChain, 
-                        (oldValue, value) -> CollectionUtils.merge(oldValue, value) 
-                );
+                return methodAdvisorsMap;
+            } finally {
+                weaverMetrics.incrTypeMatchingTime(System.nanoTime() - startedAt);
             }
-
-            return methodAdvisorsMap;
         } finally {
-            weaverMetrics.incrTypeMatchingTime(System.nanoTime() - startedAt);
+            AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
+
+            TypeWorld typeWorld = advisorContext.getTypeWorld();
+            if(typeWorld != null && typeWorld instanceof TypeWorld.CacheResolutionFacade) {
+                ((TypeWorld.CacheResolutionFacade) typeWorld).releaseCache(typeDescription);
+            }
         }
     }
 
@@ -297,37 +302,25 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         if(this.factoryContext.isMatchJoinpoint() == false)
             return false;
 
-        String joinpointClassLoaderName = ClassLoaderUtils.getClassLoaderName(joinpointClassLoader);
-
-        // 2.check included joinpointClassLoaders
-        if(factoryContext.getIncludedClassLoadersMatcher().matches(joinpointClassLoaderName) == true) {
-            return true;
-        }
-
-        // 3.check excluded joinpointClassLoaders
-        if(factoryContext.getExcludedClassLoadersMatcher().matches(joinpointClassLoaderName) == true) {
+        // 2.filter type by classLoaderMatcher
+        if(factoryContext.matchClassLoaders(joinpointClassLoader) == false)
             return false;
-        }
 
-        // 4.check included types
-        if(factoryContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
-            return true;
-        }
-
-        // 5.check excluded types
-        if(factoryContext.createExcludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
+        // 3.filter type by typeMatcher
+        if(factoryContext.matchType(typeDescription.getTypeName()) == false)
             return false;
-        }
 
         return true;
     }
 
     private List<? extends Advisor> getOrCreateAdvisorPerClassLoader(String typeName, 
             String joinpointClassLoaderId, ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            AdvisorContext advisorContext, WeaverMetrics weaverMetrics) {
+            WeaverMetrics weaverMetrics) {
         long startedAt = System.nanoTime();
 
         try {
+            AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
+
             ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
 
             if(this.classLoaderAdvisorMap.containsKey(cacheKey)) {

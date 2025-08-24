@@ -43,7 +43,7 @@ import io.gemini.aop.weaver.Joinpoints.Descriptor;
 import io.gemini.aop.weaver.WeaverCache.TypeCache;
 import io.gemini.aop.weaver.advice.DescriptorOffset;
 import io.gemini.api.classloader.ThreadContext;
-import io.gemini.core.util.ClassLoaderUtils;
+import io.gemini.core.pool.TypePools.ExplicitTypePool;
 import io.gemini.core.util.CollectionUtils;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.agent.builder.AgentBuilder.RawMatcher;
@@ -140,6 +140,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
         ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
 
         TypeCache typeCache = null;
+        ExplicitTypePool typePool = null;
         try {
             ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
 
@@ -148,23 +149,30 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                 LOGGER.info("Matching type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
             }
 
+            // 1.filter type by classloaderMatcher in Weaver level
+            if(weaverContext.matchClassLoader(joinpointClassLoader) == false)
+                return false;
+
             // check cached result since bytebuddy will enter this method twice when class redefinition, or retransmission
             typeCache = weaverCache.getTypeCache(joinpointClassLoader, typeName);
-            if(typeCache.isMatched() == true) {
+            if(typeCache == null)
+                return false;
+            else if(typeCache.isMatched() == true)
                 return true;
-            }
 
-            weaverMetrics = aopContext.getAopMetrics().createWeaverMetrics(joinpointClassLoader, javaModule);
-            weaverMetrics.incrTypeLoadingCount();
-
-
-            // 1.filter type by excluding and including rules in Weaver level
             try {
+                weaverMetrics = aopContext.getAopMetrics().createWeaverMetrics(joinpointClassLoader, javaModule);
+                weaverMetrics.incrTypeLoadingCount();
                 weaverMetrics.incrTypeAcceptingCount();
-                if(this.acceptType(typeDescription, joinpointClassLoader, javaModule, 
-                        classBeingRedefined, protectionDomain, weaverMetrics) == false) {
+
+                // cache resolved typeDescription
+                typePool = aopContext.getTypePoolFactory().createTypePool(joinpointClassLoader, javaModule);
+                typePool.addTypeDescription(typeDescription);
+
+
+                // filter type by typeMatcher in Weaver level
+                if(weaverContext.matchType(typeName) == false)
                     return false;
-                }
             } finally {
                 weaverMetrics.incrTypeAcceptingTime(System.nanoTime() - startedAt);
             }
@@ -190,44 +198,17 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
         } finally {
             ThreadContext.setContextClassLoader(existingClassLoader);
 
-            if(null != typeCache && typeCache.isMatched() == false) {
+            if(typeCache != null && typeCache.isMatched() == false) {
                 weaverCache.removeTypeCache(joinpointClassLoader, typeName);        // remove cache since not matched
             }
+
+            // release cached typeDescription
+            if(typePool != null)
+                typePool.removeTypeDescription(typeName);
 
             if(weaverMetrics != null)
                 weaverMetrics.incrTypeLoadingTime(System.nanoTime() - startedAt);
         }
-    }
-
-    private boolean acceptType(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule,
-            Class<?> classBeingRedefined, ProtectionDomain protectionDomain, WeaverMetrics weaverMetrics) {
-        String joinpointClassLoaderName = ClassLoaderUtils.getClassLoaderName(joinpointClassLoader);
-
-        // 1.check included joinpointClassLoaders
-        if(weaverContext.getIncludedClassLoadersMatcher().matches(joinpointClassLoaderName) == true) {
-            return true;
-        }
-
-        // 2.check excluded joinpointClassLoaders
-        if(weaverContext.getExcludedClassLoadersMatcher().matches(joinpointClassLoaderName) == true) {
-            return false;
-        }
-
-        // 3.check included types
-        aopContext.getTypePoolFactory().createTypePool(joinpointClassLoader, javaModule).addTypeDescription(typeDescription);
-
-//        if(weaverContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
-//            return true;
-//        }
-        return weaverContext.createIncludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription);
-
-        // 4.check excluded types
-//        if(weaverContext.createExcludedTypesMatcher(joinpointClassLoader, javaModule).matches(typeDescription) == true) {
-//            return false;
-//        }
-//
-//        return true;
     }
 
 

@@ -61,7 +61,6 @@ import net.bytebuddy.matcher.ElementMatchers;
  * @author   martin.liu
  * @since	 1.0
  */
-@NoMatching(classLoader = true)
 public abstract class AspectClassLoader extends URLClassLoader {
 
     private final String loaderName;

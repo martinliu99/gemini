@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
-import io.gemini.api.annotation.NoMatching;
-
 /**
  * <p>
  * This specialized ClassLoader is used by {@code AopLauncher} to load AOP framework and depended classes 
@@ -57,7 +55,6 @@ import io.gemini.api.annotation.NoMatching;
  * @author   martin.liu
  * @since	 1.0
  */
-@NoMatching(classLoader = true)
 public abstract class AopClassLoader extends URLClassLoader {
 
     /**

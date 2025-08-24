@@ -39,8 +39,8 @@ public class TypeMatchers {
 
         protected Object expression;
 
-        protected AbstractMatcher(Object pattern) {
-            this.expression = pattern;
+        protected AbstractMatcher(Object expression) {
+            this.expression = expression;
         }
 
         @Override

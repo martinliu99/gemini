@@ -18,11 +18,11 @@ package io.gemini.aspectj.weaver;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.aspectj.weaver.ReferenceType;
 import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.Shadow;
 import org.aspectj.weaver.World;
 
+import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import net.bytebuddy.description.ByteCodeElement.Member;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.pool.TypePool;
@@ -35,16 +35,27 @@ import net.bytebuddy.pool.TypePool;
  */
 public interface TypeWorld {
 
+    TypeWorld EMPTY_WORLD = new TypeWorld.LazyFacade( new BytebuddyWorld(TypePool.Empty.INSTANCE, null) );
+
+
     World getWorld();
 
     ResolvedType resolve(String typeName);
 
     ResolvedType resolve(TypeDescription typeDescription);
 
-    ReferenceType getReferenceType(String typeName);
-
 
     Shadow makeShadow(Member member);
+
+
+    class TypeWorldException extends RuntimeException {
+
+        private static final long serialVersionUID = 816600136638029684L;
+
+        public TypeWorldException(String message) {
+            super(message);
+        }
+    }
 
 
     abstract class WithDelegation implements TypeWorld {
@@ -70,14 +81,6 @@ public interface TypeWorld {
         }
 
         /** 
-         * {@inheritDoc} 
-         */
-        @Override
-        public ResolvedType resolve(TypeDescription typeDescription) {
-            return getDelegate().resolve(typeDescription);
-        }
-
-        /** 
          * {@inheritDoc}
          */
         @Override
@@ -86,11 +89,11 @@ public interface TypeWorld {
         }
 
         /** 
-         * {@inheritDoc}
+         * {@inheritDoc} 
          */
         @Override
-        public ReferenceType getReferenceType(String typeName) {
-            return getDelegate().getReferenceType(typeName);
+        public ResolvedType resolve(TypeDescription typeDescription) {
+            return getDelegate().resolve(typeDescription);
         }
 
 
@@ -123,16 +126,23 @@ public interface TypeWorld {
             if(typeDescription == null)
                 return null;
 
-            ReferenceType resolvedType = getDelegate().getReferenceType(typeDescription.getTypeName());
-            return resolvedType != null ? resolvedType : new DelegatedReferenceType.LazyFacade(typeDescription, this.getDelegate());
+            ResolvedType resolvedType = getDelegate().getWorld().getTypeMap().get(typeDescription.getTypeName());
+            return resolvedType != null ? resolvedType : new ReferenceTypes.LazyFacade(typeDescription, this.getDelegate());
         }
 
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public ResolvedType resolve(String typeName) {
+            ResolvedType resolvedType = getDelegate().getWorld().getTypeMap().get(typeName);
+            return resolvedType != null ? resolvedType : new ReferenceTypes.LazyFacade(typeName, this.getDelegate());
+        }
     }
 
     public static class CacheResolutionFacade extends WithDelegation {
 
-        private final ConcurrentMap<TypeDescription, ResolvedType> resolvedTypeCache = new ConcurrentHashMap<>();
-        private final ConcurrentMap<Member, Shadow> shadowCache = new ConcurrentHashMap<>();
+        private final ConcurrentMap<TypeDescription, Resolution> resolutionCache = new ConcurrentHashMap<>();
 
 
         /**
@@ -149,10 +159,7 @@ public interface TypeWorld {
         public ResolvedType resolve(TypeDescription typeDescription) {
             if(typeDescription == null) return null;
 
-            return resolvedTypeCache.computeIfAbsent(
-                    typeDescription, 
-                    key -> getDelegate().resolve(typeDescription)
-            );
+            return doResolve(typeDescription).resolvedType;
         }
 
         /**
@@ -162,12 +169,38 @@ public interface TypeWorld {
         public Shadow makeShadow(Member member) {
             if(member == null) return null;
 
-            return this.shadowCache.computeIfAbsent(
+            return doResolve(member.getDeclaringType().asErasure()).shadowCache.computeIfAbsent(
                     member, 
                     key -> getDelegate().makeShadow(key)
             );
         }
 
+        protected Resolution doResolve(TypeDescription typeDescription) {
+            return resolutionCache.computeIfAbsent(
+                    typeDescription, 
+                    key -> new Resolution(
+                            getDelegate().resolve(key) )
+            );
+        }
+
+
+        public void releaseCache(TypeDescription typeDescription) {
+            if(typeDescription == null) return;
+
+            resolutionCache.remove(typeDescription);
+        }
+
+
+        private static class Resolution {
+
+            final ResolvedType resolvedType;
+            ConcurrentMap<Member, Shadow> shadowCache;
+
+            public Resolution(ResolvedType resolvedType) {
+                this.resolvedType = resolvedType;
+                this.shadowCache = new ConcurrentHashMap<>();
+            }
+        }
     }
 
 

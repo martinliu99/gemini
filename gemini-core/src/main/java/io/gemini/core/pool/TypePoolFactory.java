@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
-import io.gemini.core.pool.TypePools.LazyResolutionTypePool;
+import io.gemini.core.pool.TypePools.HybridResolutionTypePool;
 import io.gemini.core.pool.TypePools.ExplicitTypePool;
 import io.gemini.core.util.ClassLoaderUtils;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
@@ -91,15 +91,12 @@ public interface TypePoolFactory {
             if(classLoader instanceof AopClassLoader)
                 // reuse loaded Aop framework classes for better performance
                 return TypePool.ClassLoading.of(classLoader);
-            else {
-                String classLoaderName = ClassLoaderUtils.getClassLoaderName(classLoader);
-
-                return new LazyResolutionTypePool(
-                                classLoaderName,
-                                CacheProvider.Simple.withObjectType(), 
-                                this.locationStrategy.classFileLocator(classLoader, javaModule), 
-                                ReaderMode.FAST);
-            }
+            else
+                return new HybridResolutionTypePool(
+                        ClassLoaderUtils.getClassLoaderName(classLoader),
+                        CacheProvider.Simple.withObjectType(), 
+                        this.locationStrategy.classFileLocator(classLoader, javaModule), 
+                        ReaderMode.FAST);
         }
 
         /** 
@@ -124,7 +121,7 @@ public interface TypePoolFactory {
                 cacheProvider = CacheProvider.Simple.withObjectType();
 
             return new TypePool.LazyFacade(
-                    new LazyResolutionTypePool(        // new TypePool with changed classFileLocator
+                    new HybridResolutionTypePool(        // new TypePool with changed classFileLocator
                             ClassLoaderUtils.getClassLoaderName(classLoader),
                             cacheProvider,
                             classFileLocator,

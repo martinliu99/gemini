@@ -26,11 +26,32 @@ import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
 
 /**
- * 
+ *
+ *
+ * @author   martin.liu
+ * @since	 1.0
  */
 public interface TypePools {
 
-    class LazyResolutionTypePool extends TypePool.Default.WithLazyResolution {
+    enum ResolutionType {
+        EAGER,
+        LAZY;
+    }
+
+
+    /**
+     * This type pool supports both eagerly and lazily type resolution.
+     *
+     * @author   martin.liu
+     * @since	 1.0
+     */
+    class HybridResolutionTypePool extends TypePool.Default.WithLazyResolution {
+
+        private static final ThreadLocal<ResolutionType> RESOLUTION_TYPE = new ThreadLocal<ResolutionType>() {
+                protected ResolutionType initialValue() {
+                    return ResolutionType.LAZY;
+                }
+        };
 
         private final String poolName;
 
@@ -39,13 +60,13 @@ public interface TypePools {
          * @param classFileLocator
          * @param readerMode
          */
-        public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
+        public HybridResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
             super(cacheProvider, classFileLocator, readerMode);
 
             this.poolName = poolName;
         }
 
-        public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
+        public HybridResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
             super(cacheProvider, classFileLocator, readerMode, parentPool);
 
             this.poolName = poolName;
@@ -56,6 +77,26 @@ public interface TypePools {
             return this.cacheProvider;
         }
 
+        public static ResolutionType getResolutionType() {
+            return RESOLUTION_TYPE.get();
+        }
+
+        public static void setResolutionType(ResolutionType resolutionType) {
+            RESOLUTION_TYPE.set(resolutionType);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected Resolution doDescribe(String name) {
+            Resolution resolution = super.doDescribe(name);
+
+            if(RESOLUTION_TYPE.get() == ResolutionType.EAGER)
+                resolution.resolve().getModifiers();        // trigger actual resolution
+
+            return resolution;
+        }
 
         @Override
         public String toString() {
@@ -64,6 +105,12 @@ public interface TypePools {
     }
 
 
+    /**
+     * This type pool resolves type with explicitly type definitions.
+     *
+     * @author   martin.liu
+     * @since	 1.0
+     */
     class ExplicitTypePool implements TypePool {
 
         private final TypePool delegate;
@@ -79,9 +126,9 @@ public interface TypePools {
         }
 
         public CacheProvider getCacheProvider() {
-            return delegate instanceof LazyResolutionTypePool == false
+            return delegate instanceof HybridResolutionTypePool == false
                 ? null
-                : ((LazyResolutionTypePool) delegate).getCacheProvider();
+                : ((HybridResolutionTypePool) delegate).getCacheProvider();
         }
 
         public void addTypeDescription(TypeDescription typeDescription) {

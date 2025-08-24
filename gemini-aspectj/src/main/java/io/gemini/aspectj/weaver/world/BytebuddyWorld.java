@@ -123,24 +123,20 @@ public class BytebuddyWorld extends World implements TypeWorld {
 
     @Override
     protected ReferenceTypeDelegate resolveDelegate(ReferenceType referenceType) {
-        return new InternalReferenceTypeDelegate(
-                this, 
-                describeType(referenceType.getName()), 
-                referenceType);
+        try {
+            return new InternalReferenceTypeDelegate(
+                    this, 
+                    describeType(referenceType.getName()), 
+                    referenceType);
+        } catch(Exception e) {
+            return null;
+        }
     }
 
     protected TypeDescription describeType(String typeName) {
         if("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
         return this.typePool.describe(typeName).resolve();
-    }
-
-    /** 
-     * {@inheritDoc}
-     */
-    @Override
-    public ReferenceType getReferenceType(String typeName) {
-        return lookupBySignature(typeName);
     }
 
 
@@ -286,17 +282,6 @@ public class BytebuddyWorld extends World implements TypeWorld {
 
         public void ignore(org.aspectj.bridge.IMessage.Kind kind) {
             // empty
-        }
-
-    }
-
-
-    public static class TypeWorldException extends RuntimeException {
-
-        private static final long serialVersionUID = 816600136638029684L;
-
-        public TypeWorldException(String message) {
-            super(message);
         }
     }
 }

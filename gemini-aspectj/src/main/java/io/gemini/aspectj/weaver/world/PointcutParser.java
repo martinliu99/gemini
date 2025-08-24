@@ -52,6 +52,8 @@ import org.aspectj.weaver.tools.UnsupportedPointcutPrimitiveException;
 import io.gemini.aspectj.weaver.Expression.PointcutExpr;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
+import io.gemini.core.pool.TypePools.HybridResolutionTypePool;
+import io.gemini.core.pool.TypePools.ResolutionType;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 
@@ -190,7 +192,10 @@ public class PointcutParser {
     }
 
     public Pointcut parsePointcut(String expression, TypeDescription inScope, Map<String, TypeDescription> formalParameters) {
+        ResolutionType currentResolutionType = HybridResolutionTypePool.getResolutionType();
         try {
+            HybridResolutionTypePool.setResolutionType(ResolutionType.EAGER);
+
             Pointcut pc = resolvePointcutExpression(expression, inScope, formalParameters);
 
             pc = concretizePointcutExpression(pc, inScope, formalParameters);
@@ -201,6 +206,8 @@ public class PointcutParser {
             throw new IllegalArgumentException(buildUserMessageFromParserException(expression, pEx));
         } catch (ReflectionWorld.ReflectionWorldException rwEx) {
             throw new IllegalArgumentException(rwEx.getMessage());
+        } finally {
+            HybridResolutionTypePool.setResolutionType(currentResolutionType);
         }
     }
 

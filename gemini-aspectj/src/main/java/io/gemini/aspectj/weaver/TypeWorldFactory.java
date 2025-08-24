@@ -66,8 +66,9 @@ public interface TypeWorldFactory {
             TypePool typePool = typePoolFactory.createTypePool(classLoader, javaModule);
             this.typeWorldCache.computeIfAbsent(
                     cacheKey, 
-                    key -> new TypeWorld.LazyFacade(
-                            doCreateTypeWorld(typePool, null) )
+                    key -> new TypeWorld.CacheResolutionFacade(
+                            new TypeWorld.LazyFacade(
+                                    doCreateTypeWorld(typePool, null) ) )
             );
 
             return typeWorldCache.get(cacheKey);

@@ -17,55 +17,58 @@ package io.gemini.aspectj.weaver;
 
 import org.aspectj.weaver.ReferenceType;
 import org.aspectj.weaver.ReferenceTypeDelegate;
+import org.aspectj.weaver.UnresolvedType;
 import org.aspectj.weaver.World;
 
 import net.bytebuddy.description.type.TypeDescription;
 
 
-public abstract class DelegatedReferenceType extends ReferenceType {
+public interface ReferenceTypes {
 
-    private ReferenceType referenceType;
+    abstract class WithDelegation extends ReferenceType {
+        private ReferenceType referenceType;
 
 
-    public DelegatedReferenceType(String signature, World world) {
-        super(signature, world);
-    }
-
-    @Override
-    public ReferenceTypeDelegate getDelegate() {
-        if(super.getDelegate() == null) {
-            // initialize delegate with lazily resolved referenceType
-            super.setDelegate(doResolveReferenceType().getDelegate());
+        public WithDelegation(String signature, World world) {
+            super(signature, world);
         }
 
-        return super.getDelegate();
-    }
+        @Override
+        public ReferenceTypeDelegate getDelegate() {
+            if(super.getDelegate() == null) {
+                // initialize delegate with lazily resolved referenceType
+                super.setDelegate(doResolveReferenceType().getDelegate());
+            }
 
-    ReferenceType getResolvedType() {
-        if(referenceType == null) {
-            referenceType = this.doResolveReferenceType();
+            return super.getDelegate();
         }
-        return referenceType;
+
+        ReferenceType getResolvedType() {
+            if(referenceType == null) {
+                referenceType = this.doResolveReferenceType();
+            }
+            return referenceType;
+        }
+
+        protected abstract ReferenceType doResolveReferenceType();
+
+
+        @Override
+        public int hashCode() {
+            return this.getResolvedType().hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if(obj instanceof WithDelegation)
+                obj = ((WithDelegation) obj).doResolveReferenceType();
+
+            return this.getResolvedType().equals(obj);
+        }
     }
 
-    protected abstract ReferenceType doResolveReferenceType();
 
-    @Override
-    public int hashCode() {
-        return this.getResolvedType().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if(obj instanceof DelegatedReferenceType)
-            obj = ((DelegatedReferenceType) obj).doResolveReferenceType();
-
-        return this.getResolvedType().equals(obj);
-    }
-
-
-
-    public static class Facade extends DelegatedReferenceType {
+    class Facade extends WithDelegation {
 
         private final ReferenceType referenceType;
 
@@ -89,11 +92,20 @@ public abstract class DelegatedReferenceType extends ReferenceType {
     }
 
 
-    public static class LazyFacade extends DelegatedReferenceType {
+    class LazyFacade extends WithDelegation {
 
+        private final String typeName;
         private final TypeDescription typeDescription;
         private final TypeWorld typeWorld;
 
+
+        public LazyFacade(String typeName, TypeWorld typeWorld) {
+            super(UnresolvedType.forName(typeName).getSignature(), typeWorld.getWorld());
+
+            this.typeName = typeName;
+            this.typeDescription = null;
+            this.typeWorld = typeWorld;
+        }
 
         /**
          * @param signature
@@ -102,6 +114,7 @@ public abstract class DelegatedReferenceType extends ReferenceType {
         public LazyFacade(TypeDescription typeDescription, TypeWorld typeWorld) {
             super(typeDescription.getDescriptor(), typeWorld.getWorld());
 
+            this.typeName = typeDescription.getTypeName();
             this.typeDescription = typeDescription;
             this.typeWorld = typeWorld;
         }
@@ -111,7 +124,10 @@ public abstract class DelegatedReferenceType extends ReferenceType {
          */
         @Override
         protected ReferenceType doResolveReferenceType() {
-            return (ReferenceType) typeWorld.resolve(typeDescription);
+            if(typeDescription != null)
+                return (ReferenceType) typeWorld.resolve(typeDescription);
+            else
+                return (ReferenceType) typeWorld.resolve(typeName);
         }
     }
 }

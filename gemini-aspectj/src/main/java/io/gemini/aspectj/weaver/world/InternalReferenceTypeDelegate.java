@@ -326,7 +326,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         List<PointcutMethod> pointcutMethods = this.getDeclaredPointcutMethods(typeDescription);
         this.pointcuts = new ResolvedPointcutDefinition[pointcutMethods.size()];
 
-        PointcutParser parser = PointcutParser.createPointcutParser(typeWorld);
+        PointcutParser pointcutParser = new PointcutParser(typeWorld);
 
         // phase 1, create legitimate entries in pointcuts[] before we
         // attempt to resolve *any* of the pointcuts
@@ -364,7 +364,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
                 formalParameters.put(parameterNames[j], parameterTypes[j]);
             }
 
-            Pointcut pointcut = parser.parsePointcut(pointcutMethod.getPointcutExpression(), this.typeDescription, formalParameters);
+            Pointcut pointcut = pointcutParser.resolvePointcutExpression(pointcutMethod.getPointcutExpression(), this.typeDescription, formalParameters);
             ResolvedPointcutDefinition resolvedMember = pointcuts[i];
             resolvedMember.setParameterNames(parameterNames);
             resolvedMember.setPointcut(pointcut);
@@ -372,7 +372,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
         // phase 3, now concretize them all
         for(int i = 0; i < pointcuts.length; i++) {
-            pointcuts[i].setPointcut(parser.concretizePointcutExpression(pointcuts[i].getPointcut(), this.typeDescription, formalParameterList.get(i)));
+            pointcuts[i].setPointcut(pointcutParser.concretizePointcutExpression(pointcuts[i].getPointcut(), this.typeDescription, formalParameterList.get(i)));
         }
 
         return pointcuts;

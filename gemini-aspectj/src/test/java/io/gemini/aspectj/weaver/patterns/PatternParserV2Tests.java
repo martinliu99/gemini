@@ -32,7 +32,7 @@ import net.bytebuddy.pool.TypePool;
 
 public class PatternParserV2Tests {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SelfTestPatternParserTests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PatternParserV2Tests.class);
 
 
     @Test

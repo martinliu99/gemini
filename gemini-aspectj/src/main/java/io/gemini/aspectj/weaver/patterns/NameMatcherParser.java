@@ -33,7 +33,7 @@ import net.bytebuddy.matcher.StringMatcher;
  * @author   martin.liu
  * @since	 1.0
  */
-public enum NameMatcherParser {
+enum NameMatcherParser {
 
     INSTANCE;
 
@@ -75,6 +75,9 @@ public enum NameMatcherParser {
         }
     }
 
+    private boolean isStar(String expression) {
+        return expression != null && expression.equals(STAR);
+    }
 
     /**
      * Checks if the type expression looks like "com.foo..*"
@@ -85,21 +88,13 @@ public enum NameMatcherParser {
         }
         // now must looks like with "charsss..*" or "cha.rss..*" etc
         // note that "*" and "*..*" won't be fast matched
-        // and that "charsss.*" will not neither
         int length = expression.length();
-        if (expression.endsWith("..*") && length > 3) {
-            if (expression.indexOf("..") == length - 3 // no ".." before last sequence
-                    && expression.indexOf('*') == length - 1) { // no earlier '*'
-                expression = expression.substring(0, length - 2); // "charsss." or "char.rss." etc
-                length = expression.length();
+        expression = expression.endsWith("..*") && length > 3
+                ? expression.substring(0, length - 2) // "charsss." or "char.rss." etc
+                : expression.substring(0, length -1);
 
-                return expression.endsWith("$.") && length > 2    // nested class under "char.rss$"
-                    ? expression.substring(0, length - 1) : expression;
-            }
-        } else if (expression.endsWith("*")) {
-            return expression.substring(0, expression.length()-1);
-        }
-        return null;
+        return expression.indexOf("..") == -1 && expression.indexOf(STAR) == -1 
+                ? expression : null;
     }
 
     /**
@@ -149,9 +144,5 @@ public enum NameMatcherParser {
             return null;
         }
         return expression;
-    }
-
-    private boolean isStar(String expression) {
-        return expression != null && expression.equals(STAR);
     }
 }

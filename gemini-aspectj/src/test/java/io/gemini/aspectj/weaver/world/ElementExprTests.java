@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aspectj.weaver;
+package io.gemini.aspectj.weaver.world;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,9 +22,11 @@ import java.net.URLClassLoader;
 
 import org.junit.jupiter.api.Test;
 
+import io.gemini.api.classloader.ClassLoaders;
+import io.gemini.aspectj.weaver.ExprParser;
+import io.gemini.aspectj.weaver.TypeWorld;
+import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.pool.TypePoolFactory;
-import io.gemini.core.util.ClassLoaderUtils;
-import jdk.proxy2.$Proxy27;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
@@ -58,17 +60,16 @@ public class ElementExprTests {
     @Test
     public void testClassLoader() {
         {
-            ElementMatcher<ClassLoader> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseClassLoaderExpr(
-                            "BootstrapClassLoader || AppClassLoader");
+            ElementMatcher<ClassLoader> elementExpr = ExprParser.INSTANCE.parseClassLoaderExpr(
+                    "BootstrapClassLoader || AppClassLoader");
 
             assertThat( elementExpr.matches(null) ).isTrue();
-            assertThat( elementExpr.matches( ClassLoaderUtils.getExtClassLoader() ) ).isFalse();
-            assertThat( elementExpr.matches( ClassLoaderUtils.getAppClassLoader() ) ).isTrue();
+            assertThat( elementExpr.matches( ClassLoaders.getExtClassLoader() ) ).isFalse();
+            assertThat( elementExpr.matches( ClassLoaders.getAppClassLoader() ) ).isTrue();
         }
 
         {
-            ElementMatcher<ClassLoader> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<ClassLoader> elementExpr = ExprParser.INSTANCE
                     .parseClassLoaderExpr(
                             "io.gemini.aspectj.weaver.*ExprTest*$NestedClassLoader");
 
@@ -77,7 +78,7 @@ public class ElementExprTests {
 
 
         {
-            ElementMatcher<ClassLoader> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<ClassLoader> elementExpr = ExprParser.INSTANCE
                     .parseClassLoaderExpr(
                             "io.gemini.aspectj.weaver.*ExprTest*.NestedClassLoader");
 
@@ -101,7 +102,7 @@ public class ElementExprTests {
     @Test
     public void testTypeName() {
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseTypeNameExpr(
                             "io.gemini..weaver.*ExprTest*");
 
@@ -110,7 +111,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseTypeNameExpr(
                             "io.gemini..weaver.*ExprTest*$1");
 
@@ -118,7 +119,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseTypeNameExpr(
                             "io.gemini..weaver.*ExprTest*$InnerClass");
 
@@ -127,7 +128,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseTypeNameExpr(
                             "io.gemini..weaver.*ExprTest* && !io.gemini..weaver.*ExprTest*$NestClass");
 
@@ -137,12 +138,51 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseTypeNameExpr(
                             " !*..$Proxy*");
 
             assertThat( elementExpr.matches( getClass().getName() ) ).isTrue();
-            assertThat( elementExpr.matches( $Proxy27.class.getName() ) ).isFalse();
+            assertThat( elementExpr.matches( jdk.proxy2.$Proxy27.class.getName() ) ).isFalse();
+        }
+    }
+
+
+    @Test
+    public void testTypeName2() {
+        // starts with
+        {
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
+                    .parseTypeNameExpr(
+                            ElementExprTests.class.getPackage().getName() +  ".ElementExprTests*");
+
+            assertThat( elementExpr.matches( getClass().getName() ) ).isTrue();
+        }
+
+        {
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
+                    .parseTypeNameExpr(
+                            ElementExprTests.class.getPackage().getName() +  ".ElementExprTests$Inner*");
+
+            assertThat( elementExpr.matches( ElementExprTests.InnerClass.class.getName() ) ).isTrue();
+        }
+
+        // ends with
+        {
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
+                    .parseTypeNameExpr(
+                            "*ElementExprTests");
+
+            assertThat( elementExpr.matches( getClass().getName() ) ).isTrue();
+        }
+
+        // ends with
+        {
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
+                    .parseTypeNameExpr(
+                            "*..ElementExprTests");
+
+            assertThat( elementExpr.matches( getClass().getName() ) ).isTrue();
         }
     }
 
@@ -150,7 +190,7 @@ public class ElementExprTests {
     @Test
     public void testResourceName() {
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseResourceNameExpr(
                             "io/gemini//weaver/*ExprTest*");
 
@@ -159,7 +199,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseResourceNameExpr(
                             "io.gemini..weaver.*ExprTest*$1");
 
@@ -167,7 +207,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseResourceNameExpr(
                             "io.gemini..weaver.*ExprTest*$InnerClass");
 
@@ -176,7 +216,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseResourceNameExpr(
                             "io.gemini..weaver.resource.*roperties");
 
@@ -185,7 +225,7 @@ public class ElementExprTests {
         }
 
         {
-            ElementMatcher<String> elementExpr = ElementExpr.Parser.INSTANCE
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
                     .parseResourceNameExpr(
                             "io/gemini/aspectj/weaver/resource.*roperties");
 
@@ -201,35 +241,31 @@ public class ElementExprTests {
                 .createTypeWorld(getClass().getClassLoader(), null);
 
         {
-            ElementMatcher<TypeDescription> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseTypeExpr(
-                            "io.gemini..weaver.*ExprTest*", typeWorld);
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "io.gemini..weaver.*ExprTest*");
 
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(getClass()) ) ).isTrue();
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.InnerClass.class) ) ).isTrue();
         }
 
         {
-            ElementMatcher<TypeDescription> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseTypeExpr(
-                            "io.gemini..weaver.*ExprTest*$1", typeWorld);
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "io.gemini..weaver.*ExprTest*$1");
 
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(anonymousClass.getClass()) ) ).isTrue();
         }
 
         {
-            ElementMatcher<TypeDescription> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseTypeExpr(
-                            "io.gemini..weaver.*ExprTest*$InnerClass", typeWorld);
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "io.gemini..weaver.*ExprTest*$InnerClass");
 
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(getClass()) ) ).isFalse();
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.InnerClass.class) ) ).isTrue();
         }
 
         {
-            ElementMatcher<TypeDescription> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseTypeExpr(
-                            "io.gemini..weaver.*ExprTest* && !io.gemini..weaver.*ExprTest*$NestClass", typeWorld);
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "io.gemini..weaver.*ExprTest* && !io.gemini..weaver.*ExprTest*$NestClass");
 
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(getClass()) ) ).isTrue();
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.InnerClass.class) ) ).isTrue();
@@ -238,20 +274,32 @@ public class ElementExprTests {
 
 
         {
-            ElementMatcher<TypeDescription> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseTypeExpr(
-                            "io.gemini.aspectj.weaver.ElementExprTests$Generic[]", typeWorld);
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "io.gemini.aspectj.weaver.ElementExprTests$GenericType[]");
 
-            assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.Generic[].class) ) ).isTrue();
+            assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.GenericType[].class) ) ).isTrue();
         }
 
         {
-            ElementMatcher<TypeDescription> elementExpr = ElementExpr.Parser.INSTANCE
-                    .parseTypeExpr(
-                            "@io.gemini.aspectj.weaver.ElementExprTests.Mark io.gemini.aspectj.weaver.ElementExprTests.Generic", typeWorld);
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "@io.gemini.aspectj.weaver.ElementExprTests.Mark io.gemini.aspectj.weaver.ElementExprTests.GenericType");
 
-            assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.Generic.class) ) ).isTrue();
+            assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.GenericType.class) ) ).isTrue();
         }
+    }
+
+    @Test
+    public void testType2() {
+        TypeWorld typeWorld = new TypeWorldFactory.Default( new TypePoolFactory.Default() )
+                .createTypeWorld(getClass().getClassLoader(), null);
+
+        {
+            ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
+                    typeWorld, "io.gemini.aspectj.weaver.ElementExprTests$GenericType");
+
+            assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.Parameterized.class) ) ).isTrue();
+        }
+
     }
 
 
@@ -263,8 +311,27 @@ public class ElementExprTests {
     public @interface Mark {}
 
     @Mark
-    public class Generic<T> {}
+    public class GenericType<T> {
+
+        private T t;
+
+        public GenericType(T t) {
+            this.t = t;
+        }
+
+        public T get() {
+            return this.t;
+        }
+    }
 
     @Mark
-    public class Parameterized extends Generic<String> {}
+    public class Parameterized extends GenericType<String> {
+
+        /**
+         * @param t
+         */
+        public Parameterized(String t) {
+            super(t);
+        }
+    }
 }

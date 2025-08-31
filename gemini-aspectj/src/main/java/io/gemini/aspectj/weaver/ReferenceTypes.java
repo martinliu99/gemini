@@ -17,6 +17,7 @@ package io.gemini.aspectj.weaver;
 
 import org.aspectj.weaver.ReferenceType;
 import org.aspectj.weaver.ReferenceTypeDelegate;
+import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.UnresolvedType;
 import org.aspectj.weaver.World;
 
@@ -31,6 +32,11 @@ public interface ReferenceTypes {
 
         public WithDelegation(String signature, World world) {
             super(signature, world);
+        }
+
+        @Override
+        public boolean isGenericType() {
+            return false;
         }
 
         @Override
@@ -55,15 +61,24 @@ public interface ReferenceTypes {
 
         @Override
         public int hashCode() {
-            return this.getResolvedType().hashCode();
+            return this.hashCode();
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if(obj instanceof WithDelegation)
-                obj = ((WithDelegation) obj).doResolveReferenceType();
+        public boolean equals(Object other) {
+            if (other instanceof ResolvedType) {
+                ResolvedType resolvedType= (ResolvedType) other;
 
-            return this.getResolvedType().equals(obj);
+                // quickly compare signature
+                if(this.getSignature().equals(resolvedType.getSignature()) == false)
+                    return false;
+
+                if(other instanceof WithDelegation)
+                    // fetch delegatee
+                    other = ((WithDelegation) other).getResolvedType();
+            }
+
+            return this.getResolvedType().equals(other);
         }
     }
 

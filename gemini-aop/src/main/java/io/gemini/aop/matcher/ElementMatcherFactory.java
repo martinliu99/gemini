@@ -23,7 +23,7 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aspectj.weaver.ElementExpr;
+import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.core.util.CollectionUtils;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
@@ -45,19 +45,20 @@ public enum ElementMatcherFactory {
 
 
     public ElementMatcher.Junction<ClassLoader> createClassLoaderMatcher(String ruleName, Collection<String> expressions) {
-        return doCreateElementMatcher(ruleName, expressions, ElementExpr.Parser.INSTANCE::parseClassLoaderExpr);
+        return doCreateElementMatcher(ruleName, expressions, ExprParser.INSTANCE::parseClassLoaderExpr);
     }
 
     public ElementMatcher.Junction<String> createTypeNameMatcher(String ruleName, Collection<String> expressions) {
-        return doCreateElementMatcher(ruleName, expressions, ElementExpr.Parser.INSTANCE::parseTypeNameExpr);
+        return doCreateElementMatcher(ruleName, expressions, ExprParser.INSTANCE::parseTypeNameExpr);
     }
 
     public ElementMatcher.Junction<String> createResourceNameMatcher(String ruleName, Collection<String> expressions) {
-        return doCreateElementMatcher(ruleName, expressions, ElementExpr.Parser.INSTANCE::parseResourceNameExpr);
+        return doCreateElementMatcher(ruleName, expressions, ExprParser.INSTANCE::parseResourceNameExpr);
     }
 
 
-    private <T> ElementMatcher.Junction<T> doCreateElementMatcher(String ruleName, Collection<String> expressions, Function<String, ElementMatcher<T>> parser) {
+    private <T> ElementMatcher.Junction<T> doCreateElementMatcher(String ruleName, Collection<String> expressions, 
+            Function<String, ElementMatcher<T>> parser) {
         if(CollectionUtils.isEmpty(expressions))
             return ElementMatchers.none();
 

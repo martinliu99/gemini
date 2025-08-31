@@ -464,11 +464,11 @@ abstract class AdviceMethodSpec {
             return Collections.unmodifiableList(this.pointcutParameterNames);
         }
 
-        public List<TypeDescription> getPointcutParameterTypes() {
-            return pointcutParameterNames.stream()
-                    .map( p -> 
-                        this.parameterDescriptionMap.get(p).getType().asErasure() )
-                    .collect( Collectors.toList() );
+        public Map<String, TypeDescription> getPointcutParameterTypes() {
+            Map<String, TypeDescription> parameterTypes = new LinkedHashMap<>(pointcutParameterNames.size());
+            for(String parameterName : pointcutParameterNames)
+                parameterTypes.put(parameterName, this.parameterDescriptionMap.get(parameterName).getType().asErasure());
+            return parameterTypes;
         }
 
         public Map<String, NamedPointcutParameter> getPointcutParameters() {

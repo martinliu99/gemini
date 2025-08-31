@@ -17,7 +17,6 @@ package io.gemini.core.config;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -237,7 +236,7 @@ public interface ConfigView {
         public Collection<String> keys(String keyPrefix) {
             Assert.hasText(keyPrefix, "'keyPrefix' must not be empty");
 
-            Set<String> keys = new HashSet<>();
+            Set<String> keys = new LinkedHashSet<>();
             for(String key : this.keys()) {
                 if(key != null && key.startsWith(keyPrefix)) {
                     keys.add(key);
@@ -414,7 +413,7 @@ public interface ConfigView {
 
         @Override
         public Set<String> keys() {
-            Set<String> keys = new HashSet<>();
+            Set<String> keys = new LinkedHashSet<>();
             keys.addAll(super.keys());
             keys.addAll(parent.keys());
 

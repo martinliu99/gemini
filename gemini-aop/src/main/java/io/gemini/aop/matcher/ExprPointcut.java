@@ -13,23 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aop.factory.support;
+package io.gemini.aop.matcher;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
+import org.aspectj.util.FuzzyBoolean;
+import org.aspectj.weaver.Shadow;
+import org.aspectj.weaver.ast.Literal;
+import org.aspectj.weaver.ast.Test;
+import org.aspectj.weaver.patterns.ExposedState;
+import org.aspectj.weaver.patterns.FastMatchInfo;
+import org.aspectj.weaver.patterns.Pointcut;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.api.aop.Pointcut;
-import io.gemini.aspectj.weaver.Expression;
-import io.gemini.aspectj.weaver.Expression.PointcutExpr;
+import io.gemini.aspectj.weaver.ExprParser;
+import io.gemini.aspectj.weaver.PointcutParameter;
 import io.gemini.aspectj.weaver.PointcutParameter.NamedPointcutParameter;
-import io.gemini.aspectj.weaver.ShadowMatch;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.util.ObjectUtils;
 import net.bytebuddy.description.method.MethodDescription;
@@ -42,11 +49,11 @@ import net.bytebuddy.matcher.ElementMatcher;
  * @author   martin.liu
  * @since	 1.0
  */
-interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
+public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher<MethodDescription> {
 
     String getPointcutExpression();
 
-    boolean matches(MethodDescription targetMethodDescription);
+    boolean matches(MethodDescription methodDescription);
 
     boolean matches(MethodDescription methodDescription, PointcutParameterMatcher pointcutParameterMatcher);
 
@@ -74,17 +81,16 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(AspectJExprPointcut.class);
 
-        private static final Set<PointcutPrimitive> SUPPORTED_PRIMITIVES = new HashSet<>();
+        private static final Set<PointcutPrimitive> SUPPORTED_PRIMITIVES = new LinkedHashSet<>();
 
 
         private final TypeWorld typeWorld;
 
         private final String pointcutExpression;
-        private transient PointcutExpr pointcutExpr;
+        private transient Pointcut pointcut;
 
         private final TypeDescription pointcutDeclarationScope;
-        private final String[] pointcutParameterNames;
-        private final TypeDescription[] pointcutParameterTypes;
+        private final Map<String, TypeDescription> pointcutParameters;
 
 
         static {
@@ -110,7 +116,7 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
          * Create a new AspectJExprPointcut with the given settings.
          */
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression) {
-            this(typeWorld, pointcutExpression, null, new String[0], new TypeDescription[0]);
+            this(typeWorld, pointcutExpression, null, Collections.emptyMap());
         }
 
         /**
@@ -121,18 +127,12 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
          * @param pointcutParameterTypes the parameter types for the pointcut
          */
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression,
-                TypeDescription declarationScope, String[] pointcutParameterNames, TypeDescription[] pointcutParameterTypes) {
+                TypeDescription declarationScope, Map<String, TypeDescription> pointcutParametes) {
             this.typeWorld = typeWorld;
             this.pointcutExpression = pointcutExpression;
 
             this.pointcutDeclarationScope = declarationScope;
-
-            this.pointcutParameterNames = pointcutParameterNames == null ? new String[0] : pointcutParameterNames;
-            this.pointcutParameterTypes = pointcutParameterTypes == null ? new TypeDescription[0] : pointcutParameterTypes;
-            if (pointcutParameterNames.length != pointcutParameterTypes.length) {
-                throw new IllegalStateException(
-                        "Number of pointcut parameter names must match number of pointcut parameter types");
-            }
+            this.pointcutParameters = pointcutParametes;
         }
 
         /**
@@ -158,34 +158,23 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
         }
 
         /**
-         * Lazily build the underlying AspectJ pointcut expression, and 
-         * check whether this pointcut is ready to match,
+         * Lazily build the underlying AspectJ pointcut expression.
          */
-        public PointcutExpr getPointcutExpr() {
-            if (this.pointcutExpr == null) {
-                this.pointcutExpr = buildPointcutExpr(this.typeWorld);
+        public Pointcut getPointcut() {
+            if (this.pointcut == null) {
+                // Build the underlying pointcut expression.
+                this.pointcut = ExprParser.INSTANCE.parsePointcutExpr(typeWorld, SUPPORTED_PRIMITIVES, 
+                        pointcutExpression, pointcutDeclarationScope, pointcutParameters);
             }
 
-            return this.pointcutExpr;
-        }
-
-        /**
-         * Build the underlying AspectJ pointcut expression.
-         */
-        private PointcutExpr buildPointcutExpr(TypeWorld typeWorld) {
-//            PointcutParser parser = initializePointcutParser(typeWorld);
-            Map<String, TypeDescription> pointcutParameters = new LinkedHashMap<String, TypeDescription>(this.pointcutParameterNames.length);
-            for (int i = 0; i < pointcutParameterNames.length; i++) {
-                pointcutParameters.put(this.pointcutParameterNames[i], this.pointcutParameterTypes[i]);
-            }
-
-            return Expression.Parser.INSTACE.
-                    parsePointcutExpression(typeWorld, pointcutExpression, pointcutDeclarationScope, pointcutParameters);
+            return this.pointcut;
         }
 
         public boolean matches(TypeDescription typeDescription) {
             try {
-                return getPointcutExpr().fastMatch( typeWorld.resolve(typeDescription) );
+                FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(typeDescription), null, typeWorld.getWorld());
+                FuzzyBoolean fastMatch = getPointcut().fastMatch(info);
+                return fastMatch.maybeTrue();
             } catch (Throwable t) {
                 LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetType: {} \n  PointcutExpression: '{}' \n  Error reason: {} \n", 
                         typeDescription.getTypeName(), pointcutExpression, t.getMessage(), t);
@@ -210,15 +199,24 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
         }
 
         protected boolean doMatch(MethodDescription methodDescription, boolean beanHasIntroductions, PointcutParameterMatcher pointcutParameterMatcher) {
-            ShadowMatch shadowMatch = getShadowMatch(methodDescription);
+            Shadow shadow = typeWorld.makeShadow(methodDescription);
+            FuzzyBoolean matchResult = getPointcut().match(shadow);
+
+            Test residueTest = Literal.TRUE;
+            ExposedState exposedState = new ExposedState(pointcutParameters.size());
+            if (matchResult.maybeTrue()) {
+                residueTest = pointcut.findResidue(shadow, exposedState);
+            }
+
 
             // Special handling for this, target, @this, @target, @annotation
             // in Spring - we can optimize since we know we have exactly this class,
             // and there will never be matching subclass at runtime.
-            if (shadowMatch.alwaysMatches()) {
-                return pointcutParameterMatcher.match(methodDescription, shadowMatch.getPointcutParameters());
+            if (matchResult.alwaysTrue()) {
+                return pointcutParameterMatcher.match(methodDescription, 
+                        createParamterBindings(pointcutParameters, exposedState));
             }
-            else if (shadowMatch.neverMatches()) {
+            else if (matchResult.alwaysFalse()) {
                 return false;
             }
             else {
@@ -236,18 +234,22 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
             }
         }
 
+        private List<NamedPointcutParameter> createParamterBindings(
+                Map<String, TypeDescription> pointcutParameters, ExposedState exposedState) {
+            int i = 0;
+            List<NamedPointcutParameter> parameterBindings = new ArrayList<>(pointcutParameters.size());
+            for(Entry<String, TypeDescription> entry : pointcutParameters.entrySet()) {
+                PointcutParameter var = (PointcutParameter) exposedState.vars[i++];
+                if(var == null)
+                    continue;
 
-        private ShadowMatch getShadowMatch(MethodDescription methodDescription) {
-            try {
-                return getPointcutExpr().matches( typeWorld.makeShadow(methodDescription) );
-            } catch (Throwable t) {
-                // Possibly AspectJ 1.8.10 encountering an invalid signature
-                LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetMethod: {} \n  PointcutExpression: '{}' \n  Error reason: {} \n", 
-                        methodDescription.getName(), pointcutExpression, t.getMessage(), t);
+                parameterBindings.add( new PointcutParameter.Default(entry.getKey(), var) );
 
-                return new ShadowMatch(org.aspectj.util.FuzzyBoolean.NO, null, null, null);
             }
+
+            return parameterBindings;
         }
+
 
         @Override
         public boolean equals(Object other) {
@@ -260,16 +262,14 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
             AspectJExprPointcut otherPc = (AspectJExprPointcut) other;
             return ObjectUtils.equals(this.getPointcutExpression(), otherPc.getPointcutExpression()) &&
                     ObjectUtils.equals(this.pointcutDeclarationScope, otherPc.pointcutDeclarationScope) &&
-                    ObjectUtils.equals(this.pointcutParameterNames, otherPc.pointcutParameterNames) &&
-                    ObjectUtils.equals(this.pointcutParameterTypes, otherPc.pointcutParameterTypes);
+                    ObjectUtils.equals(this.pointcutParameters, otherPc.pointcutParameters);
         }
 
         @Override
         public int hashCode() {
             int hashCode = ObjectUtils.hashCode(this.getPointcutExpression());
             hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutDeclarationScope);
-            hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutParameterNames);
-            hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutParameterTypes);
+            hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutParameters);
             return hashCode;
         }
 
@@ -277,15 +277,18 @@ interface ExprPointcut extends Pointcut, ElementMatcher<MethodDescription> {
         public String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append("AspectJExprPointcut: ");
-            if (this.pointcutParameterNames != null && this.pointcutParameterTypes != null) {
+
+            int i = 0;
+            if (this.pointcutParameters != null) {
                 sb.append("(");
-                for (int i = 0; i < this.pointcutParameterTypes.length; i++) {
-                    sb.append(this.pointcutParameterTypes[i].getName());
+                for (Entry<String, TypeDescription> entry : this.pointcutParameters.entrySet()) {
+                    sb.append(entry.getValue().getName());
                     sb.append(" ");
-                    sb.append(this.pointcutParameterNames[i]);
-                    if ((i+1) < this.pointcutParameterTypes.length) {
+                    sb.append(entry.getKey());
+                    if ((i+1) < pointcutParameters.size()) {
                         sb.append(", ");
                     }
+                    i++;
                 }
                 sb.append(")");
             }

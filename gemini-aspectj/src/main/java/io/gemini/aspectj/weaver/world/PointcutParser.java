@@ -17,12 +17,11 @@ package io.gemini.aspectj.weaver.world;
 
 import java.io.File;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.aspectj.bridge.IMessageHandler;
 import org.aspectj.bridge.ISourceLocation;
 import org.aspectj.bridge.SourceLocation;
 import org.aspectj.weaver.BindingScope;
@@ -45,15 +44,11 @@ import org.aspectj.weaver.patterns.Pointcut;
 import org.aspectj.weaver.patterns.SimpleScope;
 import org.aspectj.weaver.patterns.ThisOrTargetAnnotationPointcut;
 import org.aspectj.weaver.patterns.ThisOrTargetPointcut;
-import org.aspectj.weaver.reflect.ReflectionWorld;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 import org.aspectj.weaver.tools.UnsupportedPointcutPrimitiveException;
 
-import io.gemini.aspectj.weaver.Expression.PointcutExpr;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
-import io.gemini.core.pool.TypePools.HybridResolutionTypePool;
-import io.gemini.core.pool.TypePools.ResolutionType;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 
@@ -65,7 +60,7 @@ public class PointcutParser {
 
 
     protected static Set<PointcutPrimitive> getAllSupportedPointcutPrimitives() {
-        Set<PointcutPrimitive> primitives = new HashSet<>();
+        Set<PointcutPrimitive> primitives = new LinkedHashSet<>();
 //        primitives.add(PointcutPrimitive.ADVICE_EXECUTION);
         primitives.add(PointcutPrimitive.ARGS);
 //        primitives.add(PointcutPrimitive.CALL);
@@ -93,41 +88,6 @@ public class PointcutParser {
 
 
     /**
-     * Returns a pointcut parser that can parse the full AspectJ pointcut language with the following exceptions:
-     * <ul>
-     * <li>The <code>if, cflow, and cflowbelow</code> pointcut designators are not supported
-     * <li>Pointcut expressions must be self-contained :- they cannot contain references to other named pointcuts
-     * <li>The pointcut expression must be anonymous with no formals allowed.
-     * </ul>
-     * <p>
-     * When resolving types in pointcut expressions, the given classloader is used to find types.
-     * </p>
-     */
-    public static PointcutParser createPointcutParser(TypeWorld typeWorld) {
-        return new PointcutParser(getAllSupportedPointcutPrimitives(), typeWorld);
-    }
-
-    /**
-     * Returns a pointcut parser that can parse pointcut expressions built from a user-defined subset of AspectJ's supported
-     * pointcut primitives. The following restrictions apply:
-     * <ul>
-     * <li>The <code>if, cflow, and cflowbelow</code> pointcut designators are not supported
-     * <li>Pointcut expressions must be self-contained :- they cannot contain references to other named pointcuts
-     * <li>The pointcut expression must be anonymous with no formals allowed.
-     * </ul>
-     * <p>
-     * When resolving types in pointcut expressions, the given classloader is used to find types.
-     * </p>
-     * 
-     * @param supportedPointcutKinds a set of PointcutPrimitives this parser should support
-     * @throws UnsupportedOperationException if the set contains if, cflow, or cflow below
-     */
-    public static PointcutParser createPointcutParser(Set<PointcutPrimitive> supportedPointcutKinds, TypeWorld typeWorld) {
-        return new PointcutParser(supportedPointcutKinds, typeWorld);
-    }
-
-
-    /**
      * Create a pointcut parser that can parse pointcut expressions built from a user-defined subset of AspectJ's supported pointcut
      * primitives. The following restrictions apply:
      * <ul>
@@ -139,7 +99,9 @@ public class PointcutParser {
      * @param supportedPointcutKinds a set of PointcutPrimitives this parser should support
      * @throws UnsupportedOperationException if the set contains if, cflow, or cflow below
      */
-    protected PointcutParser(Set<PointcutPrimitive> supportedPointcutKinds, TypeWorld typeWorld) {
+    public PointcutParser(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds) {
+        this.typeWorld = typeWorld;
+
         supportedPrimitives = supportedPointcutKinds;
         for (PointcutPrimitive pointcutPrimitive : supportedPointcutKinds) {
             if ((pointcutPrimitive == PointcutPrimitive.IF) || (pointcutPrimitive == PointcutPrimitive.CFLOW)
@@ -147,21 +109,10 @@ public class PointcutParser {
                 throw new UnsupportedOperationException("Cannot handle if, cflow, and cflowbelow primitives");
             }
         }
-
-        this.typeWorld = typeWorld;
     }
 
-    /**
-     * Parse the given pointcut expression. A global scope is assumed for resolving any type references, and the pointcut must
-     * contain no formals (variables to be bound).
-     * 
-     * @throws UnsupportedPointcutPrimitiveException if the parser encounters a primitive pointcut expression of a kind not
-     *         supported by this PointcutParser.
-     * @throws IllegalArgumentException if the expression is not a well-formed pointcut expression
-     */
-    public PointcutExpr parsePointcutExpression(String expression) throws UnsupportedPointcutPrimitiveException,
-            IllegalArgumentException {
-        return parsePointcutExpression(expression, null, Collections.emptyMap());
+    public PointcutParser(TypeWorld typeWorld) {
+        this(typeWorld, getAllSupportedPointcutPrimitives());
     }
 
     /**
@@ -173,57 +124,36 @@ public class PointcutParser {
      *         supported by this PointcutParser.
      * @throws IllegalArgumentException if the expression is not a well-formed pointcut expression
      */
-    public PointcutExpr parsePointcutExpression(String expression, TypeDescription inScope, Map<String, TypeDescription> formalParameters)
-            throws UnsupportedPointcutPrimitiveException, IllegalArgumentException {
-        PointcutExpr pcExpr = null;
+    public Pointcut parsePointcut(String pointcutExpression, 
+            TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
         try {
-            Pointcut pc = resolvePointcutExpression(expression, inScope, formalParameters);
+            Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
 
-            pc = concretizePointcutExpression(pc, inScope, formalParameters);
-            validateAgainstSupportedPrimitives(pc, expression); // again, because we have now followed any ref'd pcuts
+            pointcut = concretizePointcutExpression(pointcut, pointcutDeclarationScope, pointcutParameters);
+            validateAgainstSupportedPrimitives(pointcut, pointcutExpression); // again, because we have now followed any ref'd pcuts
 
-            pcExpr = new PointcutExpr.Default(pc, expression, formalParameters, getTypeWorld());
-        } catch (ParserException pEx) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(expression, pEx));
-        } catch (ReflectionWorld.ReflectionWorldException rwEx) {
-            throw new IllegalArgumentException(rwEx.getMessage());
-        }
-        return pcExpr;
-    }
-
-    public Pointcut parsePointcut(String expression, TypeDescription inScope, Map<String, TypeDescription> formalParameters) {
-        ResolutionType currentResolutionType = HybridResolutionTypePool.getResolutionType();
-        try {
-            HybridResolutionTypePool.setResolutionType(ResolutionType.EAGER);
-
-            Pointcut pc = resolvePointcutExpression(expression, inScope, formalParameters);
-
-            pc = concretizePointcutExpression(pc, inScope, formalParameters);
-            validateAgainstSupportedPrimitives(pc, expression); // again, because we have now followed any ref'd pcuts
-
-            return pc;
-        } catch (ParserException pEx) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(expression, pEx));
-        } catch (ReflectionWorld.ReflectionWorldException rwEx) {
-            throw new IllegalArgumentException(rwEx.getMessage());
-        } finally {
-            HybridResolutionTypePool.setResolutionType(currentResolutionType);
+            return pointcut;
+        } catch (ParserException e) {
+            throw new IllegalArgumentException(buildUserMessageFromParserException(pointcutExpression, e));
+        } catch (TypeWorld.TypeWorldException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
-    protected Pointcut resolvePointcutExpression(String expression, TypeDescription inScope, Map<String, TypeDescription> formalParameters) {
+    protected Pointcut resolvePointcutExpression(String pointcutExpression, 
+            TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
         try {
-            expression = replaceBooleanOperators(expression);
-            PatternParser parser = new PatternParserV2(expression);
+            pointcutExpression = replaceBooleanOperators(pointcutExpression);
+            PatternParser parser = new PatternParserV2(pointcutExpression);
 
-            Pointcut pc = parser.parsePointcut(true);
-            validateAgainstSupportedPrimitives(pc, expression);
+            Pointcut pointcut = parser.parsePointcut(true);
+            validateAgainstSupportedPrimitives(pointcut, pointcutExpression);
 
-            IScope resolutionScope = buildResolutionScope(inScope, formalParameters);
-            pc = pc.resolve(resolutionScope);
-            return pc;
+            IScope resolutionScope = buildResolutionScope(pointcutDeclarationScope, pointcutParameters);
+            pointcut = pointcut.resolve(resolutionScope);
+            return pointcut;
         } catch (ParserException pEx) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(expression, pEx), pEx);
+            throw new IllegalArgumentException(buildUserMessageFromParserException(pointcutExpression, pEx), pEx);
         }
     }
 
@@ -233,58 +163,28 @@ public class PointcutParser {
      * We also allow {@code and} between two pointcut sub-expressions.
      * <p>This method converts back to {@code &&} for the AspectJ pointcut parser.
      */
-    private String replaceBooleanOperators(String pcExpr) {
-        String result = StringUtils.replace(pcExpr, " and ", " && ");
+    public static String replaceBooleanOperators(String pointcutExpression) {
+        String result = StringUtils.replace(pointcutExpression, " and ", " && ");
         result = StringUtils.replace(result, " or ", " || ");
         result = StringUtils.replace(result, " not ", " ! ");
         return result;
     }
 
-    protected Pointcut concretizePointcutExpression(Pointcut pc, TypeDescription inScope, Map<String, TypeDescription> formalParameters) {
-        ResolvedType declaringTypeForResolution = null;
-        if (inScope != null) {
-            declaringTypeForResolution = getTypeWorld().resolve(inScope.getName());
-        } else {
-            declaringTypeForResolution = getTypeWorld().getWorld().resolve(ResolvedType.OBJECT);
-        }
-        IntMap arity = new IntMap(formalParameters.size());
-        for (int i = 0; i < formalParameters.size(); i++) {
-            arity.put(i, i);
-        }
-        return pc.concretize(declaringTypeForResolution, declaringTypeForResolution, arity);
-    }
-
-    private TypeWorld getTypeWorld() {
-        return typeWorld;
-    }
-
-    /* for testing */
-    Set<PointcutPrimitive> getSupportedPrimitives() {
-        return supportedPrimitives;
-    }
-
-    /* for testing */
-    IMessageHandler setCustomMessageHandler(IMessageHandler aHandler) {
-        IMessageHandler current = getTypeWorld().getWorld().getMessageHandler();
-        getTypeWorld().getWorld().setMessageHandler(aHandler);
-        return current;
-    }
-
-    private IScope buildResolutionScope(TypeDescription inScope, Map<String, TypeDescription> formalParameters) {
-        if (formalParameters == null) {
-            formalParameters = Collections.emptyMap();
+    private IScope buildResolutionScope(TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+        if (pointcutParameters == null) {
+            pointcutParameters = Collections.emptyMap();
         }
 
-        FormalBinding[] formalBindings = new FormalBinding[formalParameters.size()];
+        FormalBinding[] formalBindings = new FormalBinding[pointcutParameters.size()];
         int i = 0;
-        for(Entry<String, TypeDescription> entry : formalParameters.entrySet()) {
+        for(Entry<String, TypeDescription> entry : pointcutParameters.entrySet()) {
             formalBindings[i] = new FormalBinding.ImplicitFormalBinding(toUnresolvedType(entry.getValue()), entry.getKey(), i++);
         }
 
-        if (inScope == null) {
-            return new SimpleScope(getTypeWorld().getWorld(), formalBindings);
+        if (pointcutDeclarationScope == null) {
+            return new SimpleScope(typeWorld.getWorld(), formalBindings);
         } else {
-            ResolvedType inType = getTypeWorld().resolve(inScope);
+            ResolvedType inType = typeWorld.resolve(pointcutDeclarationScope);
             ISourceContext sourceContext = new ISourceContext() {
                 public ISourceLocation makeSourceLocation(IHasPosition position) {
                     return new SourceLocation(new File(""), 0);
@@ -313,92 +213,109 @@ public class PointcutParser {
         }
     }
 
-    private void validateAgainstSupportedPrimitives(Pointcut pc, String expression) {
-        switch (pc.getPointcutKind()) {
+
+    protected Pointcut concretizePointcutExpression(Pointcut pointcut, 
+            TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+        ResolvedType declaringTypeForResolution = null;
+        if (pointcutDeclarationScope != null) {
+            declaringTypeForResolution = typeWorld.resolve(pointcutDeclarationScope.getName());
+        } else {
+            declaringTypeForResolution = typeWorld.getWorld().resolve(ResolvedType.OBJECT);
+        }
+        IntMap arity = new IntMap(pointcutParameters.size());
+        for (int i = 0; i < pointcutParameters.size(); i++) {
+            arity.put(i, i);
+        }
+        return pointcut.concretize(declaringTypeForResolution, declaringTypeForResolution, arity);
+    }
+
+
+    private void validateAgainstSupportedPrimitives(Pointcut pointcut, String pointcutExpression) {
+        switch (pointcut.getPointcutKind()) {
         case Pointcut.AND:
-            validateAgainstSupportedPrimitives(((AndPointcut) pc).getLeft(), expression);
-            validateAgainstSupportedPrimitives(((AndPointcut) pc).getRight(), expression);
+            validateAgainstSupportedPrimitives(((AndPointcut) pointcut).getLeft(), pointcutExpression);
+            validateAgainstSupportedPrimitives(((AndPointcut) pointcut).getRight(), pointcutExpression);
             break;
         case Pointcut.ARGS:
             if (!supportedPrimitives.contains(PointcutPrimitive.ARGS)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.ARGS);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.ARGS);
             }
             break;
         case Pointcut.CFLOW:
-            CflowPointcut cfp = (CflowPointcut) pc;
+            CflowPointcut cfp = (CflowPointcut) pointcut;
             if (cfp.isCflowBelow()) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.CFLOW_BELOW);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.CFLOW_BELOW);
             } else {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.CFLOW);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.CFLOW);
             }
         case Pointcut.HANDLER:
             if (!supportedPrimitives.contains(PointcutPrimitive.HANDLER)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.HANDLER);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.HANDLER);
             }
             break;
         case Pointcut.IF:
         case Pointcut.IF_FALSE:
         case Pointcut.IF_TRUE:
-            throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.IF);
+            throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.IF);
         case Pointcut.KINDED:
-            validateKindedPointcut(((KindedPointcut) pc), expression);
+            validateKindedPointcut(((KindedPointcut) pointcut), pointcutExpression);
             break;
         case Pointcut.NOT:
-            validateAgainstSupportedPrimitives(((NotPointcut) pc).getNegatedPointcut(), expression);
+            validateAgainstSupportedPrimitives(((NotPointcut) pointcut).getNegatedPointcut(), pointcutExpression);
             break;
         case Pointcut.OR:
-            validateAgainstSupportedPrimitives(((OrPointcut) pc).getLeft(), expression);
-            validateAgainstSupportedPrimitives(((OrPointcut) pc).getRight(), expression);
+            validateAgainstSupportedPrimitives(((OrPointcut) pointcut).getLeft(), pointcutExpression);
+            validateAgainstSupportedPrimitives(((OrPointcut) pointcut).getRight(), pointcutExpression);
             break;
         case Pointcut.THIS_OR_TARGET:
-            boolean isThis = ((ThisOrTargetPointcut) pc).isThis();
+            boolean isThis = ((ThisOrTargetPointcut) pointcut).isThis();
             if (isThis && !supportedPrimitives.contains(PointcutPrimitive.THIS)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.THIS);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.THIS);
             } else if (!supportedPrimitives.contains(PointcutPrimitive.TARGET)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.TARGET);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.TARGET);
             }
             break;
         case Pointcut.WITHIN:
             if (!supportedPrimitives.contains(PointcutPrimitive.WITHIN)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.WITHIN);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.WITHIN);
             }
             break;
         case Pointcut.WITHINCODE:
             if (!supportedPrimitives.contains(PointcutPrimitive.WITHIN_CODE)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.WITHIN_CODE);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.WITHIN_CODE);
             }
             break;
         case Pointcut.ATTHIS_OR_TARGET:
-            isThis = ((ThisOrTargetAnnotationPointcut) pc).isThis();
+            isThis = ((ThisOrTargetAnnotationPointcut) pointcut).isThis();
             if (isThis && !supportedPrimitives.contains(PointcutPrimitive.AT_THIS)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.AT_THIS);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.AT_THIS);
             } else if (!supportedPrimitives.contains(PointcutPrimitive.AT_TARGET)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.AT_TARGET);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.AT_TARGET);
             }
             break;
         case Pointcut.ATARGS:
             if (!supportedPrimitives.contains(PointcutPrimitive.AT_ARGS)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.AT_ARGS);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.AT_ARGS);
             }
             break;
         case Pointcut.ANNOTATION:
             if (!supportedPrimitives.contains(PointcutPrimitive.AT_ANNOTATION)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.AT_ANNOTATION);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.AT_ANNOTATION);
             }
             break;
         case Pointcut.ATWITHIN:
             if (!supportedPrimitives.contains(PointcutPrimitive.AT_WITHIN)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.AT_WITHIN);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.AT_WITHIN);
             }
             break;
         case Pointcut.ATWITHINCODE:
             if (!supportedPrimitives.contains(PointcutPrimitive.AT_WITHINCODE)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.AT_WITHINCODE);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.AT_WITHINCODE);
             }
             break;
         case Pointcut.REFERENCE:
             if (!supportedPrimitives.contains(PointcutPrimitive.REFERENCE)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.REFERENCE);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.REFERENCE);
             }
             break;
         case Pointcut.USER_EXTENSION:
@@ -406,48 +323,48 @@ public class PointcutParser {
             break;
         case Pointcut.NONE: // deliberate fall-through
         default:
-            throw new IllegalArgumentException("Unknown pointcut kind: " + pc.getPointcutKind());
+            throw new IllegalArgumentException("Unknown pointcut kind: " + pointcut.getPointcutKind());
         }
     }
 
-    private void validateKindedPointcut(KindedPointcut pc, String expression) {
-        Shadow.Kind kind = pc.getKind();
+    private void validateKindedPointcut(KindedPointcut pointcut, String pointcutExpression) {
+        Shadow.Kind kind = pointcut.getKind();
         if ((kind == Shadow.MethodCall) || (kind == Shadow.ConstructorCall)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.CALL)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.CALL);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.CALL);
             }
         } else if ((kind == Shadow.MethodExecution) || (kind == Shadow.ConstructorExecution)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.EXECUTION)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.EXECUTION);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.EXECUTION);
             }
         } else if (kind == Shadow.AdviceExecution) {
             if (!supportedPrimitives.contains(PointcutPrimitive.ADVICE_EXECUTION)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.ADVICE_EXECUTION);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.ADVICE_EXECUTION);
             }
         } else if (kind == Shadow.FieldGet) {
             if (!supportedPrimitives.contains(PointcutPrimitive.GET)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.GET);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.GET);
             }
         } else if (kind == Shadow.FieldSet) {
             if (!supportedPrimitives.contains(PointcutPrimitive.SET)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.SET);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.SET);
             }
         } else if (kind == Shadow.Initialization) {
             if (!supportedPrimitives.contains(PointcutPrimitive.INITIALIZATION)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.INITIALIZATION);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.INITIALIZATION);
             }
         } else if (kind == Shadow.PreInitialization) {
             if (!supportedPrimitives.contains(PointcutPrimitive.PRE_INITIALIZATION)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.PRE_INITIALIZATION);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.PRE_INITIALIZATION);
             }
         } else if (kind == Shadow.StaticInitialization) {
             if (!supportedPrimitives.contains(PointcutPrimitive.STATIC_INITIALIZATION)) {
-                throw new UnsupportedPointcutPrimitiveException(expression, PointcutPrimitive.STATIC_INITIALIZATION);
+                throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.STATIC_INITIALIZATION);
             }
         }
     }
 
-    private String buildUserMessageFromParserException(String pc, ParserException ex) {
+    public static String buildUserMessageFromParserException(String pointcutExpression, ParserException ex) {
         StringBuffer msg = new StringBuffer();
         msg.append("Expression is not well-formed: expecting '");
         msg.append(ex.getMessage());
@@ -456,7 +373,7 @@ public class PointcutParser {
         msg.append(" at character position ");
         msg.append(location.getStart());
         msg.append("\n");
-        msg.append(pc);
+        msg.append(pointcutExpression);
         msg.append("\n");
         for (int i = 0; i < location.getStart(); i++) {
             msg.append(" ");

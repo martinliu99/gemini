@@ -16,6 +16,7 @@
 package io.gemini.aop.factory.support;
 
 import java.lang.reflect.Constructor;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import org.aspectj.weaver.patterns.ParserException;
@@ -29,7 +30,8 @@ import io.gemini.aop.factory.support.AdviceMethodMatcher.AspectJMethodMatcher;
 import io.gemini.aop.factory.support.AdviceMethodMatcher.PojoMethodMatcher;
 import io.gemini.aop.factory.support.AdviceMethodSpec.AspectJMethodSpec;
 import io.gemini.aop.factory.support.AdviceMethodSpec.PojoMethodSpec;
-import io.gemini.aop.factory.support.ExprPointcut.AspectJExprPointcut;
+import io.gemini.aop.matcher.ExprPointcut;
+import io.gemini.aop.matcher.ExprPointcut.AspectJExprPointcut;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
@@ -119,8 +121,10 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
         protected abstract P doCreatePointcut(AdvisorContext advisorContext);
 
 
-        protected AspectJExprPointcut doCreateExprPointcut(AdvisorContext advisorContext, String pointcutExpression, 
-                TypeDescription pointcutDeclarationScope, String[] pointcutParameterNames, TypeDescription[] pointcutParameterTypes) {
+        protected AspectJExprPointcut doCreateExprPointcut(AdvisorContext advisorContext, 
+                String pointcutExpression, 
+                TypeDescription pointcutDeclarationScope, 
+                Map<String, TypeDescription> pointcutParameters) {
             if(StringUtils.hasText(pointcutExpression) == false) {
                 return null;
             }
@@ -129,9 +133,12 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             pointcutExpression = advisorContext.getPlaceholderHelper().replace(pointcutExpression);
 
             return pointcutDeclarationScope != null 
-                    ? new AspectJExprPointcut(advisorContext.getTypeWorld(), pointcutExpression, 
-                            pointcutDeclarationScope, pointcutParameterNames, pointcutParameterTypes)
-                    : new AspectJExprPointcut(advisorContext.getTypeWorld(), pointcutExpression);
+                    ? new AspectJExprPointcut(advisorContext.getTypeWorld(), 
+                            pointcutExpression, 
+                            pointcutDeclarationScope, 
+                            pointcutParameters)
+                    : new AspectJExprPointcut(advisorContext.getTypeWorld(), 
+                            pointcutExpression);
         }
 
         protected boolean doValidatePointcut(AdvisorContext advisorContext, P pointcut) {
@@ -143,7 +150,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
             if(pointcut instanceof AspectJExprPointcut) {
                 AspectJExprPointcut aspectJExpressionPointcut = (AspectJExprPointcut) pointcut;
                 try {
-                    aspectJExpressionPointcut.getPointcutExpr();
+                    aspectJExpressionPointcut.getPointcut();
                     return true;
                 } catch(Throwable t) {
                     String advisorName = advisorSpec.getAdvisorName();
@@ -295,7 +302,10 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
         @Override
         protected Pointcut doCreatePointcut(AdvisorContext advisorContext) {
-            return doCreateExprPointcut(advisorContext, advisorSpec.getPointcutExpression(), null, null, null);
+            return doCreateExprPointcut(advisorContext, 
+                    advisorSpec.getPointcutExpression(), 
+                    null, 
+                    null);
         }
 
         /** 
@@ -334,11 +344,10 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
         @Override
         protected ExprPointcut doCreatePointcut(AdvisorContext advisorContext) {
-            String[] pointcutParameterNames = aspectJMethodSpec.getPointcutParameterNames().toArray(new String[] {});
-            TypeDescription[] pointcutParameterTypes = aspectJMethodSpec.getPointcutParameterTypes().toArray(new TypeDescription[] {});
-            String pointcutExpression = advisorSpec.getPointcutExpression();
-
-            return this.doCreateExprPointcut(advisorContext, pointcutExpression, aspectJMethodSpec.getAdviceTypeDescription(), pointcutParameterNames, pointcutParameterTypes);
+            return this.doCreateExprPointcut(advisorContext, 
+                    advisorSpec.getPointcutExpression(), 
+                    aspectJMethodSpec.getAdviceTypeDescription(), 
+                    aspectJMethodSpec.getPointcutParameterTypes());
         }
 
         /** 

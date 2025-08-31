@@ -26,7 +26,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -157,7 +157,7 @@ public interface ObjectFactory extends Closeable {
         private ConcurrentMap<String, Object> objectMap;
 
         static {
-            INJECTION_ANNOTATION = new HashSet<>();
+            INJECTION_ANNOTATION = new LinkedHashSet<>();
             INJECTION_ANNOTATION.add("javax.inject.Inject");
             INJECTION_ANNOTATION.add("jakarta.inject.Inject");
             INJECTION_ANNOTATION.add("javax.annotation.Resource");

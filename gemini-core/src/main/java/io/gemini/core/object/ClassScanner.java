@@ -19,7 +19,6 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,7 +65,7 @@ public interface ClassScanner {
         private static final Logger LOGGER = LoggerFactory.getLogger(ClassScanner.class);
 
         private static final String STAR = "*";
-        private static final Set<Pattern> ACCEPT_ALL_JARS = new HashSet<>();
+        private static final Set<Pattern> ACCEPT_ALL_JARS = new LinkedHashSet<>();
         private static final String[] ACCEPT_ALL_PACKAGES = new String[] { STAR };
 
 
@@ -74,7 +73,7 @@ public interface ClassScanner {
         private static final Set<String> AUTOMATIC_PACKAGE_ROOT_SUFFIXES;
 
         static {
-            AUTOMATIC_PACKAGE_ROOT_SUFFIXES = new HashSet<>();
+            AUTOMATIC_PACKAGE_ROOT_SUFFIXES = new LinkedHashSet<>();
 
             // POJO classes folder
             AUTOMATIC_PACKAGE_ROOT_SUFFIXES.add("target/classes");
@@ -183,7 +182,7 @@ public interface ClassScanner {
         private Set<Pattern> formatAcceptJarPatterns(Set<String> acceptJars) {
             Assert.notEmpty(acceptJars, "'acceptJars' must not be empty.");
 
-            Set<Pattern> patterns = new HashSet<>(acceptJars.size());
+            Set<Pattern> patterns = new LinkedHashSet<>(acceptJars.size());
             for(String jarPattern : acceptJars) {
                 // if contain '*' element, accept all jars
                 if(STAR.equals(jarPattern))

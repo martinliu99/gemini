@@ -43,6 +43,7 @@ import net.bytebuddy.agent.builder.AgentBuilder.InjectionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.TypeStrategy;
 import net.bytebuddy.dynamic.scaffold.MethodGraph;
+import net.bytebuddy.matcher.BooleanMatcher;
 
 
 /**
@@ -133,7 +134,7 @@ public class AopWeavers {
             .with( new ByteBuddy()
                     .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )
             )
-            .ignore( aopWeaver.getIgnoreMatcher() )
+            .ignore( BooleanMatcher.of(weaverContext.isMatchJoinpoint() == false) )
             // better performance than REDEFINE or REDEFINE_FROZEN
             .with( TypeStrategy.Default.DECORATE )
             .with( InjectionStrategy.UsingUnsafe.INSTANCE )

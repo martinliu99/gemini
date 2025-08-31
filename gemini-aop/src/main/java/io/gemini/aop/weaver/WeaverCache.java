@@ -21,7 +21,7 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.AccessibleObject;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -211,7 +211,7 @@ class WeaverCache implements Closeable {
 
         private List<? extends Advisor> processAdvisors(List<? extends Advisor> candidates) {
             // remove null, or duplicate advice classes
-            Set<Class<?>> adviceClasses = new HashSet<>();
+            Set<Class<?>> adviceClasses = new LinkedHashSet<>();
             List<Advisor> advisors = candidates.stream()
             .filter( advisor -> 
                     advisor.getAdviceClass() != null 

@@ -46,7 +46,6 @@ import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.pool.TypePools.ExplicitTypePool;
 import io.gemini.core.util.CollectionUtils;
 import net.bytebuddy.ClassFileVersion;
-import net.bytebuddy.agent.builder.AgentBuilder.RawMatcher;
 import net.bytebuddy.asm.Advice.WithCustomMapping;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -70,8 +69,6 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
     private final AopContext aopContext;
     private final AdvisorFactory advisorFactory;
     private final WeaverContext weaverContext;
-
-    private RawMatcher ignoreMatcher;
 
     private WeaverCache weaverCache;
 
@@ -103,29 +100,8 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
     }
 
     private void initialize(WeaverContext weaverContext) {
-        // 1.create ignoreMatcher
-        this.ignoreMatcher = new RawMatcher() {
-            @Override
-            public boolean matches(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule,
-                    Class<?> classBeingRedefined, ProtectionDomain protectionDomain) {
-                if(weaverContext.isMatchJoinpoint() == false)
-                    return true;
-
-                if(ElementMatchers.isSynthetic().matches(typeDescription) == true)
-                    return true;
-
-                return false;
-            }
-        };
-
-        // 3.initialize properties
+        // 1.initialize properties
         this.weaverCache = new WeaverCache(weaverContext);
-    }
-
-
-    @Override
-    public RawMatcher getIgnoreMatcher() {
-        return this.ignoreMatcher;
     }
 
 

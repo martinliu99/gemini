@@ -16,6 +16,7 @@
 package io.gemini.aop.factory.classloader;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -61,7 +62,8 @@ import net.bytebuddy.matcher.ElementMatchers;
  * @author   martin.liu
  * @since	 1.0
  */
-public abstract class AspectClassLoader extends URLClassLoader {
+@NoMatching(classLoader = true)
+public class AspectClassLoader extends URLClassLoader {
 
     private final String loaderName;
 
@@ -130,26 +132,28 @@ public abstract class AspectClassLoader extends URLClassLoader {
             } catch(ClassNotFoundException ignored) { /* ignored */ }
 
 
+            ClassLoader joinpointCL = getJoinpointClassLoader();
+
             // 3.delegate to joinpoint CL to load joinpoint only classes
-            if(this.joinpointTypeMatcher.matches(name) == true) {
+            if(joinpointCL != null && this.joinpointTypeMatcher.matches(name) == true) {
                 // load classes by subclass-defined JoinpointClassLoader
-                return this.loadClassFromJoinpointCL(name, resolve);
+                return this.loadClassFromJoinpointCL(joinpointCL, name, resolve);
             }
 
 
             // 4.delegate to current CL and joinpoint CL
             // load Aspect relevant classes by current ClassLoader
-            type = this.loadClassFromCurrentCL(name, resolve);
+            type = this.loadClassFromCurrentCL(name, resolve, joinpointCL == null);
             if(type != null) {
                 return type;
             }
 
             // load classes by subclass-defined JoinpointClassLoader
-            return this.loadClassFromJoinpointCL(name, resolve);
+            return joinpointCL != null ? this.loadClassFromJoinpointCL(joinpointCL, name, resolve) : null;
         }
     }
 
-    private Class<?> loadClassFromCurrentCL(String name, boolean resolve) throws ClassNotFoundException {
+    private Class<?> loadClassFromCurrentCL(String name, boolean resolve, boolean throwException) throws ClassNotFoundException {
         try {
             Class<?> type = this.findClass(name);
             if (resolve) {
@@ -157,17 +161,14 @@ public abstract class AspectClassLoader extends URLClassLoader {
             }
 
             return type;
-        } catch(ClassNotFoundException ignored) { /* ignored */ }
+        } catch(ClassNotFoundException e) {
+            if(throwException) throw e;
+        }
 
         return null;
     }
 
-    private Class<?> loadClassFromJoinpointCL(String name, boolean resolve) throws ClassNotFoundException {
-        ClassLoader joinpointCL = doFindJoinpointCL();
-        if(null == joinpointCL || this == joinpointCL) {
-            return null;
-        }
-
+    private Class<?> loadClassFromJoinpointCL(ClassLoader joinpointCL, String name, boolean resolve) throws ClassNotFoundException {
         Class<?> type = joinpointCL.loadClass(name);
 
         if (resolve) {
@@ -177,7 +178,10 @@ public abstract class AspectClassLoader extends URLClassLoader {
     }
 
 
-    protected abstract ClassLoader doFindJoinpointCL();
+    public ClassLoader getJoinpointClassLoader() {
+        ClassLoader joinpointCL =  ThreadContext.getContextClassLoader();
+        return this == joinpointCL ? null : joinpointCL;
+    }
 
 
     /**
@@ -194,31 +198,43 @@ public abstract class AspectClassLoader extends URLClassLoader {
         }
 
 
+        ClassLoader joinpointCL = getJoinpointClassLoader();
+
         // 2.delegate to joinpoint CL to load joinpoint only resources
-        if(this.joinpointResourceMatcher.matches(name) == true) {
+        if(joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
             // load resource by subclass-defined JoinpointClassLoader
-            return this.findResourceWithJoinpointCL(name);
+            return this.findResourceWithJoinpointCL(joinpointCL, name);
         }
 
 
         // 3.delegate to joinpoint CL and current CL
-        // load resource by subclass-defined JoinpointClassLoader
+        // load resource by current ClassLoader
         url = this.findResource(name);
         if(url != null) {
             return url;
         }
 
-        // load resource by current ClassLoader
-        return this.findResourceWithJoinpointCL(name);
+        // load resource by subclass-defined JoinpointClassLoader
+        return joinpointCL != null ? this.findResourceWithJoinpointCL(joinpointCL, name) : null;
     }
 
-    private URL findResourceWithJoinpointCL(String name) {
-        ClassLoader joinpointCL = this.doFindJoinpointCL();
-        if(null == joinpointCL || this == joinpointCL) {
+
+    private URL findResourceWithJoinpointCL(ClassLoader joinpointCL, String name) {
+        return joinpointCL.getResource(name);
+    }
+
+
+    public URL getAspectResource(String name) {
+        return super.getResource(name);
+    }
+
+    public InputStream getAspectResourceAsStream(String name) {
+        URL url = getAspectResource(name);
+        try {
+            return url != null ? url.openStream() : null;
+        } catch (IOException e) {
             return null;
         }
-
-        return joinpointCL.getResource(name);
     }
 
 
@@ -233,10 +249,12 @@ public abstract class AspectClassLoader extends URLClassLoader {
         }
 
 
+        ClassLoader joinpointCL = getJoinpointClassLoader();
+
         // 2.delegate to joinpoint CL to load joinpoint only resources
-        if(this.joinpointResourceMatcher.matches(name) == true) {
+        if(joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
             // load resources by subclass-defined JoinpointClassLoader
-            urls = this.findResourcesWithJoinpointCL(name);
+            urls = this.findResourcesWithJoinpointCL(joinpointCL, name);
             if(urls != null) {
                 urlsList.add(urls);
             }
@@ -246,14 +264,14 @@ public abstract class AspectClassLoader extends URLClassLoader {
 
 
         // 3.delegate to joinpoint CL and current CL
-        // load resources by subclass-defined JoinpointClassLoader
+        // load resources by current ClassLoader
         urls = this.findResources(name);
         if(urls != null) {
             urlsList.add(urls);
         }
 
-        // load resources by current ClassLoader
-        urls = this.findResourcesWithJoinpointCL(name);
+        // load resources by subclass-defined JoinpointClassLoader
+        urls = joinpointCL != null ? this.findResourcesWithJoinpointCL(joinpointCL, name) : null;
         if(urls != null) {
             urlsList.add(urls);
         }
@@ -261,19 +279,14 @@ public abstract class AspectClassLoader extends URLClassLoader {
         return new CompoundEnumeration<>( urlsList );
     }
 
-    private Enumeration<URL> findResourcesWithJoinpointCL(String name) throws IOException {
-        ClassLoader joinpointCL = this.doFindJoinpointCL();
-        if(null == joinpointCL || this == joinpointCL) {
-            return null;
-        }
-
+    private Enumeration<URL> findResourcesWithJoinpointCL(ClassLoader joinpointCL, String name) throws IOException {
         return joinpointCL.getResources(name);
     }
 
     private String getLoaderName() {
         return super.toString()
                 + "-" + loaderName
-                + "-" + ClassLoaderUtils.getClassLoaderName(this.doFindJoinpointCL());
+                + "-" + ClassLoaderUtils.getClassLoaderName(this.getJoinpointClassLoader());
     }
 
     
@@ -281,44 +294,4 @@ public abstract class AspectClassLoader extends URLClassLoader {
     public String toString() {
         return getLoaderName();
     }
-
-
-    @NoMatching(classLoader = true)
-    public static class WithThreadContextCL extends AspectClassLoader {
-
-        public WithThreadContextCL(String loaderName, URL[] urls, AopClassLoader aopClassLoader) {
-            super(loaderName, urls, aopClassLoader);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected ClassLoader doFindJoinpointCL() {
-            return ThreadContext.getContextClassLoader();
-        }
-    }
-
-
-    @NoMatching(classLoader = true)
-    public static class WithJoinpointCL extends AspectClassLoader {
-
-        private final ClassLoader joinpointClassLoader;
-
-        public WithJoinpointCL(String loaderName, URL[] urls, AopClassLoader aopClassLoader, 
-                ClassLoader joinpointClassLoader) {
-            super(loaderName, urls, aopClassLoader);
-
-            this.joinpointClassLoader = joinpointClassLoader;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected ClassLoader doFindJoinpointCL() {
-            return this.joinpointClassLoader;
-        }
-    }
 }
-

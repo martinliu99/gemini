@@ -23,6 +23,7 @@ import java.util.Set;
 
 import io.gemini.api.annotation.NoMatching;
 import io.gemini.api.classloader.AopClassLoader;
+import io.gemini.api.classloader.ClassLoaders;
 
 /**
  * <p>
@@ -36,8 +37,6 @@ import io.gemini.api.classloader.AopClassLoader;
  */
 @NoMatching(classLoader = true)
 public class DefaultAopClassLoader extends AopClassLoader {
-
-    private static final ClassLoader EXT_CLASSLOADER;
 
     private static final Set<String> BUILTIN_PARENT_FIRST_CLASS_PREFIXES = new LinkedHashSet<>();
     private static final Set<String> BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES = new LinkedHashSet<>();
@@ -58,12 +57,6 @@ public class DefaultAopClassLoader extends AopClassLoader {
         // invoke registerAsParallelCapable directly since JDK 7+
         registerAsParallelCapable();
 
-        // search ExtClassLoader
-        ClassLoader classLoader = getSystemClassLoader();
-        while (classLoader.getParent() != null) {
-            classLoader = classLoader.getParent();
-        }
-        EXT_CLASSLOADER = classLoader;
 
         BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.activation.");
         BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.classloader.");
@@ -80,7 +73,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
     public DefaultAopClassLoader(URL[] urls, ClassLoader parentClassLoader) {
         // use ExtClassLoader/PlatformClassLoader as parent ClassLoader.
-        super(urls, EXT_CLASSLOADER);
+        super(urls, ClassLoaders.getExtClassLoader());
     
         this.urls = urls;
 

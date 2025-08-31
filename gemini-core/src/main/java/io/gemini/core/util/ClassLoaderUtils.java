@@ -23,26 +23,12 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
+import io.gemini.api.classloader.ClassLoaders;
+
 public class ClassLoaderUtils {
-
-
-    public static final String BOOTSTRAP_CLASSLOADER_NAME = "BootstrapClassLoader";
-    public static final String EXT_CLASSLOADER_NAME = "ExtClassLoader";
-    public static final String APP_CLASSLOADER_NAME = "AppClassLoader";
 
     public static final ClassLoader BOOTSTRAP_CLASSLOADER = new BootstrapClassLoader();
 
-    static class BootstrapClassLoader extends ClassLoader {
-
-        @Override
-        public String toString() {
-            return BOOTSTRAP_CLASSLOADER_NAME;
-        }
-    }
-
-    public static boolean isBootstrapClassLoader(ClassLoader classLoader) {
-        return classLoader == null || classLoader == BOOTSTRAP_CLASSLOADER;
-    }
 
     public static ClassLoader maskNull(ClassLoader classLoader) {
         return classLoader == null ? BOOTSTRAP_CLASSLOADER : classLoader;
@@ -50,12 +36,12 @@ public class ClassLoaderUtils {
 
     public static String getClassLoaderName(ClassLoader classLoader) {
         return classLoader == null || classLoader == BOOTSTRAP_CLASSLOADER 
-                ? BOOTSTRAP_CLASSLOADER_NAME : classLoader.getClass().getName();
+                ? ClassLoaders.BOOTSTRAP_CLASSLOADER_NAME : classLoader.getClass().getName();
     }
 
     public static String getClassLoaderId(ClassLoader classLoader) {
         return classLoader == null || classLoader == BOOTSTRAP_CLASSLOADER
-                ? BOOTSTRAP_CLASSLOADER_NAME 
+                ? ClassLoaders.BOOTSTRAP_CLASSLOADER_NAME 
                 : ( classLoader.getClass().getName() + "@" + ObjectUtils.getIdentityHexString(classLoader) );
     }
 
@@ -88,5 +74,14 @@ public class ClassLoaderUtils {
         }
 
         return classPaths;
+    }
+
+
+    private static class BootstrapClassLoader extends ClassLoader {
+
+        @Override
+        public String toString() {
+            return ClassLoaders.BOOTSTRAP_CLASSLOADER_NAME;
+        }
     }
 }

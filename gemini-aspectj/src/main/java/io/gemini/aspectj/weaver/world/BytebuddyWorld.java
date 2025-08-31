@@ -52,9 +52,9 @@ import net.bytebuddy.pool.TypePool;
 
 public class BytebuddyWorld extends World implements TypeWorld {
 
-    private final static TypeDescription  OBJECT_DESCRIPTION = TypeDescription.ForLoadedType.of(Object.class);
+    protected final static TypeDescription  OBJECT_DESCRIPTION = TypeDescription.ForLoadedType.of(Object.class);
 
-    private final TypePool typePool;
+    protected final TypePool typePool;
     private final PlaceholderHelper placeholderHelper;
 
     private final ResolvedType objectType;

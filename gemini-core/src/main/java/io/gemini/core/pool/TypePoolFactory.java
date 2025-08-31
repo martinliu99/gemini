@@ -19,8 +19,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
-import io.gemini.core.pool.TypePools.HybridResolutionTypePool;
 import io.gemini.core.pool.TypePools.ExplicitTypePool;
+import io.gemini.core.pool.TypePools.LazyResolutionTypePool;
 import io.gemini.core.util.ClassLoaderUtils;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.PoolStrategy;
@@ -92,9 +92,9 @@ public interface TypePoolFactory {
                 // reuse loaded Aop framework classes for better performance
                 return TypePool.ClassLoading.of(classLoader);
             else
-                return new HybridResolutionTypePool(
+                return new LazyResolutionTypePool(
                         ClassLoaderUtils.getClassLoaderName(classLoader),
-                        CacheProvider.Simple.withObjectType(), 
+                        new CacheProvider.Simple.UsingSoftReference(), 
                         this.locationStrategy.classFileLocator(classLoader, javaModule), 
                         ReaderMode.FAST);
         }
@@ -121,7 +121,7 @@ public interface TypePoolFactory {
                 cacheProvider = CacheProvider.Simple.withObjectType();
 
             return new TypePool.LazyFacade(
-                    new HybridResolutionTypePool(        // new TypePool with changed classFileLocator
+                    new LazyResolutionTypePool(        // new TypePool with changed classFileLocator
                             ClassLoaderUtils.getClassLoaderName(classLoader),
                             cacheProvider,
                             classFileLocator,

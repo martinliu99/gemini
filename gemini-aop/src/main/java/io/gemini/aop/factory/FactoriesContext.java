@@ -21,7 +21,6 @@ import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +40,7 @@ import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
-import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.StringUtils;
-import net.bytebuddy.matcher.BooleanMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
@@ -123,10 +120,8 @@ class FactoriesContext implements Closeable {
                         StringUtils.join(includedFactoryExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<String> includedFactoryMatcher = CollectionUtils.isEmpty(includedFactoryExprs) 
-                    ? BooleanMatcher.of(true)
-                    : ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            FACTORIES_INCLUDED_FACTORY_EXPRS_KEY, includedFactoryExprs );
+            ElementMatcher.Junction<String> includedFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                    FACTORIES_INCLUDED_FACTORY_EXPRS_KEY, includedFactoryExprs );
 
 
             Set<String> excludedFactoryExprs = configView.getAsStringSet(FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, Collections.emptySet());
@@ -137,17 +132,16 @@ class FactoriesContext implements Closeable {
                         StringUtils.join(excludedFactoryExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<String> excludedFactoryMatcher = CollectionUtils.isEmpty(excludedFactoryExprs) 
-                    ? BooleanMatcher.of(false)
-                    : ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, excludedFactoryExprs );
+            ElementMatcher.Junction<String> excludedFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                        FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, excludedFactoryExprs );
 
 
-            this.factoryMatcher = includedFactoryMatcher.or( ElementMatchers.not(excludedFactoryMatcher) );
+            this.factoryMatcher = includedFactoryMatcher.or( 
+                    ElementMatchers.not(excludedFactoryMatcher) );
         }
 
         {
-            Set<String> classLoaders = new HashSet<>();
+            Set<String> classLoaders = new LinkedHashSet<>();
             classLoaders.addAll( 
                     configView.getAsStringSet(FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet()) );
             this.defaultMatchingClassLoaderExprs = classLoaders;

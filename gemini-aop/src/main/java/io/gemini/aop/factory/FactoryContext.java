@@ -22,7 +22,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,8 +36,10 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.aop.factory.classloader.AspectTypePool;
+import io.gemini.aop.factory.classloader.AspectTypeWorld;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.aop.condition.Condition;
+import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
@@ -61,8 +62,6 @@ public class FactoryContext implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FactoryContext.class);
 
     private static final String FACTORY_INTERNAL_PROPERTIES = "META-INF/factory-internal.properties";
-
-    private static final Set<ClassLoader> SYSTEM_CLASSLOADERS;
 
     private static final String FACTORY_JOINPOINT_TYPE_EXPRS = "aop.factory.joinpointTypeExprs";
     private static final String FACTORY_JOINPOINT_RESOURCE_EXPRS = "aop.factory.joinpointResourceExprs";
@@ -122,22 +121,10 @@ public class FactoryContext implements Closeable {
     private final ClassScanner classScanner;
 
     private final ObjectFactory objectFactory;
-    private final TypePool typePool;
+    private final AspectTypePool typePool;
     private final TypeWorld typeWorld;
 
     private final ConcurrentMap<ClassLoader, AdvisorContext> advisorContextMap;
-
-
-    static {
-        SYSTEM_CLASSLOADERS = new HashSet<>();
-        SYSTEM_CLASSLOADERS.add(ClassLoaderUtils.BOOTSTRAP_CLASSLOADER);
-
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        while (classLoader != null) {
-            SYSTEM_CLASSLOADERS.add(classLoader);
-            classLoader = classLoader.getParent();
-        }
-    }
 
 
     public FactoryContext(AopContext aopContext, 
@@ -156,10 +143,10 @@ public class FactoryContext implements Closeable {
 
         this.factoryResourceURLs = factoryResourceURLs;
 
-        this.classLoader = new AspectClassLoader.WithThreadContextCL(
+        this.classLoader = new AspectClassLoader(
                 factoryName, 
                 factoryResourceURLs, 
-                aopContext.getAopClassLoader());
+                aopContext.getAopClassLoader() );
 
 
         // 2.load settings
@@ -180,7 +167,8 @@ public class FactoryContext implements Closeable {
         this.objectFactory = this.createObjectFactory(classLoader, this.classScanner);
 
         this.typePool = new AspectTypePool(classLoader, typePoolFactory);
-        this.typeWorld = typeWorldFactory.createTypeWorld(typePool, placeholderHelper);
+        this.typeWorld = new TypeWorld.LazyFacade(
+                new AspectTypeWorld(typePool, placeholderHelper, classLoader, typeWorldFactory) );
 
         this.advisorContextMap = new ConcurrentReferenceHashMap<>();
 
@@ -254,8 +242,8 @@ public class FactoryContext implements Closeable {
                         StringUtils.join(includedClassLoaderExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<ClassLoader> includedClassLoadersMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                    FactoryContext.FACTORY_INCLUDED_CLASS_LOADER_EXPRS_KEY, includedClassLoaderExprs );
+            ElementMatcher.Junction<ClassLoader> includedClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                        FactoryContext.FACTORY_INCLUDED_CLASS_LOADER_EXPRS_KEY, includedClassLoaderExprs );
 
 
             Set<String> excludedClassLoaderExprs = configView.getAsStringSet(FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
@@ -266,11 +254,12 @@ public class FactoryContext implements Closeable {
                         StringUtils.join(excludedClassLoaderExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<ClassLoader> excludedClassLoadersMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                    FactoryContext.FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY, excludedClassLoaderExprs );
+            ElementMatcher.Junction<ClassLoader> excludedClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                        FactoryContext.FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY, excludedClassLoaderExprs );
 
 
-            this.classLoaderMatcher = includedClassLoadersMatcher.or( ElementMatchers.not(excludedClassLoadersMatcher) );
+            this.classLoaderMatcher = includedClassLoaderMatcher.or( 
+                    ElementMatchers.not(excludedClassLoaderMatcher) );
         }
 
         {
@@ -283,7 +272,7 @@ public class FactoryContext implements Closeable {
                 );
 
             ElementMatcher.Junction<String> includedTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_INCLUDED_TYPE_EXPRS_KEY, includedTypeExprs );
+                        FACTORY_INCLUDED_TYPE_EXPRS_KEY, includedTypeExprs );
 
 
             Set<String> excludedTypeExprs = configView.getAsStringSet(FACTORY_EXCLUDED_TYPE_EXPRS_KEY, Collections.emptySet());
@@ -295,10 +284,11 @@ public class FactoryContext implements Closeable {
                 );
 
             ElementMatcher.Junction<String> excludedTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_EXCLUDED_TYPE_EXPRS_KEY, excludedTypeExprs );
+                        FACTORY_EXCLUDED_TYPE_EXPRS_KEY, excludedTypeExprs );
 
 
-            this.typeMatcher = includedTypeMatcher.or( ElementMatchers.not(excludedTypeMatcher) );
+            this.typeMatcher = includedTypeMatcher.or( 
+                    ElementMatchers.not(excludedTypeMatcher) );
         }
 
         {
@@ -311,7 +301,7 @@ public class FactoryContext implements Closeable {
                 );
 
             ElementMatcher.Junction<String> includedAdvisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            FACTORY_INCLUDED_ADVISOR_EXPRS_KEY, includedAdvisorExprs );
+                        FACTORY_INCLUDED_ADVISOR_EXPRS_KEY, includedAdvisorExprs );
 
 
             Set<String> excludedAdvisorExprs = configView.getAsStringSet(FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY, Collections.emptySet());
@@ -323,10 +313,11 @@ public class FactoryContext implements Closeable {
                 );
 
             ElementMatcher.Junction<String> excludedAdvisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY, excludedAdvisorExprs );
+                        FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY, excludedAdvisorExprs );
 
 
-            this.advisorMatcher = includedAdvisorMatcher.or( ElementMatchers.not(excludedAdvisorMatcher) );
+            this.advisorMatcher = includedAdvisorMatcher.or( 
+                    ElementMatchers.not(excludedAdvisorMatcher) );
         }
 
         {
@@ -473,7 +464,7 @@ public class FactoryContext implements Closeable {
 
 
         // 2.used shared AspectClassLoader for system ClassLoaders
-        if(SYSTEM_CLASSLOADERS.contains(joinpointClassLoader) == true)
+        if(ClassLoaders.getBuiltinClassLoaders().contains(joinpointClassLoader) == true)
             return true;
 
 
@@ -515,11 +506,10 @@ public class FactoryContext implements Closeable {
         AspectClassLoader classLoader = this.classLoader;
         ObjectFactory objectFactory = this.objectFactory;
         if(sharedMode == false) {
-            classLoader = new AspectClassLoader.WithJoinpointCL(
+            classLoader = new AspectClassLoader(
                     factoryName, 
                     factoryResourceURLs, 
-                    aopContext.getAopClassLoader(),
-                    joinpointClassLoader);
+                    aopContext.getAopClassLoader() );
 
             classLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
             classLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);

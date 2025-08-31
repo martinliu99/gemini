@@ -35,8 +35,6 @@ public interface TypeWorldFactory {
 
     TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule);
 
-    TypeWorld createTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper);
-
 
     abstract class AbstractBase implements TypeWorldFactory {
 
@@ -72,14 +70,6 @@ public interface TypeWorldFactory {
             );
 
             return typeWorldCache.get(cacheKey);
-        }
-
-        /** 
-         * {@inheritDoc}
-         */
-        @Override
-        public TypeWorld createTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
-            return doCreateTypeWorld(typePool, placeholderHelper);
         }
     }
 }

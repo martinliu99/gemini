@@ -124,11 +124,12 @@ class WeaverContext {
                             StringUtils.join(excludedClassLoaderExprs, "\n  ")
                     );
 
-                ElementMatcher.Junction<ClassLoader> excludedClassLoadersMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        WEAVER_EXCLUDED_CLASS_LOADER_EXPRS_KEY, excludedClassLoaderExprs );
+                ElementMatcher.Junction<ClassLoader> excludedClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                            WEAVER_EXCLUDED_CLASS_LOADER_EXPRS_KEY, excludedClassLoaderExprs );
 
 
-                this.classLoaderMatcher = includedClassLoadersMatcher.or( ElementMatchers.not(excludedClassLoadersMatcher) );
+                this.classLoaderMatcher = includedClassLoadersMatcher.or( 
+                        ElementMatchers.not(excludedClassLoaderMatcher) );
             }
 
 
@@ -141,8 +142,9 @@ class WeaverContext {
                             StringUtils.join(includedTypeExprs, "\n  ") 
                     );
 
-                ElementMatcher.Junction<String> includedTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        WeaverContext.WEAVER_INCLUDED_TYPE_EXPRS_KEY, includedTypeExprs);
+                ElementMatcher.Junction<String> includedTypeMatcher = 
+                        ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                                WeaverContext.WEAVER_INCLUDED_TYPE_EXPRS_KEY, includedTypeExprs);
 
 
                 Set<String> excludedTypeExprs = new LinkedHashSet<>();
@@ -161,11 +163,14 @@ class WeaverContext {
                             StringUtils.join(excludedTypeExprs, "\n  ")
                     );
 
-                ElementMatcher.Junction<String> excludedTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        WeaverContext.WEAVER_EXCLUDED_TYPE_EXPRS_KEY, excludedTypeExprs);
+                ElementMatcher.Junction<String> excludedTypeMatcher = excludedTypeExprs.size() == 0 
+                        ? ElementMatchers.any()
+                        : ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                                WeaverContext.WEAVER_EXCLUDED_TYPE_EXPRS_KEY, excludedTypeExprs);
 
 
-                this.typeMatcher = includedTypeMatcher.or( ElementMatchers.not(excludedTypeMatcher) );
+                this.typeMatcher = includedTypeMatcher.or( 
+                        ElementMatchers.not(excludedTypeMatcher) );
             }
         }
 

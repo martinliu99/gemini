@@ -33,25 +33,13 @@ import net.bytebuddy.pool.TypePool;
  */
 public interface TypePools {
 
-    enum ResolutionType {
-        EAGER,
-        LAZY;
-    }
-
-
     /**
      * This type pool supports both eagerly and lazily type resolution.
      *
      * @author   martin.liu
      * @since	 1.0
      */
-    class HybridResolutionTypePool extends TypePool.Default.WithLazyResolution {
-
-        private static final ThreadLocal<ResolutionType> RESOLUTION_TYPE = new ThreadLocal<ResolutionType>() {
-                protected ResolutionType initialValue() {
-                    return ResolutionType.LAZY;
-                }
-        };
+    class LazyResolutionTypePool extends TypePool.Default.WithLazyResolution {
 
         private final String poolName;
 
@@ -60,13 +48,13 @@ public interface TypePools {
          * @param classFileLocator
          * @param readerMode
          */
-        public HybridResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
+        public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
             super(cacheProvider, classFileLocator, readerMode);
 
             this.poolName = poolName;
         }
 
-        public HybridResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
+        public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
             super(cacheProvider, classFileLocator, readerMode, parentPool);
 
             this.poolName = poolName;
@@ -75,27 +63,6 @@ public interface TypePools {
         // expose cache provider to reuse
         public CacheProvider getCacheProvider() {
             return this.cacheProvider;
-        }
-
-        public static ResolutionType getResolutionType() {
-            return RESOLUTION_TYPE.get();
-        }
-
-        public static void setResolutionType(ResolutionType resolutionType) {
-            RESOLUTION_TYPE.set(resolutionType);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected Resolution doDescribe(String name) {
-            Resolution resolution = super.doDescribe(name);
-
-            if(RESOLUTION_TYPE.get() == ResolutionType.EAGER)
-                resolution.resolve().getModifiers();        // trigger actual resolution
-
-            return resolution;
         }
 
         @Override
@@ -126,9 +93,9 @@ public interface TypePools {
         }
 
         public CacheProvider getCacheProvider() {
-            return delegate instanceof HybridResolutionTypePool == false
+            return delegate instanceof LazyResolutionTypePool == false
                 ? null
-                : ((HybridResolutionTypePool) delegate).getCacheProvider();
+                : ((LazyResolutionTypePool) delegate).getCacheProvider();
         }
 
         public void addTypeDescription(TypeDescription typeDescription) {

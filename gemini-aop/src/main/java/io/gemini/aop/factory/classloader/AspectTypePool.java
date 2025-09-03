@@ -43,7 +43,7 @@ public class AspectTypePool extends TypePool.Default {
     public Resolution describe(String name) {
         // check AspectClassLoader
         try {
-            Resolution resolution = super.doDescribe(name);
+            Resolution resolution = super.describe(name);
             if(resolution != null && resolution.isResolved())
                 return resolution;
         } catch(Exception e) { }

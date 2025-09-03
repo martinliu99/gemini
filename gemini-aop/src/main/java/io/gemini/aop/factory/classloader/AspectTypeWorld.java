@@ -61,9 +61,6 @@ public class AspectTypeWorld extends BytebuddyWorld {
 
     private TypeWorld getJoinpointTypeWorld() {
         ClassLoader joinpointCL = aspectClassLoader.getJoinpointClassLoader();
-        if(joinpointCL == null)
-            return null;
-
         return typeWordlFactory.createTypeWorld(joinpointCL, null);
     }
 

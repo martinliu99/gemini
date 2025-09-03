@@ -131,10 +131,10 @@ public interface TaskExecutor {
             if(elements.size() % batchSize != 0)  batchCount++;
 
             List<List<T>> splitedTasks = new ArrayList<>(batchCount);
-            for(int batch = 0; batch < batchCount; batch++) {
-                int endIndex = Math.min((batch + 1) * batchSize, elements.size());
+            for(int batch = 0; batch < batchSize; batch++) {
+                int endIndex = Math.min((batch + 1) * batchCount, elements.size());
 
-                splitedTasks.add( elements.subList(batch * batchSize, endIndex) );
+                splitedTasks.add( elements.subList(batch * (batchCount-1), endIndex) );
             }
             return splitedTasks;
         }

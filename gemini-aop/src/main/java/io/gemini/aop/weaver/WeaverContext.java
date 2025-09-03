@@ -54,11 +54,11 @@ class WeaverContext {
 
     private static final String WEAVER_MATCH_JOINPOINT_KEY = "aop.weaver.matchJoinpoint";
 
-    private static final String WEAVER_INCLUDED_CLASS_LOADER_EXPRS_KEY = "aop.weaver.includedClassLoaderExprs";
-    private static final String WEAVER_EXCLUDED_CLASS_LOADER_EXPRS_KEY = "aop.weaver.excludedClassLoaderExprs";
+    private static final String WEAVER_CLASS_LOADER_EXPRS_KEY = "aop.weaver.classLoaderExprs";
+    private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRS = "aop.weaver.defaultExcludedClassLoaderExprs";
 
-    private static final String WEAVER_INCLUDED_TYPE_EXPRS_KEY = "aop.weaver.includedTypeExprs";
-    private static final String WEAVER_EXCLUDED_TYPE_EXPRS_KEY = "aop.weaver.excludedTypeExprs";
+    private static final String WEAVER_TYPE_EXPRS_KEY = "aop.weaver.typeExprs";
+    private static final String WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRS = "aop.weaver.defaultExcludedTypeExprs";
 
 
     // weaver settings
@@ -97,80 +97,65 @@ class WeaverContext {
             }
 
             {
-                Set<String> includedClassLoaderExprs = configView.getAsStringSet(WEAVER_INCLUDED_CLASS_LOADER_EXPRS_KEY, new LinkedHashSet<>());
-
-                if(includedClassLoaderExprs.size() > 0)
+                Set<String> classLoaderExprs = configView.getAsStringSet(WEAVER_CLASS_LOADER_EXPRS_KEY, new LinkedHashSet<>());
+                if(classLoaderExprs.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            includedClassLoaderExprs.size(), WEAVER_INCLUDED_CLASS_LOADER_EXPRS_KEY, 
-                            StringUtils.join(includedClassLoaderExprs, "\n  ")
+                            classLoaderExprs.size(), WEAVER_CLASS_LOADER_EXPRS_KEY, 
+                            StringUtils.join(classLoaderExprs, "\n  ")
                     );
 
-                ElementMatcher.Junction<ClassLoader> includedClassLoadersMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        WEAVER_INCLUDED_CLASS_LOADER_EXPRS_KEY, includedClassLoaderExprs );
 
-
-                Set<String> excludedClassLoaderExprs = new LinkedHashSet<>();
-                excludedClassLoaderExprs.addAll(
-                        configView.getAsStringList("aop.weaver.builtinExcludedClassLoaderExprs", Collections.emptyList()) );
-                excludedClassLoaderExprs.addAll(
+                Set<String> defaultExcludedClassLoaderExprs = new LinkedHashSet<>();
+                defaultExcludedClassLoaderExprs.addAll(
+                        configView.getAsStringSet(WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRS, Collections.emptySet()) );
+                defaultExcludedClassLoaderExprs.addAll(
                         noMatchingClassInfoList.filter( this::isClassLoader ).getNames() );
 
-                excludedClassLoaderExprs.addAll(
-                        configView.getAsStringList(WEAVER_EXCLUDED_CLASS_LOADER_EXPRS_KEY, Collections.emptyList()) );
-
-                if(excludedClassLoaderExprs.size() > 0) 
-                    LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            excludedClassLoaderExprs.size(), WEAVER_EXCLUDED_CLASS_LOADER_EXPRS_KEY, 
-                            StringUtils.join(excludedClassLoaderExprs, "\n  ")
-                    );
-
-                ElementMatcher.Junction<ClassLoader> excludedClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                            WEAVER_EXCLUDED_CLASS_LOADER_EXPRS_KEY, excludedClassLoaderExprs );
+                LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
+                        defaultExcludedClassLoaderExprs.size(), WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRS, 
+                        StringUtils.join(defaultExcludedClassLoaderExprs, "\n  ")
+                );
 
 
-                this.classLoaderMatcher = includedClassLoadersMatcher.or( 
-                        ElementMatchers.not(excludedClassLoaderMatcher) );
+                this.classLoaderMatcher = ElementMatchers.not(
+                        ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                                WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRS, defaultExcludedClassLoaderExprs ) );
+                if(classLoaderExprs.size() > 0)
+                    this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                            WEAVER_CLASS_LOADER_EXPRS_KEY, classLoaderExprs )
+                        .and( this.classLoaderMatcher );
             }
 
 
             {
-                Set<String> includedTypeExprs = configView.getAsStringSet(WEAVER_INCLUDED_TYPE_EXPRS_KEY, Collections.emptySet());
-
-                if(includedTypeExprs.size() > 0)
+                Set<String> typeExprs = configView.getAsStringSet(WEAVER_TYPE_EXPRS_KEY, Collections.emptySet());
+                if(typeExprs.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            includedTypeExprs.size(), WEAVER_INCLUDED_TYPE_EXPRS_KEY,
-                            StringUtils.join(includedTypeExprs, "\n  ") 
+                            typeExprs.size(), WEAVER_TYPE_EXPRS_KEY,
+                            StringUtils.join(typeExprs, "\n  ") 
                     );
 
-                ElementMatcher.Junction<String> includedTypeMatcher = 
-                        ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                                WeaverContext.WEAVER_INCLUDED_TYPE_EXPRS_KEY, includedTypeExprs);
 
-
-                Set<String> excludedTypeExprs = new LinkedHashSet<>();
-                excludedTypeExprs.addAll(
-                        configView.getAsStringList("aop.weaver.builtinExcludedTypeExprs", Collections.emptyList()) );
-                excludedTypeExprs.addAll(
+                Set<String> defaultExcludedTypeExprs = new LinkedHashSet<>();
+                defaultExcludedTypeExprs.addAll(
+                        configView.getAsStringList(WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRS, Collections.emptyList()) );
+                defaultExcludedTypeExprs.addAll(
                         noMatchingClassInfoList.filter( this::isClass ).getNames() );
-                excludedTypeExprs.addAll( aopContext.getBootstrapClassNameMapping().keySet() );
+                defaultExcludedTypeExprs.addAll( aopContext.getBootstrapClassNameMapping().values() );
 
-                excludedTypeExprs.addAll(
-                        configView.getAsStringList(WEAVER_EXCLUDED_TYPE_EXPRS_KEY, Collections.emptyList()) );
-
-                if(excludedTypeExprs.size() > 0) 
-                    LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            excludedTypeExprs.size(), WEAVER_EXCLUDED_TYPE_EXPRS_KEY,
-                            StringUtils.join(excludedTypeExprs, "\n  ")
-                    );
-
-                ElementMatcher.Junction<String> excludedTypeMatcher = excludedTypeExprs.size() == 0 
-                        ? ElementMatchers.any()
-                        : ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                                WeaverContext.WEAVER_EXCLUDED_TYPE_EXPRS_KEY, excludedTypeExprs);
+                LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
+                        defaultExcludedTypeExprs.size(), WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRS,
+                        StringUtils.join(defaultExcludedTypeExprs, "\n  ")
+                );
 
 
-                this.typeMatcher = includedTypeMatcher.or( 
-                        ElementMatchers.not(excludedTypeMatcher) );
+                this.typeMatcher = ElementMatchers.not(
+                        ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                                WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRS, defaultExcludedTypeExprs) );
+                if(typeExprs.size() > 0)
+                    this.typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                            WEAVER_TYPE_EXPRS_KEY, typeExprs)
+                        .and( typeMatcher );
             }
         }
 

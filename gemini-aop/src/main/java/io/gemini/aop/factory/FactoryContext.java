@@ -38,7 +38,7 @@ import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.aop.factory.classloader.AspectTypePool;
 import io.gemini.aop.factory.classloader.AspectTypeWorld;
 import io.gemini.aop.matcher.ElementMatcherFactory;
-import io.gemini.api.aop.condition.Condition;
+import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
@@ -68,14 +68,9 @@ public class FactoryContext implements Closeable {
 
     private static final String FACTORY_MATCHER_MATCH_JOINPOINT_KEY = "aop.factory.matchJoinpoint";
 
-    private static final String FACTORY_INCLUDED_CLASS_LOADER_EXPRS_KEY = "aop.factory.includedClassLoaderExprs";
-    private static final String FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY = "aop.factory.excludedClassLoaderExprs";
-
-    private static final String FACTORY_INCLUDED_TYPE_EXPRS_KEY = "aop.factory.includedTypeExprs";
-    private static final String FACTORY_EXCLUDED_TYPE_EXPRS_KEY = "aop.factory.excludedTypeExprs";
-
-    private static final String FACTORY_INCLUDED_ADVISOR_EXPRS_KEY = "aop.factory.includedAdvisorExprs";
-    private static final String FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY = "aop.factory.excludedAdvisorExprs";
+    private static final String FACTORY_CLASS_LOADER_EXPRS_KEY = "aop.factory.classLoaderExprs";
+    private static final String FACTORY_TYPE_EXPRS_KEY = "aop.factory.typeExprs";
+    private static final String FACTORY_ADVISOR_EXPRS_KEY = "aop.factory.advisorExprs";
 
     private static final String FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY = "aop.factory.defaultMatchingClassLoaderExprs";
 
@@ -112,7 +107,7 @@ public class FactoryContext implements Closeable {
     private ElementMatcher<String> advisorMatcher;
 
 
-    private Condition defaultCondition;
+    private ElementMatcher<ConditionContext> defaultCondition;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
@@ -234,90 +229,45 @@ public class FactoryContext implements Closeable {
         }
 
         {
-            Set<String> includedClassLoaderExprs = configView.getAsStringSet(FACTORY_INCLUDED_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
-
-            if(includedClassLoaderExprs.size() > 0) 
+            Set<String> classLoaderExprs = configView.getAsStringSet(FACTORY_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
+            if(classLoaderExprs.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        includedClassLoaderExprs.size(), FACTORY_INCLUDED_CLASS_LOADER_EXPRS_KEY, factoryName,
-                        StringUtils.join(includedClassLoaderExprs, "\n  ")
+                        classLoaderExprs.size(), FACTORY_CLASS_LOADER_EXPRS_KEY, factoryName,
+                        StringUtils.join(classLoaderExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<ClassLoader> includedClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        FactoryContext.FACTORY_INCLUDED_CLASS_LOADER_EXPRS_KEY, includedClassLoaderExprs );
-
-
-            Set<String> excludedClassLoaderExprs = configView.getAsStringSet(FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
-
-            if(excludedClassLoaderExprs.size() > 0) 
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        excludedClassLoaderExprs.size(), FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY, factoryName,
-                        StringUtils.join(excludedClassLoaderExprs, "\n  ")
-                );
-
-            ElementMatcher.Junction<ClassLoader> excludedClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        FactoryContext.FACTORY_EXCLUDED_CLASS_LOADER_EXPRS_KEY, excludedClassLoaderExprs );
-
-
-            this.classLoaderMatcher = includedClassLoaderMatcher.or( 
-                    ElementMatchers.not(excludedClassLoaderMatcher) );
+                this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(FACTORY_CLASS_LOADER_EXPRS_KEY, classLoaderExprs );
+            } else {
+                this.classLoaderMatcher = ElementMatchers.any();
+            }
         }
 
         {
-            Set<String> includedTypeExprs = configView.getAsStringSet(FACTORY_INCLUDED_TYPE_EXPRS_KEY, Collections.emptySet());
-
-            if(includedTypeExprs.size() > 0) 
+            Set<String> typeExprs = configView.getAsStringSet(FACTORY_TYPE_EXPRS_KEY, Collections.emptySet());
+            if(typeExprs.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        includedTypeExprs.size(), FACTORY_INCLUDED_TYPE_EXPRS_KEY, factoryName,
-                        StringUtils.join(includedTypeExprs, "\n  ")
+                        typeExprs.size(), FACTORY_TYPE_EXPRS_KEY, factoryName,
+                        StringUtils.join(typeExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<String> includedTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORY_INCLUDED_TYPE_EXPRS_KEY, includedTypeExprs );
-
-
-            Set<String> excludedTypeExprs = configView.getAsStringSet(FACTORY_EXCLUDED_TYPE_EXPRS_KEY, Collections.emptySet());
-
-            if(excludedTypeExprs.size() > 0)
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        excludedTypeExprs.size(), FACTORY_EXCLUDED_TYPE_EXPRS_KEY, factoryName,
-                        StringUtils.join(excludedTypeExprs, "\n  ")
-                );
-
-            ElementMatcher.Junction<String> excludedTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORY_EXCLUDED_TYPE_EXPRS_KEY, excludedTypeExprs );
-
-
-            this.typeMatcher = includedTypeMatcher.or( 
-                    ElementMatchers.not(excludedTypeMatcher) );
+                this.typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_TYPE_EXPRS_KEY, typeExprs );
+            } else {
+                this.typeMatcher = ElementMatchers.any();
+            }
         }
 
         {
-            Set<String> includedAdvisorExprs = configView.getAsStringSet(FACTORY_INCLUDED_ADVISOR_EXPRS_KEY, Collections.emptySet());
-
-            if(includedAdvisorExprs.size() > 0)
+            Set<String> advisorExprs = configView.getAsStringSet(FACTORY_ADVISOR_EXPRS_KEY, Collections.emptySet());
+            if(advisorExprs.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        includedAdvisorExprs.size(), FACTORY_INCLUDED_ADVISOR_EXPRS_KEY, factoryName,
-                        StringUtils.join(includedAdvisorExprs, "\n  ")
+                        advisorExprs.size(), FACTORY_ADVISOR_EXPRS_KEY, factoryName,
+                        StringUtils.join(advisorExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<String> includedAdvisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORY_INCLUDED_ADVISOR_EXPRS_KEY, includedAdvisorExprs );
-
-
-            Set<String> excludedAdvisorExprs = configView.getAsStringSet(FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY, Collections.emptySet());
-
-            if(excludedAdvisorExprs.size() > 0)
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        excludedAdvisorExprs.size(), FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY, factoryName,
-                        StringUtils.join(excludedAdvisorExprs, "\n  ")
-                );
-
-            ElementMatcher.Junction<String> excludedAdvisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORY_EXCLUDED_ADVISOR_EXPRS_KEY, excludedAdvisorExprs );
-
-
-            this.advisorMatcher = includedAdvisorMatcher.or( 
-                    ElementMatchers.not(excludedAdvisorMatcher) );
+                this.advisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_ADVISOR_EXPRS_KEY, advisorExprs );
+            } else {
+                this.advisorMatcher = ElementMatchers.any();
+            }
         }
 
         {
@@ -326,17 +276,11 @@ public class FactoryContext implements Closeable {
             mergedClassLoaderExprs.addAll(factoriesContext.getDefaultMatchingClassLoaderExprs());
             mergedClassLoaderExprs.addAll(configView.getAsStringSet(FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet()) );
 
-            ElementMatcher<String> defaultClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+            ElementMatcher<ClassLoader> defaultClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
                     FactoriesContext.FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY + ", " + FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY,
                     mergedClassLoaderExprs );
 
-            this.defaultCondition = new Condition() {
-
-                @Override
-                public boolean match(ConditionContext context) {
-                    return defaultClassLoaderMatcher.matches(context.getClassLoaderName());
-                }
-            };
+            this.defaultCondition = new ClassLoaderCondition(classLoader, defaultClassLoaderMatcher);
         }
 
         {
@@ -417,7 +361,7 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public Condition getDefaultCondition() {
+    public ElementMatcher<ConditionContext> getDefaultCondition() {
         return defaultCondition;
     }
 
@@ -562,5 +506,23 @@ public class FactoryContext implements Closeable {
 
         this.objectFactory.close();
         this.typePool.clear();
+    }
+
+
+    private static class ClassLoaderCondition implements ElementMatcher<ConditionContext> {
+
+        private final AspectClassLoader classLoader;
+        private final ElementMatcher<ClassLoader> classLoaderMatcher;
+
+
+        public ClassLoaderCondition(AspectClassLoader classLoader, ElementMatcher<ClassLoader> classLoaderMatcher) {
+            this.classLoader = classLoader;
+            this.classLoaderMatcher = classLoaderMatcher;
+        }
+
+        @Override
+        public boolean matches(ConditionContext context) {
+            return classLoaderMatcher.matches(classLoader.getJoinpointClassLoader());
+        }
     }
 }

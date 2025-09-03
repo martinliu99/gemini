@@ -17,9 +17,9 @@ package io.gemini.aop.factory;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -62,19 +62,15 @@ class CompoundAdvisorFactory implements AdvisorFactory {
         if(aopContext.getDiagnosticLevel().isSimpleEnabled())
             LOGGER.info("^Creating CompoundAdvisorFactory.");
 
-        try {
-            return aopContext.getGlobalTaskExecutor().executeTasks( 
-                    factoryContextMap.entrySet().stream()
-                        .collect( Collectors.toList() ), 
-                    entry -> 
-                        new SimpleEntry<>( entry.getValue(), 
-                                    createAdvisorFactory(aopContext, factoriesContext, entry.getValue()) )
-            )
-            .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
-        } finally {
-            if(aopContext.getDiagnosticLevel().isSimpleEnabled())
-                LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory. {}", (System.nanoTime() - startedAt) / 1e9);
+        Map<FactoryContext, DefaultAdvisorFactory> advisorFactoryMap = new LinkedHashMap<>();
+        for(FactoryContext factoryContext : factoryContextMap.values()) {
+            DefaultAdvisorFactory advisorFactory = this.createAdvisorFactory(aopContext, factoriesContext, factoryContext);
+            advisorFactoryMap.put(factoryContext, advisorFactory);
         }
+
+        if(aopContext.getDiagnosticLevel().isSimpleEnabled())
+            LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory. {}", (System.nanoTime() - startedAt) / 1e9);
+        return advisorFactoryMap;
     }
 
     private DefaultAdvisorFactory createAdvisorFactory(AopContext aopContext,

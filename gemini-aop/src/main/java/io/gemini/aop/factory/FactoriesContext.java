@@ -54,8 +54,7 @@ class FactoriesContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FactoriesContext.class);
 
-    private static final String FACTORIES_INCLUDED_FACTORY_EXPRS_KEY = "aop.factories.includedFactoryExprs";
-    private static final String FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY = "aop.factories.excludedFactoryExprs";
+    private static final String FACTORIES_FACTORY_EXPRS_KEY = "aop.factories.factoryExprs";
 
     static final String FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY = "aop.factories.defaultMatchingClassLoaderExprs";
 
@@ -112,39 +111,22 @@ class FactoriesContext implements Closeable {
 
         // load global advisor factory settings
         {
-            Set<String> includedFactoryExprs = configView.getAsStringSet(FACTORIES_INCLUDED_FACTORY_EXPRS_KEY, Collections.emptySet());
-
-            if(includedFactoryExprs.size() > 0) 
+            Set<String> factoryExprs = configView.getAsStringSet(FACTORIES_FACTORY_EXPRS_KEY, Collections.emptySet());
+            if(factoryExprs.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        includedFactoryExprs.size(), FACTORIES_INCLUDED_FACTORY_EXPRS_KEY,
-                        StringUtils.join(includedFactoryExprs, "\n  ")
+                        factoryExprs.size(), FACTORIES_FACTORY_EXPRS_KEY,
+                        StringUtils.join(factoryExprs, "\n  ")
                 );
 
-            ElementMatcher.Junction<String> includedFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORIES_INCLUDED_FACTORY_EXPRS_KEY, includedFactoryExprs );
-
-
-            Set<String> excludedFactoryExprs = configView.getAsStringSet(FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, Collections.emptySet());
-
-            if(excludedFactoryExprs.size() > 0) 
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        excludedFactoryExprs.size(), FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY,
-                        StringUtils.join(excludedFactoryExprs, "\n  ")
-                );
-
-            ElementMatcher.Junction<String> excludedFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORIES_EXCLUDED_FACTORY_EXPRS_KEY, excludedFactoryExprs );
-
-
-            this.factoryMatcher = includedFactoryMatcher.or( 
-                    ElementMatchers.not(excludedFactoryMatcher) );
+                this.factoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORIES_FACTORY_EXPRS_KEY, factoryExprs );
+            } else {
+                this.factoryMatcher = ElementMatchers.any();
+            }
         }
 
         {
-            Set<String> classLoaders = new LinkedHashSet<>();
-            classLoaders.addAll( 
-                    configView.getAsStringSet(FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet()) );
-            this.defaultMatchingClassLoaderExprs = classLoaders;
+            this.defaultMatchingClassLoaderExprs = configView.getAsStringSet(
+                    FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
 
             this.shareAspectClassLoader = configView.getAsBoolean("aop.factories.shareAspectClassLoader", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(

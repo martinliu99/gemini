@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aspectj.weaver.world;
+package io.gemini.aspectj.weaver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,9 +23,6 @@ import java.net.URLClassLoader;
 import org.junit.jupiter.api.Test;
 
 import io.gemini.api.classloader.ClassLoaders;
-import io.gemini.aspectj.weaver.ExprParser;
-import io.gemini.aspectj.weaver.TypeWorld;
-import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.pool.TypePoolFactory;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;

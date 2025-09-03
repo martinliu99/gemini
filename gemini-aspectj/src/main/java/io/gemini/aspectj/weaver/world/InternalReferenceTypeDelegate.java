@@ -201,7 +201,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     @Override
     public boolean isGeneric() {
-        return this.getDeclaredGenericSignature() != null;
+        return this.typeDescription.getTypeVariables().size() > 0;
     }
 
     @Override

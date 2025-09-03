@@ -63,79 +63,7 @@ public class PatternParserV2 extends PatternParser {
     }
 
 
-    public static class KindedPointcutV2 extends KindedPointcut {
-
-        public KindedPointcutV2(KindedPointcut kindedPointcut) {
-            super(kindedPointcut.getKind(), kindedPointcut.getSignature());
-        }
-
-        private KindedPointcutV2(Kind kind, SignaturePattern signature, ShadowMunger munger) {
-            super(kind, signature);
-        }
-
-        @Override
-        public FuzzyBoolean fastMatch(FastMatchInfo info) {
-            Kind infoKind = info.getKind();
-            Kind kind = this.getKind();
-            if(infoKind != null && infoKind != kind)
-                return FuzzyBoolean.NO;
-
-            if (this.getSignature().isExactDeclaringTypePattern()) {
-                ExactTypePattern typePattern = (ExactTypePattern) this.getSignature().getDeclaringType();
-
-                // TODO: traverse type hierarchy is expensive to load supper class and interfaces
-                boolean traverseTypeHierarchy = false;
-                if(typePattern.isIncludeSubtypes() == true) {
-                    traverseTypeHierarchy = false;
-                }
-
-                if( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
-                        || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
-                    return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
-                }
-            }
-
-            return super.fastMatch(info);
-        }
-
-        @Override
-        protected FuzzyBoolean matchInternal(Shadow shadow) {
-            if (shadow.getKind() != getKind()) {
-                return FuzzyBoolean.NO;
-            }
-
-            if (shadow.getKind() == Shadow.SynchronizationLock && getKind() == Shadow.SynchronizationLock) {
-                return FuzzyBoolean.YES;
-            }
-            if (shadow.getKind() == Shadow.SynchronizationUnlock && getKind() == Shadow.SynchronizationUnlock) {
-                return FuzzyBoolean.YES;
-            }
-
-            // allow bridge method
-            if (!getSignature().matches(shadow.getMatchingSignature(), shadow.getIWorld(), true)) {
-                return FuzzyBoolean.NO;
-            }
-
-            return FuzzyBoolean.YES;
-        }
-
-        @Override
-        public Pointcut concretize1(ResolvedType inAspect, ResolvedType declaringType, IntMap bindings) {
-            Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature(), bindings.getEnclosingAdvice());
-            pointcut.copyLocationFrom(this);
-            return pointcut;
-        }
-
-        @Override
-        public Pointcut parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
-            Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature().parameterizeWith(typeVariableMap, w), null);
-            pointcut.copyLocationFrom(this);
-            return pointcut;
-        }
-    }
-
-
-    public static class WildTypePatternV2 extends WildTypePattern {
+    private static class WildTypePatternV2 extends WildTypePattern {
 
 
         /**
@@ -217,6 +145,82 @@ public class PatternParserV2 extends PatternParser {
         @Override
         public boolean isNested() {
             return false;
+        }
+    }
+
+
+    private static class KindedPointcutV2 extends KindedPointcut {
+
+        public KindedPointcutV2(KindedPointcut kindedPointcut) {
+            super(kindedPointcut.getKind(), kindedPointcut.getSignature());
+        }
+
+        private KindedPointcutV2(Kind kind, SignaturePattern signature, ShadowMunger munger) {
+            super(kind, signature);
+        }
+
+        @Override
+        public FuzzyBoolean fastMatch(FastMatchInfo info) {
+            Kind infoKind = info.getKind();
+            Kind kind = this.getKind();
+            if(infoKind != null && infoKind != kind)
+                return FuzzyBoolean.NO;
+
+            if (this.getSignature().isExactDeclaringTypePattern()) {
+                ExactTypePattern typePattern = (ExactTypePattern) this.getSignature().getDeclaringType();
+
+                // TODO: traverse type hierarchy is expensive to load supper class and interfaces
+                boolean traverseTypeHierarchy = false;
+                if(typePattern.isIncludeSubtypes() == true) {
+                    traverseTypeHierarchy = false;
+                }
+
+                if( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
+                        || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
+                    return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
+                }
+            } else  if (this.getSignature().getDeclaringType() instanceof WildTypePattern) {
+                final WildTypePattern pattern = (WildTypePattern) this.getSignature().getDeclaringType();
+                final ResolvedType type = info.getType();
+                return pattern.matches(type, TypePattern.STATIC);
+            }
+
+            return super.fastMatch(info);
+        }
+
+        @Override
+        protected FuzzyBoolean matchInternal(Shadow shadow) {
+            if (shadow.getKind() != getKind()) {
+                return FuzzyBoolean.NO;
+            }
+
+            if (shadow.getKind() == Shadow.SynchronizationLock && getKind() == Shadow.SynchronizationLock) {
+                return FuzzyBoolean.YES;
+            }
+            if (shadow.getKind() == Shadow.SynchronizationUnlock && getKind() == Shadow.SynchronizationUnlock) {
+                return FuzzyBoolean.YES;
+            }
+
+            // allow bridge method
+            if (!getSignature().matches(shadow.getMatchingSignature(), shadow.getIWorld(), true)) {
+                return FuzzyBoolean.NO;
+            }
+
+            return FuzzyBoolean.YES;
+        }
+
+        @Override
+        public Pointcut concretize1(ResolvedType inAspect, ResolvedType declaringType, IntMap bindings) {
+            Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature(), bindings.getEnclosingAdvice());
+            pointcut.copyLocationFrom(this);
+            return pointcut;
+        }
+
+        @Override
+        public Pointcut parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
+            Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature().parameterizeWith(typeVariableMap, w), null);
+            pointcut.copyLocationFrom(this);
+            return pointcut;
         }
     }
 }

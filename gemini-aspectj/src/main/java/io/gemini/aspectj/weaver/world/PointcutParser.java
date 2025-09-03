@@ -87,6 +87,10 @@ public class PointcutParser {
     }
 
 
+    public PointcutParser(TypeWorld typeWorld) {
+        this(typeWorld, getAllSupportedPointcutPrimitives());
+    }
+
     /**
      * Create a pointcut parser that can parse pointcut expressions built from a user-defined subset of AspectJ's supported pointcut
      * primitives. The following restrictions apply:
@@ -111,8 +115,9 @@ public class PointcutParser {
         }
     }
 
-    public PointcutParser(TypeWorld typeWorld) {
-        this(typeWorld, getAllSupportedPointcutPrimitives());
+
+    public Pointcut parsePointcut(String pointcutExpression) {
+        return parsePointcut(pointcutExpression, null, Collections.emptyMap());
     }
 
     /**
@@ -149,7 +154,7 @@ public class PointcutParser {
             Pointcut pointcut = parser.parsePointcut(true);
             validateAgainstSupportedPrimitives(pointcut, pointcutExpression);
 
-            IScope resolutionScope = buildResolutionScope(pointcutDeclarationScope, pointcutParameters);
+            IScope resolutionScope = buildResolutionScope(typeWorld, pointcutDeclarationScope, pointcutParameters);
             pointcut = pointcut.resolve(resolutionScope);
             return pointcut;
         } catch (ParserException pEx) {
@@ -170,7 +175,7 @@ public class PointcutParser {
         return result;
     }
 
-    private IScope buildResolutionScope(TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+    public static IScope buildResolutionScope(TypeWorld typeWorld, TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
         if (pointcutParameters == null) {
             pointcutParameters = Collections.emptyMap();
         }
@@ -205,7 +210,7 @@ public class PointcutParser {
         }
     }
 
-    private UnresolvedType toUnresolvedType(TypeDescription clazz) {
+    private static UnresolvedType toUnresolvedType(TypeDescription clazz) {
         if (clazz.isArray()) {
             return UnresolvedType.forSignature(clazz.getName().replace('.', '/'));
         } else {

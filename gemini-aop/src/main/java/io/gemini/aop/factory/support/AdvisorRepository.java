@@ -77,7 +77,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
             try {
                 // 1.validate advisor condition
-                if(this.advisorSpec.getCondition().match(advisorContext.getConditionContext()) == false) {
+                if(this.advisorSpec.getCondition().matches(advisorContext.getConditionContext()) == false) {
                     return null;
                 }
 

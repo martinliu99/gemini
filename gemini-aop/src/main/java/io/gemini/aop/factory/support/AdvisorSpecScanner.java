@@ -28,14 +28,15 @@ import io.gemini.api.annotation.NoScanning;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
+import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.api.aop.Pointcut;
-import io.gemini.api.aop.condition.Condition;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
+import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  *
@@ -154,8 +155,9 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
                     String advisorName = advisorSpec.getAdvisorName();
                     boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
-                    Condition condition = advisorSpec.getCondition();
-                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
 
                     if(noAdvisorName || noCondition)
                         advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
@@ -193,8 +195,9 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
                     String advisorName = advisorSpec.getAdvisorName();
                     boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
-                    Condition condition = advisorSpec.getCondition();
-                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
 
                     if(noAdvisorName || noCondition) 
                         advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
@@ -265,8 +268,9 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
                     String advisorName = advisorSpec.getAdvisorName();
                     boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
-                    Condition condition = advisorSpec.getCondition();
-                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
 
                     if(noAdvisorName || noCondition) 
                         advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
@@ -304,8 +308,9 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
                     String advisorName = advisorSpec.getAdvisorName();
                     boolean noAdvisorName = !StringUtils.hasText(advisorName) || defaultSpecClassName.equals(advisorName);
-                    Condition condition = advisorSpec.getCondition();
-                    boolean noCondition = condition == null || Condition.AlwaysTrue.INSTANCE == condition;
+
+                    ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
+                    boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
 
                     if(noAdvisorName || noCondition) 
                         advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(

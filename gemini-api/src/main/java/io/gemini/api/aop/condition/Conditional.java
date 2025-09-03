@@ -15,7 +15,13 @@
  */
 package io.gemini.api.aop.condition;
 
-import net.bytebuddy.pool.TypePool;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  * 
@@ -23,30 +29,20 @@ import net.bytebuddy.pool.TypePool;
  * @author   martin.liu
  * @since    1.0
  */
-public interface Condition {
+@Target( {ElementType.TYPE, ElementType.METHOD} )
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Conditional {
 
-    boolean match(ConditionContext conditionContext);
+    Class<? extends ElementMatcher<ConditionContext>>[] value() default {};
 
+    String classLoaderExpr() default "";
 
-    interface ConditionContext {
+    String typeExpr() default "";
 
-        String getClassLoaderName();
+    String fieldExpr() default "";
 
-        TypePool getTypePool();
+    String constructorExpr() default "";
 
-        boolean isBootstrapClassLoader();
-    }
-
-    enum AlwaysTrue implements Condition {
-
-        INSTANCE;
-
-        /** 
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean match(ConditionContext conditionContext) {
-            return true;
-        }
-    }
+    String methodExpr() default "";
 }

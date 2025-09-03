@@ -17,12 +17,13 @@ package io.gemini.aop.factory;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.URLClassLoader;
 
-import io.gemini.api.aop.condition.Condition.ConditionContext;
+import io.gemini.aop.factory.classloader.AspectClassLoader;
+import io.gemini.api.aop.condition.ConditionContext;
+import io.gemini.api.classloader.ClassLoaders;
+import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.object.ObjectFactory;
-import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.JavaModule;
@@ -39,7 +40,7 @@ public class AdvisorContext implements Closeable {
     private final String joinpointClassLoaderName;
     private final JavaModule javaModule;
 
-    private final URLClassLoader classLoader;
+    private final AspectClassLoader classLoader;
     private final ObjectFactory objectFactory;
     private final TypePool typePool;
     private final TypeWorld typeWorld;
@@ -55,7 +56,7 @@ public class AdvisorContext implements Closeable {
 
     protected AdvisorContext(FactoryContext factoryContext, 
             String joinpointClassLoaderName, JavaModule javaModule,
-            URLClassLoader classLoader, ObjectFactory objectFactory, 
+            AspectClassLoader classLoader, ObjectFactory objectFactory, 
             TypePool typePool, TypeWorld typeWorld,
             boolean validateContext) {
         this.joinpointClassLoaderName = joinpointClassLoaderName;
@@ -70,7 +71,7 @@ public class AdvisorContext implements Closeable {
 
         this.validateContext = validateContext;
 
-        this.conditionContext = new DefultConditionContext();
+        this.conditionContext = new DefultConditionContext(classLoader, typePool, typeWorld);
 
         this.asmAutoCompute = factoryContext.getFactoriesContext().isAsmAutoCompute();
     }
@@ -133,11 +134,17 @@ public class AdvisorContext implements Closeable {
     }
 
 
-    class DefultConditionContext implements ConditionContext {
+    private static class DefultConditionContext implements ConditionContext {
 
-        @Override
-        public String getClassLoaderName() {
-            return joinpointClassLoaderName;
+        private final AspectClassLoader classLoader;
+        private final TypePool typePool;
+        private final TypeWorld typeWorld;
+
+
+        public DefultConditionContext(AspectClassLoader classLoader, TypePool typePool, TypeWorld typeWorld) {
+            this.classLoader = classLoader;
+            this.typePool = typePool;
+            this.typeWorld = typeWorld;
         }
 
         @Override
@@ -147,7 +154,63 @@ public class AdvisorContext implements Closeable {
 
         @Override
         public boolean isBootstrapClassLoader() {
-            return ClassLoaderUtils.BOOTSTRAP_CLASSLOADER_NAME.equals(joinpointClassLoaderName);
+            return ClassLoaders.isBootstrapClassLoader(classLoader);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isExtClassLoader() {
+            return ClassLoaders.isExtClassLoader(classLoader);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isAppClassLoader() {
+            return ClassLoaders.isAppClassLoader(classLoader);
+
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isClassLoader(String classLoaderExpr) {
+            return ExprParser.INSTANCE.parseClassLoaderExpr(classLoaderExpr)
+                    .matches(classLoader.getJoinpointClassLoader());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean hasType(String typeExpr) {
+            return ExprParser.INSTANCE.hasType(typeWorld, typeExpr);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean hasFiled(String fieldExpr) {
+            return ExprParser.INSTANCE.hasField(typeWorld, fieldExpr);
+        }
+
+        /** {@inheritDoc} 
+         */
+        @Override
+        public boolean hasConstructorExpr(String constructorExpr) {
+            return ExprParser.INSTANCE.hasConstructor(typeWorld, constructorExpr);
+        }
+
+        /** {@inheritDoc} 
+         */
+        @Override
+        public boolean hasMethodExpr(String methodsExpr) {
+            return ExprParser.INSTANCE.hasMethod(typeWorld, methodsExpr);
         }
     }
 }

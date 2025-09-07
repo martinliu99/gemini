@@ -23,7 +23,9 @@ import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.aspectj.weaver.TypeWorld;
+import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.object.ObjectFactory;
+import io.gemini.core.pool.TypePoolFactory;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.JavaModule;
@@ -42,7 +44,11 @@ public class AdvisorContext implements Closeable {
 
     private final AspectClassLoader classLoader;
     private final ObjectFactory objectFactory;
+
+    private final TypePoolFactory typePoolFactory;
     private final TypePool typePool;
+
+    private final TypeWorldFactory typeWorldFactory;
     private final TypeWorld typeWorld;
 
     private final PlaceholderHelper placeholderHelper;
@@ -57,21 +63,26 @@ public class AdvisorContext implements Closeable {
     protected AdvisorContext(FactoryContext factoryContext, 
             String joinpointClassLoaderName, JavaModule javaModule,
             AspectClassLoader classLoader, ObjectFactory objectFactory, 
-            TypePool typePool, TypeWorld typeWorld,
+            TypePoolFactory typePoolFactory, TypePool typePool, 
+            TypeWorldFactory typeWorldFactory, TypeWorld typeWorld,
             boolean validateContext) {
         this.joinpointClassLoaderName = joinpointClassLoaderName;
         this.javaModule = javaModule;
 
         this.classLoader = classLoader;
         this.objectFactory = objectFactory;
+
+        this.typePoolFactory = typePoolFactory;
         this.typePool = typePool;
+
+        this.typeWorldFactory = typeWorldFactory;
         this.typeWorld = typeWorld;
 
         this.placeholderHelper = factoryContext.getPlaceholderHelper();
 
         this.validateContext = validateContext;
 
-        this.conditionContext = new DefultConditionContext(classLoader, typePool, typeWorld);
+        this.conditionContext = new DefultConditionContext();
 
         this.asmAutoCompute = factoryContext.getFactoriesContext().isAsmAutoCompute();
     }
@@ -134,17 +145,14 @@ public class AdvisorContext implements Closeable {
     }
 
 
-    private static class DefultConditionContext implements ConditionContext {
+    private class DefultConditionContext implements ConditionContext {
 
-        private final AspectClassLoader classLoader;
         private final TypePool typePool;
         private final TypeWorld typeWorld;
 
-
-        public DefultConditionContext(AspectClassLoader classLoader, TypePool typePool, TypeWorld typeWorld) {
-            this.classLoader = classLoader;
-            this.typePool = typePool;
-            this.typeWorld = typeWorld;
+        public DefultConditionContext() {
+            this.typePool = typePoolFactory.createTypePool(classLoader.getJoinpointClassLoader(), javaModule);
+            this.typeWorld = typeWorldFactory.createTypeWorld(classLoader.getJoinpointClassLoader(), javaModule);
         }
 
         @Override
@@ -154,7 +162,7 @@ public class AdvisorContext implements Closeable {
 
         @Override
         public boolean isBootstrapClassLoader() {
-            return ClassLoaders.isBootstrapClassLoader(classLoader);
+            return ClassLoaders.isBootstrapClassLoader(classLoader.getJoinpointClassLoader());
         }
 
         /**
@@ -162,7 +170,7 @@ public class AdvisorContext implements Closeable {
          */
         @Override
         public boolean isExtClassLoader() {
-            return ClassLoaders.isExtClassLoader(classLoader);
+            return ClassLoaders.isExtClassLoader(classLoader.getJoinpointClassLoader());
         }
 
         /**
@@ -170,7 +178,7 @@ public class AdvisorContext implements Closeable {
          */
         @Override
         public boolean isAppClassLoader() {
-            return ClassLoaders.isAppClassLoader(classLoader);
+            return ClassLoaders.isAppClassLoader(classLoader.getJoinpointClassLoader());
 
         }
 

@@ -464,7 +464,8 @@ public class FactoryContext implements Closeable {
         return new AdvisorContext(this,
                 ClassLoaderUtils.getClassLoaderName(joinpointClassLoader), javaModule,
                 classLoader, objectFactory, 
-                typePool, typeWorld,
+                typePoolFactory, typePool, 
+                typeWorldFactory, typeWorld,
                 validateContext);
     }
 

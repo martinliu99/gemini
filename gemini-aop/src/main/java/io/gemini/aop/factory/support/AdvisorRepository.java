@@ -77,7 +77,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
             try {
                 // 1.validate advisor condition
-                if(this.advisorSpec.getCondition().matches(advisorContext.getConditionContext()) == false) {
+                if(doValidateCondition(advisorContext) == false) {
                     return null;
                 }
 
@@ -112,6 +112,21 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
 //                this.isValid = false;
                 return null;
+            }
+        }
+
+        private boolean doValidateCondition(AdvisorContext advisorContext) {
+            try {
+                return this.advisorSpec.getCondition().matches(advisorContext.getConditionContext());
+            } catch(Throwable t) {
+                String advisorName = advisorSpec.getAdvisorName();
+                if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
+                    LOGGER.warn("Ignored AdvisorSpec with unparsable Condition expression. \n  AdvisorSpec: {} \n  ClassLoader: '{}' \n", 
+                            advisorName, advisorContext.getJoinpointClassLoaderName(), t);
+
+                    this.isValid = false;
+                }
+                return false;
             }
         }
 
@@ -156,7 +171,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                     String advisorName = advisorSpec.getAdvisorName();
                     if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
                         LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: '{}' \n", 
-                                advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getClassLoader(), t);
+                                advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), t);
 
                         this.isValid = false;
                         return false;
@@ -206,13 +221,13 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
 
                         if(objectFactory.isInstantiatable(clazz) == false) {
                             LOGGER.warn("Ignored AdvisorSpec with non top-level or nested, concrete AdviceClass. \n  AdvisorSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
-                                    advisorName, adviceClassName, advisorContext.getClassLoader());
+                                    advisorName, adviceClassName, advisorContext.getJoinpointClassLoaderName());
                             return null;
                         }
 
                         if(Advice.class.isAssignableFrom(clazz) == false) {
                             LOGGER.warn("Ignored AdvisorSpec with non {} AdviceClass. \n  AdvisorSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
-                                    Advice.class.getName(), advisorName, adviceClassName, advisorContext.getClassLoader());
+                                    Advice.class.getName(), advisorName, adviceClassName, advisorContext.getJoinpointClassLoaderName());
                             return null;
                         }
 
@@ -220,7 +235,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                         return this.adviceClass;
                     } catch(Throwable t) {
                         LOGGER.warn("Failed to load AdviceClass. \n  AdvisorSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
-                                advisorName, adviceClassName, advisorContext.getClassLoader(), t);
+                                advisorName, adviceClassName, advisorContext.getJoinpointClassLoaderName(), t);
                         return null;
                     } finally {
                         isResolved = true;
@@ -249,7 +264,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                     advice = (Advice) objectFactory.createObject(adviceClass);
                 } catch (Exception e) {
                     LOGGER.warn("Ignored AdvisorSpec with uninstantiable AdviceClass. \n  AdvisorSpec: {} \n  AdviceClass: {} \n  ClassLoader: '{}' \n",
-                            advisorSpec.getAdvisorName(), adviceClass, advisorContext.getClassLoader(), e);
+                            advisorSpec.getAdvisorName(), adviceClass, advisorContext.getJoinpointClassLoaderName(), e);
                 }
 
                 return advice;
@@ -380,7 +395,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                         advisorContext.getObjectFactory().loadClass(aspectJClassName);
                     } catch(Throwable t) {
                         LOGGER.warn("Failed to load AspectJClass. \n  AdvisorSpec: {} \n  AdviceJClass: {} \n  ClassLoader: '{}' \n",
-                                advisorName, aspectJClassName, advisorContext.getClassLoader(), t);
+                                advisorName, aspectJClassName, advisorContext.getJoinpointClassLoaderName(), t);
                         return null;
                     } finally {
                         this.isResolved = true;
@@ -391,7 +406,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                         return this.adviceClass;
                     } catch(Throwable t) {
                         LOGGER.warn("Failed to generate adapter class for AspectJ advice method. \n  AdvisorSpec: {} \n  AdapterClass: {} \n  ClassLoader: '{}' \n",
-                                advisorName, classMaker.getAdviceClassName(), advisorContext.getClassLoader(), t);
+                                advisorName, classMaker.getAdviceClassName(), advisorContext.getJoinpointClassLoaderName(), t);
                         return null;
                     } finally {
                         this.isResolved = true;
@@ -427,7 +442,7 @@ public interface AdvisorRepository<T extends AdvisorSpec> {
                                 advisorContext.getObjectFactory().createObject(aspectJClass) );
                     } catch (Throwable t) {
                         LOGGER.warn("Failed to instantiate adapter class for AspectJ advice method. \n  AdvisorSpec: {} \n  AdapterClass: {} \n  ClassLoader: '{}' \n",
-                                advisorSpec.getAdvisorName(), classMaker.getAdviceClassName(), advisorContext.getClassLoader(), t);
+                                advisorSpec.getAdvisorName(), classMaker.getAdviceClassName(), advisorContext.getJoinpointClassLoaderName(), t);
                         return null;
                     }
                 }

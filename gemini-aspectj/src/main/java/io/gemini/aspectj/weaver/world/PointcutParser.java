@@ -15,41 +15,29 @@
  */
 package io.gemini.aspectj.weaver.world;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import org.aspectj.bridge.ISourceLocation;
-import org.aspectj.bridge.SourceLocation;
-import org.aspectj.weaver.BindingScope;
-import org.aspectj.weaver.IHasPosition;
-import org.aspectj.weaver.ISourceContext;
 import org.aspectj.weaver.IntMap;
 import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.Shadow;
-import org.aspectj.weaver.UnresolvedType;
 import org.aspectj.weaver.patterns.AndPointcut;
 import org.aspectj.weaver.patterns.CflowPointcut;
-import org.aspectj.weaver.patterns.FormalBinding;
-import org.aspectj.weaver.patterns.IScope;
 import org.aspectj.weaver.patterns.KindedPointcut;
 import org.aspectj.weaver.patterns.NotPointcut;
 import org.aspectj.weaver.patterns.OrPointcut;
-import org.aspectj.weaver.patterns.ParserException;
 import org.aspectj.weaver.patterns.PatternParser;
 import org.aspectj.weaver.patterns.Pointcut;
-import org.aspectj.weaver.patterns.SimpleScope;
 import org.aspectj.weaver.patterns.ThisOrTargetAnnotationPointcut;
 import org.aspectj.weaver.patterns.ThisOrTargetPointcut;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 import org.aspectj.weaver.tools.UnsupportedPointcutPrimitiveException;
 
+import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
-import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 
 
@@ -132,92 +120,37 @@ public class PointcutParser {
     public Pointcut parsePointcut(String pointcutExpression, 
             TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
         try {
-            Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
+             Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
 
             pointcut = concretizePointcutExpression(pointcut, pointcutDeclarationScope, pointcutParameters);
+
             validateAgainstSupportedPrimitives(pointcut, pointcutExpression); // again, because we have now followed any ref'd pcuts
 
             return pointcut;
-        } catch (ParserException e) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(pointcutExpression, e));
-        } catch (TypeWorld.TypeWorldException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+        } catch (Exception e) {
+            ExprParser.handleException(pointcutExpression, e);
+            return null;
         }
     }
 
     protected Pointcut resolvePointcutExpression(String pointcutExpression, 
             TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
         try {
-            pointcutExpression = replaceBooleanOperators(pointcutExpression);
+            pointcutExpression = ExprParser.replaceBooleanOperators(pointcutExpression);
             PatternParser parser = new PatternParserV2(pointcutExpression);
 
             Pointcut pointcut = parser.parsePointcut(true);
             validateAgainstSupportedPrimitives(pointcut, pointcutExpression);
 
-            IScope resolutionScope = buildResolutionScope(typeWorld, pointcutDeclarationScope, pointcutParameters);
-            pointcut = pointcut.resolve(resolutionScope);
+            pointcut = pointcut.resolve(
+                    ExprParser.buildResolutionScope(typeWorld, pointcutDeclarationScope, pointcutParameters) );
+
             return pointcut;
-        } catch (ParserException pEx) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(pointcutExpression, pEx), pEx);
+        } catch(Exception e) {
+            ExprParser.handleException(pointcutExpression, e);
+            return null;
         }
     }
-
-    /**
-     * If a pointcut expression has been specified in XML, the user cannot
-     * write {@code and} as "&&" (though &amp;&amp; will work).
-     * We also allow {@code and} between two pointcut sub-expressions.
-     * <p>This method converts back to {@code &&} for the AspectJ pointcut parser.
-     */
-    public static String replaceBooleanOperators(String pointcutExpression) {
-        String result = StringUtils.replace(pointcutExpression, " and ", " && ");
-        result = StringUtils.replace(result, " or ", " || ");
-        result = StringUtils.replace(result, " not ", " ! ");
-        return result;
-    }
-
-    public static IScope buildResolutionScope(TypeWorld typeWorld, TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
-        if (pointcutParameters == null) {
-            pointcutParameters = Collections.emptyMap();
-        }
-
-        FormalBinding[] formalBindings = new FormalBinding[pointcutParameters.size()];
-        int i = 0;
-        for(Entry<String, TypeDescription> entry : pointcutParameters.entrySet()) {
-            formalBindings[i] = new FormalBinding.ImplicitFormalBinding(toUnresolvedType(entry.getValue()), entry.getKey(), i++);
-        }
-
-        if (pointcutDeclarationScope == null) {
-            return new SimpleScope(typeWorld.getWorld(), formalBindings);
-        } else {
-            ResolvedType inType = typeWorld.resolve(pointcutDeclarationScope);
-            ISourceContext sourceContext = new ISourceContext() {
-                public ISourceLocation makeSourceLocation(IHasPosition position) {
-                    return new SourceLocation(new File(""), 0);
-                }
-
-                public ISourceLocation makeSourceLocation(int line, int offset) {
-                    return new SourceLocation(new File(""), line);
-                }
-
-                public int getOffset() {
-                    return 0;
-                }
-
-                public void tidy() {
-                }
-            };
-            return new BindingScope(inType, sourceContext, formalBindings);
-        }
-    }
-
-    private static UnresolvedType toUnresolvedType(TypeDescription clazz) {
-        if (clazz.isArray()) {
-            return UnresolvedType.forSignature(clazz.getName().replace('.', '/'));
-        } else {
-            return UnresolvedType.forName(clazz.getName());
-        }
-    }
-
 
     protected Pointcut concretizePointcutExpression(Pointcut pointcut, 
             TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
@@ -233,7 +166,6 @@ public class PointcutParser {
         }
         return pointcut.concretize(declaringTypeForResolution, declaringTypeForResolution, arity);
     }
-
 
     private void validateAgainstSupportedPrimitives(Pointcut pointcut, String pointcutExpression) {
         switch (pointcut.getPointcutKind()) {
@@ -369,24 +301,4 @@ public class PointcutParser {
         }
     }
 
-    public static String buildUserMessageFromParserException(String pointcutExpression, ParserException ex) {
-        StringBuffer msg = new StringBuffer();
-        msg.append("Expression is not well-formed: expecting '");
-        msg.append(ex.getMessage());
-        msg.append("'");
-        IHasPosition location = ex.getLocation();
-        msg.append(" at character position ");
-        msg.append(location.getStart());
-        msg.append("\n");
-        msg.append(pointcutExpression);
-        msg.append("\n");
-        for (int i = 0; i < location.getStart(); i++) {
-            msg.append(" ");
-        }
-        for (int j = location.getStart(); j <= location.getEnd(); j++) {
-            msg.append("^");
-        }
-        msg.append("\n");
-        return msg.toString();
-    }
 }

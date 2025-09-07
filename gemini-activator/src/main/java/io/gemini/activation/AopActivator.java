@@ -17,11 +17,13 @@ package io.gemini.activation;
 
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
+import java.lang.management.ManagementFactory;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Callable;
 
 import io.gemini.activation.classloader.DefaultAopClassLoader;
@@ -75,7 +77,8 @@ public class AopActivator {
     }
 
     private static void wrap(Callable<Void> callable) {
-        System.out.println("Activating Gemini at " + currentDate());
+        System.out.println("Activating Gemini at " + currentDate() 
+            + "(launched JVM at " + formatDate(ManagementFactory.getRuntimeMXBean().getStartTime()) + ")");
 
         try {
             callable.call();
@@ -86,8 +89,12 @@ public class AopActivator {
     }
 
     private static String currentDate() {
-        SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
-        Date date = new Date(System.currentTimeMillis());
-        return formatter.format(date);
+        return formatDate(System.currentTimeMillis());
+    }
+
+    private static String formatDate(long timestamp) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+                .withZone(ZoneId.systemDefault());
+        return formatter.format( Instant.ofEpochMilli(timestamp) );
     }
 }

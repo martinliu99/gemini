@@ -55,7 +55,7 @@
 
     <properties>
         <!-- project settings -->
-        <revision>0.14.0</revision>
+        <revision>0.15.0-SNAPSHOT</revision>
 
         <license.root.dir>${maven.multiModuleProjectDirectory}/docs/license</license.root.dir>
 

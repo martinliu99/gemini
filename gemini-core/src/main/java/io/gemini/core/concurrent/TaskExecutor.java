@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.stream.Stream;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,28 +43,29 @@ public interface TaskExecutor {
      */
     boolean isParallel();
 
-
-    <T> List<List<T>> splitTasks(List<T> elements, int batchSize);
-
-    default <T> List<List<T>> splitTasks(List<T> elements) {
-        return splitTasks(elements, Default.BATCH_SIZE);
-    }
-
-
     /**
      * Executes task sequentially or in parallel
      * 
      * @param <T>
-     * @param <M>
-     * @param elements
-     * @param elementMapper
+     * @param <R>
+     * @param tasks
+     * @param taskExecutor
      * @param parallel
+     * @param batchCount
      * @return
      */
-    <T, M> Stream<M> executeTasks(List<T> elements, Function<T, M> elementMapper, boolean parallel);
+    <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor, 
+            boolean parallel, int batchCount, Function<Supplier<List<R>>, List<R>> executionWrapper);
 
-    default <T, M> Stream<M> executeTasks(List<T> elements, Function<T, M> elementMapper) {
-        return executeTasks(elements, elementMapper, isParallel());
+    default <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor) {
+        return executeTasks(tasks, taskExecutor, 
+                isParallel(), Default.DEFAULT_BATCH_COUNT, null);
+    }
+
+    default <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor, 
+            Function<Supplier<List<R>>, List<R>> executionWrapper) {
+        return executeTasks(tasks, taskExecutor, 
+                isParallel(), Default.DEFAULT_BATCH_COUNT, executionWrapper);
     }
 
 
@@ -87,20 +88,20 @@ public interface TaskExecutor {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(TaskExecutor.class);
 
-        private static final int BATCH_SIZE = Runtime.getRuntime().availableProcessors() - 1;
+        private static final int DEFAULT_BATCH_COUNT = Runtime.getRuntime().availableProcessors() - 1;
 
         private final String executorName;
-        private final boolean parallel;
+        private final boolean inParallel;
 
         private volatile boolean terminated = false;
         private ExecutorService executorService = null;
 
 
-        protected Default(String executorName, boolean parallel) {
+        protected Default(String executorName, boolean inParallel) {
             this.executorName = executorName;
-            this.parallel = parallel;
+            this.inParallel = inParallel;
 
-            if(this.parallel == true) {
+            if(this.inParallel == true) {
                 executorService = Executors.newCachedThreadPool( 
                         new DaemonThreadFactory(executorName) );
                 LOGGER.info("TaskExecutor '{}' works in parallel mode.", executorName);
@@ -115,67 +116,98 @@ public interface TaskExecutor {
          */
         @Override
         public boolean isParallel() {
-            return parallel;
+            return inParallel;
         }
 
 
-        /** 
+        /**
          * {@inheritDoc}
          */
         @Override
-        public <T> List<List<T>> splitTasks(List<T> elements, int batchSize) {
+        public <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor, 
+                boolean parallel, int batchCount, Function<Supplier<List<R>>, List<R>> executionWrapper) {
+            if(tasks.size() == 0 || taskExecutor == null)
+                return Collections.emptyList();
+
+            // execute sequentially or in parallel
+            if(parallel == false || inParallel == false || terminated == true)
+                return executeTaskSequentially(tasks, taskExecutor);
+
+            return executeTasksInParallel(splitTasks(tasks, batchCount), taskExecutor, executionWrapper, tasks.size());
+        }
+
+        private <T, R> List<R> executeTaskSequentially(List<T> tasks, Function<T, R> taskExecutor) {
+            List<R> resultList = new ArrayList<R>(tasks.size());
+            for(T task : tasks) {
+                R result = taskExecutor.apply(task);
+
+                if(result != null) resultList.add(result);
+            }
+            return resultList;
+        }
+
+        private <T> List<List<T>> splitTasks(List<T> elements, int batchCount) {
             if(elements.size() == 0)
                 return Collections.emptyList();
 
-            int batchCount = elements.size() / batchSize;
-            if(elements.size() % batchSize != 0)  batchCount++;
+            int avgEleCount = elements.size() / batchCount;
+            int mod = elements.size() % batchCount;
 
-            List<List<T>> splitedTasks = new ArrayList<>(batchCount);
-            for(int batch = 0; batch < batchSize; batch++) {
-                int endIndex = Math.min((batch + 1) * batchCount, elements.size());
+            int slotEleCount = 0;
+            int slotIndex = 0;
+            ArrayList<List<T>> splitedTaskList = new ArrayList<>(batchCount);
+            for(T ele : elements) {
+                int curSlotTaskCount = avgEleCount + (slotIndex < mod ? 1 :0);
+                List<T> splitedTasks = slotIndex < splitedTaskList.size() ? splitedTaskList.get(slotIndex) : null;
+                if(splitedTasks == null) {
+                    splitedTasks = new ArrayList<>( curSlotTaskCount );
+                    splitedTaskList.add(splitedTasks);
+                }
 
-                splitedTasks.add( elements.subList(batch * (batchCount-1), endIndex) );
+                splitedTasks.add(ele);
+
+                if(++slotEleCount == curSlotTaskCount) {
+                    slotEleCount =  0;
+                    slotIndex++;
+                }
             }
-            return splitedTasks;
+            return splitedTaskList;
         }
 
-        /** 
-         * {@inheritDoc}
+        /**
+         * @param splitTasks
+         * @param taskExecutor
+         * @param taskCount
+         * @return
          */
-        @Override
-        public <T, M> Stream<M> executeTasks(List<T> elements, Function<T, M> elementMapper, boolean parallel) {
-            if(elements.size() == 0 || elementMapper == null)
-                return Stream.empty();
+        private <T, R> List<R> executeTasksInParallel(List<List<T>> splitedTaskList, Function<T, R> taskExecutor, 
+                Function<Supplier<List<R>>, List<R>> executionWrapper, int taskCount) {
+            // submit splitTasks
+            List<Future<List<R>>> futures = new ArrayList<>(splitedTaskList.size());
+            for(List<T> splitedTasks : splitedTaskList) {
+                Future<List<R>> future = executorService.submit( 
+                        () -> executionWrapper == null 
+                            ? executeTaskSequentially(splitedTasks, taskExecutor)
+                            : executionWrapper.apply( () -> executeTaskSequentially(splitedTasks, taskExecutor) )
+                );
 
-            // execute sequentially or in parallel
-            return parallel == false || terminated == true || parallel == false
-                    ? elements.stream().map(elementMapper).filter( e -> e != null)
-                    : executeInParallel(elements, elementMapper);
-        }
-
-
-        protected <T, M> Stream<M> executeInParallel(List<T> elements, Function<T, M> elementMapper) {
-            // submit tasks
-            List<Future<M>> futures = new ArrayList<>(elements.size());
-            for(T element : elements) {
-                futures.add( 
-                        executorService.submit( 
-                                () -> elementMapper.apply(element) ) );
+                futures.add(future);
             }
 
             // collect result
-            return futures.stream().map( future -> {
-                        try {
-                            return future.get();
-                        } catch(InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        } catch(ExecutionException e) {
-                            LOGGER.warn("Failed to execute task {} with TaskExecutor '{}'.", elementMapper, executorName, e);
-                        }
-                        return null;
-                } )
-                .filter( e -> e != null)
-                ;
+            List<R> resultList = new ArrayList<R>(taskCount);
+            for(Future<List<R>> future : futures) {
+                try {
+                    for(R result : future.get()) {
+                        if(result != null) resultList.add(result);
+                    }
+                } catch(InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } catch(ExecutionException e) {
+                    LOGGER.warn("Failed to execute task {} with TaskExecutor '{}'.", taskExecutor, executorName, e);
+                }
+            }
+            return resultList;
         }
 
 
@@ -183,7 +215,7 @@ public interface TaskExecutor {
          * {@inheritDoc}
          */
         public void shutdown() {
-            if(parallel == false || terminated == true)
+            if(inParallel == false || terminated == true)
                 return;
 
             terminated = true;
@@ -207,6 +239,5 @@ public interface TaskExecutor {
                 LOGGER.info("Shut down TaskExecutor '{}'.", executorName);
             }
         }
-
     }
 }

@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
+import io.gemini.core.pool.TypePools.EagerResolutionTypePool;
 import io.gemini.core.pool.TypePools.ExplicitTypePool;
 import io.gemini.core.pool.TypePools.LazyResolutionTypePool;
 import io.gemini.core.util.ClassLoaderUtils;
@@ -92,7 +93,7 @@ public interface TypePoolFactory {
                 // reuse loaded Aop framework classes for better performance
                 return TypePool.ClassLoading.of(classLoader);
             else
-                return new LazyResolutionTypePool(
+                return new EagerResolutionTypePool(
                         ClassLoaderUtils.getClassLoaderName(classLoader),
                         new CacheProvider.Simple.UsingSoftReference(), 
                         this.locationStrategy.classFileLocator(classLoader, javaModule), 

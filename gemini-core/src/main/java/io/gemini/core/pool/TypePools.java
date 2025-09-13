@@ -33,6 +33,39 @@ import net.bytebuddy.pool.TypePool;
  */
 public interface TypePools {
 
+    class EagerResolutionTypePool extends TypePool.Default {
+
+        private final String poolName;
+
+        /**
+         * @param cacheProvider
+         * @param classFileLocator
+         * @param readerMode
+         */
+        public EagerResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
+            super(cacheProvider, classFileLocator, readerMode);
+
+            this.poolName = poolName;
+        }
+
+        public EagerResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
+            super(cacheProvider, classFileLocator, readerMode, parentPool);
+
+            this.poolName = poolName;
+        }
+
+        // expose cache provider to reuse
+        public CacheProvider getCacheProvider() {
+            return this.cacheProvider;
+        }
+
+        @Override
+        public String toString() {
+            return poolName;
+        }
+    }
+
+
     /**
      * This type pool supports both eagerly and lazily type resolution.
      *
@@ -42,6 +75,7 @@ public interface TypePools {
     class LazyResolutionTypePool extends TypePool.Default.WithLazyResolution {
 
         private final String poolName;
+
 
         /**
          * @param cacheProvider
@@ -93,9 +127,11 @@ public interface TypePools {
         }
 
         public CacheProvider getCacheProvider() {
-            return delegate instanceof LazyResolutionTypePool == false
-                ? null
-                : ((LazyResolutionTypePool) delegate).getCacheProvider();
+            return delegate instanceof EagerResolutionTypePool
+                ? ((EagerResolutionTypePool) delegate).getCacheProvider()
+                : delegate instanceof LazyResolutionTypePool
+                    ? ((LazyResolutionTypePool) delegate).getCacheProvider()
+                    : null;
         }
 
         public void addTypeDescription(TypeDescription typeDescription) {

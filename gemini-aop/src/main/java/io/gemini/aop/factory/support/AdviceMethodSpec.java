@@ -18,7 +18,6 @@ package io.gemini.aop.factory.support;
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
@@ -39,6 +38,7 @@ import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.aop.factory.support.AspectJSpecs.AspectJAdvisorSpec;
 import io.gemini.api.aop.Joinpoint;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.aspectj.weaver.PointcutParameter;
@@ -68,9 +68,9 @@ abstract class AdviceMethodSpec {
 
     protected boolean isValid = true;
 
-    private final TypeDescription adviceTypeDescription;
+    private final TypeDescription adviceType;
 
-    protected MethodDescription adviceMethodDescription;
+    protected MethodDescription adviceMethod;
     private String adviceMethodSignature;
 
     private Generic parameterizedReturningType = null;
@@ -80,13 +80,13 @@ abstract class AdviceMethodSpec {
     protected Generic adviceThrowingParameterType = null;
 
 
-    protected AdviceMethodSpec(String advisorName, TypeDescription adviceTypeDescription) {
+    protected AdviceMethodSpec(String advisorName, TypeDescription adviceType) {
         this.advisorName = advisorName;
-        this.adviceTypeDescription = adviceTypeDescription;
+        this.adviceType = adviceType;
     }
 
     protected MethodDescription doDiscoverAdviceMethod() {
-        TypeDescription adviceType = this.adviceTypeDescription;
+        TypeDescription adviceType = this.adviceType;
         while(adviceType != null) {
             MethodDescription adviceMethod = discoverFirstAdviceMethod(adviceType);
             if(adviceMethod != null)
@@ -170,17 +170,17 @@ abstract class AdviceMethodSpec {
         return isValid;
     }
 
-    public TypeDescription getAdviceTypeDescription() {
-        return adviceTypeDescription;
+    public TypeDescription getAdviceType() {
+        return adviceType;
     }
 
-    public MethodDescription getAdviceMethodDescription() {
-        return adviceMethodDescription;
+    public MethodDescription getAdviceMethod() {
+        return adviceMethod;
     }
 
     public String getAdviceMethodSignature() {
         if(adviceMethodSignature == null)
-            adviceMethodSignature = MethodUtils.getMethodSignature(adviceMethodDescription);
+            adviceMethodSignature = MethodUtils.getMethodSignature(adviceMethod);
 
         return adviceMethodSignature;
     }
@@ -204,15 +204,15 @@ abstract class AdviceMethodSpec {
 
     static class PojoMethodSpec extends AdviceMethodSpec {
 
-        public PojoMethodSpec(String advisorName, TypeDescription adviceTypeDescription) {
-            super(advisorName, adviceTypeDescription);
+        public PojoMethodSpec(String advisorName, TypeDescription adviceType) {
+            super(advisorName, adviceType);
 
             // discover returning and throwing types
-            MethodDescription methodDescription = this.doDiscoverAdviceMethod();
-            Assert.notNull(methodDescription, "adviceMethodDescription must not be null.");
+            MethodDescription adviceMethod = this.doDiscoverAdviceMethod();
+            Assert.notNull(adviceMethod, "adviceMethod must not be null.");
 
-            this.adviceMethodDescription = methodDescription;
-            this.doDiscoverJoinpointTypeArguments(adviceMethodDescription.getParameters().get(0).getType());
+            this.adviceMethod = adviceMethod;
+            this.doDiscoverJoinpointTypeArguments(adviceMethod.getParameters().get(0).getType());
         }
     }
 
@@ -243,33 +243,30 @@ abstract class AdviceMethodSpec {
         private boolean isVoidReturningOfTargetMethod = false;
 
 
-        public AspectJMethodSpec(String advisorName, TypeDescription adviceTypeDescription, 
-                MethodDescription adviceMethodDescription, 
-                Class<? extends Annotation> annotationType, AnnotationDescription annotationDescription) {
-            super(advisorName, adviceTypeDescription);
+        public AspectJMethodSpec(AspectJAdvisorSpec advisorSpec) {
+            super(advisorSpec.getAdvisorName(), advisorSpec.getAspectJType());
 
-            this.adviceMethodDescription = adviceMethodDescription;
+            this.adviceMethod = advisorSpec.getAspectJMethod();
+            AnnotationDescription aspectJAnnotation = advisorSpec.getAspectJAnnotation();
 
-            ParameterList<ParameterDescription.InDefinedShape> parameters = adviceMethodDescription.asDefined().getParameters();
-            this.parameterNames = this.parseParameterNames(adviceMethodDescription, annotationDescription, parameters);
+            ParameterList<ParameterDescription.InDefinedShape> parameters = adviceMethod.asDefined().getParameters();
+            this.parameterNames = this.parseParameterNames(adviceMethod, aspectJAnnotation, parameters);
 
             this.parameterDescriptionMap = this.createParameterDescriptionMap(parameters, this.parameterNames);
 
             this.pointcutParameters = new LinkedHashMap<>();
             this.pointcutParameterNames = new ArrayList<>(parameterNames);
-            this.resolvePointcutParameters(adviceMethodDescription, 
+            this.resolvePointcutParameters(adviceMethod, 
                     parameterDescriptionMap, pointcutParameters, pointcutParameterNames);
 
-            this.isAround = Around.class == annotationType;
-            this.isBefore = Before.class == annotationType;
+            this.isAround = aspectJAnnotation.getAnnotationType().represents(Around.class);
+            this.isBefore = aspectJAnnotation.getAnnotationType().represents(Before.class);
 
-            this.adviceReturningParameterType = this.resolveAdviceReturningParamBindings(adviceMethodDescription, 
-                    annotationType, annotationDescription, 
-                    parameterDescriptionMap, pointcutParameters, pointcutParameterNames);
+            this.adviceReturningParameterType = this.resolveAdviceReturningParamBindings(adviceMethod, 
+                    aspectJAnnotation, parameterDescriptionMap, pointcutParameters, pointcutParameterNames);
 
-            this.adviceThrowingParameterType = this.resolveAdviceThrowingParamBindings(adviceMethodDescription, 
-                    annotationType, annotationDescription, 
-                    parameterDescriptionMap, pointcutParameters, pointcutParameterNames);
+            this.adviceThrowingParameterType = this.resolveAdviceThrowingParamBindings(adviceMethod, 
+                    aspectJAnnotation, parameterDescriptionMap, pointcutParameters, pointcutParameterNames);
         }
 
         private List<String> parseParameterNames(MethodDescription methodDescription, 
@@ -371,15 +368,14 @@ abstract class AdviceMethodSpec {
         }
 
         private Generic resolveAdviceReturningParamBindings(MethodDescription methodDescription, 
-                Class<? extends Annotation> annotationType, AnnotationDescription annotationDescription, 
-                Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
+                AnnotationDescription aspectJAnnotation, Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
                 Map<String, NamedPointcutParameter> pointcutParameters, List<String> pointcutParameterNames) {
-            this.isAfterReturning = AfterReturning.class == annotationType;
+            this.isAfterReturning = aspectJAnnotation.getAnnotationType().represents(AfterReturning.class);
             if(this.isAfterReturning == false)
                 return null;
 
             // 2.index returning parameters
-            AnnotationValue<?, ?> annotationValue = annotationDescription.getValue("returning");
+            AnnotationValue<?, ?> annotationValue = aspectJAnnotation.getValue("returning");
             String returningParameter = annotationValue.resolve(String.class).trim();
             if(StringUtils.hasText(returningParameter) == false) {
                 LOGGER.warn("Ignored AspectJ @AfterReturning advice method without 'returning' annotation attribute. \n"
@@ -413,15 +409,14 @@ abstract class AdviceMethodSpec {
         }
 
         private Generic resolveAdviceThrowingParamBindings(MethodDescription methodDescription, 
-                Class<? extends Annotation> annotationType, AnnotationDescription annotationDescription, 
-                Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
+                AnnotationDescription aspectJAnnotation, Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
                 Map<String, NamedPointcutParameter> pointcutParameters, List<String> pointcutParameterNames) {
-            this.isAfterThrowing = AfterThrowing.class == annotationType;
+            this.isAfterThrowing = aspectJAnnotation.getAnnotationType().represents(AfterThrowing.class);
             if(this.isAfterThrowing == false)
                 return null;
 
             // 3.index throwing parameters
-            AnnotationValue<?, ?> annotationValue = annotationDescription.getValue("throwing");
+            AnnotationValue<?, ?> annotationValue = aspectJAnnotation.getValue("throwing");
             String throwingParameter = annotationValue.resolve(String.class).trim();
 
             if(StringUtils.hasText(throwingParameter) == false) {
@@ -456,7 +451,7 @@ abstract class AdviceMethodSpec {
         }
 
 
-        public Map<String, ParameterDescription.InDefinedShape> getParameterDescriptionMap() {
+        public Map<String, ParameterDescription.InDefinedShape> getParameterMap() {
             return parameterDescriptionMap;
         }
 

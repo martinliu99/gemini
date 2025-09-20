@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
-import io.gemini.api.aop.AdvisorSpec;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
@@ -87,10 +86,10 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
 
     @Override
-    public Map<String, List<? extends AdvisorSpec>> getAdvisorSpecs() {
+    public Map<String, Integer> getAdvisorSpecNum() {
         return this.advisorFactoryMap.values().stream()
                 .flatMap( e -> 
-                    e.getAdvisorSpecs().entrySet().stream() )
+                    e.getAdvisorSpecNum().entrySet().stream() )
                 .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
     }
 

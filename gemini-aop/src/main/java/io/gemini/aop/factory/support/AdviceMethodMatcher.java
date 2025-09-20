@@ -57,7 +57,7 @@ abstract class AdviceMethodMatcher implements ElementMatcher<MethodDescription> 
         if(adviceMethodSpec.isValid() == false)
             return false;
 
-        if(adviceMethodSpec.getAdviceMethodDescription() == null)
+        if(adviceMethodSpec.getAdviceMethod() == null)
             return false;
 
         // 1.match pointcut method matcher
@@ -108,7 +108,7 @@ abstract class AdviceMethodMatcher implements ElementMatcher<MethodDescription> 
 
         String matchingReturningTypeMsg = parameterizedReturningType ? "ParameterizedReturning" : "AdviceReturning";
 
-        if(ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethodSpec.getAdviceMethodDescription().getDeclaringType().asErasure()) == false) {
+        if(ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethodSpec.getAdviceMethod().getDeclaringType().asErasure()) == false) {
             LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under Joinpoint ClassLoader. \n"
                     + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    {}: {} {} \n",
                     matchingReturningTypeMsg,
@@ -156,7 +156,7 @@ abstract class AdviceMethodMatcher implements ElementMatcher<MethodDescription> 
             boolean parameterizedThrowingType, Generic adviceThrowingType) {
         String matchingThrowingTypeMsg = parameterizedThrowingType ? "ParameterizedThrowing" : "AdviceThrowing";
 
-        if(ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), adviceMethodSpec.getAdviceMethodDescription().getDeclaringType().asErasure()) == false) {
+        if(ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), adviceMethodSpec.getAdviceMethod().getDeclaringType().asErasure()) == false) {
             LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under Joinpoint ClassLoader. \n"
                     + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    {}: {} {} \n",
                     matchingThrowingTypeMsg,
@@ -288,7 +288,7 @@ abstract class AdviceMethodMatcher implements ElementMatcher<MethodDescription> 
                     return false;
                 }
 
-                TypeDescription paramType = adviceMethodSpec.getParameterDescriptionMap().get(pointcutParameterBinding.getParamName()).getType().asErasure();
+                TypeDescription paramType = adviceMethodSpec.getParameterMap().get(pointcutParameterBinding.getParamName()).getType().asErasure();
                 if(ClassUtils.isVisibleTo(paramType, methodDescription.getDeclaringType().asErasure()) == false) {
                     LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under Joinpoint ClassLoader. \n"
                             + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    parameter '{}': {} {} \n",

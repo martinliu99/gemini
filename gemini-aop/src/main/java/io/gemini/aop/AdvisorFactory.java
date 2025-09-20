@@ -20,14 +20,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import io.gemini.api.aop.AdvisorSpec;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
 
 public interface AdvisorFactory extends Closeable {
 
-    Map<String, List<? extends AdvisorSpec>> getAdvisorSpecs();
+    Map<String, Integer> getAdvisorSpecNum();
 
     Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
             ClassLoader joinpointClassLoader, JavaModule javaModule);

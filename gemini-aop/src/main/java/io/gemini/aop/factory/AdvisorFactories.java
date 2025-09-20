@@ -15,14 +15,9 @@
  */
 package io.gemini.aop.factory;
 
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-
+import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
-import io.gemini.aop.AdvisorFactory;
 import io.gemini.core.util.Assert;
 
 /**
@@ -44,13 +39,7 @@ public class AdvisorFactories {
         // record metrics
         AopMetrics.BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
 
-        Map<String, Integer> advisorSpecs = advisorFactory.getAdvisorSpecs().entrySet().stream()
-                .map( e -> 
-                        new SimpleEntry<>(e.getKey(), e.getValue().size()) )
-                .collect( 
-                        Collectors.toMap(Entry::getKey, Entry::getValue) );
-        bootstraperMetrics.setAdvisorSpecs(advisorSpecs);
-
+        bootstraperMetrics.setAdvisorSpecs(advisorFactory.getAdvisorSpecNum());
         bootstraperMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
 
         return advisorFactory;

@@ -278,39 +278,4 @@ public interface AdvisorSpec {
 
         }
     }
-
-
-    interface AspectJSpec extends AdvisorSpec {
-
-        String getAspectJClassName();
-
-
-        class Default extends AdvisorSpec.AbstractBase implements AspectJSpec {
-
-            private final String aspectJClassName;
-
-
-            public Default(boolean perInstance, String aspectJClassName, int order) {
-                this(null, null, perInstance, aspectJClassName, order);
-            }
-
-            public Default(ElementMatcher<ConditionContext> condition, boolean perInstance, 
-                    String aspectJClassName, int order) {
-                this(null, condition, perInstance, aspectJClassName, order);
-            }
-
-            public Default(String advisorName, ElementMatcher<ConditionContext> condition, boolean perInstance, 
-                    String aspectJClassName, int order) {
-                super(advisorName == null ? aspectJClassName : advisorName, condition, 
-                        perInstance, null, order);
-
-                this.aspectJClassName = aspectJClassName;
-            }
-
-            @Override
-            public String getAspectJClassName() {
-                return aspectJClassName;
-            }
-        }
-    }
 }

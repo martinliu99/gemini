@@ -65,10 +65,8 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     private final AopContext aopContext;
     private final FactoryContext factoryContext;
 
-
-    private List<? extends AdvisorSpec> advisorSpecs;
-    private List<? extends AdvisorRepository<? extends AdvisorSpec>> advisorRepositories;
-
+    private final List<? extends AdvisorSpec> advisorSpecs;
+    private final List<? extends AdvisorRepository> advisorRepositories;
 
     // cache advisors per ClassLoader
     private ConcurrentMap<ClassLoader, List<? extends Advisor>> classLoaderAdvisorMap;
@@ -83,13 +81,9 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         this.aopContext = aopContext;
         this.factoryContext = factoryContext;
 
-        // 1.create AdvisorRepository
-        FactoriesContext factoriesContext = factoryContext.getFactoriesContext();
-
-        this.advisorSpecs = this.scanAdvisorSpecs(aopContext, factoryContext, factoriesContext);
-        this.advisorRepositories = this.resolveAdvisorRepositories(factoryContext, factoriesContext, this.advisorSpecs);
-        this.validateAdvisorRepositories(factoryContext);
-
+        // 1.resolve AdvisorRepository
+        this.advisorSpecs = scanAdvisorSpecs(factoryContext);
+        this.advisorRepositories = this.resolveAdvisorRepositories(factoryContext, advisorSpecs);
 
         // 2.initialize properties
         this.classLoaderAdvisorMap = new ConcurrentReferenceHashMap<>();
@@ -99,63 +93,63 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     (System.nanoTime() - startedAt) / 1e9, factoryName);
     }
 
-    private List<? extends AdvisorSpec> scanAdvisorSpecs(AopContext aopContext, FactoryContext factoryContext, 
-            FactoriesContext factoriesContext) {
+    /**
+     * @param factoryContext2
+     * @return
+     */
+    private List<? extends AdvisorSpec> scanAdvisorSpecs(FactoryContext factoryContext2) {
         long startedAt = System.nanoTime();
-        LOGGER.info("^Scanning AdvisorSpecs under '{}'.", factoryContext.getFactoryName());
+        String factoryName = factoryContext.getFactoryName();
+        LOGGER.info("^Scanning AdvisorSpec under '{}'.", factoryName);
 
-        final List<AdvisorSpec> advisorSpecs = this.aopContext.getGlobalTaskExecutor().executeTasks(
-                factoriesContext.getAdvisorSpecScanners(), 
-                specScanner -> specScanner.scan(factoryContext)
+        List<? extends AdvisorSpec> advisorSpecs = this.aopContext.getGlobalTaskExecutor().executeTasks(
+                factoryContext.getFactoriesContext().getAdvisorSpecScanners(), 
+                advisorSpecScanner -> advisorSpecScanner.scan(factoryContext)
         )
         .stream()
-        .flatMap( e -> e.stream() )
-        .collect( Collectors.toList() )
-        ;
+        .flatMap( e -> e.stream())
+        .collect( Collectors.toList() );
 
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled() == false) 
-            LOGGER.info("$Took '{}' seconds to load {} AdvisorSpecs under '{}'.", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
-                    advisorSpecs.size(), 
-                    factoryContext.getFactoryName());
-        else
-            LOGGER.info("$Took '{}' seconds to load {} AdvisorSpecs under '{}'. {}", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
-                    advisorSpecs.size(), 
-                    factoryContext.getFactoryName(),
-                    StringUtils.join(advisorSpecs, spec -> spec.getAdvisorName(), "\n  ", "\n  ", "\n")
+        if(aopContext.getDiagnosticLevel().isSimpleEnabled() == false)
+            LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'.", 
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecs.size(), factoryName);
+        else 
+            LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'. {}", 
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecs.size(), factoryName,
+                    StringUtils.join(advisorSpecs, repository -> repository.getAdvisorName(), "\n  ", "\n  ", "\n")
             );
 
         return advisorSpecs;
     }
 
-    private List<? extends AdvisorRepository<? extends AdvisorSpec>> resolveAdvisorRepositories(
-            FactoryContext factoryContext, FactoriesContext factoriesContext,
+    private List<? extends AdvisorRepository> resolveAdvisorRepositories(FactoryContext factoryContext, 
             List<? extends AdvisorSpec> advisorSpecs) {
         long startedAt = System.nanoTime();
         String factoryName = factoryContext.getFactoryName();
         LOGGER.info("^Resolving AdvisorSpec under '{}'.", factoryName);
 
-        List<? extends AdvisorRepository<? extends AdvisorSpec>> advisorRepositories = this.aopContext.getGlobalTaskExecutor().executeTasks(
+        List<AdvisorRepositoryResolver> advisorRepositoryResolvers = factoryContext.getFactoriesContext().getAdvisorRepositoryResolvers();
+        AdvisorContext validationContext = factoryContext.createAdvisorContext(factoryContext.getClassLoader(), null, true);
+        List<? extends AdvisorRepository> advisorRepositories = this.aopContext.getGlobalTaskExecutor().executeTasks(
                 advisorSpecs, 
                 advisorSpec -> {
-                    List<AdvisorRepository<AdvisorSpec>> repositories = new ArrayList<>();
-                    for(AdvisorRepositoryResolver<AdvisorSpec, AdvisorSpec> resolver : factoriesContext.getAdvisorRepositoryResolvers()) {
-                        if(resolver.support(advisorSpec) == false)
+                    List<AdvisorRepository> repositories = new ArrayList<>(advisorRepositoryResolvers.size());
+                    for(AdvisorRepositoryResolver advisorRepositoryResolver : advisorRepositoryResolvers) {
+                        AdvisorRepository advisorRepository  = advisorRepositoryResolver.resolve(factoryContext, advisorSpec);
+                        if(advisorRepository == null) continue;
+
+                        // filter advisorRepositry via advisorMatcher
+                        if(factoryContext.matchAdvisor(advisorRepository.getAdvisorName()) == false)
                             continue;
 
-                        List<? extends AdvisorRepository<AdvisorSpec>> resolvedRepositories =  resolver.resolve(advisorSpec, factoryContext);
-                        if(resolvedRepositories == null) continue;
-
-                        for(AdvisorRepository<AdvisorSpec> repository : resolvedRepositories) {
-                            if(repository == null) continue;
-
-                            // filter advisorRepositry via advisorMatcher
-                            if(factoryContext.matchAdvisor(repository.getAdvisorName()) == false)
-                                continue;
-
-                            repositories.add(repository);
+                        // validate advisor creation
+                        try {
+                            advisorRepository.create(validationContext);
+                        } catch(Exception e) {
+                            continue;
                         }
+
+                        repositories.add(advisorRepository);
                     }
 
                     return repositories;
@@ -177,22 +171,13 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         return advisorRepositories;
     }
 
-    private void validateAdvisorRepositories(FactoryContext factoryContext) {
-        AdvisorContext validationContext = factoryContext.createAdvisorContext(factoryContext.getClassLoader(), null, true);
-        this.aopContext.getGlobalTaskExecutor().executeTasks(
-                advisorRepositories, 
-                advisorRepository -> 
-                    advisorRepository.create(validationContext)    // validate advisor creation
-        );
-    }
-
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Map<String, List<? extends AdvisorSpec>> getAdvisorSpecs() {
-        return Collections.singletonMap(this.factoryContext.getFactoryName(), this.advisorSpecs);
+    public Map<String, Integer> getAdvisorSpecNum() {
+        return Collections.singletonMap(this.factoryContext.getFactoryName(), this.advisorRepositories.size());
     }
 
 
@@ -308,7 +293,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
         // create Advisors
         List<Advisor> advisors = new ArrayList<>();
-        for(AdvisorRepository<? extends AdvisorSpec> advisorRepository : this.advisorRepositories) {
+        for(AdvisorRepository advisorRepository : this.advisorRepositories) {
             try {
                 Advisor advisor = advisorRepository.create(advisorContext);
                 if(advisor != null)

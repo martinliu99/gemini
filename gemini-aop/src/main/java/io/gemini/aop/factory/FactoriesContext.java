@@ -36,7 +36,6 @@ import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.aop.matcher.ElementMatcherFactory;
-import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
@@ -74,13 +73,12 @@ class FactoriesContext implements Closeable {
     private boolean asmAutoCompute = false;
 
 
-    private final List<AdvisorSpecScanner<AdvisorSpec>> advisorSpecScanners;
-    private final List<AdvisorRepositoryResolver<AdvisorSpec, AdvisorSpec>> advisorRepositoryResolvers;
+    private List<AdvisorSpecScanner> advisorSpecScanners;
+    private List<AdvisorRepositoryResolver> advisorRepositoryResolvers;
 
     private final Map<String /* FactoryName */, FactoryContext> factoryContextMap;
 
 
-    @SuppressWarnings("unchecked")
     public FactoriesContext(AopContext aopContext) {
         Assert.notNull(aopContext, "'aopContext' must not be null.");
         this.aopContext = aopContext;
@@ -90,18 +88,7 @@ class FactoriesContext implements Closeable {
 
 
         // 2.initialize properties
-        // load advisorSpecScanners & advisorRepositoryResolver
-        ObjectFactory objectFactory = aopContext.getObjectFactory();
-        this.advisorSpecScanners = new ArrayList<>();
-        for(AdvisorSpecScanner<AdvisorSpec> advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorSpecScanner.class)) {
-            this.advisorSpecScanners.add(advisorSpecScanner);
-        }
-
-        this.advisorRepositoryResolvers = new ArrayList<>();
-        for(AdvisorRepositoryResolver<AdvisorSpec, AdvisorSpec> advisorRepositoryResolver : 
-                objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class)) {
-            advisorRepositoryResolvers.add(advisorRepositoryResolver);
-        }
+        initialize(aopContext);
 
         this.factoryContextMap = createFactoryContextMap(aopContext);
     }
@@ -160,6 +147,18 @@ class FactoriesContext implements Closeable {
         return groupList;
     }
 
+    private void initialize(AopContext aopContext) {
+        ObjectFactory objectFactory = aopContext.getObjectFactory();
+        this.advisorSpecScanners = new ArrayList<>();
+        for(AdvisorSpecScanner advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorSpecScanner.class)) {
+            advisorSpecScanners.add(advisorSpecScanner);
+        }
+
+        this.advisorRepositoryResolvers = new ArrayList<>();
+        for(AdvisorRepositoryResolver advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class)) {
+            advisorRepositoryResolvers.add(advisorSpecScanner);
+        }
+    }
 
     private Map<String, FactoryContext> createFactoryContextMap(AopContext aopContext) {
         long startedAt = System.nanoTime();
@@ -175,6 +174,7 @@ class FactoriesContext implements Closeable {
                     entry -> new SimpleEntry<>(entry.getKey(), 
                             new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) )
             )
+           .stream()
            .collect( 
                    Collectors.toMap(Entry::getKey, Entry::getValue) );
         } finally {
@@ -206,12 +206,12 @@ class FactoriesContext implements Closeable {
     }
 
 
-    public List<AdvisorSpecScanner<AdvisorSpec>> getAdvisorSpecScanners() {
-        return advisorSpecScanners;
+    public List<AdvisorSpecScanner> getAdvisorSpecScanners() {
+        return Collections.unmodifiableList( advisorSpecScanners );
     }
 
-    public List<AdvisorRepositoryResolver<AdvisorSpec, AdvisorSpec>> getAdvisorRepositoryResolvers() {
-        return advisorRepositoryResolvers;
+    public List<AdvisorRepositoryResolver> getAdvisorRepositoryResolvers() {
+        return Collections.unmodifiableList( advisorRepositoryResolvers );
     }
 
     public Map<String, FactoryContext> getFactoryContextMap() {

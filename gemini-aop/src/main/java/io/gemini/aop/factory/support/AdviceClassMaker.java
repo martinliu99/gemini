@@ -220,7 +220,7 @@ interface AdviceClassMaker {
             }
 
             String adviceClassName = classMaker.adviceClassName;
-            TypeDescription adviceTypeDescription = aspectJMethodSpec.getAdviceTypeDescription();
+            TypeDescription adviceTypeDescription = aspectJMethodSpec.getAdviceType();
 
             DynamicType.Builder<?> builder = new ByteBuddy()
                     .subclass(Object.class, ConstructorStrategy.Default.NO_CONSTRUCTORS)
@@ -306,7 +306,7 @@ interface AdviceClassMaker {
              */
             public AspectJAdviceMethodImplementation(AspectJMethodSpec aspectJMethodSpec) {
                 this.aspectJMethodSpec = aspectJMethodSpec;
-                this.methodDescription = aspectJMethodSpec.getAdviceMethodDescription();
+                this.methodDescription = aspectJMethodSpec.getAdviceMethod();
             }
 
             @Override
@@ -368,7 +368,7 @@ interface AdviceClassMaker {
                 }
 
                 // 3.2.push arguments based on binder type
-                Map<String, InDefinedShape> parameterDescriptionMap = aspectJMethodSpec.getParameterDescriptionMap();
+                Map<String, InDefinedShape> parameterDescriptionMap = aspectJMethodSpec.getParameterMap();
                 int paramIndex = 0;
                 for(Entry<String, NamedPointcutParameter> entry : aspectJMethodSpec.getPointcutParameters().entrySet()) {
                     String parameterName = entry.getKey();

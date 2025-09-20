@@ -16,26 +16,32 @@
 package io.gemini.aop.factory.support;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.factory.FactoryContext;
+import io.gemini.aop.factory.support.AspectJSpecs.AspectAspectJSpec;
+import io.gemini.aop.factory.support.AspectJSpecs.AspectJAdvisorSpec;
 import io.gemini.api.annotation.NoScanning;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
-import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -44,47 +50,18 @@ import net.bytebuddy.matcher.ElementMatcher;
  * @author   martin.liu
  * @since	 1.0
  */
-public interface AdvisorSpecScanner<T extends AdvisorSpec> {
+public interface AdvisorSpecScanner {
 
-    List<T> scan(FactoryContext factoryContext);
+    List<? extends AdvisorSpec> scan(FactoryContext factoryContext);
 
 
-    abstract class AbstractBase<T extends AdvisorSpec> extends ClassScanner.InstantiableClassInfoFilter
-            implements AdvisorSpecScanner<T> {
+    abstract class AbstractBase<S extends AdvisorSpec> extends ClassScanner.InstantiableClassInfoFilter 
+            implements AdvisorSpecScanner {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecScanner.class);
 
-        protected String scannerName = this.getClass().getName();
+        protected String resolverName = this.getClass().getName();
 
-
-        @Override
-        public List<T> scan(FactoryContext factoryContext) {
-            Assert.notNull(factoryContext, "'factoryContext' must not be null");
-
-            List<T> advisorSpecs = null;
-            try {
-                advisorSpecs = this.doScanSpecs(factoryContext);
-
-                advisorSpecs = advisorSpecs.stream()
-                .filter( advisorSpec -> doValidateSpecInstance(advisorSpec) )
-                .collect( Collectors.toList());
-
-
-                if(CollectionUtils.isEmpty(advisorSpecs)) {
-                    LOGGER.info("Did not find AdvisorSpec.{} via '{}'.", getSpecType(), scannerName);
-                } else {
-                    LOGGER.info("Found {} AdvisorSpec.{} via '{}'.", advisorSpecs.size(), getSpecType(), scannerName);
-                }
-            } catch(Throwable t) {
-                LOGGER.warn("Failed to scan AdvisorSpec.{} via '{}'.", getSpecType(), scannerName, t);
-            }
-
-            return advisorSpecs;
-        }
-
-        protected abstract String getSpecType();
-
-        protected abstract List<T> doScanSpecs(FactoryContext factoryContext);
 
         /**
          * {@inheritDoc}
@@ -101,14 +78,51 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
             return false;
         }
 
-        protected boolean doValidateSpecInstance(T advisorSpecs) {
-            if(advisorSpecs == null)
+
+        @Override
+        public List<? extends AdvisorSpec> scan(FactoryContext factoryContext) {
+            Assert.notNull(factoryContext, "'factoryContext' must not be null");
+
+            // scan AdvisorSpec implementation
+            try {
+                List<S> advisorSpecs = this.doScanSpecs(factoryContext);
+
+                if(advisorSpecs != null) {
+                    Iterator<S> it = advisorSpecs.iterator();
+                    while(it.hasNext()) {
+                        S advisorSpec = it.next();
+                        if(advisorSpec == null || doValidateSpec(advisorSpec) == false)
+                            it.remove();
+                    }
+                }
+
+                if(CollectionUtils.isEmpty(advisorSpecs)) {
+                    LOGGER.info("Did not find AdvisorSpec.{} via '{}'.", getSpecType(), resolverName);
+                } else {
+                    LOGGER.info("Found {} AdvisorSpec.{} via '{}'.", advisorSpecs.size(), getSpecType(), resolverName);
+
+                    return advisorSpecs;
+                }
+            } catch(Throwable t) {
+                LOGGER.warn("Failed to scan AdvisorSpec.{} via '{}'.", getSpecType(), resolverName, t);
+            }
+
+            return Collections.emptyList();
+        }
+
+        protected abstract String getSpecType();
+
+        protected abstract List<S> doScanSpecs(FactoryContext factoryContext);
+
+
+        protected boolean doValidateSpec(S advisorSpec) {
+            if(advisorSpec == null)
                 return false;
 
             // check advice definition
-            if(StringUtils.hasText(advisorSpecs.getAdviceClassName()) == false) {
+            if(StringUtils.hasText(advisorSpec.getAdviceClassName()) == false) {
                 LOGGER.warn("Ignored AdvisorSpec with empty adviceClassName. \n  {}: {} \n", 
-                        getSpecType(), advisorSpecs.getAdvisorName() );
+                        getSpecType(), advisorSpec.getAdvisorName() );
                 return false;
             }
 
@@ -136,7 +150,6 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
             return advisorSpecss;
         }
 
-        @SuppressWarnings("unchecked")
         protected void doScanImplementor(FactoryContext factoryContext, List<AdvisorSpec.PojoPointcutSpec> advisorSpecs) {
             List<String> classNames = factoryContext.getClassScanner()
                     .getClassesImplementing( AdvisorSpec.PojoPointcutSpec.class.getName() )
@@ -149,8 +162,7 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
 
             for(String className : classNames) {
                 try {
-                    Class<AdvisorSpec.PojoPointcutSpec> clazz = (Class<AdvisorSpec.PojoPointcutSpec>) classLoader.loadClass(className);
-
+                    Class<?> clazz = classLoader.loadClass(className);
                     AdvisorSpec.PojoPointcutSpec advisorSpec = (AdvisorSpec.PojoPointcutSpec) objectFactory.createObject(clazz);
 
                     String advisorName = advisorSpec.getAdvisorName();
@@ -214,8 +226,8 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
         }
 
         @Override
-        protected boolean doValidateSpecInstance(AdvisorSpec.PojoPointcutSpec advisorSpec) {
-            if(super.doValidateSpecInstance(advisorSpec) == false)
+        protected boolean doValidateSpec(AdvisorSpec.PojoPointcutSpec advisorSpec) {
+            if(super.doValidateSpec(advisorSpec) == false)
                 return false;
 
             Pointcut pointcut = advisorSpec.getPointcut();
@@ -263,7 +275,6 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
             for(String className : classNames) {
                 try {
                     Class<?> clazz = classLoader.loadClass(className);
-
                     AdvisorSpec.ExprPointcutSpec advisorSpec = (AdvisorSpec.ExprPointcutSpec) objectFactory.createObject(clazz);
 
                     String advisorName = advisorSpec.getAdvisorName();
@@ -330,8 +341,8 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
          * {@inheritDoc}
          */
         @Override
-        protected boolean doValidateSpecInstance(AdvisorSpec.ExprPointcutSpec advisorSpec) {
-            if(super.doValidateSpecInstance(advisorSpec) == false)
+        protected boolean doValidateSpec(AdvisorSpec.ExprPointcutSpec advisorSpec) {
+            if(super.doValidateSpec(advisorSpec) == false)
                 return false;
 
             if(StringUtils.hasText(advisorSpec.getPointcutExpression()) == false) {
@@ -345,22 +356,22 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
     }
 
 
-    public class ForAspectJ extends AbstractBase<AdvisorSpec.AspectJSpec> {
+    public class ForAspectJ extends AbstractBase<AspectJAdvisorSpec> {
 
         /**
          * {@inheritDoc}
          */
         @Override
         protected String getSpecType() {
-            return AdvisorSpec.AspectJSpec.class.getSimpleName();
+            return AspectJAdvisorSpec.class.getSimpleName();
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        protected List<AdvisorSpec.AspectJSpec> doScanSpecs(FactoryContext factoryContext) {
-            List<AdvisorSpec.AspectJSpec> advisorSpecs = new ArrayList<>();
+        protected List<AspectJAdvisorSpec> doScanSpecs(FactoryContext factoryContext) {
+            List<AspectJAdvisorSpec> advisorSpecs = new ArrayList<>();
 
             List<String> classNames = factoryContext.getClassScanner()
                     .getClassesWithAnnotation( Aspect.class.getName() )
@@ -368,21 +379,37 @@ public interface AdvisorSpecScanner<T extends AdvisorSpec> {
                     .getNames();
 
             for(String className : classNames) {
-                advisorSpecs.add(
-                        new AdvisorSpec.AspectJSpec.Default(
-                                className, 
-                                factoryContext.getDefaultCondition(), 
-                                false, className, 0) );
+                doParseAspectJClass(factoryContext, className, advisorSpecs);
             }
 
             return advisorSpecs;
+        }
+
+        protected void doParseAspectJClass(FactoryContext factoryContext, String aspectJClassName,
+                List<AspectJAdvisorSpec> advisorSpecs) {
+            TypeDescription aspectJType = factoryContext.getTypePool().describe(aspectJClassName).resolve();
+            if(aspectJType == null) 
+                return;
+
+            AspectAspectJSpec aspectJSpec = AspectJSpecs.Parser.INSTANCE.parseSpec(factoryContext, aspectJClassName);
+            AtomicInteger aspectJMethodIndex = new AtomicInteger(1);
+            for(MethodDescription.InDefinedShape aspectJMethod : aspectJType.getDeclaredMethods()) {
+                advisorSpecs.addAll(
+                        AspectJSpecs.Parser.INSTANCE.parseSpec(factoryContext, aspectJSpec, 
+                                aspectJType, aspectJMethod, aspectJMethodIndex) );
+            }
+
+            if(aspectJMethodIndex.get() == 1) {
+                LOGGER.warn("Ignored AdvisorSpec contains no advice methods. \n  {}: {} \n", 
+                        AspectJAdvisorSpec.class.getSimpleName(), aspectJClassName );
+            }
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        protected boolean doValidateSpecInstance(AdvisorSpec.AspectJSpec advisorSpec) {
+        protected boolean doValidateSpec(AspectJAdvisorSpec advisorSpec) {
             if(StringUtils.hasText(advisorSpec.getAspectJClassName()) == false) {
                 LOGGER.warn("Ignored AdvisorSpec with empty aspectJClassName. \n  {}: {} \n", 
                         getSpecType(), advisorSpec.getAdvisorName() );

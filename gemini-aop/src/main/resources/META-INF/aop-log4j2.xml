@@ -2,12 +2,12 @@
  <configuration status="${logger:aop.logger.statusLogLevel:-${logger:aop.logger.allLogLevel}}" verbose="false" strict="true" monitorInterval="10" > 
      <Properties>
         <property name="LOG_FILE_PATH" value="${logger:aop.logger.logFilePath}" />
-        <property name="INCLUDE_LOCATION" value="${logger:aop.logger.includeLocation:-true}" />
+        <property name="INCLUDE_LOCATION" value="true" />
     </Properties>
  
     <appenders>
         <console name="Console" target="SYSTEM_OUT">
-            <PatternLayout charset="UTF-8" pattern="${logger:aop.logger.logConsolePattern}"/>
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-8.-8thread] %-5level [gemini %X{}] (%F:%L) - %msg%n"/>
        <!--     <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>  -->
         </console>
 

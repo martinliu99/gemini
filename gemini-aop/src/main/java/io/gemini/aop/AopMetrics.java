@@ -39,7 +39,6 @@ import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.PlaceholderHelper;
-import io.gemini.core.util.PlaceholderHelper.PlaceholderResolver;
 import net.bytebuddy.utility.JavaModule;
 
 public class AopMetrics {
@@ -143,12 +142,12 @@ public class AopMetrics {
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics) );
         } else {
-            LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}\n{}", 
+            LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}{}\n", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics),
-                    bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary) : "",
-                    launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary) : "" );
+                    bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary, true) : "",
+                    launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary, false) : "" );
         }
     }
 
@@ -160,10 +159,10 @@ public class AopMetrics {
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics) );
         } else {
-            LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}",
+            LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}\n",
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics),
-                    renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary) );
+                    renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary, true) );
         }
     }
 
@@ -215,7 +214,7 @@ public class AopMetrics {
 
         valueMap.put("typeRedefiningCount", bootstraperMetrics.getTypeRedefiningCount());
 
-        PlaceholderHelper placeholderHelper = new PlaceholderHelper.Builder().build(valueMap);
+        PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
         return placeholderHelper.replace(launcherStartupSummrayTemplate);
     }
 
@@ -234,13 +233,15 @@ public class AopMetrics {
 
         valueMap.put("tyepTransformationCount", appStartupSummary.getTypeTransformationCount() );
 
-        PlaceholderHelper placeholderHelper = new PlaceholderHelper.Builder().build(valueMap);
+        PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
         return placeholderHelper.replace(appStartupSummrayTemplate);
     }
 
-    private String renderWeaverMetricsTemplate(String phaseName, WeaverSummary weaverStats) {
+    private String renderWeaverMetricsTemplate(String phaseName, WeaverSummary weaverStats, boolean withHead) {
         StringBuilder renderResult = new StringBuilder();
-        renderResult.append(this.weaverSummrayHeaderTemplate);
+
+        if(withHead)
+            renderResult.append(this.weaverSummrayHeaderTemplate);
 
         // 1.render summary metrics
         {
@@ -270,7 +271,7 @@ public class AopMetrics {
 
             valueMap.put("itemName", formatStr(phaseName + " \u2935") );
 
-            renderResult.append( new PlaceholderHelper.Builder().build(valueMap).replace(weaverSummrayDetailTemplate) );
+            renderResult.append( PlaceholderHelper.create(valueMap).replace(weaverSummrayDetailTemplate) );
         }
 
         // 2.render detail metrics per ClassLoader and Advisor
@@ -281,7 +282,7 @@ public class AopMetrics {
             Map<String, Object> valueMap = new HashMap<>();
 
             valueMap.put("itemName", format(
-                    ClassUtils.abbreviate( ClassLoaderUtils.getClassLoaderId(weaverMetrics.getClassLoader()) ) ) );
+                    ClassUtils.abbreviate( ClassLoaderUtils.getClassLoaderId(weaverMetrics.getClassLoader()), ITEM_NAME_LENGTH ) ) );
 
             valueMap.put("typeLoadingCount", weaverMetrics.getTypeLoadingCount());
             valueMap.put("typeLoadingTime", weaverMetrics.getTypeLoadingTime() / NANO_TIME);
@@ -305,8 +306,8 @@ public class AopMetrics {
 
             valueMap = format(valueMap);
             renderResult.append(
-                    new PlaceholderHelper.Builder()
-                    .build( new CompositePlaceholderResolver(valueMap, configView) )
+                    PlaceholderHelper.create( 
+                            new ConfigView.Builder().parent(configView).configSource("valueMap", valueMap).build() )
                     .replace(weaverSummrayPerCLTemplate) );
 
             if(this.summarizeMetricsDetail) {
@@ -321,7 +322,7 @@ public class AopMetrics {
                         valueMap.put("advisorTypeMatchingTime", advisorMethodMatchingType.get(advisorName).get() / NANO_TIME);
 
                         renderResult.append(
-                                new PlaceholderHelper.Builder().build(valueMap).replace(aopWeavingDetailPerAdvisor) );
+                                PlaceholderHelper.create(valueMap).replace(aopWeavingDetailPerAdvisor) );
                     }
                 }
             }
@@ -368,27 +369,6 @@ public class AopMetrics {
                     new SimpleEntry<>(e.getKey(), format(e.getValue())) )
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
-
-
-    private static class CompositePlaceholderResolver implements PlaceholderResolver {
-
-        private final Map<String, Object> valueMap;
-        private final ConfigView configView;
-
-        public CompositePlaceholderResolver(Map<String, Object> valueMap, ConfigView configView) {
-            this.valueMap = valueMap;
-            this.configView = configView;
-        }
-
-        @Override
-        public String getValue(String key) {
-            Object value = valueMap.get(key);
-            if(value != null)
-                return value.toString();
-
-            return configView.getAsString(key);
-        }
-    } 
 
 
     public class BootstraperMetrics {

@@ -147,7 +147,7 @@ public class FactoryContext implements Closeable {
         // 2.load settings
         // create configView
         this.configView = createConfigView(aopContext, classLoader);
-        this.placeholderHelper = new PlaceholderHelper.Builder().build(configView);
+        this.placeholderHelper = PlaceholderHelper.create(configView);
 
         this.typePoolFactory = aopContext.getTypePoolFactory();
         this.typeWorldFactory = aopContext.getTypeWorldFactory();
@@ -336,6 +336,11 @@ public class FactoryContext implements Closeable {
 
     public AspectClassLoader getClassLoader() {
         return this.classLoader;
+    }
+
+
+    public ConfigView getConfigView() {
+        return configView;
     }
 
     public PlaceholderHelper getPlaceholderHelper() {

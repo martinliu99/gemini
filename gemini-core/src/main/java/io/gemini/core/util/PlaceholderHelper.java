@@ -24,9 +24,13 @@ import org.apache.logging.log4j.core.lookup.LookupResult;
 import org.apache.logging.log4j.core.lookup.StrLookup;
 import org.apache.logging.log4j.core.lookup.StrSubstitutor;
 
+import ch.qos.logback.core.spi.PropertyContainer;
+import ch.qos.logback.core.spi.ScanException;
+import ch.qos.logback.core.subst.NodeToStringTransformer;
 import io.gemini.core.config.ConfigView;
+import io.gemini.core.config.ConfigView.Converter;
 
-// TODO: not thread-safe
+
 public interface PlaceholderHelper {
 
     String replace(String placeholder);
@@ -39,7 +43,97 @@ public interface PlaceholderHelper {
     }
 
 
-    public class Builder {
+    static <T> PlaceholderHelper create(Map<String, T> valueMap) {
+        return new Default( new Default.WithMap(valueMap) );
+    }
+
+    static PlaceholderHelper create(ConfigView configView) {
+        return new Default( new Default.WithConfigView(configView) );
+    }
+
+
+    class Default implements PlaceholderHelper {
+
+        private final PropertyContainer propertyContainer;
+
+
+        Default(PropertyContainer propertyContainer) {
+            this.propertyContainer = propertyContainer;
+        }
+
+        @Override
+        public String replace(String placeholder) {
+            try {
+                return NodeToStringTransformer.substituteVariable(placeholder, propertyContainer, null);
+            } catch (ScanException e) {
+                e.printStackTrace();
+                return placeholder;
+            }
+        }
+
+
+        private static abstract class AbstractBase implements PropertyContainer {
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public abstract String getProperty(String key);
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public Map<String, String> getCopyOfPropertyMap() {
+                return null;
+            }
+        }
+
+
+        private static class WithMap extends AbstractBase {
+
+            private final Map<String, String> stringValueMap;
+
+            <T> WithMap(Map<String, T> valueMap) {
+                Map<String, String> stringValueMap = new HashMap<>();
+                for(Entry<String, T> entry : valueMap.entrySet()) {
+                    String value = entry.getValue() == null ? null : entry.getValue().toString();
+                    stringValueMap.put(entry.getKey(), value);
+                }
+
+                this.stringValueMap = stringValueMap;
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public String getProperty(String key) {
+                return stringValueMap.get(key);
+            }
+        }
+
+
+        private static class WithConfigView extends AbstractBase {
+
+            private ConfigView configView;
+
+            WithConfigView(ConfigView configView) {
+                this.configView = configView;
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public String getProperty(String key) {
+                return configView.getValue(key, null, Converter.ToString.INSTANCE, false);
+            }
+        }
+    }
+
+
+    class Builder {
 
         private static final char ESCAPE = '$';
         private static final String PLACEHOLDER_PREFIX = ESCAPE + "{";
@@ -53,6 +147,7 @@ public interface PlaceholderHelper {
         private char escape = ESCAPE;
         private String defaultValueDelimiter = DEFAULT_VALUE_DELIMITER;
 
+        private Builder() {}
 
         public Builder withEscape(char escape) {
             this.escape = escape;

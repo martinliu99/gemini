@@ -122,8 +122,7 @@ public class AopContext implements Closeable {
 
         // 2.create helper classes
         this.configView = createConfigView(configSource, diagnosticLevel);
-        this.placeholderHelper = new PlaceholderHelper.Builder()
-                .build(this.getConfigView());
+        this.placeholderHelper = PlaceholderHelper.create(this.getConfigView());
 
         this.aopMetrics = new AopMetrics(configView, diagnosticLevel);
         BootstraperMetrics bootstraperMetrics = aopMetrics.getBootstraperMetrics();

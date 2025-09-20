@@ -15,18 +15,18 @@
  */
 package io.gemini.core.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import io.gemini.core.config.ConfigView;
 
 public class PlaceholderHelperTests {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(PlaceholderHelperTests.class);
-
-//    @Test
+    @Test
     public void test() {
         Map<String, String> valueMap = new HashMap<>();
         valueMap.put("var1", "${var11}+1");
@@ -34,43 +34,34 @@ public class PlaceholderHelperTests {
         valueMap.put("var2", "${var1}");
         valueMap.put("2", "2");
 
-        PlaceholderHelper placeholderHelper = new PlaceholderHelper.Builder().build(valueMap);
+        PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
         String template = "${var1} and ${var${2}}";
 
         String value = placeholderHelper.replace(template);
-        LOGGER.info("test()");
-        LOGGER.info("template: '{}'", template);
-        LOGGER.info("value: '{}'", value);
-        LOGGER.info("");
+        assertThat(value).isEqualTo("11+1 and 11+1");
     }
-    
+
     @Test
     public void testVarInDefaultValue() {
         Map<String, String> valueMap = new HashMap<>();
-        valueMap.put("var1", "${var11:${var12}}/log");
+        valueMap.put("var1", "${var11:-${var12}}/log");
         valueMap.put("var12", "12");
 
-        PlaceholderHelper placeholderHelper = new PlaceholderHelper.Builder().build(valueMap);
+        PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
         String template = "${var1}";
 
         String value = placeholderHelper.replace(template);
-        LOGGER.info("testVarInDefaultValue()");
-        LOGGER.info("template: '{}'", template);
-        LOGGER.info("value: '{}'", value);
-        LOGGER.info("");
+        assertThat(value).isEqualTo("12/log");
     }
 
-//    @Test
+    @Test
     public void testIllegalVariable() {
         Map<String, String> valueMap = new HashMap<>();
 
-        PlaceholderHelper placeholderHelper = new PlaceholderHelper.Builder().build(valueMap);
+        PlaceholderHelper placeholderHelper = PlaceholderHelper.create( new ConfigView.Builder().configSource("", valueMap).build() );
         String template = "${var1} and ${var${2}}";
 
         String value = placeholderHelper.replace(template);
-        LOGGER.info("testIllegalVariable()");
-        LOGGER.info("template: '{}'", template);
-        LOGGER.info("value: '{}'", value);
-        LOGGER.info("");
+        assertThat(value).isEqualTo("var1_IS_UNDEFINED and var2_IS_UNDEFINED_IS_UNDEFINED");
     }
 }

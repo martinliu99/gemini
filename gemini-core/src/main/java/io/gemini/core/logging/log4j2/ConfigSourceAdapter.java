@@ -27,6 +27,7 @@ import org.apache.logging.log4j.util.BiConsumer;
 import org.apache.logging.log4j.util.PropertySource;
 
 import io.gemini.core.config.ConfigSource;
+import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.StringUtils;
 
@@ -40,7 +41,6 @@ import io.gemini.core.util.StringUtils;
 public class ConfigSourceAdapter implements PropertySource, ConfigSource {
 
     public static final String STATUS_LOG_LEVEL_KEY = "aop.logger.statusLogLevel";
-    public static final String ALL_LOG_LEVEL_KEY = "aop.logger.allLogLevel";
 
     private static final int DEFAULT_PRIORITY = 10000;
     private static final String SETTING_KEY_PREFIX = "aop.logger.";
@@ -58,8 +58,8 @@ public class ConfigSourceAdapter implements PropertySource, ConfigSource {
         DEBUG_SETTINGS.put(SETTING_KEY_PREFIX + "log4j2.disableJmx", "false");
 
         DEBUG_SETTINGS.put(STATUS_LOG_LEVEL_KEY, Level.DEBUG.name());
-        DEBUG_SETTINGS.put(ALL_LOG_LEVEL_KEY, Level.DEBUG.name());
-        DEBUG_SETTINGS.put("aop.logger.includeLocation", "true");
+        DEBUG_SETTINGS.put(LoggingSystem.LOGGER_ALL_LOG_LEVEL_KEY, Level.DEBUG.name());
+        DEBUG_SETTINGS.put(LoggingSystem.LOGGER_INCLUDE_LOCATION_KEY, "true");
     }
 
     public ConfigSourceAdapter(ConfigSource configSource, boolean debug) {

@@ -22,8 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.core.pattern.NameAbbreviator;
-
+import ch.qos.logback.classic.pattern.TargetLengthBasedClassNameAbbreviator;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -45,8 +44,6 @@ public class ClassUtils {
     private static final Map<String, Class<?>> PRIMITIVE_TYPE_MAP;
     private static final Map<Class<?>, Class<?>> PRIMITIVE_WRAPPER_MAP;
     private static final Map<TypeDescription, TypeDescription> PRIMITIVE_TYPE_DEFINITION_MAP;
-
-    private static NameAbbreviator ABBREVIATOR;
 
 
     static {
@@ -82,9 +79,6 @@ public class ClassUtils {
                                 entry -> TypeDescription.ForLoadedType.of(entry.getValue())
                         )
                 );
-
-
-        ABBREVIATOR = NameAbbreviator.getAbbreviator("1.");
     }
 
 
@@ -136,12 +130,8 @@ public class ClassUtils {
         return sb.toString();
     }
 
-    public static String abbreviate(String className) {
-        if(className == null) return null;
-
-        StringBuilder destination = new StringBuilder();
-        ABBREVIATOR.abbreviate(className, destination);
-        return destination.toString();
+    public static String abbreviate(String className, int targetLength) {
+        return new TargetLengthBasedClassNameAbbreviator(targetLength).abbreviate(className);
     }
 
 

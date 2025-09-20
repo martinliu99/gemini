@@ -225,7 +225,7 @@ public interface ConfigView {
 
 
         protected AbstractBase() {
-            this.placeholderHelper = new PlaceholderHelper.Builder().build(this);
+            this.placeholderHelper = PlaceholderHelper.create(this);
         }
 
 
@@ -429,19 +429,19 @@ public interface ConfigView {
         }
 
         @Override
-        public <T> T getValue(String key, Converter<T> converter) {
+        public <T> T getValue(String key, Converter<T> converter, boolean resolvePlaceholders) {
             if(super.containsKey(key))
-                return super.getValue(key, converter);
+                return super.getValue(key, converter, resolvePlaceholders);
 
-            return parent.getValue(key, converter);
+            return parent.getValue(key, converter, resolvePlaceholders);
         }
 
         @Override
-        public <T> T getValue(String key, T defaultValue, Converter<T> converter) {
+        public <T> T getValue(String key, T defaultValue, Converter<T> converter, boolean resolvePlaceholders) {
             if(super.containsKey(key))
-                return super.getValue(key, defaultValue, converter);
+                return super.getValue(key, defaultValue, converter, resolvePlaceholders);
 
-            return parent.getValue(key, defaultValue, converter);
+            return parent.getValue(key, defaultValue, converter, resolvePlaceholders);
         }
     }
 

@@ -22,7 +22,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.logging.log4j.status.StatusLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.OrderedProperties;
@@ -35,7 +36,7 @@ import io.gemini.core.util.OrderedProperties;
  */
 public class ConfigViews {
 
-    private static final StatusLogger LOGGER = StatusLogger.getLogger();
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigViews.class);
 
     private static final String BUILTIN_SETTING_PREFIX = "_";
 

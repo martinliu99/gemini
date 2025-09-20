@@ -14,7 +14,7 @@
 
 
     <properties>
-        <aop.log4j.file>META-INF/aop-log4j2.xml</aop.log4j.file>
+        <aop.log4j.file>META-INF/aop-logback.xml</aop.log4j.file>
     </properties>
 
 

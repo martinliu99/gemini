@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.config.ConfigSource;
+import io.gemini.core.logging.log4j2.Log4j2LoggingSystem;
 
 public class LoggingSystemTests {
 
@@ -71,7 +72,7 @@ public class LoggingSystemTests {
 
     private ConfigSource getConfigSource(boolean simpleInitialization) {
         Map<String, Object> map = new HashMap<>();
-        map.put(LoggingSystem.Log4j2.SIMPLE_INITIALIZATION_KEY, simpleInitialization ? "true" : "false");
+        map.put(Log4j2LoggingSystem.SIMPLE_INITIALIZATION_KEY, simpleInitialization ? "true" : "false");
 
         ConfigSource configSource = new ConfigSource.Builder().configSource("", map).build();
         return configSource;

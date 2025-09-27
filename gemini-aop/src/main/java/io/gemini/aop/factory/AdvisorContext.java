@@ -186,8 +186,8 @@ public class AdvisorContext implements Closeable {
          * {@inheritDoc}
          */
         @Override
-        public boolean isClassLoader(String classLoaderExpr) {
-            return ExprParser.INSTANCE.parseClassLoaderExpr(classLoaderExpr)
+        public boolean isClassLoader(String classLoaderExpression) {
+            return ExprParser.INSTANCE.parseClassLoaderExpr(classLoaderExpression)
                     .matches(classLoader.getJoinpointClassLoader());
         }
 
@@ -195,30 +195,30 @@ public class AdvisorContext implements Closeable {
          * {@inheritDoc}
          */
         @Override
-        public boolean hasType(String typeExpr) {
-            return ExprParser.INSTANCE.hasType(typeWorld, typeExpr);
+        public boolean hasType(String typeExpression) {
+            return ExprParser.INSTANCE.hasType(typeWorld, typeExpression);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public boolean hasFiled(String fieldExpr) {
-            return ExprParser.INSTANCE.hasField(typeWorld, fieldExpr);
+        public boolean hasFiled(String fieldExpression) {
+            return ExprParser.INSTANCE.hasField(typeWorld, fieldExpression);
         }
 
         /** {@inheritDoc} 
          */
         @Override
-        public boolean hasConstructorExpr(String constructorExpr) {
-            return ExprParser.INSTANCE.hasConstructor(typeWorld, constructorExpr);
+        public boolean hasConstructor(String constructorExpression) {
+            return ExprParser.INSTANCE.hasConstructor(typeWorld, constructorExpression);
         }
 
         /** {@inheritDoc} 
          */
         @Override
-        public boolean hasMethodExpr(String methodsExpr) {
-            return ExprParser.INSTANCE.hasMethod(typeWorld, methodsExpr);
+        public boolean hasMethod(String methodExpression) {
+            return ExprParser.INSTANCE.hasMethod(typeWorld, methodExpression);
         }
     }
 }

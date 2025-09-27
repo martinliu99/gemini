@@ -131,7 +131,7 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
 
                         @Override
                         public boolean matches(ConditionContext target) {
-                            return target.hasMethodExpr("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
+                            return target.hasMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
                         }
                     })
                     .typeMatcher(

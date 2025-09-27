@@ -77,12 +77,12 @@ public class AopClassLoaderConfigurer {
             LOGGER.info("^Configuring AopClassLoader with settings,");
         }
 
-        // 1.create ParentFirstFilter with parentFirstTypeExprs and parentFirstResourceExprs
-        Set<String> parentFirstTypeExprs = new LinkedHashSet<>();
-        Set<String> parentFirstResourceExprs = new LinkedHashSet<>();
+        // 1.create ParentFirstFilter with parentFirstTypeExpressions and parentFirstResourceExpressions
+        Set<String> parentFirstTypeExpressions = new LinkedHashSet<>();
+        Set<String> parentFirstResourceExpressions = new LinkedHashSet<>();
 
         this.configureParentFirstFilter(aopClassLoader, nameMapping,
-                parentFirstTypeExprs, parentFirstResourceExprs);
+                parentFirstTypeExpressions, parentFirstResourceExpressions);
 
 
         // 2.create BootstrapClassFilter with bootstrap classes.
@@ -95,40 +95,40 @@ public class AopClassLoaderConfigurer {
         long time =  System.nanoTime() - startedAt;
         if(aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to configure AopClassLoader. \n"
-                    + "  parentFirstTypeExprs: {}  parentFirstResourceExprs: {}", 
+                    + "  parentFirstTypeExpressions: {}  parentFirstResourceExpressions: {}", 
                     time / 1e9,
-                    StringUtils.join(parentFirstTypeExprs, "\n    ", "\n    ", "\n"), 
-                    StringUtils.join(parentFirstResourceExprs, "\n    ", "\n    ", "\n")
+                    StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
+                    StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
             );
         aopContext.getAopMetrics().getBootstraperMetrics().setAopCLConfigTime(time);
     }
 
     private void configureParentFirstFilter(AopClassLoader aopClassLoader, Map<String, String> nameMapping,
-            Set<String> parentFirstTypeExprs, Set<String> parentFirstResourceExprs) {
-        // 1.collect parent first type exprs
-        parentFirstTypeExprs.addAll(
-                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.builtinParentFirstTypeExprs", Collections.emptySet()) );
-        parentFirstTypeExprs.addAll(
-                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstTypeExprs", Collections.emptySet()) );
+            Set<String> parentFirstTypeExpressions, Set<String> parentFirstResourceExpressions) {
+        // 1.collect parent first type expressions
+        parentFirstTypeExpressions.addAll(
+                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.builtinParentFirstTypeExpressions", Collections.emptySet()) );
+        parentFirstTypeExpressions.addAll(
+                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstTypeExpressions", Collections.emptySet()) );
 
         if(aopContext.isScanClassesFolder())
-            parentFirstTypeExprs.addAll( CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES );
+            parentFirstTypeExpressions.addAll( CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES );
 
-        parentFirstTypeExprs.addAll( nameMapping.values() );
+        parentFirstTypeExpressions.addAll( nameMapping.values() );
 
         ElementMatcher<String> parentFirstClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                "ParentFirstClassMatcher", parentFirstTypeExprs);
+                "ParentFirstClassMatcher", parentFirstTypeExpressions);
 
 
-        // 2.collect parent first resource exprs
-        parentFirstResourceExprs.addAll( 
-                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstResourceExprs", Collections.emptySet()) );
+        // 2.collect parent first resource expressions
+        parentFirstResourceExpressions.addAll( 
+                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstResourceExpressions", Collections.emptySet()) );
 
-        // convert parentFirstTypeExprs and merge into parentFirstResourceExprs
-        parentFirstResourceExprs.addAll( parentFirstTypeExprs );
+        // convert parentFirstTypeExpressions and merge into parentFirstResourceExpressions
+        parentFirstResourceExpressions.addAll( parentFirstTypeExpressions );
 
         ElementMatcher<String> parentFirstResourceMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
-                "ParentFirstResourceMatcher", parentFirstTypeExprs);
+                "ParentFirstResourceMatcher", parentFirstTypeExpressions);
 
 
         // 3.add ParentFirstFilter

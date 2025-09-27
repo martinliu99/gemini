@@ -85,19 +85,19 @@ public class StringUtils {
         return join(elements, delimiter, "", "");
     }
 
-    public static <S extends CharSequence> String join(Collection<S> elements, 
+    public static <S extends CharSequence> String join(Collection<? extends S> elements, 
             CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
-        Stream<S> stream = elements == null ? Stream.empty() : elements.stream();
+        Stream<? extends S> stream = elements == null ? Stream.empty() : elements.stream();
 
         return join(stream, delimiter, prefix, suffix);
     }
 
-    public static <T, S extends CharSequence> String join(Collection<T> elements, 
+    public static <T, S extends CharSequence> String join(Collection<? extends T> elements, 
             Function<T, S> mapper, CharSequence delimiter) {
         return join(elements, mapper, delimiter, "", "");
     }
 
-    public static <T, S extends CharSequence> String join(Collection<T> elements, 
+    public static <T, S extends CharSequence> String join(Collection<? extends T> elements, 
             Function<T, S> mapper,
             CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
         if(CollectionUtils.isEmpty(elements))

@@ -193,10 +193,10 @@ class WeaverCache implements Closeable {
                         ? null
                         : this.createJoinpointDescriptor(lookup, methodSignature, thisClass, this.methodSignatureMap.get(methodSignature), advisorChain);
 
-                LOGGER.info("Created joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  {} \n{} \n", 
+                LOGGER.info("Created joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n  Method: {} \n    {} \n", 
                         typeName, lookup.lookupClass().getClassLoader(),
                         methodSignature,
-                        StringUtils.join(advisorChain, a -> "    " + a.getAdvisorName(), "\n")
+                        StringUtils.join(advisorChain, Advisor::getAdvisorName, "\n    ")
                 );
 
                 return joinpointDescriptor;

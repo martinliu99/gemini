@@ -26,26 +26,26 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopContext;
 import io.gemini.aop.Advisor;
+import io.gemini.aop.AopContext;
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.Joinpoint;
 import io.gemini.api.aop.Advice.After;
 import io.gemini.api.aop.Advice.Around;
 import io.gemini.api.aop.Advice.Before;
+import io.gemini.api.aop.Joinpoint;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Joinpoint.ProceedingJoinpoint;
 import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.method.MethodDescription;
 
 interface Joinpoints {
@@ -480,7 +480,10 @@ interface Joinpoints {
                     LOGGER.info("^Invoking joinpoint '{}'. \n  ClassLoader: {} \n"
                             + "  {}: {} ", 
                             getAccessibleName(), joinpointClassLoader, adviceMessage,
-                            (dispatchBeforeAdvice ? this.beforeAdvices : this.afterAdvices).stream().map( e -> e.getClass().getName() ).collect(Collectors.joining("\n    ", "\n    ", "\n") ) 
+                            StringUtils.join(
+                                    dispatchBeforeAdvice ? this.beforeAdvices : this.afterAdvices, 
+                                    e -> e.getClass().getName(), 
+                                    "\n    ", "\n    ", "\n") 
                     );
 
                 if(dispatchBeforeAdvice) {
@@ -494,7 +497,10 @@ interface Joinpoints {
                 LOGGER.warn("$Failed to invoke joinpoint '{}'. \n  ClassLoader: {} \n"
                         + "  {}: {} ", 
                         getAccessibleName(), joinpointClassLoader, adviceMessage, 
-                        (dispatchBeforeAdvice ? this.beforeAdvices : this.afterAdvices).stream().map( e -> e.getClass().getName() ).collect(Collectors.joining("\n    ", "\n    ", "\n") ),
+                        StringUtils.join(
+                                dispatchBeforeAdvice ? this.beforeAdvices : this.afterAdvices,
+                                e -> e.getClass().getName(),
+                                "\n    ", "\n    ", "\n"),
                         t
                 );
 
@@ -687,7 +693,7 @@ interface Joinpoints {
                         LOGGER.info("^Proceeding joinpoint '{}'. \n  ClassLoader: {} \n"
                                 + "  Around advices: {} ", 
                                 getAccessibleName(), joinpointClassLoader,
-                                getAroundAdvice().stream().map( e -> e.getClass().getName() ).collect(Collectors.joining("\n    ", "\n    ", "\n") )
+                                StringUtils.join(getAroundAdvice(), e -> e.getClass().getName(), "\n    ", "\n    ", "\n")
                         );
                     }
 
@@ -696,7 +702,7 @@ interface Joinpoints {
                     LOGGER.warn("$Failed to proceed joinpoint '{}'. \n  ClassLoader: {} \n"
                             + "  Around advices: {} ", 
                             getAccessibleName(), joinpointClassLoader,
-                            getAroundAdvice().stream().map( e -> e.getClass().getName() ).collect(Collectors.joining("\n    ", "\n    ", "\n") ),
+                            StringUtils.join(getAroundAdvice(), e -> e.getClass().getName(), "\n    ", "\n    ", "\n"),
                             t
                     );
 

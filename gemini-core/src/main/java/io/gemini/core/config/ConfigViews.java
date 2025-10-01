@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 
+import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.logging.DelayLoggerFactory;
 import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.OrderedProperties;
@@ -39,6 +40,8 @@ public class ConfigViews {
     private static final Logger LOGGER = DelayLoggerFactory.getLogger(ConfigViews.class);
 
     private static final String BUILTIN_SETTING_PREFIX = "_";
+
+    private static final String DIAGNOSTIC_LEVEL_KEY = "aop.launcher.diagnosticStrategy";
 
 
     public static ConfigView createConfigView(Map<String, String> launchArgs, Map<String, Object> builtinSettings,
@@ -76,9 +79,16 @@ public class ConfigViews {
             builder.configSource(userDefinedConfigLocation, userDefinedSettings);
         }
 
-        return builder
+        ConfigView configView = builder
                 .configSource("DefaultSettings", defaultSettings)
                 .build();
+
+        if(getDiagnosticLevel(configView).isSimpleEnabled())
+            LOGGER.info("Created ConfigView for AopContext with settings, \n"
+                    + "  LaunchArgs: {} \n  InternalConfigLocation: {} \n  UserDefinedConfigLocation: {} \n",
+                    launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() );
+
+        return configView;
     }
 
     public static ConfigView createConfigView(ConfigView parentConfigView,
@@ -149,5 +159,19 @@ public class ConfigViews {
         } finally {
             IOUtils.closeQuietly(inStream);
         }
+    }
+
+
+    public static DiagnosticLevel getDiagnosticLevel(ConfigView configView) {
+        if(configView.containsKey(DIAGNOSTIC_LEVEL_KEY)) {
+            String level = configView.getAsString(DIAGNOSTIC_LEVEL_KEY).toUpperCase();
+            try {
+                return DiagnosticLevel.valueOf(level);
+            } catch(Exception e) {
+                LOGGER.warn("Ignored illegal setting '" + level + "' and disabled diagnostic mode.\n");
+            }
+        }
+
+        return DiagnosticLevel.DISABLED;
     }
 }

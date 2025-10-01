@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="${aop.logger.debugLogback:-false}" scan="true">
 
-    <property name="LOG_FILE_PATH" value="${aop.launcher.launchPath:-${user.home}}/logs" />
+    <property name="LOG_FILE_PATH" value="${aop.logger.logPath:-${user.home}/logs}" />
     <property name="INCLUDE_LOCATION" value="${aop.logger.includeLocation:-true}" />
 
-
-    <conversionRule conversionWord="cfile" converterClass="io.gemini.core.logging.logback.pattern.CustomizedFileOfCallerConverter" />
-    <conversionRule conversionWord="cline" converterClass="io.gemini.core.logging.logback.pattern.CustomizedLineOfCallerConverter" />
-    <conversionRule conversionWord="cclass" converterClass="io.gemini.core.logging.logback.pattern.CustomizedClassOfCallerConverter" />
-    <conversionRule conversionWord="cmethod" converterClass="io.gemini.core.logging.logback.pattern.CustomizedMethodOfCallerConverter" />
-
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [gemini %X] %cclass.%cmethod\(%cline\) - %msg%n" />
-    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-8.-8thread] %-5level [gemini %X] \(%cfile:%cline\) - %msg%n" />
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%contextName %X] \(%callerSource\) - %msg%n" />
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-8.-8thread] %-5level [%contextName %X] \(%callerSource\) - %msg%n" />
 
 
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">

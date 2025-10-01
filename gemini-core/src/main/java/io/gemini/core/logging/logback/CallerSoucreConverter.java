@@ -13,17 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.core.logging.logback.pattern;
+package io.gemini.core.logging.logback;
 
-import ch.qos.logback.classic.pattern.FileOfCallerConverter;
+import ch.qos.logback.classic.pattern.Abbreviator;
+import ch.qos.logback.classic.pattern.ClassicConverter;
+import ch.qos.logback.classic.pattern.TargetLengthBasedClassNameAbbreviator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Context;
-import ch.qos.logback.core.CoreConstants;
 import io.gemini.core.logging.LoggingSystem;
 
-public class CustomizedFileOfCallerConverter extends FileOfCallerConverter {
+public class CallerSoucreConverter extends ClassicConverter {
 
     private boolean includeLocation = true;
+    private final Abbreviator nameAbbreviator = new TargetLengthBasedClassNameAbbreviator(10);
+
 
     @Override
     public void start() {
@@ -38,6 +41,14 @@ public class CustomizedFileOfCallerConverter extends FileOfCallerConverter {
 
     @Override
     public String convert(ILoggingEvent event) {
-        return includeLocation ? super.convert(event) : CoreConstants.NA;
+        if(this.includeLocation) {
+            StackTraceElement[] cda = event.getCallerData();
+            if (cda != null && cda.length > 0) {
+                return cda[0].getFileName() + ":" + Integer.toString(cda[0].getLineNumber());
+            } else {
+                return nameAbbreviator.abbreviate(event.getLoggerName());
+            }
+        } else
+            return nameAbbreviator.abbreviate(event.getLoggerName());
     }
 }

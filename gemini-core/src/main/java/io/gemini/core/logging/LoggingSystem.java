@@ -22,7 +22,7 @@ import io.gemini.core.util.Assert;
 
 public interface LoggingSystem {
 
-    static final String CONTEXT_NAME = "GeminiLogger";
+    static final String CONTEXT_NAME = "Gemini";
 
     static final String LOGGER_CONFIG_LOCATION_KEY = "aop.logger.configLocation";
     static final String LOGGER_ALL_LOG_LEVEL_KEY = "aop.logger.allLogLevel";

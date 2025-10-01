@@ -30,6 +30,7 @@ import org.slf4j.helpers.SubstituteLoggerFactory;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.status.OnConsoleStatusListener;
@@ -196,6 +197,11 @@ public class LogbackLoggingSystem implements LoggingSystem {
             loggerContext.putProperty(entry.getKey(), entry.getValue());
 
 
+        // register customized converter
+        PatternLayout.DEFAULT_CONVERTER_MAP.put("CS", CallerSoucreConverter.class.getName());
+        PatternLayout.DEFAULT_CONVERTER_MAP.put("callerSource", CallerSoucreConverter.class.getName());
+
+
         // configure LoggerContext
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext(loggerContext);
@@ -217,6 +223,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
     }
 
     private void customizeLoggerContext(LoggerContext loggerContext) {
+        // adjust log level
         for(Logger logger : loggerContext.getLoggerList()) {
             Level currentLevel = logger.getEffectiveLevel();
             if(currentLevel.isGreaterOrEqual(allLogLevel))
@@ -224,6 +231,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
 
             logger.setLevel(allLogLevel);
         }
+
     }
 
     private void reportConfigurationErrorsIfNecessary(LoggerContext loggerContext) {

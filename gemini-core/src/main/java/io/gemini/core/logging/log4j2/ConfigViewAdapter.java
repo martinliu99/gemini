@@ -27,6 +27,7 @@ import org.apache.logging.log4j.util.BiConsumer;
 import org.apache.logging.log4j.util.PropertySource;
 
 import io.gemini.core.config.ConfigSource;
+import io.gemini.core.config.ConfigView;
 import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.StringUtils;
@@ -38,7 +39,7 @@ import io.gemini.core.util.StringUtils;
  * @author   martin.liu
  * @since	 1.0
  */
-public class ConfigSourceAdapter implements PropertySource, ConfigSource {
+public class ConfigViewAdapter implements PropertySource, ConfigSource {
 
     public static final String STATUS_LOG_LEVEL_KEY = "aop.logger.statusLogLevel";
 
@@ -47,7 +48,7 @@ public class ConfigSourceAdapter implements PropertySource, ConfigSource {
 
     private static final Map<String, String> DEBUG_SETTINGS;
 
-    private final ConfigSource configSource;
+    private final ConfigView configView;
     private final boolean debug;
 
     private final Set<String> keys;
@@ -62,22 +63,18 @@ public class ConfigSourceAdapter implements PropertySource, ConfigSource {
         DEBUG_SETTINGS.put(LoggingSystem.LOGGER_INCLUDE_LOCATION_KEY, "true");
     }
 
-    public ConfigSourceAdapter(ConfigSource configSource, boolean debug) {
-        Assert.notNull(configSource, "'configSource' must not be null.");
-        this.configSource = configSource;
+    public ConfigViewAdapter(ConfigView configView, boolean debug) {
+        Assert.notNull(configView, "'configView' must not be null.");
+        this.configView = configView;
 
         this.debug = debug;
 
         this.keys = new LinkedHashSet<>();
 
         // filter out null && empty setting value
-        for(String key : configSource.keys()) {
-            Object value = configSource.getValue(key);
-            if(value == null || value instanceof String == false)
-                continue;
-
-            String strValue = (String) value;
-            if(StringUtils.hasText(strValue) == false)
+        for(String key : configView.keys()) {
+            String value = configView.getAsString(key, null);
+            if(value == null || StringUtils.hasText(value) == false)
                 continue;
 
             this.keys.add(key);
@@ -110,8 +107,8 @@ public class ConfigSourceAdapter implements PropertySource, ConfigSource {
 
     @Override
     public String getProperty(String key) {
-        Object value = doGetProperty(SETTING_KEY_PREFIX + key);
-        if(value != null && value instanceof String)
+        String value = doGetProperty(SETTING_KEY_PREFIX + key);
+        if(value != null)
             return (String) value;
 
         value = doGetProperty(key);
@@ -124,14 +121,14 @@ public class ConfigSourceAdapter implements PropertySource, ConfigSource {
         throw new IllegalStateException("value '" + value + "' is not String.");
     }
 
-    private Object doGetProperty(String key) {
+    private String doGetProperty(String key) {
         if(debug) {
             String value = DEBUG_SETTINGS.get(key);
             if(value != null)
                 return value;
         }
 
-        return this.configSource.getValue(key);
+        return this.configView.getAsString(key, null);
     }
 
     @Override

@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.Set;
 
 import io.gemini.core.util.Assert;
-import io.gemini.core.util.Converters;
-import io.gemini.core.util.OrderedProperties;
 import io.gemini.core.util.StringUtils;
 
 public interface ConfigSource {
@@ -152,32 +150,6 @@ public interface ConfigSource {
         @Override
         public String toString() {
             return this.configSources.toString();
-        }
-    }
-
-
-    class Builder {
-
-        private List<ConfigSource> configSources = new ArrayList<>();
-
-         public <T> Builder configSource(String sourceName, Map<String, T> configSettings) {
-            Assert.notNull(configSettings, "'configSettings' must not be null.");
-            this.configSources.add(
-                    new MapConfigSource<T>(sourceName, configSettings ) );
-
-            return this;
-        }
-
-        public Builder configSource(String sourceName, OrderedProperties configSettings) {
-            Assert.notNull(configSettings, "'configSettings' must not be null.");
-            this.configSources.add(
-                    new MapConfigSource<Object>(sourceName, Converters.to(configSettings) ) );
-
-            return this;
-        }
-
-        public ConfigSource build() {
-            return new Compound(configSources);
         }
     }
 }

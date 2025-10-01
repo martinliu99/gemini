@@ -32,7 +32,6 @@ import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.TaskExecutor;
-import io.gemini.core.config.ConfigSource;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
@@ -92,7 +91,7 @@ public class AopContext implements Closeable {
             LauncherConfig launcherConfig, 
             AopClassLoader aopClassLoader,
             Map<String, Object> builtinSettings,
-            ConfigSource configSource,
+            ConfigView configView,
             DiagnosticLevel diagnosticLevel) {
         long startedAt = System.nanoTime();
 
@@ -121,7 +120,7 @@ public class AopContext implements Closeable {
 
 
         // 2.create helper classes
-        this.configView = createConfigView(configSource, diagnosticLevel);
+        this.configView = configView;
         this.placeholderHelper = PlaceholderHelper.create(this.getConfigView());
 
         this.aopMetrics = new AopMetrics(configView, diagnosticLevel);
@@ -149,19 +148,6 @@ public class AopContext implements Closeable {
             LOGGER.info("$Took '{}' seconds to create AopContext.", time / 1e9);
         }
         aopMetrics.getBootstraperMetrics().setAopContextCreationTime(time);
-    }
-
-    private ConfigView createConfigView(ConfigSource configSource, DiagnosticLevel diagnosticLevel) {
-        ConfigView configView = new ConfigView.Builder()
-                .configSource(configSource)
-                .build();
-
-        if(diagnosticLevel.isSimpleEnabled())
-            LOGGER.info("Created ConfigView for AopContext with settings, \n"
-                    + "  LaunchArgs: {} \n  InternalConfigLoc: {} \n  UserDefinedConfigLoc: {} \n",
-                    launcherConfig.getLaunchArgs(), launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation());
-
-        return configView;
     }
 
     private void loadSettings(ConfigView configView) {

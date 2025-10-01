@@ -16,7 +16,7 @@
 package io.gemini.core.logging;
 
 import io.gemini.core.DiagnosticLevel;
-import io.gemini.core.config.ConfigSource;
+import io.gemini.core.config.ConfigView;
 import io.gemini.core.logging.logback.LogbackLoggingSystem;
 import io.gemini.core.util.Assert;
 
@@ -35,7 +35,7 @@ public interface LoggingSystem {
     class Builder {
 
         private String configLocation;
-        private ConfigSource configSource;
+        private ConfigView configView;
         private DiagnosticLevel diagnosticLevel;
 
 
@@ -46,9 +46,9 @@ public interface LoggingSystem {
             return this;
         }
 
-        public Builder configSource(ConfigSource configSource) {
-            Assert.notNull(configSource, "'configSource' must not be null.");
-            this.configSource = configSource;
+        public Builder configView(ConfigView configView) {
+            Assert.notNull(configView, "'configView' must not be null.");
+            this.configView = configView;
 
             return this;
         }
@@ -60,8 +60,8 @@ public interface LoggingSystem {
         }
 
         public LoggingSystem build() {
-//            return new Log4j2(configLocation, configSource, diagnosticLevel);
-            return new LogbackLoggingSystem(configLocation, configSource, diagnosticLevel);
+//            return new Log4j2(configLocation, configView, diagnosticLevel);
+            return new LogbackLoggingSystem(configLocation, configView, diagnosticLevel);
         }
     }
 }

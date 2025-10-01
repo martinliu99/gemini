@@ -38,12 +38,15 @@ import ch.qos.logback.core.status.StatusUtil;
 import ch.qos.logback.core.util.StatusListenerConfigHelper;
 import ch.qos.logback.core.util.StatusPrinter;
 import io.gemini.core.DiagnosticLevel;
-import io.gemini.core.config.ConfigSource;
+import io.gemini.core.config.ConfigView;
+import io.gemini.core.logging.DelayLoggerFactory;
 import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.StringUtils;
 
 
 public class LogbackLoggingSystem implements LoggingSystem {
+
+    private static final org.slf4j.Logger LOGGER = DelayLoggerFactory.getLogger(LogbackLoggingSystem.class);
 
     private static final String INTERNAL_CONFIGURATION_FILE = "META-INF/aop-logback.xml";
 
@@ -52,14 +55,15 @@ public class LogbackLoggingSystem implements LoggingSystem {
     private final DiagnosticLevel diagnosticLevel;
 
     private final Level allLogLevel;
+    private final org.slf4j.event.Level allSlf4jLogLevel;
     private final boolean debugLogback;
 
 
-    public LogbackLoggingSystem(String configLocation, ConfigSource configSource,
+    public LogbackLoggingSystem(String configLocation, ConfigView configView,
             DiagnosticLevel diagnosticLevel) {
         this.diagnosticLevel = diagnosticLevel;
 
-        this.loggerSettings= fetchLoggerSettings(diagnosticLevel, configSource);
+        this.loggerSettings= fetchLoggerSettings(diagnosticLevel, configView);
 
         if(StringUtils.hasText(configLocation))
             this.configLocation = configLocation;
@@ -71,25 +75,28 @@ public class LogbackLoggingSystem implements LoggingSystem {
         if(this.loggerSettings.containsKey(LOGGER_ALL_LOG_LEVEL_KEY)) {
             String logLevel = this.loggerSettings.get(LOGGER_ALL_LOG_LEVEL_KEY).toUpperCase();
             this.allLogLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
-        } else
-        this.allLogLevel = null;
+            this.allSlf4jLogLevel = StringUtils.hasText(logLevel) ? org.slf4j.event.Level.valueOf(logLevel) : null;
+        } else {
+            this.allLogLevel = null;
+            this.allSlf4jLogLevel = org.slf4j.event.Level.INFO;
+        }
 
         // set aop.logger.debugLogback flag
         debugLogback = this.diagnosticLevel.isDebugEnabled() || allLogLevel == Level.DEBUG;
         this.loggerSettings.put("aop.logger.debugLogback", debugLogback ? "true" : "false");
     }
 
-    private Map<String, String> fetchLoggerSettings(DiagnosticLevel diagnosticLevel, ConfigSource configSource) {
+    private Map<String, String> fetchLoggerSettings(DiagnosticLevel diagnosticLevel, ConfigView configView) {
         Map<String, String> loggerSettings = new LinkedHashMap<>();
 
         // fetch logger settings
-        for(String key : configSource.keys()) {
+        for(String key : configView.keys()) {
             if(key.startsWith("aop.logger.") == false) continue;
 
-            Object value = configSource.getValue(key);
+            String value = configView.getAsString(key, null);
             if(value == null) continue;
 
-            loggerSettings.put(key, String.valueOf(value).trim());
+            loggerSettings.put(key, value);
         }
 
         // reset debug setting
@@ -109,32 +116,32 @@ public class LogbackLoggingSystem implements LoggingSystem {
     public void initialize(ClassLoader currentClassLoader) {
         long startedAt = System.nanoTime();
 
-        Logger logger = null;
         try {
             // 1.get LoggerContext
             LoggerContext loggerContext = getLoggerContext();
-            logger = loggerContext.getLogger(getClass());
 
             if(diagnosticLevel.isSimpleEnabled()) {
-                logger.info("^Initializing LoggingSystem with settings, {} ",
+                LOGGER.info("^Initializing LoggingSystem with settings, {} ",
                         StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  ", "\n  ", "\n")
                 );
             }
 
             // 2.configure LoggerContext
-            configureLoggerContext(currentClassLoader, loggerContext, logger);
+            configureLoggerContext(currentClassLoader, loggerContext);
 
             // 3.customize LoggerContext
             customizeLoggerContext(loggerContext);
 
             // 4.log initialization
-            reportConfigurationErrorsIfNecessary(loggerContext, logger);
+            reportConfigurationErrorsIfNecessary(loggerContext);
+
+            // 5.stop delay logger
+            DelayLoggerFactory.setLoggerInitialized(allSlf4jLogLevel);
         } catch(Throwable t) {
-            if(logger != null)
-                logger.warn("$Failed to initialize LoggingSystem.", t);
+            LOGGER.warn("$Failed to initialize LoggingSystem.", t);
         } finally {
             if(diagnosticLevel.isSimpleEnabled()) {
-                LoggerFactory.getLogger(LoggingSystem.class).info("$Took '{}' seconds to initialize LoggingSystem.", (System.nanoTime() - startedAt) / 1e9);
+                LOGGER.info("$Took '{}' seconds to initialize LoggingSystem.", (System.nanoTime() - startedAt) / 1e9);
             }
         }
     }
@@ -174,7 +181,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
      * @param currentClassLoader 
      * @throws JoranException 
      */
-    private void configureLoggerContext(ClassLoader currentClassLoader, LoggerContext loggerContext, Logger logger) throws JoranException {
+    private void configureLoggerContext(ClassLoader currentClassLoader, LoggerContext loggerContext) throws JoranException {
         // reset LoggerContext
         if(debugLogback)
             StatusListenerConfigHelper.addOnConsoleListenerInstance(loggerContext, new OnConsoleStatusListener());
@@ -192,20 +199,18 @@ public class LogbackLoggingSystem implements LoggingSystem {
         // configure LoggerContext
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext(loggerContext);
-        configurator.doConfigure( loadConfigurationFile(currentClassLoader, logger) );
+        configurator.doConfigure( loadConfigurationFile(currentClassLoader) );
     }
 
-    private URL loadConfigurationFile(ClassLoader currentClassLoader, Logger logger) {
+    private URL loadConfigurationFile(ClassLoader currentClassLoader) {
         // load user-defined configuration file, or built-in configuration file
         URL configFile = currentClassLoader.getResource(configLocation);
         if(configFile != null) {
-            if(logger.isDebugEnabled()) {
-                logger.debug("Loaded config file '{}'.", configLocation);
-            }
+            LOGGER.debug("Loaded config file '{}'.", configLocation);
 
             return configFile;
         } else {
-            logger.warn("Did not find config file '{}'.\n", configLocation);
+            LOGGER.warn("Did not find config file '{}'.\n", configLocation);
 
             return null;
         }
@@ -221,7 +226,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
         }
     }
 
-    private void reportConfigurationErrorsIfNecessary(LoggerContext loggerContext, Logger logger) {
+    private void reportConfigurationErrorsIfNecessary(LoggerContext loggerContext) {
         List<Status> statuses = loggerContext.getStatusManager().getCopyOfStatusList();
         StringBuilder errors = new StringBuilder();
         for (Status status : statuses) {

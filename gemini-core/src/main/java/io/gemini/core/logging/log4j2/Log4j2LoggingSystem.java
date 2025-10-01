@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.core.DiagnosticLevel;
-import io.gemini.core.config.ConfigSource;
+import io.gemini.core.config.ConfigView;
 import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.StringUtils;
 
@@ -48,7 +48,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     private static final StatusLogger LOGGER = StatusLogger.getLogger();
 
     private final String configLocation;
-    private final ConfigSourceAdapter configSource;
+    private final ConfigViewAdapter configSource;
     private final DiagnosticLevel diagnosticLevel;
 
     private final boolean simpleInitialization;
@@ -59,11 +59,11 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     private final Level allLogLevel;
 
 
-    Log4j2LoggingSystem(String configLocation, ConfigSource configSource,
+    Log4j2LoggingSystem(String configLocation, ConfigView configView,
             DiagnosticLevel diagnosticLevel) {
         this.diagnosticLevel = diagnosticLevel;
 
-        this.configSource =  new ConfigSourceAdapter(configSource, diagnosticLevel.isDebugEnabled());
+        this.configSource =  new ConfigViewAdapter(configView, diagnosticLevel.isDebugEnabled());
 
 
         if(StringUtils.hasText(configLocation))
@@ -81,8 +81,8 @@ public class Log4j2LoggingSystem implements LoggingSystem {
             this.simpleInitialization = true;
         }
 
-        if(this.configSource.containsProperty(ConfigSourceAdapter.STATUS_LOG_LEVEL_KEY)) {
-            String logLevel = this.configSource.getProperty(ConfigSourceAdapter.STATUS_LOG_LEVEL_KEY).toString().trim();
+        if(this.configSource.containsProperty(ConfigViewAdapter.STATUS_LOG_LEVEL_KEY)) {
+            String logLevel = this.configSource.getProperty(ConfigViewAdapter.STATUS_LOG_LEVEL_KEY).toString().trim();
             this.statusLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
         } else
             this.statusLevel = null;

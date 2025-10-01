@@ -21,7 +21,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import io.gemini.core.DiagnosticLevel;
-import io.gemini.core.config.ConfigSource;
+import io.gemini.core.config.ConfigView;
 import io.gemini.core.logging.log4j2.Log4j2LoggingSystem;
 
 public class LoggingSystemTests {
@@ -30,7 +30,7 @@ public class LoggingSystemTests {
     public void simpleInitialization_withConfigFile() {
         LoggingSystem loggingSystem = new LoggingSystem.Builder()
                 .configLocation("log4j2.xml")
-                .configSource(getConfigSource(true))
+                .configView(getConfigView(true))
                 .diagnosticLevel(DiagnosticLevel.DEBUG)
                 .build()
                 ;
@@ -41,7 +41,7 @@ public class LoggingSystemTests {
     public void simpleInitialization_withoutConfigFile() {
         LoggingSystem loggingSystem = new LoggingSystem.Builder()
                 .configLocation("log4j2-wrong.xml")
-                .configSource(getConfigSource(true))
+                .configView(getConfigView(true))
                 .diagnosticLevel(DiagnosticLevel.DEBUG)
                 .build()
                 ;
@@ -52,7 +52,7 @@ public class LoggingSystemTests {
     public void customInitialization_withConfigFile() {
         LoggingSystem loggingSystem = new LoggingSystem.Builder()
                 .configLocation("log4j2.xml")
-                .configSource(getConfigSource(false))
+                .configView(getConfigView(false))
                 .diagnosticLevel(DiagnosticLevel.DEBUG)
                 .build()
                 ;
@@ -63,18 +63,17 @@ public class LoggingSystemTests {
     public void customInitialization_withoutConfigFile() {
         LoggingSystem loggingSystem = new LoggingSystem.Builder()
                 .configLocation("log4j2-wrong.xml")
-                .configSource(getConfigSource(false))
+                .configView(getConfigView(false))
                 .diagnosticLevel(DiagnosticLevel.DEBUG)
                 .build()
                 ;
         loggingSystem.initialize(this.getClass().getClassLoader());
     }
 
-    private ConfigSource getConfigSource(boolean simpleInitialization) {
+    private ConfigView getConfigView(boolean simpleInitialization) {
         Map<String, Object> map = new HashMap<>();
         map.put(Log4j2LoggingSystem.SIMPLE_INITIALIZATION_KEY, simpleInitialization ? "true" : "false");
 
-        ConfigSource configSource = new ConfigSource.Builder().configSource("", map).build();
-        return configSource;
+        return new ConfigView.Builder().configSource("", map).build();
     }
 }

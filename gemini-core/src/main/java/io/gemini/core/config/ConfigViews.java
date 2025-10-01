@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import io.gemini.core.logging.DelayLoggerFactory;
 import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.OrderedProperties;
 
@@ -36,19 +36,19 @@ import io.gemini.core.util.OrderedProperties;
  */
 public class ConfigViews {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigViews.class);
+    private static final Logger LOGGER = DelayLoggerFactory.getLogger(ConfigViews.class);
 
     private static final String BUILTIN_SETTING_PREFIX = "_";
 
 
-    public static ConfigSource createConfigSource(Map<String, String> launchArgs, Map<String, Object> builtinSettings,
+    public static ConfigView createConfigView(Map<String, String> launchArgs, Map<String, Object> builtinSettings,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
         launchArgs = launchArgs == null ? Collections.emptyMap() : launchArgs;
 
         // built-in settings, can NOT be overrode
         builtinSettings = builtinSettings == null ? new LinkedHashMap<>() : builtinSettings;
 
-        ConfigSource.Builder builder = new ConfigSource.Builder()
+        ConfigView.Builder builder = new ConfigView.Builder()
                 .configSource("BuiltinSettings", builtinSettings)
                 .configSource("LaunchArgs", launchArgs);
 

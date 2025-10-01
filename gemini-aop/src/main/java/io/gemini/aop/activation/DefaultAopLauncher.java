@@ -22,7 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
@@ -37,13 +36,14 @@ import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.DaemonThreadFactory;
-import io.gemini.core.config.ConfigSource;
+import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
+import io.gemini.core.logging.DelayLoggerFactory;
 import io.gemini.core.logging.LoggingSystem;
 
 public class DefaultAopLauncher implements AopLauncher {
 
-    private static final String DIAGNOSTIC_LEVEL_KEY = "aop.launcher.diagnosticStrategy";
+    private static final Logger LOGGER = DelayLoggerFactory.getLogger(DefaultAopLauncher.class);
 
 
     private AopContext aopContext;
@@ -54,6 +54,10 @@ public class DefaultAopLauncher implements AopLauncher {
     public DefaultAopLauncher() {
     }
 
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void start(Instrumentation instrumentation, 
             LauncherConfig launcherConfig,
@@ -73,26 +77,28 @@ public class DefaultAopLauncher implements AopLauncher {
             Map<String, Object> builtinSettings = new LinkedHashMap<>();
             builtinSettings.put("aop.launcher.launchPath", launcherConfig.getLaunchPath());
 
-            ConfigSource configSource = ConfigViews.createConfigSource(
+            ConfigView configView = ConfigViews.createConfigView(
                     launcherConfig.getLaunchArgs(), builtinSettings,
                     aopClassLoader,
                     launcherConfig.getInternalConfigLocation(), 
                     Collections.singletonMap(launcherConfig.getUserDefinedConfigLocation(), "aop-context")
             );
-            DiagnosticLevel diagnosticLevel = this.parseDiagnosticLevel(configSource);
+
+            DiagnosticLevel diagnosticLevel = ConfigViews.getDiagnosticLevel(configView);
 
 
-            // 2.initialize LoggingSystem and create logger instance
-            // !!! do not create logger instance (using default configuration) before configuring LoggingSystem !!!
+            // 2.initialize LoggingSystem
             long startedAt = System.nanoTime();
-            Logger logger = createLogger(launcherConfig, aopClassLoader, configSource, diagnosticLevel);
+            new LoggingSystem.Builder().configView(configView).diagnosticLevel(diagnosticLevel)
+                    .build()
+                    .initialize(aopClassLoader);
             long loggerCreationTime = System.nanoTime() - startedAt;
             long launcherSetupTime = System.nanoTime() - launcherConfig.getLaunchedAt();
 
 
             // 3.create helper classes
             this.aopContext = new AopContext(launcherConfig, aopClassLoader, 
-                    builtinSettings, configSource, diagnosticLevel);
+                    builtinSettings, configView, diagnosticLevel);
 
             bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
             bootstraperMetrics.setLauncherStartedAt(launcherConfig.getLaunchedAt());
@@ -119,7 +125,7 @@ public class DefaultAopLauncher implements AopLauncher {
                         try {
                             DefaultAopLauncher.this.stop();
 
-                            logger.info("Stopped AopLauncher.");
+                            LOGGER.info("Stopped AopLauncher.");
                         } catch (Exception e) {/* ignored */}
                     } );
             Runtime.getRuntime().addShutdownHook(shutdownHook);
@@ -130,33 +136,6 @@ public class DefaultAopLauncher implements AopLauncher {
 
             Thread.currentThread().setContextClassLoader(existingClassLoader);
         }
-    }
-
-    private DiagnosticLevel parseDiagnosticLevel(ConfigSource configSource) {
-        if(configSource.containsKey(DIAGNOSTIC_LEVEL_KEY)) {
-            String level = configSource.getValue(DIAGNOSTIC_LEVEL_KEY)
-                    .toString()
-                    .trim().toUpperCase();
-            try {
-                return DiagnosticLevel.valueOf(level);
-            } catch(Exception e) {
-                System.err.println("Ignored illegal setting '" + level + "' and disabled diagnostic mode.\n");
-            }
-        }
-
-        return DiagnosticLevel.DISABLED;
-    }
-
-    private Logger createLogger(LauncherConfig launcherConfig, AopClassLoader aopClassLoader, ConfigSource configSource,
-            DiagnosticLevel diagnosticLevel) {
-        LoggingSystem loggingSystem = new LoggingSystem.Builder()
-                .configSource(configSource)
-                .diagnosticLevel(diagnosticLevel)
-                .build()
-                ;
-        loggingSystem.initialize(aopClassLoader);
-
-        return LoggerFactory.getLogger(getClass());
     }
 
     private void configureClassLoader(Instrumentation instrumentation, 

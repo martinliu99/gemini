@@ -93,7 +93,7 @@ public interface AspectAppScanner {
 
         private void scanPath(Stream<Path> pathStream, List<Path> resourcePaths) {
             pathStream.filter( Files::isRegularFile )
-            .sorted( Comparator.comparing(p -> p.getFileName().toString()) )
+            .sorted( Comparator.comparing(p -> p.getFileName().toString()) )        // sort by filename
             .collect( Collectors.toCollection(() -> resourcePaths) );
         }
     }

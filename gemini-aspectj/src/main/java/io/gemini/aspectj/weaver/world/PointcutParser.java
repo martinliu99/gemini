@@ -38,6 +38,7 @@ import org.aspectj.weaver.tools.UnsupportedPointcutPrimitiveException;
 import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
+import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 
 
@@ -118,7 +119,7 @@ public class PointcutParser {
      * @throws IllegalArgumentException if the expression is not a well-formed pointcut expression
      */
     public Pointcut parsePointcut(String pointcutExpression, 
-            TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+            TypeDescription pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
         try {
              Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
 
@@ -134,7 +135,7 @@ public class PointcutParser {
     }
 
     protected Pointcut resolvePointcutExpression(String pointcutExpression, 
-            TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+            TypeDescription pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
         try {
             pointcutExpression = ExprParser.replaceBooleanOperators(pointcutExpression);
             PatternParser parser = new PatternParserV2(pointcutExpression);
@@ -153,10 +154,10 @@ public class PointcutParser {
     }
 
     protected Pointcut concretizePointcutExpression(Pointcut pointcut, 
-            TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+            TypeDefinition pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
         ResolvedType declaringTypeForResolution = null;
         if (pointcutDeclarationScope != null) {
-            declaringTypeForResolution = typeWorld.resolve(pointcutDeclarationScope.getName());
+            declaringTypeForResolution = typeWorld.resolve(pointcutDeclarationScope.getTypeName());
         } else {
             declaringTypeForResolution = typeWorld.getWorld().resolve(ResolvedType.OBJECT);
         }

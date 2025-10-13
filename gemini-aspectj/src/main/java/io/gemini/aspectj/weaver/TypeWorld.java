@@ -18,12 +18,14 @@ package io.gemini.aspectj.weaver;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.aspectj.weaver.ResolvedMember;
 import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.Shadow;
 import org.aspectj.weaver.World;
 
 import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import net.bytebuddy.description.ByteCodeElement.Member;
+import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.pool.TypePool;
 
@@ -44,6 +46,10 @@ public interface TypeWorld {
 
     ResolvedType resolve(TypeDescription typeDescription);
 
+    TypeDescription describeType(String typeName);
+
+
+    ResolvedMember resolve(Member member);
 
     Shadow makeShadow(Member member);
 
@@ -96,6 +102,20 @@ public interface TypeWorld {
             return getDelegate().resolve(typeDescription);
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        public TypeDescription describeType(String typeName) {
+            return getDelegate().describeType(typeName);
+        }
+
+
+        /**
+         * {@inheritDoc}
+         */
+        public ResolvedMember resolve(Member member) {
+            return getDelegate().resolve(member);
+        }
 
         /**
          *  {@inheritDoc} 
@@ -139,6 +159,7 @@ public interface TypeWorld {
             return resolvedType != null ? resolvedType : new ReferenceTypes.LazyFacade(typeName, this.getDelegate());
         }
     }
+
 
     public static class CacheResolutionFacade extends WithDelegation {
 
@@ -184,10 +205,10 @@ public interface TypeWorld {
         }
 
 
-        public void releaseCache(TypeDescription typeDescription) {
-            if(typeDescription == null) return;
+        public void releaseCache(TypeDefinition typeDefinition) {
+            if(typeDefinition == null) return;
 
-            resolutionCache.remove(typeDescription);
+            resolutionCache.remove(typeDefinition);
         }
 
 

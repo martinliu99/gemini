@@ -61,7 +61,7 @@ public class AspectTypePool extends TypePool.Default {
         return typePool.describe(name);
     }
 
-    public Resolution describeAspect(String name) {
+    public Resolution describeAspectType(String name) {
         return super.describe(name);
     }
 

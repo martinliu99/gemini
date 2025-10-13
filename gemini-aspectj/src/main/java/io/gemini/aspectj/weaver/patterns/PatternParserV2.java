@@ -99,8 +99,9 @@ public class PatternParserV2 extends PatternParser {
             if(exactTypePattern.getType() instanceof ReferenceType == false)
                 return exactTypePattern;
 
+            ReferenceType type = (ReferenceType) exactTypePattern.getType();
             return new ExactTypePattern(
-                    new ReferenceTypes.Facade( (ReferenceType) exactTypePattern.getType(), scope.getWorld() ),
+                    new ReferenceTypes.Facade( type, type.getWorld() ),
                     exactTypePattern.isIncludeSubtypes(), 
                     exactTypePattern.isVarArgs(), 
                     exactTypePattern.getTypeParameters());

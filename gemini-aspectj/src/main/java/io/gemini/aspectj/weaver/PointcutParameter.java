@@ -15,18 +15,19 @@
  */
 package io.gemini.aspectj.weaver;
 
+import net.bytebuddy.description.type.TypeDescription.Generic;
 
 public interface PointcutParameter {
 
     int INVALID_ARGS_INDEX = -1;
 
 
-    ParamType getParamType();
+    ParamCategory getParamCategory();
 
     int getArgsIndex();
 
 
-    enum ParamType {
+    enum ParamCategory {
 
         JOINPOINT_PARAM,
         MUTABLE_JOINPOINT_PARAM,
@@ -57,24 +58,31 @@ public interface PointcutParameter {
          * The name of this parameter
          */
         String getParamName();
+
+        Generic getParamType();
     }
 
 
     class Default implements NamedPointcutParameter {
 
         private final String paramName;
-        private final ParamType paramType;
+        private final Generic paramType;
+        private final ParamCategory paramCategory;
         private final int argsIndex;
 
-        public Default(String paramName, ParamType paramType) {
+        public Default(String paramName, Generic paramType, 
+                ParamCategory paramCategory) {
             this.paramName = paramName;
             this.paramType = paramType;
+            this.paramCategory = paramCategory;
             this.argsIndex = INVALID_ARGS_INDEX;
         }
 
-        public Default(String paramName, PointcutParameter pointcutParameter) {
+        public Default(String paramName, Generic paramType,
+                PointcutParameter pointcutParameter) {
             this.paramName = paramName;
-            this.paramType = pointcutParameter.getParamType();
+            this.paramType = paramType;
+            this.paramCategory = pointcutParameter.getParamCategory();
             this.argsIndex = pointcutParameter.getArgsIndex();
         }
 
@@ -87,11 +95,19 @@ public interface PointcutParameter {
         }
 
         /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Generic getParamType() {
+            return paramType;
+        }
+
+        /**
          *  {@inheritDoc} 
          */
         @Override
-        public ParamType getParamType() {
-            return this.paramType;
+        public ParamCategory getParamCategory() {
+            return this.paramCategory;
         }
 
         /**

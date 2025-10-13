@@ -36,7 +36,8 @@ public class AspectTypeWorld extends BytebuddyWorld {
     private final TypeWorldFactory typeWordlFactory;
 
 
-    public AspectTypeWorld(AspectTypePool typePool, PlaceholderHelper placeholderHelper, AspectClassLoader aspectClassLoader, TypeWorldFactory typeWordlFactory) {
+    public AspectTypeWorld(AspectTypePool typePool, PlaceholderHelper placeholderHelper, 
+            AspectClassLoader aspectClassLoader, TypeWorldFactory typeWordlFactory) {
         super(typePool, placeholderHelper);
 
         this.aspectClassLoader = aspectClassLoader;
@@ -48,15 +49,15 @@ public class AspectTypeWorld extends BytebuddyWorld {
      * {@inheritDoc}
      */
     @Override
-    public ResolvedType resolve(UnresolvedType ty, boolean allowMissing) {
+    public ResolvedType resolve(UnresolvedType unresolvedType, boolean allowMissing) {
         try {
-            ResolvedType resolvedType = super.resolve(ty, allowMissing);
+            ResolvedType resolvedType = super.resolve(unresolvedType, allowMissing);
             if(resolvedType != null && resolvedType.isMissing() == false)
                 return resolvedType;
         } catch(Exception e) {}
 
         TypeWorld joinpointTypeWorld = getJoinpointTypeWorld();
-        return joinpointTypeWorld == null ? null : joinpointTypeWorld.getWorld().resolve(ty, allowMissing);
+        return joinpointTypeWorld == null ? null : joinpointTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
     }
 
     private TypeWorld getJoinpointTypeWorld() {
@@ -64,10 +65,13 @@ public class AspectTypeWorld extends BytebuddyWorld {
         return typeWordlFactory.createTypeWorld(joinpointCL, null);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    protected TypeDescription describeType(String typeName) {
+    public TypeDescription describeType(String typeName) {
         if("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
-        return ((AspectTypePool) typePool).describeAspect(typeName).resolve();
+        return ((AspectTypePool) typePool).describeAspectType(typeName).resolve();
     }
 }

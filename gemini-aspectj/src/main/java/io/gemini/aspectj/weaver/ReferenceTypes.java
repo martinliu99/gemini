@@ -27,7 +27,8 @@ import net.bytebuddy.description.type.TypeDescription;
 public interface ReferenceTypes {
 
     abstract class WithDelegation extends ReferenceType {
-        private ReferenceType referenceType;
+
+        private ReferenceType delegateReferenceType;
 
 
         public WithDelegation(String signature, World world) {
@@ -39,24 +40,37 @@ public interface ReferenceTypes {
             return false;
         }
 
+        /** {@inheritDoc} 
+         */
+        public ResolvedType resolve(World world) {
+            return this;
+        }
+
         @Override
         public ReferenceTypeDelegate getDelegate() {
             if(super.getDelegate() == null) {
                 // initialize delegate with lazily resolved referenceType
-                super.setDelegate(doResolveReferenceType().getDelegate());
+                super.setDelegate(getDelegateReferenceType().getDelegate());
             }
 
             return super.getDelegate();
         }
 
-        ReferenceType getResolvedType() {
-            if(referenceType == null) {
-                referenceType = this.doResolveReferenceType();
+
+        private ReferenceType getDelegateReferenceType() {
+            if(delegateReferenceType == null) {
+                delegateReferenceType = this.doResolveDelegateReferenceType();
             }
-            return referenceType;
+            return delegateReferenceType;
         }
 
-        protected abstract ReferenceType doResolveReferenceType();
+        protected void setDelegateReferenceType(ReferenceType delegateReferenceType) {
+            this.delegateReferenceType = delegateReferenceType;
+        }
+
+        protected ReferenceType doResolveDelegateReferenceType() {
+            return null;
+        }
 
 
         @Override
@@ -75,17 +89,15 @@ public interface ReferenceTypes {
 
                 if(other instanceof WithDelegation)
                     // fetch delegatee
-                    other = ((WithDelegation) other).getResolvedType();
+                    other = ((WithDelegation) other).getDelegateReferenceType();
             }
 
-            return this.getResolvedType().equals(other);
+            return this.getDelegateReferenceType().equals(other);
         }
     }
 
 
     class Facade extends WithDelegation {
-
-        private final ReferenceType referenceType;
 
         /**
          * @param signature
@@ -94,15 +106,7 @@ public interface ReferenceTypes {
         public Facade(ReferenceType referenceType, World world) {
             super(referenceType.getSignature(), world);
 
-            this.referenceType = referenceType;
-        }
-
-        /** 
-         * {@inheritDoc}
-         */
-        @Override
-        protected ReferenceType doResolveReferenceType() {
-            return referenceType;
+            setDelegateReferenceType(referenceType);
         }
     }
 
@@ -138,7 +142,7 @@ public interface ReferenceTypes {
          * {@inheritDoc}
          */
         @Override
-        protected ReferenceType doResolveReferenceType() {
+        protected ReferenceType doResolveDelegateReferenceType() {
             if(typeDescription != null)
                 return (ReferenceType) typeWorld.resolve(typeDescription);
             else

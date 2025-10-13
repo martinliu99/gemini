@@ -27,26 +27,26 @@ import io.gemini.aspectj.weaver.PointcutParameter;
  */
 class InternalVar extends Var implements PointcutParameter {
 
-    private final ParamType bindingType;
+    private final ParamCategory paramCategory;
     private final int argsIndex;
 
 
-    public InternalVar(ResolvedType type, ParamType paramType) {
-        this(type, paramType, INVALID_ARGS_INDEX);
+    public InternalVar(ResolvedType type, ParamCategory paramCategory) {
+        this(type, paramCategory, INVALID_ARGS_INDEX);
     }
 
-    public InternalVar(ResolvedType type, ParamType paramType, int argsIndex) {
+    public InternalVar(ResolvedType type, ParamCategory paramCategory, int argsIndex) {
         super(type);
 
-        this.bindingType = paramType;
+        this.paramCategory = paramCategory;
         this.argsIndex = argsIndex;
     }
 
     /**
      * {@inheritDoc}
      */
-    public ParamType getParamType() {
-        return bindingType;
+    public ParamCategory getParamCategory() {
+        return paramCategory;
     }
 
     /**

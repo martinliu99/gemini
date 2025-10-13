@@ -53,6 +53,7 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.method.ParameterList;
+import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.matcher.ElementMatchers;
@@ -342,7 +343,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         }
 
         // phase 2, now go back round and resolve in-place all of the pointcuts
-        List<Map<String, TypeDescription>> formalParameterList = new ArrayList<>(pointcutMethods.size());
+        List<Map<String, ? extends TypeDefinition>> formalParameterList = new ArrayList<>(pointcutMethods.size());
         for(int i = 0; i < pointcutMethods.size(); i++) {
             PointcutMethod pointcutMethod = pointcutMethods.get(i);
 
@@ -358,13 +359,14 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             }
 
             // parse Pointcut expression
-            Map<String, TypeDescription> formalParameters = new LinkedHashMap<String, TypeDescription>(parameterTypes.length);
+            Map<String, TypeDefinition> formalParameters = new LinkedHashMap<>(parameterTypes.length);
             formalParameterList.add(formalParameters);
             for(int j = 0; j < parameterNames.length; j++) {
                 formalParameters.put(parameterNames[j], parameterTypes[j]);
             }
 
-            Pointcut pointcut = pointcutParser.resolvePointcutExpression(pointcutMethod.getPointcutExpression(), this.typeDescription, formalParameters);
+            Pointcut pointcut = pointcutParser.resolvePointcutExpression(pointcutMethod.getPointcutExpression(), 
+                    this.typeDescription, formalParameters);
             ResolvedPointcutDefinition resolvedMember = pointcuts[i];
             resolvedMember.setParameterNames(parameterNames);
             resolvedMember.setPointcut(pointcut);

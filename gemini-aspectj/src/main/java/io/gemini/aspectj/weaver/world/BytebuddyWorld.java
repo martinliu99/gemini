@@ -110,7 +110,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
         if(typeDescription == null)
             return null;
 
-        String typeName = typeDescription.getName();
+        String typeName = typeDescription.getTypeName();
         if (typeDescription.isArray()) {
             UnresolvedType ut = UnresolvedType.forSignature(typeName.replace('.', '/'));
             return this.resolve(ut, false);
@@ -133,12 +133,23 @@ public class BytebuddyWorld extends World implements TypeWorld {
         }
     }
 
-    protected TypeDescription describeType(String typeName) {
+
+    /**
+     * {@inheritDoc}
+     */
+    public TypeDescription describeType(String typeName) {
         if("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
         return this.typePool.describe(typeName).resolve();
     }
 
+
+    /**
+     * {@inheritDoc}
+     */
+    public ResolvedMember resolve(Member member) {
+        return doResolve(member);
+    }
 
     /** 
      * {@inheritDoc}

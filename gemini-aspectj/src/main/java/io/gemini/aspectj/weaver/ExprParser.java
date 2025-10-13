@@ -20,6 +20,7 @@ package io.gemini.aspectj.weaver;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -32,6 +33,7 @@ import org.aspectj.weaver.ISourceContext;
 import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.UnresolvedType;
 import org.aspectj.weaver.patterns.Bindings;
+import org.aspectj.weaver.patterns.ExactTypePattern;
 import org.aspectj.weaver.patterns.FormalBinding;
 import org.aspectj.weaver.patterns.IScope;
 import org.aspectj.weaver.patterns.ISignaturePattern;
@@ -50,7 +52,10 @@ import io.gemini.aspectj.weaver.world.ElementExpr.TypeExpr;
 import io.gemini.aspectj.weaver.world.ElementExpr.TypeNameExpr;
 import io.gemini.aspectj.weaver.world.PointcutParser;
 import io.gemini.core.util.Assert;
+import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
@@ -155,14 +160,16 @@ public enum ExprParser {
     }
 
     public Pointcut parsePointcutExpr(TypeWorld typeWorld, 
-            String pointcutExpression, TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+            String pointcutExpression, TypeDescription pointcutDeclarationScope, 
+            Map<String, ? extends TypeDefinition> pointcutParameters) {
         pointcutExpression = validateExpression(pointcutExpression);
 
         return new PointcutParser(typeWorld).parsePointcut(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
     }
 
     public Pointcut parsePointcutExpr(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds, 
-            String pointcutExpression, TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+            String pointcutExpression, TypeDescription pointcutDeclarationScope, 
+            Map<String, ? extends TypeDefinition> pointcutParameters) {
         pointcutExpression = validateExpression(pointcutExpression);
 
         return new PointcutParser(typeWorld, supportedPointcutKinds).parsePointcut(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
@@ -231,6 +238,34 @@ public enum ExprParser {
     }
 
 
+    public MethodDescription findMethod(TypeWorld typeWorld, String expression) {
+        try {
+            expression = replaceBooleanOperators(expression);
+            ISignaturePattern signaturePattern = new PatternParserV2(expression).parseMethodOrConstructorSignaturePattern();
+
+            IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
+            Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
+            signaturePattern = signaturePattern.resolveBindings(resolutionScope, bindingTable);
+
+            List<ExactTypePattern> exactTypePatterns = signaturePattern.getExactDeclaringTypes();
+            Assert.isTrue(exactTypePatterns != null && exactTypePatterns.size() == 1, 
+                    "Only one signature should be defined in " + expression);
+
+            ResolvedType resolvedType = exactTypePatterns.get(0).getResolvedExactType(typeWorld.getWorld());
+            TypeDescription typeDescription = typeWorld.describeType(resolvedType.getName());
+
+            for(MethodDescription methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
+                if(signaturePattern.matches(typeWorld.resolve(methodDescription), typeWorld.getWorld(), false))
+                    return methodDescription;
+            }
+            return null;
+        } catch (Exception e) {
+            ExprParser.handleException(expression, e);
+            return null;
+        }
+    }
+
+
     /**
      * If a pointcut expression has been specified in XML, the user cannot
      * write {@code and} as "&&" (though &amp;&amp; will work).
@@ -244,14 +279,15 @@ public enum ExprParser {
         return result;
     }
 
-    public static IScope buildResolutionScope(TypeWorld typeWorld, TypeDescription pointcutDeclarationScope, Map<String, TypeDescription> pointcutParameters) {
+    public static IScope buildResolutionScope(TypeWorld typeWorld, 
+            TypeDescription pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
         if (pointcutParameters == null) {
             pointcutParameters = Collections.emptyMap();
         }
 
         FormalBinding[] formalBindings = new FormalBinding[pointcutParameters.size()];
         int i = 0;
-        for(Entry<String, TypeDescription> entry : pointcutParameters.entrySet()) {
+        for(Entry<String, ? extends TypeDefinition> entry : pointcutParameters.entrySet()) {
             formalBindings[i] = new FormalBinding.ImplicitFormalBinding(toUnresolvedType(entry.getValue()), entry.getKey(), i++);
         }
 
@@ -280,17 +316,17 @@ public enum ExprParser {
     }
 
 
-    private static UnresolvedType toUnresolvedType(TypeDescription clazz) {
-        if (clazz.isArray()) {
-            return UnresolvedType.forSignature(clazz.getName().replace('.', '/'));
+    private static UnresolvedType toUnresolvedType(TypeDefinition typeDefinition) {
+        if (typeDefinition.isArray()) {
+            return UnresolvedType.forSignature(typeDefinition.getTypeName().replace('.', '/'));
         } else {
-            return UnresolvedType.forName(clazz.getName());
+            return UnresolvedType.forName(typeDefinition.getTypeName());
         }
     }
 
     public static void handleException(String expression, Exception exp) {
         if(exp instanceof ParserException) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(expression, (ParserException) exp));
+            throw new IllegalArgumentException(buildUserMessageFromParserException(expression, (ParserException) exp), exp);
         } else if (exp instanceof TypeWorld.TypeWorldException && !(exp instanceof RuntimeException) ) {
             throw new IllegalArgumentException(exp.getMessage(), exp);
         } else {

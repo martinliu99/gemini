@@ -17,27 +17,21 @@ package io.gemini.aop.factory.support;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
-import java.lang.annotation.Annotation;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
-import org.aspectj.lang.annotation.After;
-import org.aspectj.lang.annotation.AfterReturning;
-import org.aspectj.lang.annotation.AfterThrowing;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.factory.AdvisorContext;
-import io.gemini.aop.factory.support.AdviceMethodSpec.AspectJMethodSpec;
+import io.gemini.aop.factory.support.AspectJAdvisorSpec.AdviceCategory;
+import io.gemini.aop.matcher.AdviceMethodMatcher;
 import io.gemini.api.aop.Advice;
 import io.gemini.aspectj.weaver.PointcutParameter.NamedPointcutParameter;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
@@ -47,7 +41,6 @@ import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.field.FieldList;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.MethodList;
-import net.bytebuddy.description.method.ParameterDescription.InDefinedShape;
 import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
@@ -78,14 +71,6 @@ import net.bytebuddy.pool.TypePool;
  */
 interface AdviceClassMaker {
 
-    List<Class<? extends Annotation>> ADVICE_ANNOTATIONS = Arrays.asList(
-            Before.class, After.class, 
-            AfterReturning.class, AfterThrowing.class, 
-            Around.class);
-
-
-    AspectJMethodSpec getAspectJMethodSpec();
-
     Class<? extends Advice> make(AdvisorContext advisorContext);
 
 
@@ -93,31 +78,19 @@ interface AdviceClassMaker {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(AdvisorRepository.class);
 
-        private final String adviceClassName;
-        private final AspectJMethodSpec aspectJMethodSpec;
+
+        private final AspectJAdvisorSpec aspectJAdvisorSpec;
+        private final AdviceMethodMatcher adviceMethodMatcher;
 
         private ConcurrentMap<ClassLoader, WeakReference<Class<? extends Advice>>> adviceClassRefMap;
         private DynamicType.Unloaded<? extends Advice> adviceClassUnloaded;
 
 
-        public ByteBuddyMaker(String adviceClassName, AspectJMethodSpec aspectJMethodSpec) {
-            this.adviceClassName = adviceClassName;
-            this.aspectJMethodSpec = aspectJMethodSpec;
+        public ByteBuddyMaker(AspectJAdvisorSpec aspectJAdvisorSpec, AdviceMethodMatcher adviceMethodMatcher) {
+            this.aspectJAdvisorSpec = aspectJAdvisorSpec;
+            this.adviceMethodMatcher = adviceMethodMatcher;
 
             this.adviceClassRefMap = new ConcurrentReferenceHashMap<>();
-        }
-
-
-        public String getAdviceClassName() {
-            return adviceClassName;
-        }
-
-        /** 
-         * {@inheritDoc}
-         */
-        @Override
-        public AspectJMethodSpec getAspectJMethodSpec() {
-            return this.aspectJMethodSpec;
         }
 
         /**
@@ -139,7 +112,7 @@ interface AdviceClassMaker {
                                 .load(cacheKey, new ClassLoadingStrategy.ForUnsafeInjection())
                                 .getLoaded();
                         LOGGER.info("Took '{}' seconds to inject advisorClass '{}' into classloader '{}'.", 
-                                (System.nanoTime() - startedAt) / 1e9, adviceClassName, cacheKey);
+                                (System.nanoTime() - startedAt) / 1e9, aspectJAdvisorSpec.getAdviceClassName(), cacheKey);
                         return new WeakReference<Class<? extends Advice>>(adviceClass);
                     }
             );
@@ -150,7 +123,7 @@ interface AdviceClassMaker {
                 return adviceClass;
 
             try {
-                adviceClass = (Class<? extends Advice>) cacheKey.loadClass(adviceClassName);
+                adviceClass = (Class<? extends Advice>) cacheKey.loadClass(aspectJAdvisorSpec.getAdviceClassName());
                 adviceClassRefMap.putIfAbsent(cacheKey, new WeakReference<Class<? extends Advice>>(adviceClass));
             } catch(Throwable t) { /* ignored */ }
 
@@ -165,8 +138,8 @@ interface AdviceClassMaker {
         INSTANCE
         ;
 
-        private static final TypeDescription JOINPOINT_TYPE = AspectJMethodSpec.JOINPOINT_TYPE;
-        private static final TypeDescription MUTABLE_JOINPOINT_TYPE = AspectJMethodSpec.MUTABLE_JOINPOINT_TYPE;
+        private static final TypeDescription JOINPOINT_TYPE = AspectJAdvisorSpec.JOINPOINT_TYPE;
+        private static final TypeDescription MUTABLE_JOINPOINT_TYPE = AspectJAdvisorSpec.MUTABLE_JOINPOINT_TYPE;
 
         private static final TypeDescription AROUND_ADVICE_TYPE = TypeDescription.ForLoadedType.of(Advice.Around.class);
         private static final String AROUND_ADVICE_METHOD_NAME = AROUND_ADVICE_TYPE.getSimpleName().toLowerCase();
@@ -191,18 +164,19 @@ interface AdviceClassMaker {
 
         @SuppressWarnings("unchecked")
         public DynamicType.Unloaded<? extends Advice> make(AdvisorContext advisorContext, ByteBuddyMaker classMaker) {
-            AspectJMethodSpec aspectJMethodSpec = classMaker.aspectJMethodSpec;
+            AspectJAdvisorSpec aspectJAdvisorSpec = classMaker.aspectJAdvisorSpec;
+            AdviceCategory adviceCategory = aspectJAdvisorSpec.getAdviceCategory();
 
             // 1.define class
             // prepare parent interfaces
             List<TypeDefinition> implementTypeDefinitions = new ArrayList<>(2);
-            Generic parameterizedReturningType = aspectJMethodSpec.getParameterizedReturningType();
-            Generic parameterizedThrowingType = aspectJMethodSpec.getParameterizedThrowingType();
+            Generic parameterizedReturningType = classMaker.adviceMethodMatcher.getParameterizedReturningType();
+            Generic parameterizedThrowingType = classMaker.adviceMethodMatcher.getParameterizedThrowingType();
             if(parameterizedReturningType != null) {
-                if(aspectJMethodSpec.isAround() == true) {
+                if(adviceCategory.isAround() == true) {
                     implementTypeDefinitions.add(
                             TypeDescription.Generic.Builder.parameterizedType(AROUND_ADVICE_TYPE, parameterizedReturningType, parameterizedThrowingType).build() );
-                } else if(aspectJMethodSpec.isBefore() == true) {
+                } else if(adviceCategory.isBefore() == true) {
                     implementTypeDefinitions.add(
                             TypeDescription.Generic.Builder.parameterizedType(BEFORE_ADVICE_TYPE, parameterizedReturningType, parameterizedThrowingType).build() );
                 } else {
@@ -210,17 +184,17 @@ interface AdviceClassMaker {
                             TypeDescription.Generic.Builder.parameterizedType(AFTER_ADVICE_TYPE, parameterizedReturningType, parameterizedThrowingType).build() );
                 }
             } else {
-                if(aspectJMethodSpec.isAround() == true) {
+                if(adviceCategory.isAround() == true) {
                     implementTypeDefinitions.add(AROUND_ADVICE_TYPE);
-                } else if(aspectJMethodSpec.isBefore() == true) {
+                } else if(adviceCategory.isBefore() == true) {
                     implementTypeDefinitions.add(BEFORE_ADVICE_TYPE);
                 } else {
                     implementTypeDefinitions.add(AFTER_ADVICE_TYPE);
                 }
             }
 
-            String adviceClassName = classMaker.adviceClassName;
-            TypeDescription adviceTypeDescription = aspectJMethodSpec.getAdviceType();
+            String adviceClassName = aspectJAdvisorSpec.getAdviceClassName();
+            TypeDescription adviceTypeDescription = aspectJAdvisorSpec.getAspectJType();
 
             DynamicType.Builder<?> builder = new ByteBuddy()
                     .subclass(Object.class, ConstructorStrategy.Default.NO_CONSTRUCTORS)
@@ -262,9 +236,9 @@ interface AdviceClassMaker {
 
 
             // 4.define advice method
-            String methodName = aspectJMethodSpec.isAround() 
+            String methodName = adviceCategory.isAround() 
                     ? AROUND_ADVICE_METHOD_NAME 
-                    : (aspectJMethodSpec.isBefore() ? BEFORE_ADVICE_METHOD_NAME : AFTER_ADVICE_METHOD_NAME);
+                    : (adviceCategory.isBefore() ? BEFORE_ADVICE_METHOD_NAME : AFTER_ADVICE_METHOD_NAME);
             builder = builder
                     .defineMethod(methodName, void.class, Modifier.PUBLIC)
                     .withParameter(
@@ -274,7 +248,7 @@ interface AdviceClassMaker {
                             "joinpoint"
                     )
             .throwing(Throwable.class)
-            .intercept( new AspectJAdviceMethodImplementation(aspectJMethodSpec) )
+            .intercept( new AspectJAdviceMethodImplementation(aspectJAdvisorSpec) )
             ;
 
             return (DynamicType.Unloaded<? extends Advice>) builder.make();
@@ -297,16 +271,14 @@ interface AdviceClassMaker {
             private static final MethodDescription.InDefinedShape GET_THROWING_METHOD = MUTABLE_JOINPOINT_TYPE.getDeclaredMethods().filter(named("getThrowing")).getOnly();
 
 
-            private final MethodDescription methodDescription;
-            private final AspectJMethodSpec aspectJMethodSpec;
+            private final AspectJAdvisorSpec aspectJAdvisorSpec;
 
 
             /**
-             * @param aspectJMethodSpec
+             * @param aspectJAdvisorSpec
              */
-            public AspectJAdviceMethodImplementation(AspectJMethodSpec aspectJMethodSpec) {
-                this.aspectJMethodSpec = aspectJMethodSpec;
-                this.methodDescription = aspectJMethodSpec.getAdviceMethod();
+            public AspectJAdviceMethodImplementation(AspectJAdvisorSpec aspectJAdvisorSpec) {
+                this.aspectJAdvisorSpec = aspectJAdvisorSpec;
             }
 
             @Override
@@ -322,21 +294,25 @@ interface AdviceClassMaker {
             @Override
             public Size apply(MethodVisitor methodVisitor, Context implementationContext, MethodDescription instrumentedMethod) {
                 TypeDescription instrumentedType = instrumentedMethod.getDeclaringType().asErasure();
+                AdviceCategory adviceCategory = aspectJAdvisorSpec.getAdviceCategory();
+                MethodDescription aspectJMethod = aspectJAdvisorSpec.getAspectJMethod();
+                Map<String, NamedPointcutParameter> namedPointcutParameters = aspectJAdvisorSpec.getNamedPointcutParameters();
+
                 int localVariableSize = instrumentedMethod.getStackSize();
                 int operandsStackSize = 0;
 
                 // 1.decide AfterReturning or AfterThrowing Advice invocation
                 final Label nullCheck = new Label();
-                if(aspectJMethodSpec.isAfterReturning() == true || aspectJMethodSpec.isAfterThrowing() == true) {
+                if(adviceCategory.isAfterReturning() == true || adviceCategory.isAfterThrowing() == true) {
                     methodVisitor.visitVarInsn(Opcodes.ALOAD, PARAM_INDEX1_MUTABLE_JOINPOINT);
                     methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, MUTABLE_JOINPOINT_TYPE.getInternalName(), 
                             GET_THROWING_METHOD.getInternalName(), GET_THROWING_METHOD.getDescriptor(), true);
 
                     // if(throwing == null) invoke AfterReturning Advice
-                    if(aspectJMethodSpec.isAfterReturning() == true)
+                    if(adviceCategory.isAfterReturning() == true)
                         methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, nullCheck);
                     // if(throwing != null) invoke AfterThrowing Advice
-                    if(aspectJMethodSpec.isAfterThrowing() == true)
+                    if(adviceCategory.isAfterThrowing() == true)
                         methodVisitor.visitJumpInsn(Opcodes.IFNULL, nullCheck);
                 }
 
@@ -344,7 +320,7 @@ interface AdviceClassMaker {
                 // 2.declare and assign argument local variable
                 // Object[] arguments = joinpoint.getArguments()
                 int argumentsVariableOffset = -1;
-                if(aspectJMethodSpec.getPointcutParameterNames().size() > 0) {
+                if(namedPointcutParameters.size() > 0) {
                     methodVisitor.visitVarInsn(Opcodes.ALOAD, PARAM_INDEX1_MUTABLE_JOINPOINT);
                     methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, JOINPOINT_TYPE.getInternalName(), 
                             GET_ARGUMENTS_METHOD.getInternalName(), GET_ARGUMENTS_METHOD.getDescriptor(), true);
@@ -357,7 +333,7 @@ interface AdviceClassMaker {
                 // 3.invoke AspectJAdvice method
                 // invoke delegatee.method(joinpoint, ...)
                 // 3.1.push target field for non-static method
-                if(methodDescription.isStatic() == false) {
+                if(aspectJMethod.isStatic() == false) {
                     methodVisitor.visitVarInsn(Opcodes.ALOAD, PARAM_INDEX0_THIS_OBJECT);
 
                     FieldDescription.InDefinedShape targetField = instrumentedType.getDeclaredFields().filter(named(TARGET_FILED)).getOnly();
@@ -368,17 +344,14 @@ interface AdviceClassMaker {
                 }
 
                 // 3.2.push arguments based on binder type
-                Map<String, InDefinedShape> parameterDescriptionMap = aspectJMethodSpec.getParameterMap();
                 int paramIndex = 0;
-                for(Entry<String, NamedPointcutParameter> entry : aspectJMethodSpec.getPointcutParameters().entrySet()) {
-                    String parameterName = entry.getKey();
-                    TypeDescription parameterType = parameterDescriptionMap.get(parameterName).getType().asErasure();
-                    Generic parameterGeneric = parameterDescriptionMap.get(parameterName).getType();
+                for(Entry<String, NamedPointcutParameter> entry : namedPointcutParameters.entrySet()) {
                     NamedPointcutParameter pointcutParameter = entry.getValue();
+                    TypeDescription parameterType = pointcutParameter.getParamType().asErasure();
 
                     paramIndex++;
                     operandsStackSize++;
-                    switch(pointcutParameter.getParamType()) {
+                    switch(pointcutParameter.getParamCategory()) {
                         case JOINPOINT_PARAM:
                         case MUTABLE_JOINPOINT_PARAM:
                         case PROCEDDING_JOINPOINT_PARAM: {
@@ -396,15 +369,15 @@ interface AdviceClassMaker {
                             break;
                         }
                         case RETURNING_ANNOTATION: {
-                            if(aspectJMethodSpec.isVoidReturningOfTargetMethod()) {
-                                Assigner.DEFAULT.assign(VOID.asGenericType(), parameterGeneric, Typing.DYNAMIC).apply(methodVisitor, implementationContext);
+                            if(aspectJAdvisorSpec.isVoidReturningOfTargetMethod()) {
+                                Assigner.DEFAULT.assign(VOID.asGenericType(), parameterType.asGenericType(), Typing.DYNAMIC).apply(methodVisitor, implementationContext);
                             } else {
                                 methodVisitor.visitVarInsn(Opcodes.ALOAD, PARAM_INDEX1_MUTABLE_JOINPOINT);
                                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, MUTABLE_JOINPOINT_TYPE.getInternalName(), 
                                         GET_RETURNING_METHOD.getInternalName(), GET_RETURNING_METHOD.getDescriptor(), true);
-                                Assigner.DEFAULT.assign(OBJECT.asGenericType(), parameterGeneric, Typing.DYNAMIC).apply(methodVisitor, implementationContext);
+                                Assigner.DEFAULT.assign(OBJECT.asGenericType(), parameterType.asGenericType(), Typing.DYNAMIC).apply(methodVisitor, implementationContext);
 
-                                if(parameterGeneric.getStackSize().getSize() > 1)
+                                if(parameterType.getStackSize().getSize() > 1)
                                     operandsStackSize++;
                             }
 
@@ -431,10 +404,10 @@ interface AdviceClassMaker {
                             methodVisitor.visitVarInsn(Opcodes.ALOAD, argumentsVariableOffset);
                             IntegerConstant.forValue(pointcutParameter.getArgsIndex()).apply(methodVisitor, implementationContext);
                             methodVisitor.visitInsn(Opcodes.AALOAD);
-                            Assigner.DEFAULT.assign(OBJECT.asGenericType(), parameterGeneric, Typing.DYNAMIC).apply(methodVisitor, implementationContext);
+                            Assigner.DEFAULT.assign(OBJECT.asGenericType(), parameterType.asGenericType(), Typing.DYNAMIC).apply(methodVisitor, implementationContext);
 
                             operandsStackSize++;
-                            if(parameterGeneric.getStackSize().getSize() == 1 && paramIndex < aspectJMethodSpec.getPointcutParameters().size())
+                            if(parameterType.getStackSize().getSize() == 1 && paramIndex < namedPointcutParameters.size())
                                 operandsStackSize--;
                             break;
                         }
@@ -444,10 +417,10 @@ interface AdviceClassMaker {
                 }
 
                 // 3.3.invoke delegatee.method(joinpoint, ...)
-                MethodInvocation.invoke(methodDescription).apply(methodVisitor, implementationContext);
+                MethodInvocation.invoke(aspectJMethod).apply(methodVisitor, implementationContext);
 
                 // 3.4.pop returning if exists
-                Generic returningType = methodDescription.getReturnType();
+                Generic returningType = aspectJMethod.getReturnType();
                 int stackSize = returningType.getStackSize().getSize();
                 if(stackSize > 0) {
                     methodVisitor.visitInsn(stackSize == 2 ? Opcodes.POP2 : Opcodes.POP);
@@ -455,7 +428,7 @@ interface AdviceClassMaker {
 
 
                 // 4.mark method return label
-                if(aspectJMethodSpec.isAfterReturning() == true || aspectJMethodSpec.isAfterThrowing() == true) {
+                if(adviceCategory.isAfterReturning() == true || adviceCategory.isAfterThrowing() == true) {
                     methodVisitor.visitLabel(nullCheck);
                     methodVisitor.visitFrame(Opcodes.F_SAME, 0, null, 0, null);     // calculate stack frame map
                 }

@@ -91,7 +91,7 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
         @After(THROW_NOTHING_POINTCUT)
         public void throwNothing_wrongType(MutableJoinpoint<String, IOException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(THROW_NOTHING_WRONG_TYPE, 
-                    new AdviceMethod().withInvoked(true).withReturning(joinpoint.getReturning()) );
+                    new AdviceMethod().withInvoked(true).withReturning(joinpoint.getThrowing()) );
         }
     }
 
@@ -161,7 +161,7 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
         @After(THROW_RUNTIME_EXCEPTION_POINTCUT)
         public void throwRuntimeException_wrongType(MutableJoinpoint<String, IOException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(THROW_RUNTIME_EXCEPTION_WRONG_TYPE, 
-                    new AdviceMethod().withInvoked(true).withReturning(joinpoint.getReturning()) );
+                    new AdviceMethod().withInvoked(true).withReturning(joinpoint.getThrowing()) );
         }
     }
 
@@ -255,7 +255,7 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
         @After(THROW_RUNTIME_EXCEPTION_POINTCUT)
         public void throwMultiException_wrongType(MutableJoinpoint<String, MultiException_Object.ExceptionA_Object> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(THROW_RUNTIME_EXCEPTION_WRONG_TYPE, 
-                    new AdviceMethod().withInvoked(true).withReturning(joinpoint.getReturning()) );
+                    new AdviceMethod().withInvoked(true).withReturning(joinpoint.getThrowing()) );
         }
     }
 }

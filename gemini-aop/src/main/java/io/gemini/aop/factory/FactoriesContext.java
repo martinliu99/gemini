@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
+import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.core.config.ConfigView;
@@ -53,9 +54,9 @@ class FactoriesContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FactoriesContext.class);
 
-    private static final String FACTORIES_FACTORY_EXPRS_KEY = "aop.factories.factoryExprs";
+    private static final String FACTORIES_FACTORY_EXPRESSIONS_KEY = "aop.factories.factoryExpressions";
 
-    static final String FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY = "aop.factories.defaultMatchingClassLoaderExprs";
+    static final String FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factories.defaultMatchingClassLoaderExpressions";
 
 
     private final AopContext aopContext;
@@ -65,7 +66,7 @@ class FactoriesContext implements Closeable {
     private ElementMatcher<String> factoryMatcher;
 
 
-    private Set<String> defaultMatchingClassLoaderExprs;
+    private Set<String> defaultMatchingClassLoaderExpressions;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
@@ -74,9 +75,10 @@ class FactoriesContext implements Closeable {
 
 
     private List<AdvisorSpecScanner> advisorSpecScanners;
+    private List<AdvisorSpecPostProcessor> advisorSpecPostProcessors;
     private List<AdvisorRepositoryResolver> advisorRepositoryResolvers;
 
-    private final Map<String /* FactoryName */, FactoryContext> factoryContextMap;
+    private Map<String /* FactoryName */, FactoryContext> factoryContextMap;
 
 
     public FactoriesContext(AopContext aopContext) {
@@ -89,8 +91,6 @@ class FactoriesContext implements Closeable {
 
         // 2.initialize properties
         initialize(aopContext);
-
-        this.factoryContextMap = createFactoryContextMap(aopContext);
     }
 
     private void loadSettings(AopContext aopContext) {
@@ -98,22 +98,22 @@ class FactoriesContext implements Closeable {
 
         // load global advisor factory settings
         {
-            Set<String> factoryExprs = configView.getAsStringSet(FACTORIES_FACTORY_EXPRS_KEY, Collections.emptySet());
-            if(factoryExprs.size() > 0) {
+            Set<String> factoryExpressions = configView.getAsStringSet(FACTORIES_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
+            if(factoryExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        factoryExprs.size(), FACTORIES_FACTORY_EXPRS_KEY,
-                        StringUtils.join(factoryExprs, "\n  ")
+                        factoryExpressions.size(), FACTORIES_FACTORY_EXPRESSIONS_KEY,
+                        StringUtils.join(factoryExpressions, "\n  ")
                 );
 
-                this.factoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORIES_FACTORY_EXPRS_KEY, factoryExprs );
+                this.factoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORIES_FACTORY_EXPRESSIONS_KEY, factoryExpressions );
             } else {
                 this.factoryMatcher = ElementMatchers.any();
             }
         }
 
         {
-            this.defaultMatchingClassLoaderExprs = configView.getAsStringSet(
-                    FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
+            this.defaultMatchingClassLoaderExpressions = configView.getAsStringSet(
+                    FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
 
             this.shareAspectClassLoader = configView.getAsBoolean("aop.factories.shareAspectClassLoader", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
@@ -154,10 +154,17 @@ class FactoriesContext implements Closeable {
             advisorSpecScanners.add(advisorSpecScanner);
         }
 
+        this.advisorSpecPostProcessors = new ArrayList<>();
+        for(AdvisorSpecPostProcessor advisorSpecPostProcessor : objectFactory.createObjectsImplementing(AdvisorSpecPostProcessor.class)) {
+            advisorSpecPostProcessors.add(advisorSpecPostProcessor);
+        }
+
         this.advisorRepositoryResolvers = new ArrayList<>();
         for(AdvisorRepositoryResolver advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class)) {
             advisorRepositoryResolvers.add(advisorSpecScanner);
         }
+
+        this.factoryContextMap = createFactoryContextMap(aopContext);
     }
 
     private Map<String, FactoryContext> createFactoryContextMap(AopContext aopContext) {
@@ -189,8 +196,8 @@ class FactoriesContext implements Closeable {
     }
 
 
-    public Set<String> getDefaultMatchingClassLoaderExprs() {
-        return Collections.unmodifiableSet( defaultMatchingClassLoaderExprs );
+    public Set<String> getDefaultMatchingClassLoaderExpressions() {
+        return Collections.unmodifiableSet( defaultMatchingClassLoaderExpressions );
     }
 
     public boolean isShareAspectClassLoader() {
@@ -208,6 +215,10 @@ class FactoriesContext implements Closeable {
 
     public List<AdvisorSpecScanner> getAdvisorSpecScanners() {
         return Collections.unmodifiableList( advisorSpecScanners );
+    }
+
+    public List<AdvisorSpecPostProcessor> getAdvisorSpecProcessors() {
+        return Collections.unmodifiableList( advisorSpecPostProcessors );
     }
 
     public List<AdvisorRepositoryResolver> getAdvisorRepositoryResolvers() {

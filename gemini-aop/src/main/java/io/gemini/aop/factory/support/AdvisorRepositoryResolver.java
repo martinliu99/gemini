@@ -19,10 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.factory.FactoryContext;
-import io.gemini.aop.factory.support.AdviceMethodSpec.AspectJMethodSpec;
-import io.gemini.aop.factory.support.AspectJSpecs.AspectJAdvisorSpec;
+import io.gemini.aop.matcher.AdviceMethodMatcher;
 import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.core.util.MethodUtils;
+import net.bytebuddy.description.type.TypeDescription;
 
 /**
  *
@@ -68,8 +67,14 @@ public interface AdvisorRepositoryResolver {
             if(advisorSpec == null || advisorSpec instanceof AdvisorSpec.PojoPointcutSpec == false)
                 return null;
 
-            return new AdvisorRepository.ForPojoPointcut( 
-                    (AdvisorSpec.PojoPointcutSpec) advisorSpec);
+            AdvisorSpec.PojoPointcutSpec pojoPointcutSpec = (AdvisorSpec.PojoPointcutSpec) advisorSpec;
+            TypeDescription adviceType = factoryContext.getTypePool()
+                    .describe(advisorSpec.getAdviceClassName())
+                    .resolve();
+
+            return new AdvisorRepository.ForPojoPointcut(
+                    pojoPointcutSpec, 
+                    AdviceMethodMatcher.create(pojoPointcutSpec, adviceType));
         }
     }
 
@@ -84,8 +89,14 @@ public interface AdvisorRepositoryResolver {
             if(advisorSpec == null || advisorSpec instanceof AdvisorSpec.ExprPointcutSpec == false)
                 return null;
 
+            AdvisorSpec.ExprPointcutSpec exprPointcutSpec = (AdvisorSpec.ExprPointcutSpec) advisorSpec;
+            TypeDescription adviceType = factoryContext.getTypePool()
+                    .describe(advisorSpec.getAdviceClassName())
+                    .resolve();
+
             return new AdvisorRepository.ForExprPointcut(
-                    (AdvisorSpec.ExprPointcutSpec) advisorSpec);
+                    exprPointcutSpec,
+                    AdviceMethodMatcher.create(exprPointcutSpec, adviceType));
         }
     }
 
@@ -101,18 +112,11 @@ public interface AdvisorRepositoryResolver {
                 return null;
 
             AspectJAdvisorSpec aspectJAdvisorSpec = (AspectJAdvisorSpec) advisorSpec;
-            AspectJMethodSpec aspectJMethodSpec;
-            try {
-                aspectJMethodSpec= new AspectJMethodSpec(aspectJAdvisorSpec);
-                if(aspectJMethodSpec.isValid() == false)
-                    return null;
-            } catch(Throwable t) {
-                LOGGER.warn("Failed to parse AspectJ advice method. \n  AdvisorSpec: {} \n  AdviceMethod: {} \n", 
-                        advisorSpec.getAdvisorName(), MethodUtils.getMethodSignature(aspectJAdvisorSpec.getAspectJMethod()), t);
-                return null;
-            }
 
-            return new AdvisorRepository.ForAspectJAdvice(aspectJAdvisorSpec, aspectJMethodSpec);
+            return new AdvisorRepository.ForAspectJAdvice(
+                    aspectJAdvisorSpec, 
+                    AdviceMethodMatcher.create(aspectJAdvisorSpec, aspectJAdvisorSpec.getAspectJMethod(), 
+                            aspectJAdvisorSpec.getAdviceReturningParameterType(), aspectJAdvisorSpec.getAdviceThrowingParameterType()));
         }
     }
 }

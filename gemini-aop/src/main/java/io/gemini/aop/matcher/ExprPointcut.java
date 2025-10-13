@@ -25,8 +25,6 @@ import java.util.Set;
 
 import org.aspectj.util.FuzzyBoolean;
 import org.aspectj.weaver.Shadow;
-import org.aspectj.weaver.ast.Literal;
-import org.aspectj.weaver.ast.Test;
 import org.aspectj.weaver.patterns.ExposedState;
 import org.aspectj.weaver.patterns.FastMatchInfo;
 import org.aspectj.weaver.patterns.Pointcut;
@@ -41,6 +39,7 @@ import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.util.ObjectUtils;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -90,7 +89,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         private transient Pointcut pointcut;
 
         private final TypeDescription pointcutDeclarationScope;
-        private final Map<String, TypeDescription> pointcutParameters;
+        private final Map<String, Generic> pointcutParameters;
 
 
         static {
@@ -127,7 +126,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
          * @param pointcutParameterTypes the parameter types for the pointcut
          */
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression,
-                TypeDescription declarationScope, Map<String, TypeDescription> pointcutParametes) {
+                TypeDescription declarationScope, Map<String, Generic> pointcutParametes) {
             this.typeWorld = typeWorld;
             this.pointcutExpression = pointcutExpression;
 
@@ -202,10 +201,10 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             Shadow shadow = typeWorld.makeShadow(methodDescription);
             FuzzyBoolean matchResult = getPointcut().match(shadow);
 
-            Test residueTest = Literal.TRUE;
+//            Test residueTest = Literal.TRUE;
             ExposedState exposedState = new ExposedState(pointcutParameters.size());
             if (matchResult.maybeTrue()) {
-                residueTest = pointcut.findResidue(shadow, exposedState);
+                pointcut.findResidue(shadow, exposedState);
             }
 
 
@@ -235,16 +234,16 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         }
 
         private List<NamedPointcutParameter> createParamterBindings(
-                Map<String, TypeDescription> pointcutParameters, ExposedState exposedState) {
+                Map<String, Generic> pointcutParameters, ExposedState exposedState) {
             int i = 0;
             List<NamedPointcutParameter> parameterBindings = new ArrayList<>(pointcutParameters.size());
-            for(Entry<String, TypeDescription> entry : pointcutParameters.entrySet()) {
+            for(Entry<String, Generic> entry : pointcutParameters.entrySet()) {
                 PointcutParameter var = (PointcutParameter) exposedState.vars[i++];
                 if(var == null)
                     continue;
 
-                parameterBindings.add( new PointcutParameter.Default(entry.getKey(), var) );
-
+                parameterBindings.add( 
+                        new PointcutParameter.Default(entry.getKey(), entry.getValue(), var) );
             }
 
             return parameterBindings;
@@ -281,8 +280,8 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             int i = 0;
             if (this.pointcutParameters != null) {
                 sb.append("(");
-                for (Entry<String, TypeDescription> entry : this.pointcutParameters.entrySet()) {
-                    sb.append(entry.getValue().getName());
+                for (Entry<String, Generic> entry : this.pointcutParameters.entrySet()) {
+                    sb.append(entry.getValue().getTypeName());
                     sb.append(" ");
                     sb.append(entry.getKey());
                     if ((i+1) < pointcutParameters.size()) {

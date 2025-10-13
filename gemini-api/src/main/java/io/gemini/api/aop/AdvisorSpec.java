@@ -48,6 +48,10 @@ public interface AdvisorSpec {
     int getOrder();
 
 
+    default boolean isValid() {
+        return true;
+    }
+
 
     abstract class AbstractBase implements AdvisorSpec {
 

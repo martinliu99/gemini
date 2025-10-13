@@ -37,6 +37,7 @@ import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.aop.factory.classloader.AspectTypePool;
 import io.gemini.aop.factory.classloader.AspectTypeWorld;
+import io.gemini.aop.matcher.AdvisorCondition;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.api.classloader.ClassLoaders;
@@ -63,16 +64,16 @@ public class FactoryContext implements Closeable {
 
     private static final String FACTORY_INTERNAL_PROPERTIES = "META-INF/factory-internal.properties";
 
-    private static final String FACTORY_JOINPOINT_TYPE_EXPRS = "aop.factory.joinpointTypeExprs";
-    private static final String FACTORY_JOINPOINT_RESOURCE_EXPRS = "aop.factory.joinpointResourceExprs";
+    private static final String FACTORY_JOINPOINT_TYPE_EXPRESSIONS = "aop.factory.joinpointTypeExpressions";
+    private static final String FACTORY_JOINPOINT_RESOURCE_EXPRESSIONS = "aop.factory.joinpointResourceExpressions";
 
     private static final String FACTORY_MATCHER_MATCH_JOINPOINT_KEY = "aop.factory.matchJoinpoint";
 
-    private static final String FACTORY_CLASS_LOADER_EXPRS_KEY = "aop.factory.classLoaderExprs";
-    private static final String FACTORY_TYPE_EXPRS_KEY = "aop.factory.typeExprs";
-    private static final String FACTORY_ADVISOR_EXPRS_KEY = "aop.factory.advisorExprs";
+    private static final String FACTORY_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factory.classLoaderExpressions";
+    private static final String FACTORY_TYPE_EXPRESSIONS_KEY = "aop.factory.typeExpressions";
+    private static final String FACTORY_ADVISOR_EXPRESSIONS_KEY = "aop.factory.advisorExpressions";
 
-    private static final String FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY = "aop.factory.defaultMatchingClassLoaderExprs";
+    private static final String FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factory.defaultMatchingClassLoaderExpressions";
 
 
     private static final String AOP_CONTEXT_OBJECT = "aopContext";
@@ -201,21 +202,21 @@ public class FactoryContext implements Closeable {
 
     private void loadSettings(FactoriesContext factoriesContext, ConfigView configView) {
         {
-            Set<String> joinpointTypeExprs = configView.getAsStringSet(FACTORY_JOINPOINT_TYPE_EXPRS, Collections.emptySet());
+            Set<String> joinpointTypeExpressions = configView.getAsStringSet(FACTORY_JOINPOINT_TYPE_EXPRESSIONS, Collections.emptySet());
 
             this.joinpointTypesMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_JOINPOINT_TYPE_EXPRS, joinpointTypeExprs );
+                    FACTORY_JOINPOINT_TYPE_EXPRESSIONS, joinpointTypeExpressions );
 
             this.classLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
 
 
-            Set<String> joinpointResourceExprs = new LinkedHashSet<>();
-            joinpointResourceExprs.addAll(
-                    configView.getAsStringSet(FACTORY_JOINPOINT_RESOURCE_EXPRS, Collections.emptySet()) );
-            joinpointResourceExprs.addAll(joinpointTypeExprs);
+            Set<String> joinpointResourceExpressions = new LinkedHashSet<>();
+            joinpointResourceExpressions.addAll(
+                    configView.getAsStringSet(FACTORY_JOINPOINT_RESOURCE_EXPRESSIONS, Collections.emptySet()) );
+            joinpointResourceExpressions.addAll(joinpointTypeExpressions);
 
             this.joinpointResourcesMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_JOINPOINT_RESOURCE_EXPRS, joinpointResourceExprs );
+                    FACTORY_JOINPOINT_RESOURCE_EXPRESSIONS, joinpointResourceExpressions );
 
             this.classLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);
         }
@@ -229,42 +230,42 @@ public class FactoryContext implements Closeable {
         }
 
         {
-            Set<String> classLoaderExprs = configView.getAsStringSet(FACTORY_CLASS_LOADER_EXPRS_KEY, Collections.emptySet());
-            if(classLoaderExprs.size() > 0) {
+            Set<String> classLoaderExpressions = configView.getAsStringSet(FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
+            if(classLoaderExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        classLoaderExprs.size(), FACTORY_CLASS_LOADER_EXPRS_KEY, factoryName,
-                        StringUtils.join(classLoaderExprs, "\n  ")
+                        classLoaderExpressions.size(), FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(classLoaderExpressions, "\n  ")
                 );
 
-                this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(FACTORY_CLASS_LOADER_EXPRS_KEY, classLoaderExprs );
+                this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, classLoaderExpressions );
             } else {
                 this.classLoaderMatcher = ElementMatchers.any();
             }
         }
 
         {
-            Set<String> typeExprs = configView.getAsStringSet(FACTORY_TYPE_EXPRS_KEY, Collections.emptySet());
-            if(typeExprs.size() > 0) {
+            Set<String> typeExpressions = configView.getAsStringSet(FACTORY_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
+            if(typeExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        typeExprs.size(), FACTORY_TYPE_EXPRS_KEY, factoryName,
-                        StringUtils.join(typeExprs, "\n  ")
+                        typeExpressions.size(), FACTORY_TYPE_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(typeExpressions, "\n  ")
                 );
 
-                this.typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_TYPE_EXPRS_KEY, typeExprs );
+                this.typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_TYPE_EXPRESSIONS_KEY, typeExpressions );
             } else {
                 this.typeMatcher = ElementMatchers.any();
             }
         }
 
         {
-            Set<String> advisorExprs = configView.getAsStringSet(FACTORY_ADVISOR_EXPRS_KEY, Collections.emptySet());
-            if(advisorExprs.size() > 0) {
+            Set<String> advisorExpressions = configView.getAsStringSet(FACTORY_ADVISOR_EXPRESSIONS_KEY, Collections.emptySet());
+            if(advisorExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        advisorExprs.size(), FACTORY_ADVISOR_EXPRS_KEY, factoryName,
-                        StringUtils.join(advisorExprs, "\n  ")
+                        advisorExpressions.size(), FACTORY_ADVISOR_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(advisorExpressions, "\n  ")
                 );
 
-                this.advisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_ADVISOR_EXPRS_KEY, advisorExprs );
+                this.advisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_ADVISOR_EXPRESSIONS_KEY, advisorExpressions );
             } else {
                 this.advisorMatcher = ElementMatchers.any();
             }
@@ -272,15 +273,11 @@ public class FactoryContext implements Closeable {
 
         {
             // load and merge global factory settings
-            Set<String> mergedClassLoaderExprs = new LinkedHashSet<>();
-            mergedClassLoaderExprs.addAll(factoriesContext.getDefaultMatchingClassLoaderExprs());
-            mergedClassLoaderExprs.addAll(configView.getAsStringSet(FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY, Collections.emptySet()) );
+            Set<String> mergedClassLoaderExpressions = new LinkedHashSet<>();
+            mergedClassLoaderExpressions.addAll(factoriesContext.getDefaultMatchingClassLoaderExpressions());
+            mergedClassLoaderExpressions.addAll(configView.getAsStringSet(FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet()) );
 
-            ElementMatcher<ClassLoader> defaultClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                    FactoriesContext.FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY + ", " + FACTORY_DEFAULT_MATCHING_CLASS_LOADER_EXPRS_KEY,
-                    mergedClassLoaderExprs );
-
-            this.defaultCondition = new ClassLoaderCondition(classLoader, defaultClassLoaderMatcher);
+            this.defaultCondition = AdvisorCondition.create(this, mergedClassLoaderExpressions);
         }
 
         {
@@ -380,6 +377,10 @@ public class FactoryContext implements Closeable {
 
     public TypePool getTypePool() {
         return typePool;
+    }
+
+    public TypeWorld getTypeWorld() {
+        return typeWorld;
     }
 
 
@@ -512,23 +513,5 @@ public class FactoryContext implements Closeable {
 
         this.objectFactory.close();
         this.typePool.clear();
-    }
-
-
-    private static class ClassLoaderCondition implements ElementMatcher<ConditionContext> {
-
-        private final AspectClassLoader classLoader;
-        private final ElementMatcher<ClassLoader> classLoaderMatcher;
-
-
-        public ClassLoaderCondition(AspectClassLoader classLoader, ElementMatcher<ClassLoader> classLoaderMatcher) {
-            this.classLoader = classLoader;
-            this.classLoaderMatcher = classLoaderMatcher;
-        }
-
-        @Override
-        public boolean matches(ConditionContext context) {
-            return classLoaderMatcher.matches(classLoader.getJoinpointClassLoader());
-        }
     }
 }

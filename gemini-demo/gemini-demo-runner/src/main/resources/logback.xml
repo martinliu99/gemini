@@ -4,8 +4,8 @@
     <property name="LOG_FILE_PATH" value="${aop.launcher.launchPath:-${user.home}}/logs" />
     <property name="INCLUDE_LOCATION" value="${aop.logger.includeLocation:-true}" />
 
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level  %class.%method\(%line\) - %msg%n" />
-    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-8.-8thread] %-5level \(%file:%line\) - %msg%n" />
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level  \\(%file:%line\\) - %msg%n" />
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-8.-8thread] %-5level \\(%file:%line\\) - %msg%n" />
 
 
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">

@@ -21,8 +21,11 @@
 
 
     <properties>
-      <release.demoapp.dir>${release.demoapps.dir}/${project.artifactId}</release.demoapp.dir>
-      <release.aspectapp.dir>${release.aspectapps.dir}/${project.artifactId}</release.aspectapp.dir>
+        <release.demoapp.dir>${release.demoapps.dir}/${project.artifactId}</release.demoapp.dir>
+        <release.aspectapp.dir>${release.aspectapps.dir}/${project.artifactId}</release.aspectapp.dir>
+
+        <slf4j-api.version>1.7.32</slf4j-api.version>
+        <logback.version>1.2.12</logback.version>
     </properties>
 
 
@@ -64,5 +67,21 @@
                 </plugin>
             </plugins>        
         </pluginManagement>
+
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-dependency</id>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>

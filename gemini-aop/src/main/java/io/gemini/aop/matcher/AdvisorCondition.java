@@ -36,19 +36,19 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
     private final FactoryContext factoryContext;
     private final Collection<String> conditionClassNames;
 
-    private final Collection<String> classLoaderExpressions;
+    private final Collection<String> acceptableClassLoaderExpressions;
 
-    private final Collection<String> typeExpressions;
-    private final Collection<String> fieldExpressions;
-    private final Collection<String> constructorExpressions;
-    private final Collection<String> methodExpressions;
+    private final Collection<String> requiredTypeExpressions;
+    private final Collection<String> requiredFieldExpressions;
+    private final Collection<String> requiredConstructorExpressions;
+    private final Collection<String> requiredMethodExpressions;
 
 
-    public static AdvisorCondition create(FactoryContext factoryContext, Collection<String> classLoaderExpressions) {
+    public static AdvisorCondition create(FactoryContext factoryContext, Collection<String> acceptableClassLoaderExpressions) {
         return new AdvisorCondition(
                 factoryContext, 
                 null,
-                classLoaderExpressions, 
+                acceptableClassLoaderExpressions, 
                 null, 
                 null, 
                 null, 
@@ -66,13 +66,22 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
         for(TypeDescription conditionTypeDescrition : conditionTypeDescritions)
             conditionClassNames.add(conditionTypeDescrition.getTypeName());
 
+        List<String> acceptableClassLoaderExpressions = fetchAttribute(annotationDescription.getValue("acceptableClassLoaderExpressions"));
+        List<String> requiredTypeExpressions = fetchAttribute(annotationDescription.getValue("requiredTypeExpressions"));
+        List<String> requiredFieldExpressions = fetchAttribute(annotationDescription.getValue("requiredFieldExpressions"));
+        List<String> requiredConstructorExpressions = fetchAttribute(annotationDescription.getValue("requiredConstructorExpressions"));
+        List<String> requiredMethodExpressions = fetchAttribute(annotationDescription.getValue("requiredMethodExpressions"));
+
+        if(conditionClassNames.size() == 0 && acceptableClassLoaderExpressions.size() == 0 
+                && requiredTypeExpressions.size() == 0 && requiredFieldExpressions.size() == 0
+                && requiredConstructorExpressions.size() == 0 && requiredMethodExpressions.size() == 0)
+            return null;
+
         return new AdvisorCondition(
-                factoryContext, conditionClassNames,
-                fetchAttribute(annotationDescription.getValue("classLoaderExpressions")), 
-                fetchAttribute(annotationDescription.getValue("typeExpressions")),
-                fetchAttribute(annotationDescription.getValue("fieldExpressions")),
-                fetchAttribute(annotationDescription.getValue("constructorExpressions")),
-                fetchAttribute(annotationDescription.getValue("methodExpressions"))
+                factoryContext, 
+                conditionClassNames, acceptableClassLoaderExpressions, 
+                requiredTypeExpressions, requiredFieldExpressions,
+                requiredConstructorExpressions, requiredMethodExpressions
         );
     }
 
@@ -91,31 +100,40 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
     }
 
     public static AdvisorCondition create(FactoryContext factoryContext, ConfigView configView, String keyPrefix) {
+        List<String> conditionClassNames = configView.getAsStringList(keyPrefix + "condition.conditionClassNames", Collections.emptyList());
+        List<String> acceptableClassLoaderExpressions = configView.getAsStringList(keyPrefix + "condition.acceptableClassLoaderExpressions", Collections.emptyList());
+        List<String> requiredTypeExpressions = configView.getAsStringList(keyPrefix + "condition.requiredTypeExpressions", Collections.emptyList());
+        List<String> requiredFieldExpressions = configView.getAsStringList(keyPrefix + "condition.requiredFieldExpressions", Collections.emptyList());
+        List<String> requiredConstructorExpressions = configView.getAsStringList(keyPrefix + "condition.requiredConstructorExpressions", Collections.emptyList());
+        List<String> requiredMethodExpressions = configView.getAsStringList(keyPrefix + "condition.requiredMethodExpressions", Collections.emptyList());
+
+        if(conditionClassNames.size() == 0 && acceptableClassLoaderExpressions.size() == 0 
+                && requiredTypeExpressions.size() == 0 && requiredFieldExpressions.size() == 0
+                && requiredConstructorExpressions.size() == 0 && requiredMethodExpressions.size() == 0)
+            return null;
+
         return new AdvisorCondition(
                 factoryContext, 
-                configView.getAsStringList(keyPrefix + "condition.conditionClassNames", Collections.emptyList()),
-                configView.getAsStringList(keyPrefix + "condition.classLoaderExpressions", Collections.emptyList()),
-                configView.getAsStringList(keyPrefix + "condition.typeExpressions", Collections.emptyList()),
-                configView.getAsStringList(keyPrefix + "condition.fieldExpressions", Collections.emptyList()),
-                configView.getAsStringList(keyPrefix + "condition.constructorExpressions", Collections.emptyList()),
-                configView.getAsStringList(keyPrefix + "condition.methodExpressions", Collections.emptyList())
+                conditionClassNames, acceptableClassLoaderExpressions, 
+                requiredTypeExpressions, requiredFieldExpressions,
+                requiredConstructorExpressions, requiredMethodExpressions
         );
     }
 
 
     private AdvisorCondition(FactoryContext factoryContext, List<String> conditionClassNames, 
-            Collection<String> classLoaderExpressions, Collection<String> typeExpressions, 
-            Collection<String> fieldExpressions, Collection<String> constructorExpressions, Collection<String> methodExpressions) {
+            Collection<String> acceptableClassLoaderExpressions, Collection<String> requiredTypeExpressions, 
+            Collection<String> requiredFieldExpressions, Collection<String> requiredConstructorExpressions, Collection<String> requiredMethodExpressions) {
         this.factoryContext = factoryContext;
 
         this.conditionClassNames = conditionClassNames == null ? Collections.emptyList() : conditionClassNames;
 
-        this.classLoaderExpressions = classLoaderExpressions == null ? Collections.emptyList() : classLoaderExpressions;
-        this.typeExpressions = typeExpressions == null ? Collections.emptyList() : typeExpressions;
+        this.acceptableClassLoaderExpressions = acceptableClassLoaderExpressions == null ? Collections.emptyList() : acceptableClassLoaderExpressions;
+        this.requiredTypeExpressions = requiredTypeExpressions == null ? Collections.emptyList() : requiredTypeExpressions;
 
-        this.fieldExpressions = fieldExpressions == null ? Collections.emptyList() : fieldExpressions;
-        this.constructorExpressions = constructorExpressions == null ? Collections.emptyList() : constructorExpressions;
-        this.methodExpressions = methodExpressions == null ? Collections.emptyList() : methodExpressions;
+        this.requiredFieldExpressions = requiredFieldExpressions == null ? Collections.emptyList() : requiredFieldExpressions;
+        this.requiredConstructorExpressions = requiredConstructorExpressions == null ? Collections.emptyList() : requiredConstructorExpressions;
+        this.requiredMethodExpressions = requiredMethodExpressions == null ? Collections.emptyList() : requiredMethodExpressions;
     }
 
 
@@ -134,10 +152,10 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
             if(condition.matches(conditionContext) == false) return false;
         }
 
-        if(classLoaderExpressions.size() > 0) {
+        if(acceptableClassLoaderExpressions.size() > 0) {
             boolean matched = false;
-            for(String classLoaderExpression : classLoaderExpressions) {
-                if(conditionContext.isClassLoader(classLoaderExpression) == true) {
+            for(String acceptableClassLoaderExpression : acceptableClassLoaderExpressions) {
+                if(conditionContext.isAccesptableClassLoader(acceptableClassLoaderExpression) == true) {
                     matched = true;
                     break;
                 }
@@ -145,20 +163,20 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
             if(matched == false) return false;
         }
 
-        for(String typeExpression : typeExpressions) {
-            if(conditionContext.hasType(typeExpression) == false) return false;
+        for(String requiredTypeExpression : requiredTypeExpressions) {
+            if(conditionContext.hasRequiredType(requiredTypeExpression) == false) return false;
         }
 
-        for(String fieldExpression : fieldExpressions) {
-            if(conditionContext.hasFiled(fieldExpression) == false) return false;
+        for(String requiredFieldExpression : requiredFieldExpressions) {
+            if(conditionContext.hasRequiredFiled(requiredFieldExpression) == false) return false;
         }
 
-        for(String constructorExpression : constructorExpressions) {
-            if(conditionContext.hasConstructor(constructorExpression) == false) return false;
+        for(String requiredConstructorExpression : requiredConstructorExpressions) {
+            if(conditionContext.hasRequiredConstructor(requiredConstructorExpression) == false) return false;
         }
 
-        for(String methodExpression : methodExpressions) {
-            if(conditionContext.hasMethod(methodExpression) == false) return false;
+        for(String requiredMethodExpression : requiredMethodExpressions) {
+            if(conditionContext.hasRequiredMethod(requiredMethodExpression) == false) return false;
         }
 
         return true;

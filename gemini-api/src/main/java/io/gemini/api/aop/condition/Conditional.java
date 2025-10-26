@@ -36,13 +36,14 @@ public @interface Conditional {
 
     Class<? extends ElementMatcher<ConditionContext>>[] value() default {};
 
-    String[] classLoaderExpressions() default {};
+    String[] acceptableClassLoaderExpressions() default {};
 
-    String[] typeExpressions() default {};
+    String[] requiredTypeExpressions() default {};
 
-    String[] fieldExpressions() default {};
+    String[] requiredFieldExpressions() default {};
 
-    String[] constructorExpressions() default {};
+    String[] requiredConstructorExpressions() default {};
 
-    String[] methodExpressions() default {};
+    String[] requiredMethodExpressions() default {};
+
 }

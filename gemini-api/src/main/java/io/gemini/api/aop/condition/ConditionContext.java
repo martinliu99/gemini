@@ -28,15 +28,15 @@ public interface ConditionContext {
 
     boolean isAppClassLoader();
 
-    boolean isClassLoader(String classLoaderExpression);
+    boolean isAccesptableClassLoader(String accesptableClassLoaderExpression);
 
 
-    boolean hasType(String typeExpression);
+    boolean hasRequiredType(String requiredTypeExpression);
 
-    boolean hasFiled(String fieldExpression);
+    boolean hasRequiredFiled(String requiredFieldExpression);
 
-    boolean hasConstructor(String constructorExpression);
+    boolean hasRequiredConstructor(String requiredConstructorExpression);
 
-    boolean hasMethod(String methodsExpression);
+    boolean hasRequiredMethod(String requiredMethodsExpression);
 
 }

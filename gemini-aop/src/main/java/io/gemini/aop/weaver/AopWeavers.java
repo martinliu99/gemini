@@ -129,7 +129,7 @@ public class AopWeavers {
 
         };
 
-        //        ResettableClassFileTransformer resettableClassFileTransformer = 
+
         new AgentBuilder.Default()
             .with( new ByteBuddy()
                     .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )

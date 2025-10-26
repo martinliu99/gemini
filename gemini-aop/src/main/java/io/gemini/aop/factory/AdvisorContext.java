@@ -186,8 +186,8 @@ public class AdvisorContext implements Closeable {
          * {@inheritDoc}
          */
         @Override
-        public boolean isClassLoader(String classLoaderExpression) {
-            return ExprParser.INSTANCE.parseClassLoaderExpr(classLoaderExpression)
+        public boolean isAccesptableClassLoader(String accesptableClassLoaderExpression) {
+            return ExprParser.INSTANCE.parseClassLoaderExpr(accesptableClassLoaderExpression)
                     .matches(classLoader.getJoinpointClassLoader());
         }
 
@@ -195,30 +195,30 @@ public class AdvisorContext implements Closeable {
          * {@inheritDoc}
          */
         @Override
-        public boolean hasType(String typeExpression) {
-            return ExprParser.INSTANCE.hasType(typeWorld, typeExpression);
+        public boolean hasRequiredType(String requiredTypeExpression) {
+            return ExprParser.INSTANCE.hasType(typeWorld, requiredTypeExpression);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public boolean hasFiled(String fieldExpression) {
-            return ExprParser.INSTANCE.hasField(typeWorld, fieldExpression);
+        public boolean hasRequiredFiled(String requiredFieldExpression) {
+            return ExprParser.INSTANCE.hasField(typeWorld, requiredFieldExpression);
         }
 
         /** {@inheritDoc} 
          */
         @Override
-        public boolean hasConstructor(String constructorExpression) {
-            return ExprParser.INSTANCE.hasConstructor(typeWorld, constructorExpression);
+        public boolean hasRequiredConstructor(String requiredConstructorExpression) {
+            return ExprParser.INSTANCE.hasConstructor(typeWorld, requiredConstructorExpression);
         }
 
         /** {@inheritDoc} 
          */
         @Override
-        public boolean hasMethod(String methodExpression) {
-            return ExprParser.INSTANCE.hasMethod(typeWorld, methodExpression);
+        public boolean hasRequiredMethod(String requiredMethodExpression) {
+            return ExprParser.INSTANCE.hasMethod(typeWorld, requiredMethodExpression);
         }
     }
 }

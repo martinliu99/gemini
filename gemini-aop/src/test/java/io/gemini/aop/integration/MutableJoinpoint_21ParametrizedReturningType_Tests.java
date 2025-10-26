@@ -522,8 +522,8 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
         private static final String RETURN_WILD_CARD_COLLECTION_POINTCUT = 
                 "execution(java.util.List<? extends java.lang.Number> io.gemini.aop.integration.MutableJoinpoint_21ParametrizedReturningType_Tests$WildCardCollectionReturning_Object.returnWildCardCollection())";
 
-        private static final String RETURN_WILD_CARD_COLLECTION_SAME_TYPE = "returnWildCardCollection_genericType";
         private static final String RETURN_WILD_CARD_COLLECTION_RAW_TYPE = "returnWildCardCollection_rawType";
+        private static final String RETURN_WILD_CARD_COLLECTION_SAME_TYPE = "returnWildCardCollection_genericType";
         private static final String RETURN_WILD_CARD_COLLECTION_WRONG_TYPE = "returnWildCardCollection_wrongType";
 
         @SuppressWarnings("rawtypes")

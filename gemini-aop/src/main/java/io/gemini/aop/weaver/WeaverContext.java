@@ -54,18 +54,18 @@ class WeaverContext {
 
     private static final String WEAVER_MATCH_JOINPOINT_KEY = "aop.weaver.matchJoinpoint";
 
-    private static final String WEAVER_CLASS_LOADER_EXPRESSIONS_KEY = "aop.weaver.classLoaderExpressions";
+    private static final String WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY = "aop.weaver.acceptableClassLoaderExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
 
-    private static final String WEAVER_TYPE_EXPRESSIONS_KEY = "aop.weaver.typeExpressions";
+    private static final String WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY = "aop.weaver.acceptableTypeExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS = "aop.weaver.defaultExcludedTypeExpressions";
 
 
     // weaver settings
     private boolean matchJoinpoint;
 
-    private ElementMatcher<ClassLoader> classLoaderMatcher;
-    private ElementMatcher<String> typeMatcher;
+    private ElementMatcher<ClassLoader> acceptableClassLoaderMatcher;
+    private ElementMatcher<String> acceptableTypeMatcher;
 
 
     private Class<?> classInitializerAdvice;
@@ -97,11 +97,11 @@ class WeaverContext {
             }
 
             {
-                Set<String> classLoaderExpressions = configView.getAsStringSet(WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
-                if(classLoaderExpressions.size() > 0)
+                Set<String> acceptableClassLoaderExpressions = configView.getAsStringSet(WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
+                if(acceptableClassLoaderExpressions.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            classLoaderExpressions.size(), WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, 
-                            StringUtils.join(classLoaderExpressions, "\n  ")
+                            acceptableClassLoaderExpressions.size(), WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, 
+                            StringUtils.join(acceptableClassLoaderExpressions, "\n  ")
                     );
 
 
@@ -117,22 +117,22 @@ class WeaverContext {
                 );
 
 
-                this.classLoaderMatcher = ElementMatchers.not(
+                this.acceptableClassLoaderMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
                                 WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, defaultExcludedClassLoaderExpressions ) );
-                if(classLoaderExpressions.size() > 0)
-                    this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                            WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, classLoaderExpressions )
-                        .and( this.classLoaderMatcher );
+                if(acceptableClassLoaderExpressions.size() > 0)
+                    this.acceptableClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                            WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions )
+                        .and( this.acceptableClassLoaderMatcher );
             }
 
 
             {
-                Set<String> typeExpressions = configView.getAsStringSet(WEAVER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-                if(typeExpressions.size() > 0)
+                Set<String> acceptableTypeExpressions = configView.getAsStringSet(WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
+                if(acceptableTypeExpressions.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            typeExpressions.size(), WEAVER_TYPE_EXPRESSIONS_KEY,
-                            StringUtils.join(typeExpressions, "\n  ") 
+                            acceptableTypeExpressions.size(), WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY,
+                            StringUtils.join(acceptableTypeExpressions, "\n  ") 
                     );
 
 
@@ -149,13 +149,13 @@ class WeaverContext {
                 );
 
 
-                this.typeMatcher = ElementMatchers.not(
+                this.acceptableTypeMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
                                 WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, defaultExcludedTypeExpressions) );
-                if(typeExpressions.size() > 0)
-                    this.typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            WEAVER_TYPE_EXPRESSIONS_KEY, typeExpressions)
-                        .and( typeMatcher );
+                if(acceptableTypeExpressions.size() > 0)
+                    this.acceptableTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                            WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions)
+                        .and( acceptableTypeMatcher );
             }
         }
 
@@ -206,12 +206,12 @@ class WeaverContext {
     }
 
 
-    public boolean matchClassLoader(ClassLoader classLoader) {
-        return this.classLoaderMatcher.matches(classLoader);
+    public boolean isAcceptableClassLoader(ClassLoader classLoader) {
+        return this.acceptableClassLoaderMatcher.matches(classLoader);
     }
 
-    public boolean matchType(String typeName) {
-        return this.typeMatcher.matches(typeName);
+    public boolean isAcceptableType(String typeName) {
+        return this.acceptableTypeMatcher.matches(typeName);
     }
 
 

@@ -16,6 +16,7 @@
 package io.gemini.core.concurrent;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -54,16 +55,16 @@ public interface TaskExecutor {
      * @param batchCount
      * @return
      */
-    <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor, 
-            boolean parallel, int batchCount, Function<Supplier<List<R>>, List<R>> executionWrapper);
+    <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
+            boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper);
 
-    default <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor) {
+    default <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor) {
         return executeTasks(tasks, taskExecutor, 
                 isParallel(), Default.DEFAULT_BATCH_COUNT, null);
     }
 
-    default <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor, 
-            Function<Supplier<List<R>>, List<R>> executionWrapper) {
+    default <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
+            Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
         return executeTasks(tasks, taskExecutor, 
                 isParallel(), Default.DEFAULT_BATCH_COUNT, executionWrapper);
     }
@@ -124,8 +125,8 @@ public interface TaskExecutor {
          * {@inheritDoc}
          */
         @Override
-        public <T, R> List<R> executeTasks(List<T> tasks, Function<T, R> taskExecutor, 
-                boolean parallel, int batchCount, Function<Supplier<List<R>>, List<R>> executionWrapper) {
+        public <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
+                boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
             if(tasks.size() == 0 || taskExecutor == null)
                 return Collections.emptyList();
 
@@ -136,7 +137,7 @@ public interface TaskExecutor {
             return executeTasksInParallel(splitTasks(tasks, batchCount), taskExecutor, executionWrapper, tasks.size());
         }
 
-        private <T, R> List<R> executeTaskSequentially(List<T> tasks, Function<T, R> taskExecutor) {
+        private <T, R> Collection<R> executeTaskSequentially(Collection<T> tasks, Function<T, R> taskExecutor) {
             List<R> resultList = new ArrayList<R>(tasks.size());
             for(T task : tasks) {
                 R result = taskExecutor.apply(task);
@@ -146,7 +147,7 @@ public interface TaskExecutor {
             return resultList;
         }
 
-        private <T> List<List<T>> splitTasks(List<T> elements, int batchCount) {
+        private <T> List<List<T>> splitTasks(Collection<T> elements, int batchCount) {
             if(elements.size() == 0)
                 return Collections.emptyList();
 
@@ -181,11 +182,11 @@ public interface TaskExecutor {
          * @return
          */
         private <T, R> List<R> executeTasksInParallel(List<List<T>> splitedTaskList, Function<T, R> taskExecutor, 
-                Function<Supplier<List<R>>, List<R>> executionWrapper, int taskCount) {
+                Function<Supplier<Collection<R>>, Collection<R>> executionWrapper, int taskCount) {
             // submit splitTasks
-            List<Future<List<R>>> futures = new ArrayList<>(splitedTaskList.size());
+            List<Future<Collection<R>>> futures = new ArrayList<>(splitedTaskList.size());
             for(List<T> splitedTasks : splitedTaskList) {
-                Future<List<R>> future = executorService.submit( 
+                Future<Collection<R>> future = executorService.submit( 
                         () -> executionWrapper == null 
                             ? executeTaskSequentially(splitedTasks, taskExecutor)
                             : executionWrapper.apply( () -> executeTaskSequentially(splitedTasks, taskExecutor) )
@@ -196,7 +197,7 @@ public interface TaskExecutor {
 
             // collect result
             List<R> resultList = new ArrayList<R>(taskCount);
-            for(Future<List<R>> future : futures) {
+            for(Future<Collection<R>> future : futures) {
                 try {
                     for(R result : future.get()) {
                         if(result != null) resultList.add(result);

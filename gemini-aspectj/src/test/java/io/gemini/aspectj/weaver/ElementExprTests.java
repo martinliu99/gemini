@@ -19,8 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.core.pool.TypePoolFactory;
@@ -29,6 +33,8 @@ import net.bytebuddy.matcher.ElementMatcher;
 
 
 public class ElementExprTests {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElementExprTests.class);
 
     private Runnable anonymousClass = new Runnable() {
 
@@ -184,6 +190,53 @@ public class ElementExprTests {
     }
 
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testTypeNam_performancee() {
+        String[] typeNameExpressions = new String[] {
+                "*..$JaxbAccessor* || *..$Proxy*",
+                " *..$$*ByCGLIB$$* || *..$$*SpringCGLIB$$* || javassist* || org.groovy*",
+                "                org.apache.skywalking.*",
+                "*reflect.DelegatingClassLoader || sun.reflect.misc.MethodUtil",
+                "javax.management.remote.rmi.NoCallStackClassLoader",
+                "net.bytebuddy.utility.dispatcher.JavaDispatcher$DynamicClassLoader",
+                "org.apache.skywalking.apm.agent.core.plugin.loader.AgentClassLoader, org.apache.skywalking.apm.dependencies.net.bytebuddy.utility.dispatcher.JavaDispatcher$DynamicClassLoader"
+        };
+
+        int count = 2000;
+
+        {
+            List<ElementMatcher<String>> elementMatchers = new ArrayList<>(typeNameExpressions.length);
+            for(String typeNameExpression : typeNameExpressions) {
+                elementMatchers.add(
+                        ExprParser.INSTANCE.parseTypeNameExpr(typeNameExpression) );
+            }
+            ElementMatcher<String> elementExpr = new ElementMatcher.Junction.Disjunction(elementMatchers);
+
+            long startedAt = System.nanoTime();
+            for(int i = 0; i < count; i++)
+                elementExpr.matches( getClass().getName() + i );
+            LOGGER.info("Took {} seconds to match type name {} times.", (System.nanoTime() - startedAt)/1e9, count);
+        }
+
+        {
+            List<ElementMatcher<ClassLoader>> elementMatchers = new ArrayList<>(typeNameExpressions.length);
+            for(String typeNameExpression : typeNameExpressions) {
+                elementMatchers.add(
+                        ExprParser.INSTANCE.parseClassLoaderExpr(typeNameExpression) );
+            }
+            ElementMatcher<ClassLoader> elementExpr = new ElementMatcher.Junction.Disjunction(elementMatchers);
+
+            long startedAt = System.nanoTime();
+            LOGGER.info("classloader {}", getClass().getClassLoader());
+            for(int i = 0; i < count; i++)
+                elementExpr.matches( getClass().getClassLoader() );
+            LOGGER.info("Took {} seconds to match classloader {} times.", (System.nanoTime() - startedAt)/1e9, count);
+        }
+
+    }
+
+
     @Test
     public void testResourceName() {
         {
@@ -292,7 +345,7 @@ public class ElementExprTests {
 
         {
             ElementMatcher<TypeDescription> elementExpr = ExprParser.INSTANCE.parseTypeExpr(
-                    typeWorld, "io.gemini.aspectj.weaver.ElementExprTests$GenericType");
+                    typeWorld, "io.gemini.aspectj.weaver.ElementExprTests$Parameterized");
 
             assertThat( elementExpr.matches( TypeDescription.ForLoadedType.of(ElementExprTests.Parameterized.class) ) ).isTrue();
         }

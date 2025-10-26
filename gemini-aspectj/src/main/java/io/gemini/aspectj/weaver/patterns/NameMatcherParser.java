@@ -59,55 +59,43 @@ enum NameMatcherParser {
             return ElementMatchers.none();
 
         expression = expression.trim();
-        if(isStar(expression)) {
+        if(isStar(expression))
             return ElementMatchers.any();
+
+        if(hasSpaceAnnotationPlus(expression, 0))
+            return null;
+
+
+        boolean mightStartWith = expression.endsWith(STAR);
+        if(mightStartWith) {
+            int length = expression.length();
+            expression = expression.endsWith("..*") && length > 3
+                    ? expression.substring(0, length - 2)
+                    : expression.substring(0, length - 1);
         }
 
-        String fastMatchInfo = looksLikeStartsWith(expression);
-        if(fastMatchInfo != null) {
-            return new StringMatcher(fastMatchInfo, StringMatcher.Mode.STARTS_WITH );
-        } else if( (fastMatchInfo = looksLikeExactName(expression)) != null) {
-            return new StringMatcher( fastMatchInfo, StringMatcher.Mode.EQUALS_FULLY);
-        } else if( (fastMatchInfo = looksLikeEndsWith(expression)) != null) {
-            return new StringMatcher(fastMatchInfo, StringMatcher.Mode.ENDS_WITH);
-        } else {
-            return null;
+        boolean mightEndWith = expression.startsWith(STAR);
+        if(mightEndWith) {
+            int length = expression.length();
+            expression = expression.startsWith("*..") && length > 3
+                    ? expression.substring(3)
+                    : expression.substring(1);
         }
+
+        if(expression.indexOf("..") != -1 || expression.indexOf(STAR) != -1)
+            return null;
+        else if(mightStartWith && mightEndWith)
+            return new StringMatcher(expression, StringMatcher.Mode.CONTAINS );
+        else if(mightStartWith)
+            return new StringMatcher(expression, StringMatcher.Mode.STARTS_WITH );
+        else if(mightEndWith)
+            return new StringMatcher(expression, StringMatcher.Mode.ENDS_WITH );
+        else
+            return new StringMatcher(expression, StringMatcher.Mode.EQUALS_FULLY );
     }
 
     private boolean isStar(String expression) {
         return expression != null && expression.equals(STAR);
-    }
-
-    /**
-     * Checks if the type expression looks like "com.foo..*"
-     */
-    private String looksLikeStartsWith(String expression) {
-        if (hasSpaceAnnotationPlus(expression, 0) || expression.charAt(expression.length() - 1) != '*') {
-            return null;
-        }
-        // now must looks like with "charsss..*" or "cha.rss..*" etc
-        // note that "*" and "*..*" won't be fast matched
-        int length = expression.length();
-        expression = expression.endsWith("..*") && length > 3
-                ? expression.substring(0, length - 2) // "charsss." or "char.rss." etc
-                : expression.substring(0, length -1);
-
-        return expression.indexOf("..") == -1 && expression.indexOf(STAR) == -1 
-                ? expression : null;
-    }
-
-    /**
-     * Checks if the expression looks like "*Exception"
-     */
-    private String looksLikeEndsWith(String expression) {
-        if (expression.charAt(0) != '*') {
-            return null;
-        }
-        if (hasSpaceAnnotationPlus(expression, 1) || hasStarDot(expression, 1)) {
-            return null;
-        }
-        return expression.substring(1);
     }
 
     /**
@@ -121,28 +109,5 @@ enum NameMatcherParser {
             }
         }
         return false;
-    }
-
-    /**
-     * Determine if something in the string is going to affect our ability to optimize. Checks for: '*' '.'
-     */
-    private boolean hasStarDot(String string, int pos) {
-        for (int i = pos, max = string.length(); i < max; i++) {
-            char ch = string.charAt(i);
-            if (ch == '*' || ch == '.') {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Checks if the expression looks like "com.foo.Bar" - an exact name
-     */
-    private String looksLikeExactName(String expression) {
-        if (hasSpaceAnnotationPlus(expression, 0) || expression.contains(STAR)) {
-            return null;
-        }
-        return expression;
     }
 }

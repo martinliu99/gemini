@@ -15,12 +15,18 @@
  */
 package io.gemini.aop.factory.support;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.aop.factory.AdvisorContext;
 import io.gemini.aop.factory.FactoryContext;
 import io.gemini.aop.matcher.AdviceMethodMatcher;
 import io.gemini.api.aop.AdvisorSpec;
+import io.gemini.api.aop.Pointcut;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 
 /**
@@ -31,92 +37,226 @@ import net.bytebuddy.description.type.TypeDescription;
  */
 public interface AdvisorRepositoryResolver {
 
+    static final Logger LOGGER = LoggerFactory.getLogger(AdvisorRepositoryResolver.class);
+
+
+    boolean supports(AdvisorSpec advisorSpec);
+
     AdvisorRepository resolve(FactoryContext factoryContext, AdvisorSpec advisorSpec);
 
 
-    abstract class AbstractBase implements AdvisorRepositoryResolver {
+    static List<AdvisorRepository> resolveRepository(FactoryContext factoryContext, AdvisorContext validationContext, AdvisorSpec advisorSpec) {
+        List<AdvisorRepositoryResolver> advisorRepositoryResolvers = factoryContext.getAdvisorRepositoryResolvers();
 
-        protected static final Logger LOGGER = LoggerFactory.getLogger(AdvisorRepositoryResolver.class);
+        List<AdvisorRepository> advisorRepositories = new ArrayList<>(advisorRepositoryResolvers.size());
+        for(AdvisorRepositoryResolver advisorRepositoryResolver : advisorRepositoryResolvers) {
+            if(advisorRepositoryResolver.supports(advisorSpec) == false)
+                continue;
+
+            AdvisorRepository advisorRepository  = advisorRepositoryResolver.resolve(factoryContext, advisorSpec);
+            if(advisorRepository == null) 
+                continue;
+
+            // validate advisor creation
+            try {
+                advisorRepository.create(validationContext);
+            } catch(Exception e) {
+                continue;
+            }
+
+            advisorRepositories.add(advisorRepository);
+        }
+
+        return advisorRepositories;
+    }
+
+
+    abstract class AbstractBase<S extends AdvisorSpec> implements AdvisorRepositoryResolver {
 
         protected String resolverName = this.getClass().getName();
 
-
+        @SuppressWarnings("unchecked")
         @Override
         public AdvisorRepository resolve(FactoryContext factoryContext, AdvisorSpec advisorSpec) {
-            if(advisorSpec == null) return null;
+            if(advisorSpec == null || verify(advisorSpec) == false) 
+                return null;
 
             try {
-                return doResolve(factoryContext, advisorSpec);
+                return doResolve(factoryContext, (S) advisorSpec);
             } catch(Throwable t) {
                 LOGGER.warn("Failed to resolve AdvisorSpec '{}' via '{}'.", advisorSpec, resolverName, t);
                 return null;
             }
         }
 
-        protected abstract AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec advisorSpec);
+        @SuppressWarnings("unchecked")
+        private boolean verify(AdvisorSpec advisorSpec) {
+            if(advisorSpec == null || supports(advisorSpec) == false)
+                return false;
+
+            // check advice definition
+            if(StringUtils.hasText(advisorSpec.getAdviceClassName()) == false) {
+                LOGGER.warn("Ignored AdvisorSpec with empty adviceClassName. \n  {}: {} \n", 
+                        getSpecType(), advisorSpec.getAdvisorName() );
+                return false;
+            }
+
+            return doVerify( (S) advisorSpec);
+        }
+
+        protected abstract String getSpecType();
+
+        protected abstract boolean doVerify(S advisorSpec);
+
+        protected abstract AdvisorRepository doResolve(FactoryContext factoryContext, S advisorSpec);
     }
 
 
-    class ForPojoPointcut extends AbstractBase {
+    class ForPojoPointcut extends AbstractBase<AdvisorSpec.PojoPointcutSpec> {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec advisorSpec) {
-            if(advisorSpec == null || advisorSpec instanceof AdvisorSpec.PojoPointcutSpec == false)
-                return null;
+        public boolean supports(AdvisorSpec advisorSpec) {
+            return advisorSpec != null && advisorSpec instanceof AdvisorSpec.PojoPointcutSpec;
+        }
 
-            AdvisorSpec.PojoPointcutSpec pojoPointcutSpec = (AdvisorSpec.PojoPointcutSpec) advisorSpec;
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected String getSpecType() {
+            return AdvisorSpec.PojoPointcutSpec.class.getSimpleName();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected boolean doVerify(AdvisorSpec.PojoPointcutSpec advisorSpec) {
+            Pointcut pointcut = advisorSpec.getPointcut();
+            if(pointcut == null ||
+                    (pointcut.getTypeMatcher() == null && pointcut.getMethodMatcher() == null)) {
+                LOGGER.warn("Ignored AdvisorSpec with null pointuct. \n  {}: {} \n", 
+                        getSpecType(), advisorSpec.getAdvisorName() );
+                return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec.PojoPointcutSpec advisorSpec) {
             TypeDescription adviceType = factoryContext.getTypePool()
                     .describe(advisorSpec.getAdviceClassName())
                     .resolve();
 
             return new AdvisorRepository.ForPojoPointcut(
-                    pojoPointcutSpec, 
-                    AdviceMethodMatcher.create(pojoPointcutSpec, adviceType));
+                    advisorSpec, 
+                    AdviceMethodMatcher.Parser.parse(advisorSpec, adviceType));
         }
     }
 
 
-    class ForExprPointcut extends AbstractBase {
+    class ForExprPointcut extends AbstractBase<AdvisorSpec.ExprPointcutSpec> {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec advisorSpec) {
-            if(advisorSpec == null || advisorSpec instanceof AdvisorSpec.ExprPointcutSpec == false)
-                return null;
+        public boolean supports(AdvisorSpec advisorSpec) {
+            return advisorSpec != null && advisorSpec instanceof AdvisorSpec.ExprPointcutSpec;
+        }
 
-            AdvisorSpec.ExprPointcutSpec exprPointcutSpec = (AdvisorSpec.ExprPointcutSpec) advisorSpec;
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected String getSpecType() {
+            return AdvisorSpec.ExprPointcutSpec.class.getSimpleName();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected boolean doVerify(AdvisorSpec.ExprPointcutSpec advisorSpec) {
+            if(StringUtils.hasText(advisorSpec.getPointcutExpression()) == false) {
+                LOGGER.warn("Ignored AdvisorSpec with empty pointcutExpression. \n  {}: {} \n", 
+                        getSpecType(), advisorSpec.getAdvisorName() );
+                return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec.ExprPointcutSpec advisorSpec) {
             TypeDescription adviceType = factoryContext.getTypePool()
                     .describe(advisorSpec.getAdviceClassName())
                     .resolve();
 
             return new AdvisorRepository.ForExprPointcut(
-                    exprPointcutSpec,
-                    AdviceMethodMatcher.create(exprPointcutSpec, adviceType));
+                    advisorSpec,
+                    AdviceMethodMatcher.Parser.parse(advisorSpec, adviceType));
         }
     }
 
 
-    class ForAspectJ extends AbstractBase {
+    class ForAspectJ extends AbstractBase<AspectJAdvisorSpec> {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec advisorSpec) {
-            if(advisorSpec == null || advisorSpec instanceof AspectJAdvisorSpec == false)
-                return null;
+        public boolean supports(AdvisorSpec advisorSpec) {
+            return advisorSpec != null && advisorSpec instanceof AspectJAdvisorSpec;
+        }
 
-            AspectJAdvisorSpec aspectJAdvisorSpec = (AspectJAdvisorSpec) advisorSpec;
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected String getSpecType() {
+            return AspectJAdvisorSpec.class.getSimpleName();
+        }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected boolean doVerify(AspectJAdvisorSpec advisorSpec) {
+            if(advisorSpec.getAspectJType() == null) {
+                LOGGER.warn("Ignored AdvisorSpec with empty aspectJClassName. \n  {}: {} \n", 
+                        getSpecType(), advisorSpec.getAdvisorName() );
+                return false;
+            }
+
+            if(StringUtils.hasText(advisorSpec.getPointcutExpression()) == false) {
+                LOGGER.warn("Ignored AdvisorSpec with empty pointcutExpression. \n  {}: {} \n", 
+                        getSpecType(), advisorSpec.getAdvisorName() );
+                return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected AdvisorRepository doResolve(FactoryContext factoryContext, AspectJAdvisorSpec advisorSpec) {
             return new AdvisorRepository.ForAspectJAdvice(
-                    aspectJAdvisorSpec, 
-                    AdviceMethodMatcher.create(aspectJAdvisorSpec, aspectJAdvisorSpec.getAspectJMethod(), 
-                            aspectJAdvisorSpec.getAdviceReturningParameterType(), aspectJAdvisorSpec.getAdviceThrowingParameterType()));
+                    advisorSpec, 
+                    AdviceMethodMatcher.Parser.parse(advisorSpec, advisorSpec.getAspectJMethod(), 
+                            advisorSpec.getAdviceReturningParameterType(), advisorSpec.getAdviceThrowingParameterType()));
         }
     }
 }

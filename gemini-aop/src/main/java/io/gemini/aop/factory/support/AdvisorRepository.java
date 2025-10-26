@@ -304,6 +304,9 @@ public interface AdvisorRepository {
          */
         @Override
         protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, Pointcut pointcut) {
+            if(adviceMethodMatcher == null)
+                return pointcut;
+
             return new Pointcut.Default(
                     pointcut.getTypeMatcher(), 
                     new ElementMatcher.Junction.Conjunction<MethodDescription>(pointcut.getMethodMatcher(), adviceMethodMatcher)
@@ -331,6 +334,9 @@ public interface AdvisorRepository {
          */
         @Override
         protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, Pointcut pointcut) {
+            if(adviceMethodMatcher == null)
+                return pointcut;
+
             return new Pointcut.Default(
                     pointcut.getTypeMatcher(),
                     new ElementMatcher.Junction.Conjunction<MethodDescription>(pointcut.getMethodMatcher(), adviceMethodMatcher)
@@ -364,11 +370,13 @@ public interface AdvisorRepository {
          */
         @Override
         protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, ExprPointcut pointcut) {
+            if(adviceMethodMatcher == null)
+                return pointcut;
+
             return new Pointcut.Default(
                     pointcut.getTypeMatcher(),
                     new ElementMatcher.Junction.Conjunction<MethodDescription>(
                             new ElementMatcher<MethodDescription>() {
-        
                                 @Override
                                 public boolean matches(MethodDescription methodDescription) {
                                     return pointcut.matches(methodDescription, advisorSpec);

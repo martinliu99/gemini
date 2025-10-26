@@ -85,7 +85,7 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
 
 
     @Aspect
-    @Conditional(value = {Condition1.class, }, classLoaderExpressions = "AppClassLoader")
+    @Conditional(value = {Condition1.class, }, acceptableClassLoaderExpressions = "AppClassLoader")
     public static class VoidMatching_Aspect {
 
         private static final String MATCH_VOID_POINTCUT = 
@@ -94,7 +94,7 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Aspect.class.getName() + ".matchVoid_afterAdvice";
 
         @After(MATCH_VOID_POINTCUT)
-        @Conditional(fieldExpressions = "io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
+        @Conditional(requiredFieldExpressions = "io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
         public void matchVoid_afterAdvice(MutableJoinpoint<Void, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(MATCH_VOID_AFTER_ADVICE, 
                     new AdviceMethod()
@@ -131,7 +131,7 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
 
                         @Override
                         public boolean matches(ConditionContext target) {
-                            return target.hasMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
+                            return target.hasRequiredMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
                         }
                     })
                     .typeMatcher(
@@ -151,7 +151,7 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
          */
         @Override
         public boolean matches(ConditionContext target) {
-            return target.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
+            return target.hasRequiredType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
         }
         
     }

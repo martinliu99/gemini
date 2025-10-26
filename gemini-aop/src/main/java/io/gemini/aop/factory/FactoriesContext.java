@@ -18,27 +18,22 @@ package io.gemini.aop.factory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
-import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
-import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
-import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.core.config.ConfigView;
-import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -54,29 +49,25 @@ class FactoriesContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FactoriesContext.class);
 
-    private static final String FACTORIES_FACTORY_EXPRESSIONS_KEY = "aop.factories.factoryExpressions";
+    private static final String FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY = "aop.factories.enabledFactoryExpressions";
 
-    static final String FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factories.defaultMatchingClassLoaderExpressions";
+    static final String FACTORIES_DEFAULT_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factories.defaultAcceptableClassLoaderExpressions";
 
 
     private final AopContext aopContext;
 
 
     // global advisor factory settings
-    private ElementMatcher<String> factoryMatcher;
+    private ElementMatcher<String> enabledFactoryMatcher;
 
 
-    private Set<String> defaultMatchingClassLoaderExpressions;
+    private Set<String> defaultAcceptableClassLoaderExpressions;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
 
     private boolean asmAutoCompute = false;
 
-
-    private List<AdvisorSpecScanner> advisorSpecScanners;
-    private List<AdvisorSpecPostProcessor> advisorSpecPostProcessors;
-    private List<AdvisorRepositoryResolver> advisorRepositoryResolvers;
 
     private Map<String /* FactoryName */, FactoryContext> factoryContextMap;
 
@@ -90,7 +81,7 @@ class FactoriesContext implements Closeable {
 
 
         // 2.initialize properties
-        initialize(aopContext);
+        this.factoryContextMap = createFactoryContextMap(aopContext);
     }
 
     private void loadSettings(AopContext aopContext) {
@@ -98,22 +89,22 @@ class FactoriesContext implements Closeable {
 
         // load global advisor factory settings
         {
-            Set<String> factoryExpressions = configView.getAsStringSet(FACTORIES_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
-            if(factoryExpressions.size() > 0) {
+            Set<String> enabledFactoryExpressions = configView.getAsStringSet(FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
+            if(enabledFactoryExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
-                        factoryExpressions.size(), FACTORIES_FACTORY_EXPRESSIONS_KEY,
-                        StringUtils.join(factoryExpressions, "\n  ")
+                        enabledFactoryExpressions.size(), FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY,
+                        StringUtils.join(enabledFactoryExpressions, "\n  ")
                 );
 
-                this.factoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORIES_FACTORY_EXPRESSIONS_KEY, factoryExpressions );
+                this.enabledFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, enabledFactoryExpressions );
             } else {
-                this.factoryMatcher = ElementMatchers.any();
+                this.enabledFactoryMatcher = ElementMatchers.any();
             }
         }
 
         {
-            this.defaultMatchingClassLoaderExpressions = configView.getAsStringSet(
-                    FACTORIES_DEFAULT_MATCHING_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
+            this.defaultAcceptableClassLoaderExpressions = configView.getAsStringSet(
+                    FACTORIES_DEFAULT_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
 
             this.shareAspectClassLoader = configView.getAsBoolean("aop.factories.shareAspectClassLoader", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
@@ -147,43 +138,22 @@ class FactoriesContext implements Closeable {
         return groupList;
     }
 
-    private void initialize(AopContext aopContext) {
-        ObjectFactory objectFactory = aopContext.getObjectFactory();
-        this.advisorSpecScanners = new ArrayList<>();
-        for(AdvisorSpecScanner advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorSpecScanner.class)) {
-            advisorSpecScanners.add(advisorSpecScanner);
-        }
-
-        this.advisorSpecPostProcessors = new ArrayList<>();
-        for(AdvisorSpecPostProcessor advisorSpecPostProcessor : objectFactory.createObjectsImplementing(AdvisorSpecPostProcessor.class)) {
-            advisorSpecPostProcessors.add(advisorSpecPostProcessor);
-        }
-
-        this.advisorRepositoryResolvers = new ArrayList<>();
-        for(AdvisorRepositoryResolver advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class)) {
-            advisorRepositoryResolvers.add(advisorSpecScanner);
-        }
-
-        this.factoryContextMap = createFactoryContextMap(aopContext);
-    }
-
     private Map<String, FactoryContext> createFactoryContextMap(AopContext aopContext) {
         long startedAt = System.nanoTime();
         if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
             LOGGER.info("^Creating FactoryContexts.");
         }
 
-        Map<String, URL[]> aspectAppResourceURLs = aopContext.getAspectAppResourceMap();
         try {
-            return aopContext.getGlobalTaskExecutor().executeTasks(
-                    aspectAppResourceURLs.entrySet().stream()
-                        .collect( Collectors.toList() ),
-                    entry -> new SimpleEntry<>(entry.getKey(), 
-                            new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) )
-            )
-           .stream()
-           .collect( 
-                   Collectors.toMap(Entry::getKey, Entry::getValue) );
+            Map<String, URL[]> aspectAppResourceURLs = aopContext.getAspectAppResourceMap();
+
+            Map<String, FactoryContext> factoryContexts = new HashMap<>(aspectAppResourceURLs.size());
+            for(Entry<String, URL[]> entry : aspectAppResourceURLs.entrySet()) {
+                factoryContexts.put(entry.getKey(), 
+                        new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) );
+            }
+
+            return factoryContexts;
         } finally {
             if(aopContext.getDiagnosticLevel().isSimpleEnabled())
                 LOGGER.info("$Took '{}' seconds to create FactoryContexts.", (System.nanoTime() - startedAt) / 1e9);
@@ -191,13 +161,13 @@ class FactoriesContext implements Closeable {
     }
 
 
-    public boolean matchFactory(String factoryName) {
-        return factoryMatcher.matches(factoryName);
+    public boolean isEnabledFactory(String factoryName) {
+        return enabledFactoryMatcher.matches(factoryName);
     }
 
 
-    public Set<String> getDefaultMatchingClassLoaderExpressions() {
-        return Collections.unmodifiableSet( defaultMatchingClassLoaderExpressions );
+    public Set<String> getDefaultAcceptableClassLoaderExpressions() {
+        return Collections.unmodifiableSet( defaultAcceptableClassLoaderExpressions );
     }
 
     public boolean isShareAspectClassLoader() {
@@ -212,18 +182,6 @@ class FactoriesContext implements Closeable {
         return asmAutoCompute;
     }
 
-
-    public List<AdvisorSpecScanner> getAdvisorSpecScanners() {
-        return Collections.unmodifiableList( advisorSpecScanners );
-    }
-
-    public List<AdvisorSpecPostProcessor> getAdvisorSpecProcessors() {
-        return Collections.unmodifiableList( advisorSpecPostProcessors );
-    }
-
-    public List<AdvisorRepositoryResolver> getAdvisorRepositoryResolvers() {
-        return Collections.unmodifiableList( advisorRepositoryResolvers );
-    }
 
     public Map<String, FactoryContext> getFactoryContextMap() {
         return this.factoryContextMap;

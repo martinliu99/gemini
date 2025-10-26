@@ -260,7 +260,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             return this.typeVariables;
 
         TypeList.Generic typeVariableList = this.typeDescription.getTypeVariables();
-        this.typeVariables = new TypeVariable[typeVariableList.size()];
+        TypeVariable[] typeVariables = new TypeVariable[typeVariableList.size()];
 
         // basic initialization
         int i = 0;
@@ -284,7 +284,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             typeVariable.setRank(tv.getRank());
         }
 
-        return this.typeVariables;
+        return this.typeVariables = typeVariables;
     }
 
 
@@ -325,7 +325,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         }
 
         List<PointcutMethod> pointcutMethods = this.getDeclaredPointcutMethods(typeDescription);
-        this.pointcuts = new ResolvedPointcutDefinition[pointcutMethods.size()];
+        ResolvedPointcutDefinition[] pointcuts = new ResolvedPointcutDefinition[pointcutMethods.size()];
 
         PointcutParser pointcutParser = new PointcutParser(typeWorld);
 
@@ -377,7 +377,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             pointcuts[i].setPointcut(pointcutParser.concretizePointcutExpression(pointcuts[i].getPointcut(), this.typeDescription, formalParameterList.get(i)));
         }
 
-        return pointcuts;
+        return this.pointcuts = pointcuts;
     }
 
     private List<PointcutMethod> getDeclaredPointcutMethods(TypeDescription typeDescription) {

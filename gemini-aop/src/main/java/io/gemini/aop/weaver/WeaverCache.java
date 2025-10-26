@@ -50,18 +50,18 @@ class WeaverCache implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverCache.class);
 
 
-//    private final WeaverContext weaverContext;
-
     private final ConcurrentMap<ClassLoader, ConcurrentMap<String /* typeName */, TypeCache>> classLoaderTypeCache;
 
 
     WeaverCache(WeaverContext weaverContext) {
-//        this.weaverContext = weaverContext;
-
         this.classLoaderTypeCache = new ConcurrentReferenceHashMap<>();
     }
 
-    public TypeCache getTypeCache(ClassLoader classLoader, String typeName) {
+    public TypeCache createTypeCache(String typeName) {
+        return new TypeCache(typeName);
+    }
+
+    public TypeCache putTypeCache(ClassLoader classLoader, TypeCache typeCache) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
         return this.classLoaderTypeCache
                 .computeIfAbsent(
@@ -69,23 +69,20 @@ class WeaverCache implements Closeable {
                         cl -> new ConcurrentHashMap<>()
                 )
                 .computeIfAbsent( 
-                        typeName, 
-                        name -> new TypeCache(name)
+                        typeCache.getTypeName(), 
+                        typeName -> typeCache
                 );
     }
 
-    public void removeTypeCache(ClassLoader classLoader, String typeName) {
+    public TypeCache getTypeCache(ClassLoader classLoader, String typeName) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
         ConcurrentMap<String /* typeName */, TypeCache> typeCaches = this.classLoaderTypeCache.get(cacheKey);
         if(typeCaches == null)
-            return;
+            return null;
 
-        TypeCache typeCache = typeCaches.remove(typeName);
-        if(typeCache == null)
-            return;
-
-        typeCache.clear();
+        return typeCaches.get(typeName);
     }
+
 
     public Joinpoints.Descriptor getJoinpointDescriptor(Lookup lookup, String methodSignature) {
         Class<?> thisClass = lookup.lookupClass();
@@ -242,6 +239,12 @@ class WeaverCache implements Closeable {
             this.methodSignatureMap.clear();
             this.methodSignatureAdvisorsMap.clear();
             this.joinpointDescriptors.clear();
+        }
+
+
+        @Override
+        public String toString() {
+            return typeName;
         }
     }
 }

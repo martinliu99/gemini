@@ -33,6 +33,7 @@ import io.gemini.aop.factory.AdvisorContext;
 import io.gemini.aop.factory.support.AspectJAdvisorSpec.AdviceCategory;
 import io.gemini.aop.matcher.AdviceMethodMatcher;
 import io.gemini.api.aop.Advice;
+import io.gemini.api.aop.Joinpoint;
 import io.gemini.aspectj.weaver.PointcutParameter.NamedPointcutParameter;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import net.bytebuddy.ByteBuddy;
@@ -138,8 +139,8 @@ interface AdviceClassMaker {
         INSTANCE
         ;
 
-        private static final TypeDescription JOINPOINT_TYPE = AspectJAdvisorSpec.JOINPOINT_TYPE;
-        private static final TypeDescription MUTABLE_JOINPOINT_TYPE = AspectJAdvisorSpec.MUTABLE_JOINPOINT_TYPE;
+        private static final TypeDescription JOINPOINT_TYPE = TypeDescription.ForLoadedType.of(Joinpoint.class);
+        private static final TypeDescription MUTABLE_JOINPOINT_TYPE = TypeDescription.ForLoadedType.of(Joinpoint.MutableJoinpoint.class);
 
         private static final TypeDescription AROUND_ADVICE_TYPE = TypeDescription.ForLoadedType.of(Advice.Around.class);
         private static final String AROUND_ADVICE_METHOD_NAME = AROUND_ADVICE_TYPE.getSimpleName().toLowerCase();
@@ -170,8 +171,8 @@ interface AdviceClassMaker {
             // 1.define class
             // prepare parent interfaces
             List<TypeDefinition> implementTypeDefinitions = new ArrayList<>(2);
-            Generic parameterizedReturningType = classMaker.adviceMethodMatcher.getParameterizedReturningType();
-            Generic parameterizedThrowingType = classMaker.adviceMethodMatcher.getParameterizedThrowingType();
+            Generic parameterizedReturningType = classMaker.adviceMethodMatcher == null ? null : classMaker.adviceMethodMatcher.getParameterizedReturningType();
+            Generic parameterizedThrowingType = classMaker.adviceMethodMatcher == null ? null : classMaker.adviceMethodMatcher.getParameterizedThrowingType();
             if(parameterizedReturningType != null) {
                 if(adviceCategory.isAround() == true) {
                     implementTypeDefinitions.add(

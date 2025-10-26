@@ -63,7 +63,14 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
         Map<FactoryContext, DefaultAdvisorFactory> advisorFactoryMap = new LinkedHashMap<>();
         for(FactoryContext factoryContext : factoryContextMap.values()) {
-            DefaultAdvisorFactory advisorFactory = this.createAdvisorFactory(aopContext, factoriesContext, factoryContext);
+            String factoryName = factoryContext.getFactoryName();
+
+            // filter aspect
+            if(factoriesContext.isEnabledFactory(factoryName) == false) 
+                return null;
+
+            // create AdvisorFactory
+            DefaultAdvisorFactory advisorFactory = new DefaultAdvisorFactory(factoryContext);
             advisorFactoryMap.put(factoryContext, advisorFactory);
         }
 
@@ -72,17 +79,6 @@ class CompoundAdvisorFactory implements AdvisorFactory {
         return advisorFactoryMap;
     }
 
-    private DefaultAdvisorFactory createAdvisorFactory(AopContext aopContext,
-            FactoriesContext factoriesContext, FactoryContext factoryContext) {
-        String factoryName = factoryContext.getFactoryName();
-
-        // filter aspect
-        if(factoriesContext.matchFactory(factoryName) == false) 
-            return null;
-
-        // create AdvisorFactory
-        return new DefaultAdvisorFactory(aopContext, factoryContext);
-    }
 
 
     @Override

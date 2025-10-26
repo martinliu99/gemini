@@ -17,6 +17,7 @@ package io.gemini.aop.factory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -35,8 +36,11 @@ import io.gemini.aop.AopMetrics;
 import io.gemini.aop.AopMetrics.WeaverMetrics;
 import io.gemini.aop.factory.support.AdvisorRepository;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
+import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
+import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
+import io.gemini.api.classloader.ThreadContext;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.util.ClassLoaderUtils;
@@ -65,21 +69,22 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     private final AopContext aopContext;
     private final FactoryContext factoryContext;
 
-    private final List<? extends AdvisorSpec> advisorSpecs;
-    private final List<? extends AdvisorRepository> advisorRepositories;
+    private final Collection<? extends AdvisorSpec> advisorSpecs;
+    private final Collection<? extends AdvisorRepository> advisorRepositories;
 
     // cache advisors per ClassLoader
     private ConcurrentMap<ClassLoader, List<? extends Advisor>> classLoaderAdvisorMap;
 
 
-    public DefaultAdvisorFactory(AopContext aopContext, FactoryContext factoryContext) {
+    public DefaultAdvisorFactory(FactoryContext factoryContext) {
         long startedAt = System.nanoTime();
+
+        this.aopContext = factoryContext.getAopContext();
+        this.factoryContext = factoryContext;
+
         String factoryName = factoryContext.getFactoryName();
         if(aopContext.getDiagnosticLevel().isSimpleEnabled())
             LOGGER.info("^Creating DefaultAdvisorFactory '{}'", factoryName);
-
-        this.aopContext = aopContext;
-        this.factoryContext = factoryContext;
 
         // 1.resolve AdvisorRepository
         this.advisorSpecs = scanAdvisorSpecs(factoryContext);
@@ -94,66 +99,40 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
     /**
-     * @param factoryContext2
+     * @param factoryContext
      * @return
      */
-    private List<? extends AdvisorSpec> scanAdvisorSpecs(FactoryContext factoryContext2) {
+    private Collection<? extends AdvisorSpec> scanAdvisorSpecs(FactoryContext factoryContext) {
         long startedAt = System.nanoTime();
         String factoryName = factoryContext.getFactoryName();
         LOGGER.info("^Scanning AdvisorSpec under '{}'.", factoryName);
 
-        List<? extends AdvisorSpec> advisorSpecs = this.aopContext.getGlobalTaskExecutor().executeTasks(
-                factoryContext.getFactoriesContext().getAdvisorSpecScanners(), 
-                advisorSpecScanner -> advisorSpecScanner.scan(factoryContext)
-        )
-        .stream()
-        .flatMap( e -> e.stream())
-        .collect( Collectors.toList() );
+        Map<String, AdvisorSpec> advisorSpecMap = AdvisorSpecScanner.scanSpecs(factoryContext);
+
+        advisorSpecMap = AdvisorSpecPostProcessor.postProcessSpecs(factoryContext, advisorSpecMap );
 
         if(aopContext.getDiagnosticLevel().isSimpleEnabled() == false)
             LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'.", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecs.size(), factoryName);
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName);
         else 
             LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'. {}", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecs.size(), factoryName,
-                    StringUtils.join(advisorSpecs, repository -> repository.getAdvisorName(), "\n  ", "\n  ", "\n")
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
+                    StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ", "\n  ", "\n")
             );
 
-        return advisorSpecs;
+        return advisorSpecMap.values();
     }
 
-    private List<? extends AdvisorRepository> resolveAdvisorRepositories(FactoryContext factoryContext, 
-            List<? extends AdvisorSpec> advisorSpecs) {
+    private Collection<? extends AdvisorRepository> resolveAdvisorRepositories(FactoryContext factoryContext, 
+            Collection<? extends AdvisorSpec> advisorSpecs) {
         long startedAt = System.nanoTime();
         String factoryName = factoryContext.getFactoryName();
         LOGGER.info("^Resolving AdvisorSpec under '{}'.", factoryName);
 
-        List<AdvisorRepositoryResolver> advisorRepositoryResolvers = factoryContext.getFactoriesContext().getAdvisorRepositoryResolvers();
         AdvisorContext validationContext = factoryContext.createAdvisorContext(factoryContext.getClassLoader(), null, true);
         List<? extends AdvisorRepository> advisorRepositories = this.aopContext.getGlobalTaskExecutor().executeTasks(
                 advisorSpecs, 
-                advisorSpec -> {
-                    List<AdvisorRepository> repositories = new ArrayList<>(advisorRepositoryResolvers.size());
-                    for(AdvisorRepositoryResolver advisorRepositoryResolver : advisorRepositoryResolvers) {
-                        AdvisorRepository advisorRepository  = advisorRepositoryResolver.resolve(factoryContext, advisorSpec);
-                        if(advisorRepository == null) continue;
-
-                        // filter advisorRepositry via advisorMatcher
-                        if(factoryContext.matchAdvisor(advisorRepository.getAdvisorName()) == false)
-                            continue;
-
-                        // validate advisor creation
-                        try {
-                            advisorRepository.create(validationContext);
-                        } catch(Exception e) {
-                            continue;
-                        }
-
-                        repositories.add(advisorRepository);
-                    }
-
-                    return repositories;
-                }
+                advisorSpec -> AdvisorRepositoryResolver.resolveRepository(factoryContext, validationContext, advisorSpec)
         )
         .stream()
         .flatMap( e -> e.stream())
@@ -165,7 +144,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         else 
             LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository under '{}'. {}", 
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName,
-                    StringUtils.join(advisorRepositories, repository -> repository.getAdvisorName(), "\n  ", "\n  ", "\n")
+                    StringUtils.join(advisorRepositories, AdvisorRepository::getAdvisorName, "\n  ", "\n  ", "\n")
             );
 
         return advisorRepositories;
@@ -188,8 +167,6 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
             TypeDescription typeDescription, ClassLoader joinpointClassLoader, JavaModule javaModule) {
         long startedAt = System.nanoTime();
-        WeaverMetrics weaverMetrics = aopContext.getAopMetrics().getWeaverMetrics(joinpointClassLoader, javaModule);
-        String joinpointClassLoaderId = ClassLoaderUtils.getClassLoaderId(joinpointClassLoader);
 
         // diagnostic log
         String typeName = typeDescription.getTypeName();
@@ -199,8 +176,9 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
         // 1.filter type by classLoaderMatcher and TypeMatcher in Advisor level
+        WeaverMetrics weaverMetrics = aopContext.getAopMetrics().getWeaverMetrics(joinpointClassLoader, javaModule);
         try {
-            if(this.acceptType(typeDescription, joinpointClassLoader, javaModule, weaverMetrics) == false)
+            if(this.acceptType(typeDescription, joinpointClassLoader, javaModule) == false)
                 return Collections.emptyMap();
         } finally {
             weaverMetrics.incrTypeAcceptingTime(System.nanoTime() - startedAt);
@@ -212,8 +190,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         try {
             startedAt = System.nanoTime();
 
-            candidateAdvisors = getOrCreateAdvisorPerClassLoader(typeName,  
-                    joinpointClassLoaderId, joinpointClassLoader, javaModule, weaverMetrics);
+            candidateAdvisors = getOrCreateAdvisorPerClassLoader(typeName, joinpointClassLoader, javaModule, weaverMetrics);
 
             if(CollectionUtils.isEmpty(candidateAdvisors))
                 return Collections.emptyMap();
@@ -262,26 +239,25 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
     }
 
-    private boolean acceptType(TypeDescription typeDescription, ClassLoader joinpointClassLoader, JavaModule javaModule,
-            WeaverMetrics weaverMetrics) {
+    private boolean acceptType(TypeDescription typeDescription, 
+            ClassLoader joinpointClassLoader, JavaModule javaModule) {
         // 1.check match switch
         if(this.factoryContext.isMatchJoinpoint() == false)
             return false;
 
         // 2.filter type by classLoaderMatcher
-        if(factoryContext.matchClassLoaders(joinpointClassLoader) == false)
+        if(factoryContext.isAcceptableClassLoader(joinpointClassLoader) == false)
             return false;
 
         // 3.filter type by typeMatcher
-        if(factoryContext.matchType(typeDescription.getTypeName()) == false)
+        if(factoryContext.isAcceptableType(typeDescription.getTypeName()) == false)
             return false;
 
         return true;
     }
 
     private List<? extends Advisor> getOrCreateAdvisorPerClassLoader(String typeName, 
-            String joinpointClassLoaderId, ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            WeaverMetrics weaverMetrics) {
+            ClassLoader joinpointClassLoader, JavaModule javaModule, WeaverMetrics weaverMetrics) {
         AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
 
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
@@ -292,24 +268,43 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
         // create Advisors
-        List<Advisor> advisors = new ArrayList<>();
-        for(AdvisorRepository advisorRepository : this.advisorRepositories) {
-            try {
-                Advisor advisor = advisorRepository.create(advisorContext);
-                if(advisor != null)
-                    advisors.add(advisor);
-            } catch(Throwable t) {
-                LOGGER.warn("Failed to instatiate advisor with '{}'.", advisorRepository, t);
-            }
-        }
+        long startedAt = System.nanoTime();
+        LOGGER.info("^Creating advisors under '{}' for '{}'.", 
+                factoryContext.getFactoryName(), joinpointClassLoader);
+
+        List<Advisor> advisors = factoryContext.getAopContext().getGlobalTaskExecutor().executeTasks(
+                advisorRepositories, 
+                advisorRepository -> {
+                    try {
+                        return advisorRepository.create(advisorContext);
+                    } catch(Throwable t) {
+                        LOGGER.warn("Failed to instantiate advisor with '{}'.", advisorRepository, t);
+                        return null;
+                    }
+                },
+                result -> {
+                    ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
+                    try {
+                        ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
+                        return result.get();
+                    } finally {
+                        ThreadContext.setContextClassLoader(existingClassLoader);
+                    }
+                }
+        )
+        .stream()
+        .filter( e -> e != null)
+        .collect( Collectors.toList() );
 
         if(aopContext.getDiagnosticLevel().isSimpleEnabled() == false)
-            LOGGER.info("Loaded {} advisors under '{}' for '{}'.", 
-                    advisors.size(), factoryContext.getFactoryName(), joinpointClassLoaderId);
+            LOGGER.info("$Took '{}' seconds to load {} advisors under '{}' for '{}'.", 
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
+                    advisors.size(), factoryContext.getFactoryName(), joinpointClassLoader);
         else
-            LOGGER.info("Loaded {} advisors under '{}' for '{}'. {}", 
-                    advisors.size(), factoryContext.getFactoryName(), joinpointClassLoaderId,
-                    StringUtils.join(advisors, advisor -> advisor.getAdvisorName(), "\n  ", "\n  ", "\n")
+            LOGGER.info("$Took '{}' seconds to load {} advisors under '{}' for '{}'. {}", 
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
+                    advisors.size(), factoryContext.getFactoryName(), joinpointClassLoader,
+                    StringUtils.join(advisors, Advisor::getAdvisorName, "\n  ", "\n  ", "\n")
             );
 
         this.classLoaderAdvisorMap.putIfAbsent(cacheKey, advisors);
@@ -317,6 +312,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
         return advisors;
     }
+
 
     private List<Advisor.PointcutAdvisor> fastMatchAdvisors(TypeDescription typeDescription, 
             ClassLoader joinpointClassLoader, JavaModule javaModule, 

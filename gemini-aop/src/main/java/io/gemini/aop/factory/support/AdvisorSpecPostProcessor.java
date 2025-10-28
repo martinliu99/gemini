@@ -19,6 +19,10 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Set;
 
 import io.gemini.aop.factory.FactoryContext;
@@ -53,6 +57,8 @@ public interface AdvisorSpecPostProcessor {
 
 
     class ForConfiguredSpec implements AdvisorSpecPostProcessor, Ordered {
+
+        private static final Logger LOGGER = LoggerFactory.getLogger(ForConfiguredSpec.class);
 
         private static final String CONFIGURED_ADVISOR_SPECS_PREFIX = "aop.advisorSpecs.";
         private static final String ADVISOR_NAME = "advisorName";
@@ -117,7 +123,7 @@ public interface AdvisorSpecPostProcessor {
 
             ElementMatcher<ConditionContext> condition = AdvisorCondition.create(factoryContext, configView, keyPrefix);
             if(condition == null)
-                condition = existingAdvisorSpec != null ? existingAdvisorSpec.getCondition() : factoryContext.getDefaultCondition();
+                condition = existingAdvisorSpec != null ? existingAdvisorSpec.getCondition() : AdvisorSpec.TRUE;
 
             Boolean perInstance = configView.getAsBoolean(keyPrefix + "perInstance", 
                     existingAdvisorSpec != null ? existingAdvisorSpec.isPerInstance() : false);
@@ -130,8 +136,9 @@ public interface AdvisorSpecPostProcessor {
                 // create new AdvisorSpec instance
                 if(StringUtils.hasText(adviceMethodExpression)) {
                     // if adviceMethodExpression is defined, all properties should be defined.
-                    MethodDescription aspectJMethod = ExprParser.INSTANCE.findMethod(
-                            factoryContext.getTypeWorld(), adviceMethodExpression);
+                    MethodDescription aspectJMethod = findMethod(advisorName, factoryContext, adviceMethodExpression);
+                    if(aspectJMethod == null)
+                        return null;
 
                     TypeDescription aspectJType = aspectJMethod.getDeclaringType().asErasure();
 
@@ -185,6 +192,28 @@ public interface AdvisorSpecPostProcessor {
                                 aspectJAdvisorSpec.getAdviceReturningParameterType(), aspectJAdvisorSpec.getAdviceThrowingParameterType()); 
                     }
                 }
+            }
+
+            return null;
+        }
+
+        private MethodDescription findMethod(String advisorName, FactoryContext factoryContext, String adviceMethodExpression) {
+            try {
+                return ExprParser.INSTANCE.findMethod(
+                        factoryContext.getTypeWorld(), adviceMethodExpression);
+            } catch(ExprParser.ExprParseException e) {
+                LOGGER.warn("Failed to find method with unparsable MethodExpression. \n  AdvisorSpec: {} \n  MethodExpression: {} \n  FactoryName: {} \n  Syntax Error: {} \n", 
+                        advisorName, adviceMethodExpression, factoryContext.getFactoryName(), e.getMessage());
+            } catch(ExprParser.ExprLintException e) {
+                LOGGER.warn("Failed to find method with lint MethodExpression. \n  AdvisorSpec: {} \n  MethodExpression: {} \n  FactoryName: {} \n  Lint message: {} \n", 
+                        advisorName, adviceMethodExpression, factoryContext.getFactoryName(), e.getMessage());
+            } catch(ExprParser.ExprUnknownException e) {
+                Throwable cause = e.getCause();
+                LOGGER.warn("Failed to find method with illegal MethodExpression. \n  AdvisorSpec: {} \n  MethodExpression: {} \n  FactoryName: {} \n  Error reason: {} \n", 
+                        advisorName, adviceMethodExpression, factoryContext.getFactoryName(), cause.getMessage(), cause);
+            } catch(Exception e) {
+                LOGGER.warn("Failed to find method with illegal MethodExpression. \n  AdvisorSpec: {} \n  MethodExpression: {} \n  FactoryName: {} \n  Error reason: {} \n", 
+                        advisorName, adviceMethodExpression, factoryContext.getFactoryName(), e.getMessage(), e);
             }
 
             return null;

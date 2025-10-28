@@ -72,8 +72,10 @@ public interface AdvisorSpecScanner {
     Collection<? extends AdvisorSpec> scan(FactoryContext factoryContext);
 
 
-    static Map<String, AdvisorSpec> scanSpecs(FactoryContext factoryContext) {
+    static Collection<? extends AdvisorSpec> scanSpecs(FactoryContext factoryContext) {
         Map<String, AdvisorSpec> advisorSpecMap = new LinkedHashMap<>();
+
+        // scan and load AdvisorSpec instances via AdvisorSpecScanner
         for(AdvisorSpecScanner advisorSpecScanner : factoryContext.getAdvisorSpecScanners()) {
             for(AdvisorSpec advisorSpec : advisorSpecScanner.scan(factoryContext) ) {
                 if(advisorSpec == null) 
@@ -90,7 +92,10 @@ public interface AdvisorSpecScanner {
             }
         }
 
-        return advisorSpecMap;
+        // post process loaded AdvisorSpec instances
+        AdvisorSpecPostProcessor.postProcessSpecs(factoryContext, advisorSpecMap);
+
+        return advisorSpecMap.values();
     }
 
 
@@ -200,12 +205,12 @@ public interface AdvisorSpecScanner {
                 boolean noAdvisorName = !StringUtils.hasText(advisorName) || AdvisorSpec.PojoPointcutSpec.Default.class.getName().equals(advisorName);
 
                 ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
-                boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
+                boolean noCondition = condition == null;
 
                 if(noAdvisorName || noCondition)
                     advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
                             noAdvisorName ? className : advisorName,
-                            noCondition ? factoryContext.getDefaultCondition() : condition,
+                            noCondition ? AdvisorSpec.TRUE : condition,
                             advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                             advisorSpec.getPointcut(), advisorSpec.getOrder());
 
@@ -231,12 +236,12 @@ public interface AdvisorSpecScanner {
                 boolean noAdvisorName = !StringUtils.hasText(advisorName) || AdvisorSpec.PojoPointcutSpec.Default.class.getName().equals(advisorName);
 
                 ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
-                boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
+                boolean noCondition = condition == null;
 
                 if(noAdvisorName || noCondition) 
                     advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
                             noAdvisorName ? className : advisorName,
-                            noCondition ? factoryContext.getDefaultCondition() : condition,
+                            noCondition ? AdvisorSpec.TRUE : condition,
                             advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                             advisorSpec.getPointcut(), advisorSpec.getOrder());
 
@@ -296,12 +301,12 @@ public interface AdvisorSpecScanner {
                 boolean noAdvisorName = !StringUtils.hasText(advisorName) || AdvisorSpec.ExprPointcutSpec.Default.class.getName().equals(advisorName);
 
                 ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
-                boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
+                boolean noCondition = condition == null;
 
                 if(noAdvisorName || noCondition) 
                     advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
                             noAdvisorName ? className : advisorName,
-                            noCondition ? factoryContext.getDefaultCondition() : condition,
+                            noCondition ? AdvisorSpec.TRUE: condition,
                             advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                             advisorSpec.getPointcutExpression(), advisorSpec.getOrder());
 
@@ -327,12 +332,12 @@ public interface AdvisorSpecScanner {
                 boolean noAdvisorName = !StringUtils.hasText(advisorName) || AdvisorSpec.ExprPointcutSpec.Default.class.getName().equals(advisorName);
 
                 ElementMatcher<ConditionContext> condition = advisorSpec.getCondition();
-                boolean noCondition = condition == null || AdvisorSpec.TRUE == condition;
+                boolean noCondition = condition == null;
 
                 if(noAdvisorName || noCondition) 
                     advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
                             noAdvisorName ? className : advisorName,
-                            noCondition ? factoryContext.getDefaultCondition() : condition,
+                            noCondition ? AdvisorSpec.TRUE : condition,
                             advisorSpec.isPerInstance(), advisorSpec.getAdviceClassName(),
                             advisorSpec.getPointcutExpression(), advisorSpec.getOrder());
 
@@ -433,7 +438,7 @@ public interface AdvisorSpecScanner {
                     // create AspectJAdvisorSpec
                     ElementMatcher<ConditionContext> condition = parseCondition(factoryContext, annotations);
                     if(condition == null)
-                        condition = factoryContext.getDefaultCondition();
+                        condition = AdvisorSpec.TRUE;
 
                     AspectJAdvisorSpec aspectJAdvisorSpec = AspectJAdvisorSpec.Parser.parse( 
                             new ElementMatcher.Junction.Conjunction<ConditionContext>(aspectJSpec.getCondition(), condition),

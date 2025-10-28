@@ -36,7 +36,6 @@ import io.gemini.aop.AopMetrics;
 import io.gemini.aop.AopMetrics.WeaverMetrics;
 import io.gemini.aop.factory.support.AdvisorRepository;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
-import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
@@ -107,20 +106,12 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         String factoryName = factoryContext.getFactoryName();
         LOGGER.info("^Scanning AdvisorSpec under '{}'.", factoryName);
 
-        Map<String, AdvisorSpec> advisorSpecMap = AdvisorSpecScanner.scanSpecs(factoryContext);
+        Collection<? extends AdvisorSpec> advisorSpecs = AdvisorSpecScanner.scanSpecs(factoryContext);
 
-        advisorSpecMap = AdvisorSpecPostProcessor.postProcessSpecs(factoryContext, advisorSpecMap );
+        LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'.", 
+                (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecs.size(), factoryName);
 
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled() == false)
-            LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'.", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName);
-        else 
-            LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec under '{}'. {}", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
-                    StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ", "\n  ", "\n")
-            );
-
-        return advisorSpecMap.values();
+        return advisorSpecs;
     }
 
     private Collection<? extends AdvisorRepository> resolveAdvisorRepositories(FactoryContext factoryContext, 

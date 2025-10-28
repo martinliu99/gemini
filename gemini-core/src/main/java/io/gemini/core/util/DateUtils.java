@@ -18,7 +18,7 @@ package io.gemini.core.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class DateUtils {
+public abstract class DateUtils {
 
     public static String now() {
         SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");

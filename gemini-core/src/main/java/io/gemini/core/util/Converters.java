@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class Converters {
+public abstract class Converters {
 
     public static <T> Map<String, Object> to(Map<String, T> source) {
         if(source == null)

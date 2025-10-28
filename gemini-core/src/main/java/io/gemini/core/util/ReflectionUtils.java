@@ -20,7 +20,7 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-public class ReflectionUtils {
+public abstract class ReflectionUtils {
 
     public static Constructor<?> getDefaultConstructor(Class<?> type) {
         if(type == null) 

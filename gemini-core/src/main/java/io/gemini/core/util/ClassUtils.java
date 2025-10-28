@@ -28,7 +28,7 @@ import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
 
-public class ClassUtils {
+public abstract class ClassUtils {
 
     /**
      * The file extension for a Java class file.

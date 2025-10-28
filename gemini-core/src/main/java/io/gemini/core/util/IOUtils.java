@@ -35,7 +35,7 @@ import java.net.URLStreamHandler;
  * @author martin.liu
  *
  */
-public class IOUtils {
+public abstract class IOUtils {
 
     public static final int EOF = -1;
 

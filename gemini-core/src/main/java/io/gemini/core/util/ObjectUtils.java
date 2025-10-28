@@ -15,7 +15,7 @@
  */
 package io.gemini.core.util;
 
-public class ObjectUtils {
+public abstract class ObjectUtils {
 
     /**
      * Return a hex String form of an object's identity hash code.

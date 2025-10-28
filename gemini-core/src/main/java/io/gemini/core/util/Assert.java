@@ -17,7 +17,7 @@ package io.gemini.core.util;
 
 import java.util.Collection;
 
-public class Assert {
+public abstract class Assert {
 
     public static void isTrue(boolean predicate, String message) {
         if (predicate != true) {

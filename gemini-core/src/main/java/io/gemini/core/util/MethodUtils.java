@@ -22,7 +22,7 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.CompoundList;
 
-public class MethodUtils {
+public abstract class MethodUtils {
 
     /**
      * Gets all MethodDescriptions including type initializer.

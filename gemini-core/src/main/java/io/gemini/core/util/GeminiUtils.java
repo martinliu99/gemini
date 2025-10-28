@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 import nonapi.io.github.classgraph.scanspec.AcceptReject;
 import nonapi.io.github.classgraph.utils.JarUtils;
 
-public class GeminiUtils {
+public abstract class GeminiUtils {
 
     private static final Pattern GEMINI_JAR_PATTERN = AcceptReject.globToPattern("gemini*.jar", true);
 

@@ -44,18 +44,6 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
     private final Collection<String> requiredMethodExpressions;
 
 
-    public static AdvisorCondition create(FactoryContext factoryContext, Collection<String> acceptableClassLoaderExpressions) {
-        return new AdvisorCondition(
-                factoryContext, 
-                null,
-                acceptableClassLoaderExpressions, 
-                null, 
-                null, 
-                null, 
-                null
-        );
-    }
-
     public static AdvisorCondition create(FactoryContext factoryContext, AnnotationDescription annotationDescription) {
         if(annotationDescription == null) return null;
 
@@ -164,21 +152,44 @@ public class AdvisorCondition implements ElementMatcher<ConditionContext> {
         }
 
         for(String requiredTypeExpression : requiredTypeExpressions) {
-            if(conditionContext.hasRequiredType(requiredTypeExpression) == false) return false;
+            if(conditionContext.hasRequiredType(requiredTypeExpression) == false)
+                throw new NoRequiredElementException("No required type defined in expression.", requiredTypeExpression);
         }
 
         for(String requiredFieldExpression : requiredFieldExpressions) {
-            if(conditionContext.hasRequiredFiled(requiredFieldExpression) == false) return false;
+            if(conditionContext.hasRequiredFiled(requiredFieldExpression) == false) 
+                throw new NoRequiredElementException("No required field defined in expression.", requiredFieldExpression);
         }
 
         for(String requiredConstructorExpression : requiredConstructorExpressions) {
-            if(conditionContext.hasRequiredConstructor(requiredConstructorExpression) == false) return false;
+            if(conditionContext.hasRequiredConstructor(requiredConstructorExpression) == false)
+                throw new NoRequiredElementException("No required constructor defined in expression.", requiredConstructorExpression);
         }
 
         for(String requiredMethodExpression : requiredMethodExpressions) {
-            if(conditionContext.hasRequiredMethod(requiredMethodExpression) == false) return false;
+            if(conditionContext.hasRequiredMethod(requiredMethodExpression) == false) 
+                throw new NoRequiredElementException("No required method defined in expression.", requiredMethodExpression);
         }
 
         return true;
+    }
+
+
+    public static class NoRequiredElementException extends RuntimeException {
+
+        private static final long serialVersionUID = 1516631892910967778L;
+
+        private final String expression;
+
+
+        public NoRequiredElementException(String message, String expression) {
+            super(message);
+
+            this.expression = expression;
+        }
+
+        public String getExpression() {
+            return expression;
+        }
     }
 }

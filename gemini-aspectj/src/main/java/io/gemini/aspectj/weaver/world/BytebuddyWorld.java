@@ -276,7 +276,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
     private static class ExceptionBasedMessageHandler implements IMessageHandler {
 
         public boolean handleMessage(IMessage message) throws AbortException {
-            throw new TypeWorldException(message.toString());
+            throw new WorldLintException(message.toString());
         }
 
         public boolean isIgnoring(org.aspectj.bridge.IMessage.Kind kind) {

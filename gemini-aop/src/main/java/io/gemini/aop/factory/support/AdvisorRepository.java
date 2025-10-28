@@ -19,7 +19,6 @@ import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import org.aspectj.weaver.patterns.ParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,11 +26,13 @@ import io.gemini.aop.Advisor;
 import io.gemini.aop.factory.AdvisorContext;
 import io.gemini.aop.factory.support.AdviceClassMaker.ByteBuddyMaker;
 import io.gemini.aop.matcher.AdviceMethodMatcher;
+import io.gemini.aop.matcher.AdvisorCondition;
 import io.gemini.aop.matcher.ExprPointcut;
 import io.gemini.aop.matcher.ExprPointcut.AspectJExprPointcut;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
+import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.StringUtils;
@@ -128,16 +129,36 @@ public interface AdvisorRepository {
         private boolean doValidateCondition(AdvisorContext advisorContext) {
             try {
                 return this.advisorSpec.getCondition().matches(advisorContext.getConditionContext());
-            } catch(Throwable t) {
-                String advisorName = advisorSpec.getAdvisorName();
-                if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
-                    LOGGER.warn("Ignored AdvisorSpec with unparsable Condition expression. \n  AdvisorSpec: {} \n  ClassLoader: '{}' \n", 
-                            advisorName, advisorContext.getJoinpointClassLoaderName(), t);
-
+            } catch(ExprParser.ExprParseException e) {
+                {
+                    LOGGER.warn("Ignored AdvisorSpec with unparsable ConditionExpression. \n  AdvisorSpec: {} \n  ConditionExpression: {} \n  ClassLoader: {} \n  Syntax Error: {} \n", 
+                            advisorSpec.getAdvisorName(), e.getExpression(), advisorContext.getJoinpointClassLoaderName(), e.getMessage());
                     this.isValid = false;
                 }
-                return false;
+            } catch(ExprParser.ExprLintException e) {
+                if(advisorContext.isValidateContext() == false) {
+                    LOGGER.warn("Ignored AdvisorSpec with lint ConditionExpression. \n  AdvisorSpec: {} \n  ConditionExpression: {} \n  ClassLoader: {} \n  Lint message: {} \n", 
+                            advisorSpec.getAdvisorName(), e.getExpression(), advisorContext.getJoinpointClassLoaderName(), e.getMessage());
+                }
+            } catch(AdvisorCondition.NoRequiredElementException e) {
+                if(advisorContext.isValidateContext() == false) {
+                    LOGGER.warn("Ignored AdvisorSpec missing element under given ClassLoader. \n  AdvisorSpec: {} \n  ConditionExpression: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                            advisorSpec.getAdvisorName(), e.getExpression(), advisorContext.getJoinpointClassLoaderName(), e.getMessage());
+                }
+            } catch(ExprParser.ExprUnknownException e) {
+                if(advisorContext.isValidateContext() == false) {
+                    Throwable cause = e.getCause();
+                    LOGGER.warn("Ignored AdvisorSpec with illegal ConditionExpression. \n  AdvisorSpec: {} \n  ConditionExpression: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                            advisorSpec.getAdvisorName(), e.getExpression(), advisorContext.getJoinpointClassLoaderName(), cause.getMessage(), cause);
+                }
+            } catch(Exception e) {
+                if(advisorContext.isValidateContext() == false) {
+                    LOGGER.warn("Ignored AdvisorSpec with illegal ConditionExpression. \n  AdvisorSpec: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                            advisorSpec.getAdvisorName(), advisorContext.getJoinpointClassLoaderName(), e.getMessage(), e);
+                }
             }
+
+            return false;
         }
 
         /**
@@ -177,23 +198,31 @@ public interface AdvisorRepository {
                 try {
                     aspectJExpressionPointcut.getPointcut();
                     return true;
-                } catch(Throwable t) {
-                    String advisorName = advisorSpec.getAdvisorName();
-                    if(t instanceof IllegalArgumentException && t.getCause() instanceof ParserException) {
-                        LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: '{}' \n", 
-                                advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), t);
-
+                } catch(ExprParser.ExprParseException e) {
+                    {
+                        LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: {} \n  Syntax Error: {} \n", 
+                                advisorSpec.getAdvisorName(), aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), e.getMessage());
                         this.isValid = false;
-                        return false;
-                    } else {
-                        if(advisorContext.isValidateContext() == false) {
-                            LOGGER.warn("Ignored AdvisorSpec with invalid AspectJ ExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
-                                    advisorName, aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), t.getMessage(), t);
-                        }
-
-                        return false;
+                    }
+                } catch(ExprParser.ExprLintException e) {
+                    if(advisorContext.isValidateContext() == false) {
+                        LOGGER.warn("Ignored AdvisorSpec with lint AspectJExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: {} \n  Lint message: {} \n", 
+                                advisorSpec.getAdvisorName(), aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), e.getMessage());
+                    }
+                } catch(ExprParser.ExprUnknownException e) {
+                    if(advisorContext.isValidateContext() == false) {
+                        Throwable cause = e.getCause();
+                        LOGGER.warn("Ignored AdvisorSpec with illegal AspectJExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                                advisorSpec.getAdvisorName(), aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), cause.getMessage(), cause);
+                    }
+                } catch(Exception e) {
+                    if(advisorContext.isValidateContext() == false) {
+                        LOGGER.warn("Ignored AdvisorSpec with illegal AspectJExprPointcut. \n  AdvisorSpec: {} \n  PointcutExpression: {} \n  ClassLoader: {} \n  Error reason: {} \n", 
+                                advisorSpec.getAdvisorName(), aspectJExpressionPointcut.getPointcutExpression(), advisorContext.getJoinpointClassLoaderName(), e.getMessage(), e);
                     }
                 }
+
+                return false;
             }
 
             return true;

@@ -123,11 +123,11 @@ public class PointcutParser {
         try {
              Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
 
-            pointcut = concretizePointcutExpression(pointcut, pointcutDeclarationScope, pointcutParameters);
+             pointcut = concretizePointcutExpression(pointcut, pointcutDeclarationScope, pointcutParameters);
 
-            validateAgainstSupportedPrimitives(pointcut, pointcutExpression); // again, because we have now followed any ref'd pcuts
+             validateAgainstSupportedPrimitives(pointcut, pointcutExpression); // again, because we have now followed any ref'd pcuts
 
-            return pointcut;
+             return pointcut;
         } catch (Exception e) {
             ExprParser.handleException(pointcutExpression, e);
             return null;

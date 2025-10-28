@@ -54,11 +54,11 @@ public interface TypeWorld {
     Shadow makeShadow(Member member);
 
 
-    class TypeWorldException extends RuntimeException {
+    class WorldLintException extends RuntimeException {
 
         private static final long serialVersionUID = 816600136638029684L;
 
-        public TypeWorldException(String message) {
+        public WorldLintException(String message) {
             super(message);
         }
     }

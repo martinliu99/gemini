@@ -43,6 +43,7 @@ import org.aspectj.weaver.patterns.SimpleScope;
 import org.aspectj.weaver.patterns.TypePattern;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 
+import io.gemini.aspectj.weaver.TypeWorld.WorldLintException;
 import io.gemini.aspectj.weaver.patterns.HasPatternParser;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
 import io.gemini.aspectj.weaver.patterns.TypeNamePatternParser;
@@ -67,16 +68,17 @@ public enum ExprParser {
     INSTANCE;
 
 
-    public ElementMatcher<ClassLoader> parseClassLoaderExpr(String expression) {
-        expression = validateExpression(expression);
+    public ElementMatcher<ClassLoader> parseClassLoaderExpr(String classLoaderExpression)
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        classLoaderExpression = validateExpression(classLoaderExpression);
 
         try {
-            expression = replaceBooleanOperators(expression);
-            TypePattern typePattern = new TypeNamePatternParser(expression).parseTypePattern();
+            classLoaderExpression = replaceBooleanOperators(classLoaderExpression);
+            TypePattern typePattern = new TypeNamePatternParser(classLoaderExpression).parseTypePattern();
 
-            return new ClassLoaderExpr(expression, typePattern);
+            return new ClassLoaderExpr(classLoaderExpression, typePattern);
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(classLoaderExpression, e);
             return null;
         }
     }
@@ -92,32 +94,34 @@ public enum ExprParser {
     }
 
 
-    public ElementMatcher<String> parseTypeNameExpr(String expression) {
-        expression = validateExpression(expression);
+    public ElementMatcher<String> parseTypeNameExpr(String typeNameExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        typeNameExpression = validateExpression(typeNameExpression);
 
         try {
-            expression = replaceBooleanOperators(expression);
-            TypePattern typePattern = new TypeNamePatternParser(expression).parseTypePattern();
+            typeNameExpression = replaceBooleanOperators(typeNameExpression);
+            TypePattern typePattern = new TypeNamePatternParser(typeNameExpression).parseTypePattern();
 
-            return new TypeNameExpr(expression, typePattern);
+            return new TypeNameExpr(typeNameExpression, typePattern);
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(typeNameExpression, e);
             return null;
         }
     }
 
 
-    public ElementMatcher<String> parseResourceNameExpr(String expression) {
-        expression = validateExpression(expression);
+    public ElementMatcher<String> parseResourceNameExpr(String resourceNameExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        resourceNameExpression = validateExpression(resourceNameExpression);
 
         try {
-            expression = formatExpression(expression);
-            expression = replaceBooleanOperators(expression);
-            TypePattern typePattern = new TypeNamePatternParser(expression).parseTypePattern();
+            resourceNameExpression = formatExpression(resourceNameExpression);
+            resourceNameExpression = replaceBooleanOperators(resourceNameExpression);
+            TypePattern typePattern = new TypeNamePatternParser(resourceNameExpression).parseTypePattern();
 
-            return new ResourceNameExpr(expression, typePattern);
+            return new ResourceNameExpr(resourceNameExpression, typePattern);
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(resourceNameExpression, e);
             return null;
         }
     }
@@ -127,33 +131,34 @@ public enum ExprParser {
     }
 
 
-    public ElementMatcher<TypeDescription> parseTypeExpr(TypeWorld typeWorld, String expression) {
-        expression = validateExpression(expression);
+    public ElementMatcher<TypeDescription> parseTypeExpr(TypeWorld typeWorld, String typeExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        typeExpression = validateExpression(typeExpression);
 
         try {
-            expression = replaceBooleanOperators(expression);
-            TypePattern typePattern = new PatternParserV2(expression).parseTypePattern();
+            typeExpression = replaceBooleanOperators(typeExpression);
+            TypePattern typePattern = new PatternParserV2(typeExpression).parseTypePattern();
 
             IScope scope = new SimpleScope(typeWorld.getWorld(), new FormalBinding[0]);
             typePattern = typePattern.resolveBindings(scope, Bindings.NONE, false, false);
 
-            return new TypeExpr(expression, typeWorld, typePattern);
+            return new TypeExpr(typeExpression, typeWorld, typePattern);
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(typeExpression, e);
             return null;
         }
     }
 
 
-    public Pointcut parsePointcutExpr(TypeWorld typeWorld, 
-            String pointcutExpression) {
+    public Pointcut parsePointcutExpr(TypeWorld typeWorld, String pointcutExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
 
         return new PointcutParser(typeWorld).parsePointcut(pointcutExpression);
     }
 
-    public Pointcut parsePointcutExpr(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds, 
-            String pointcutExpression) {
+    public Pointcut parsePointcutExpr(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds, String pointcutExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
 
         return new PointcutParser(typeWorld, supportedPointcutKinds).parsePointcut(pointcutExpression);
@@ -161,7 +166,8 @@ public enum ExprParser {
 
     public Pointcut parsePointcutExpr(TypeWorld typeWorld, 
             String pointcutExpression, TypeDescription pointcutDeclarationScope, 
-            Map<String, ? extends TypeDefinition> pointcutParameters) {
+            Map<String, ? extends TypeDefinition> pointcutParameters) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
 
         return new PointcutParser(typeWorld).parsePointcut(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
@@ -169,19 +175,21 @@ public enum ExprParser {
 
     public Pointcut parsePointcutExpr(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds, 
             String pointcutExpression, TypeDescription pointcutDeclarationScope, 
-            Map<String, ? extends TypeDefinition> pointcutParameters) {
+            Map<String, ? extends TypeDefinition> pointcutParameters) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
 
         return new PointcutParser(typeWorld, supportedPointcutKinds).parsePointcut(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
     }
 
 
-    public boolean hasType(TypeWorld typeWorld, String expression) {
-        expression = validateExpression(expression);
+    public boolean hasType(TypeWorld typeWorld, String typeExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        typeExpression = validateExpression(typeExpression);
 
         try {
-            expression = replaceBooleanOperators(expression);
-            TypePattern typePattern = new HasPatternParser(expression).parseTypePattern();
+            typeExpression = replaceBooleanOperators(typeExpression);
+            TypePattern typePattern = new HasPatternParser(typeExpression).parseTypePattern();
 
             IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
@@ -189,17 +197,18 @@ public enum ExprParser {
 
             return typePattern.matchesStatically(null);
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(typeExpression, e);
             return false;
         }
     }
 
-    public boolean hasField(TypeWorld typeWorld, String expression) {
-        expression = validateExpression(expression);
+    public boolean hasField(TypeWorld typeWorld, String fieldExpression)
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        fieldExpression = validateExpression(fieldExpression);
 
         try {
-            expression = replaceBooleanOperators(expression);
-            ISignaturePattern signaturePattern = new HasPatternParser(expression).parseCompoundFieldSignaturePattern();
+            fieldExpression = replaceBooleanOperators(fieldExpression);
+            ISignaturePattern signaturePattern = new HasPatternParser(fieldExpression).parseCompoundFieldSignaturePattern();
 
             IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
@@ -207,18 +216,20 @@ public enum ExprParser {
 
             return signaturePattern.matches(null, typeWorld.getWorld(), true);
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(fieldExpression, e);
             return false;
         }
     }
 
 
-    public boolean hasConstructor(TypeWorld typeWorld, String expression) {
-        return hasMethodOrConstructor(typeWorld, expression, false);
+    public boolean hasConstructor(TypeWorld typeWorld, String constructorExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        return hasMethodOrConstructor(typeWorld, constructorExpression, false);
     }
 
-    public boolean hasMethod(TypeWorld typeWorld, String expression) {
-        return hasMethodOrConstructor(typeWorld, expression, true);
+    public boolean hasMethod(TypeWorld typeWorld, String methodExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
+        return hasMethodOrConstructor(typeWorld, methodExpression, true);
     }
 
     private boolean hasMethodOrConstructor(TypeWorld typeWorld, String expression, boolean isMethod) {
@@ -238,10 +249,11 @@ public enum ExprParser {
     }
 
 
-    public MethodDescription findMethod(TypeWorld typeWorld, String expression) {
+    public MethodDescription findMethod(TypeWorld typeWorld, String methodExpression) 
+            throws ExprParseException, ExprLintException, ExprUnknownException {
         try {
-            expression = replaceBooleanOperators(expression);
-            ISignaturePattern signaturePattern = new PatternParserV2(expression).parseMethodOrConstructorSignaturePattern();
+            methodExpression = replaceBooleanOperators(methodExpression);
+            ISignaturePattern signaturePattern = new PatternParserV2(methodExpression).parseMethodOrConstructorSignaturePattern();
 
             IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
@@ -249,7 +261,7 @@ public enum ExprParser {
 
             List<ExactTypePattern> exactTypePatterns = signaturePattern.getExactDeclaringTypes();
             Assert.isTrue(exactTypePatterns != null && exactTypePatterns.size() == 1, 
-                    "Only one signature should be defined in " + expression);
+                    "Only one signature should be defined in " + methodExpression);
 
             ResolvedType resolvedType = exactTypePatterns.get(0).getResolvedExactType(typeWorld.getWorld());
             TypeDescription typeDescription = typeWorld.describeType(resolvedType.getName());
@@ -260,7 +272,7 @@ public enum ExprParser {
             }
             return null;
         } catch (Exception e) {
-            ExprParser.handleException(expression, e);
+            ExprParser.handleException(methodExpression, e);
             return null;
         }
     }
@@ -326,32 +338,97 @@ public enum ExprParser {
 
     public static void handleException(String expression, Exception exp) {
         if(exp instanceof ParserException) {
-            throw new IllegalArgumentException(buildUserMessageFromParserException(expression, (ParserException) exp), exp);
-        } else if (exp instanceof TypeWorld.TypeWorldException && !(exp instanceof RuntimeException) ) {
-            throw new IllegalArgumentException(exp.getMessage(), exp);
-        } else {
+            throw new ExprParseException(expression, (ParserException) exp);
+        } else if(exp instanceof TypeWorld.WorldLintException) {
+            throw new ExprLintException(expression, (TypeWorld.WorldLintException) exp);
+        } else if(exp instanceof ExprParseException || exp instanceof ExprLintException 
+                || exp instanceof ExprUnknownException || exp instanceof RuntimeException) {
             throw (RuntimeException) exp;
+        }else {
+            throw new ExprUnknownException(expression, exp);
         }
     }
 
-    private static String buildUserMessageFromParserException(String pointcutExpression, ParserException ex) {
-        StringBuffer msg = new StringBuffer();
-        msg.append("Expression is not well-formed: expecting '");
-        msg.append(ex.getMessage());
-        msg.append("'");
-        IHasPosition location = ex.getLocation();
-        msg.append(" at character position ");
-        msg.append(location.getStart());
-        msg.append("\n");
-        msg.append(pointcutExpression);
-        msg.append("\n");
-        for (int i = 0; i < location.getStart(); i++) {
-            msg.append(" ");
+
+    public static class ExprParseException extends RuntimeException {
+
+        private static final long serialVersionUID = -7800478366126303384L;
+
+        private final String expression;
+
+
+        public ExprParseException(String expression, ParserException cause) {
+            super(buildUserMessageFromParserException(expression, cause), cause);
+
+            this.expression = expression;
         }
-        for (int j = location.getStart(); j <= location.getEnd(); j++) {
-            msg.append("^");
+
+        private static String buildUserMessageFromParserException(String expression, ParserException ex) {
+            StringBuffer msg = new StringBuffer();
+
+            msg.append("Expression is not well-formed: expecting '");
+            msg.append(ex.getMessage());
+            msg.append("'");
+
+            IHasPosition location = ex.getLocation();
+            msg.append(" at character position ");
+            msg.append(location.getStart());
+            msg.append("\n");
+            msg.append(expression);
+            msg.append("\n");
+
+            for (int i = 0; i < location.getStart(); i++) {
+                msg.append(" ");
+            }
+
+            for (int j = location.getStart(); j <= location.getEnd(); j++) {
+                msg.append("^");
+            }
+
+            msg.append("\n");
+            return msg.toString();
         }
-        msg.append("\n");
-        return msg.toString();
+
+        public String getExpression() {
+            return expression;
+        }
+    }
+
+
+    public static class ExprLintException extends RuntimeException {
+
+        private static final long serialVersionUID = -7800478366126303384L;
+
+        private final String expression;
+
+
+        public ExprLintException(String expression, WorldLintException cause) {
+            super(cause.getMessage(), cause);
+
+            this.expression = expression;
+        }
+
+        public String getExpression() {
+            return expression;
+        }
+    }
+
+
+    public static class ExprUnknownException extends RuntimeException {
+
+        private static final long serialVersionUID = 816600136638029684L;
+
+        private final String expression;
+
+
+        public ExprUnknownException(String expression, Throwable cause) {
+            super(cause);
+
+            this.expression = expression;
+        }
+
+        public String getExpression() {
+            return expression;
+        }
     }
 }

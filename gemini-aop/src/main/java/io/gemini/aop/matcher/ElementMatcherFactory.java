@@ -44,21 +44,27 @@ public enum ElementMatcherFactory {
     private static final String STAR = "*";
 
 
-    public ElementMatcher.Junction<ClassLoader> createClassLoaderMatcher(String ruleName, Collection<String> expressions) {
-        return doCreateElementMatcher(ruleName, expressions, ExprParser.INSTANCE::parseClassLoaderExpr);
+    public ElementMatcher.Junction<ClassLoader> createClassLoaderMatcher(String ruleName, 
+            Collection<String> classLoaderExpressions, ElementMatcher.Junction<ClassLoader> defaultMatcher) {
+        return doCreateElementMatcher(ruleName, classLoaderExpressions, 
+                ExprParser.INSTANCE::parseClassLoaderExpr, defaultMatcher);
     }
 
-    public ElementMatcher.Junction<String> createTypeNameMatcher(String ruleName, Collection<String> expressions) {
-        return doCreateElementMatcher(ruleName, expressions, ExprParser.INSTANCE::parseTypeNameExpr);
+    public ElementMatcher.Junction<String> createTypeNameMatcher(String ruleName, 
+            Collection<String> typeNameExpressions, ElementMatcher.Junction<String> defaultMatcher) {
+        return doCreateElementMatcher(ruleName, typeNameExpressions, 
+                ExprParser.INSTANCE::parseTypeNameExpr, defaultMatcher);
     }
 
-    public ElementMatcher.Junction<String> createResourceNameMatcher(String ruleName, Collection<String> expressions) {
-        return doCreateElementMatcher(ruleName, expressions, ExprParser.INSTANCE::parseResourceNameExpr);
+    public ElementMatcher.Junction<String> createResourceNameMatcher(String ruleName, 
+            Collection<String> resourceNameExpressions, ElementMatcher.Junction<String> defaultMatcher) {
+        return doCreateElementMatcher(ruleName, resourceNameExpressions, 
+                ExprParser.INSTANCE::parseResourceNameExpr, defaultMatcher);
     }
 
 
     private <T> ElementMatcher.Junction<T> doCreateElementMatcher(String ruleName, Collection<String> expressions, 
-            Function<String, ElementMatcher<T>> parser) {
+            Function<String, ElementMatcher<T>> parser, ElementMatcher.Junction<T> defaultMatcher) {
         if(CollectionUtils.isEmpty(expressions))
             return ElementMatchers.none();
 
@@ -71,11 +77,22 @@ public enum ElementMatcherFactory {
             try {
                 elementMatchers.add(
                         parser.apply(expression) );
+            } catch(ExprParser.ExprParseException e) {
+                LOGGER.warn("Ignored unparsable expression. \n  Rule: {} \n  Expression: {} \n  Syntax Error: {} \n", 
+                        ruleName, expression, e.getMessage());
+            } catch(ExprParser.ExprLintException e) {
+                LOGGER.warn("Ignored lint expression. \n  Rule: {} \n  Expression: {} \n  Lint message: {} \n", 
+                        ruleName, expression, e.getMessage());
+            } catch(ExprParser.ExprUnknownException e) {
+                Throwable cause = e.getCause();
+                LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {} \n", 
+                        ruleName, expression, cause.getMessage(), cause);
             } catch(Exception e) {
-                LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {}",
-                        ruleName, expression, e.getMessage(), e);
+                LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {} \n", 
+                        ruleName, expression, e.getMessage());
             }
         }
-        return new ElementMatcher.Junction.Disjunction<>(elementMatchers);
+
+        return elementMatchers.size() == 0 ? defaultMatcher : new ElementMatcher.Junction.Disjunction<>(elementMatchers);
     }
 }

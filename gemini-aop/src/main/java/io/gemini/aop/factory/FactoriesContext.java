@@ -51,17 +51,12 @@ class FactoriesContext implements Closeable {
 
     private static final String FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY = "aop.factories.enabledFactoryExpressions";
 
-    static final String FACTORIES_DEFAULT_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factories.defaultAcceptableClassLoaderExpressions";
-
 
     private final AopContext aopContext;
 
 
     // global advisor factory settings
     private ElementMatcher<String> enabledFactoryMatcher;
-
-
-    private Set<String> defaultAcceptableClassLoaderExpressions;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
@@ -89,23 +84,22 @@ class FactoriesContext implements Closeable {
 
         // load global advisor factory settings
         {
-            Set<String> enabledFactoryExpressions = configView.getAsStringSet(FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
+            Set<String> enabledFactoryExpressions = configView.getAsStringSet(
+                    FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
             if(enabledFactoryExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
                         enabledFactoryExpressions.size(), FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY,
                         StringUtils.join(enabledFactoryExpressions, "\n  ")
                 );
 
-                this.enabledFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, enabledFactoryExpressions );
+                this.enabledFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                        FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, enabledFactoryExpressions, ElementMatchers.none() );
             } else {
                 this.enabledFactoryMatcher = ElementMatchers.any();
             }
         }
 
         {
-            this.defaultAcceptableClassLoaderExpressions = configView.getAsStringSet(
-                    FACTORIES_DEFAULT_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
-
             this.shareAspectClassLoader = configView.getAsBoolean("aop.factories.shareAspectClassLoader", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
                     configView.getAsString("aop.factories.conflictJoinpointClassLoaders", "") );
@@ -165,10 +159,6 @@ class FactoriesContext implements Closeable {
         return enabledFactoryMatcher.matches(factoryName);
     }
 
-
-    public Set<String> getDefaultAcceptableClassLoaderExpressions() {
-        return Collections.unmodifiableSet( defaultAcceptableClassLoaderExpressions );
-    }
 
     public boolean isShareAspectClassLoader() {
         return shareAspectClassLoader;

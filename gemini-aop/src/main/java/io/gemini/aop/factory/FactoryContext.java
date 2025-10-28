@@ -40,9 +40,7 @@ import io.gemini.aop.factory.classloader.AspectTypeWorld;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
-import io.gemini.aop.matcher.AdvisorCondition;
 import io.gemini.aop.matcher.ElementMatcherFactory;
-import io.gemini.api.aop.condition.ConditionContext;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
@@ -77,8 +75,6 @@ public class FactoryContext implements Closeable {
     private static final String FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY = "aop.factory.acceptableTypeExpressions";
     private static final String FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY = "aop.factory.enabledAdvisorExpressions";
 
-    private static final String FACTORY_DEFAULT_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factory.defaultAcceptableClassLoaderExpressions";
-
 
     private static final String AOP_CONTEXT_OBJECT = "aopContext";
     private static final String OBJECT_FACTORY_OBJECT = "objectFactory";
@@ -107,12 +103,8 @@ public class FactoryContext implements Closeable {
 
     private ElementMatcher<String> enabledAdvisorMatcher;
 
-
-    private ElementMatcher<ConditionContext> defaultCondition;
-
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
-
 
     private final ClassScanner classScanner;
     private final ObjectFactory objectFactory;
@@ -236,7 +228,7 @@ public class FactoryContext implements Closeable {
             Set<String> joinpointTypeExpressions = configView.getAsStringSet(FACTORY_JOINPOINT_TYPE_EXPRESSIONS, Collections.emptySet());
 
             this.joinpointTypesMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_JOINPOINT_TYPE_EXPRESSIONS, joinpointTypeExpressions );
+                    FACTORY_JOINPOINT_TYPE_EXPRESSIONS, joinpointTypeExpressions, ElementMatchers.none() );
 
             this.classLoader.setJoinpointTypeMatcher(joinpointTypesMatcher);
 
@@ -247,7 +239,7 @@ public class FactoryContext implements Closeable {
             joinpointResourceExpressions.addAll(joinpointTypeExpressions);
 
             this.joinpointResourcesMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_JOINPOINT_RESOURCE_EXPRESSIONS, joinpointResourceExpressions );
+                    FACTORY_JOINPOINT_RESOURCE_EXPRESSIONS, joinpointResourceExpressions, ElementMatchers.none() );
 
             this.classLoader.setJoinpointResourceMatcher(joinpointResourcesMatcher);
         }
@@ -268,7 +260,8 @@ public class FactoryContext implements Closeable {
                         StringUtils.join(acceptableClassLoaderExpressions, "\n  ")
                 );
 
-                this.acceptableClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(FACTORY_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions );
+                this.acceptableClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                        FACTORY_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions, ElementMatchers.none() );
             } else {
                 this.acceptableClassLoaderMatcher = ElementMatchers.any();
             }
@@ -282,7 +275,8 @@ public class FactoryContext implements Closeable {
                         StringUtils.join(acceptableTypeExpressions, "\n  ")
                 );
 
-                this.acceptableTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions );
+                this.acceptableTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                        FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions, ElementMatchers.none() );
             } else {
                 this.acceptableTypeMatcher = ElementMatchers.any();
             }
@@ -296,19 +290,11 @@ public class FactoryContext implements Closeable {
                         StringUtils.join(enabledAdvisorExpressions, "\n  ")
                 );
 
-                this.enabledAdvisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY, enabledAdvisorExpressions );
+                this.enabledAdvisorMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                        FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY, enabledAdvisorExpressions, ElementMatchers.none() );
             } else {
                 this.enabledAdvisorMatcher = ElementMatchers.any();
             }
-        }
-
-        {
-            // load and merge global factory settings
-            Set<String> mergedClassLoaderExpressions = new LinkedHashSet<>();
-            mergedClassLoaderExpressions.addAll(factoriesContext.getDefaultAcceptableClassLoaderExpressions());
-            mergedClassLoaderExpressions.addAll(configView.getAsStringSet(FACTORY_DEFAULT_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet()) );
-
-            this.defaultCondition = AdvisorCondition.create(this, mergedClassLoaderExpressions);
         }
 
         {
@@ -392,14 +378,8 @@ public class FactoryContext implements Closeable {
         return this.acceptableTypeMatcher.matches(typeName);
     }
 
-
     public boolean isEnabledAdvisor(String advisorName) {
         return this.enabledAdvisorMatcher.matches(advisorName);
-    }
-
-
-    public ElementMatcher<ConditionContext> getDefaultCondition() {
-        return defaultCondition;
     }
 
     public ClassScanner getClassScanner() {

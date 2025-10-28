@@ -119,10 +119,10 @@ class WeaverContext {
 
                 this.acceptableClassLoaderMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                                WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, defaultExcludedClassLoaderExpressions ) );
+                                WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, defaultExcludedClassLoaderExpressions, ElementMatchers.none() ) );
                 if(acceptableClassLoaderExpressions.size() > 0)
                     this.acceptableClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                            WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions )
+                            WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions, ElementMatchers.any() )
                         .and( this.acceptableClassLoaderMatcher );
             }
 
@@ -151,10 +151,10 @@ class WeaverContext {
 
                 this.acceptableTypeMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                                WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, defaultExcludedTypeExpressions) );
+                                WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, defaultExcludedTypeExpressions, ElementMatchers.none()) );
                 if(acceptableTypeExpressions.size() > 0)
                     this.acceptableTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions)
+                            WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions, ElementMatchers.any())
                         .and( acceptableTypeMatcher );
             }
         }

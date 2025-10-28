@@ -41,6 +41,7 @@ import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.SingleEnumeration;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
 
 /**
  * 
@@ -117,7 +118,7 @@ public class AopClassLoaderConfigurer {
         parentFirstTypeExpressions.addAll( nameMapping.values() );
 
         ElementMatcher<String> parentFirstClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                "ParentFirstClassMatcher", parentFirstTypeExpressions);
+                "ParentFirstClassMatcher", parentFirstTypeExpressions, ElementMatchers.none());
 
 
         // 2.collect parent first resource expressions
@@ -128,7 +129,7 @@ public class AopClassLoaderConfigurer {
         parentFirstResourceExpressions.addAll( parentFirstTypeExpressions );
 
         ElementMatcher<String> parentFirstResourceMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
-                "ParentFirstResourceMatcher", parentFirstTypeExpressions);
+                "ParentFirstResourceMatcher", parentFirstTypeExpressions, ElementMatchers.none());
 
 
         // 3.add ParentFirstFilter
@@ -148,10 +149,10 @@ public class AopClassLoaderConfigurer {
 
     private void configureBoostrapClassFilter(AopClassLoader aopClassLoader, Map<String, String> nameMapping) {
         ElementMatcher<String> bootstrapClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                "BootstrapClassMatcher", nameMapping.keySet());
+                "BootstrapClassMatcher", nameMapping.keySet(), ElementMatchers.none());
 
         ElementMatcher<String> bootstrapResourceMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
-                "BootstrapResourceMatcher", nameMapping.keySet());
+                "BootstrapResourceMatcher", nameMapping.keySet(), ElementMatchers.none());
 
         aopClassLoader.addTypeFilter( new AopClassLoader.TypeFilter() {
 

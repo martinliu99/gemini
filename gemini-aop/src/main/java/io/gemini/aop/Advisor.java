@@ -118,12 +118,12 @@ public interface Advisor {
             @Override
             public Advice getAdvice() {
                 // for prototype
-                if(this.perInstance == true) {
+                if (this.perInstance == true) {
                     return doCreateAdvice();
                 }
 
                 // for singleton
-                if(this.advice != null)
+                if (this.advice != null)
                     return this.advice;
                 else
                     this.advice = this.doCreateAdvice();

@@ -231,7 +231,7 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
         @After(RETURN_GENERIC_POINTCUT)
         public void returnGeneric_genericType(MutableJoinpoint<Number, RuntimeException> joinpoint) {
             Number returning = joinpoint.getReturning();
-            if(returning != null && returning instanceof Long) {
+            if (returning != null && returning instanceof Long) {
                 Long updatedReturning = -1 * (Long) returning;
                 joinpoint.setAdviceReturning(updatedReturning);
 
@@ -306,9 +306,9 @@ public class MutableJoinpoint_21ParametrizedReturningType_Tests extends Abstract
         @After(RETURN_GENERIC_ARRAY_POINTCUT)
         public void returnGenericArray_genericType(MutableJoinpoint<Number[], RuntimeException> joinpoint) {
             Number[] returning = joinpoint.getReturning();
-            if(returning != null && returning instanceof Long[]) {
+            if (returning != null && returning instanceof Long[]) {
                 List<Long> updatedReturning = new ArrayList<>();
-                for(Long l : (Long[]) returning) 
+                for (Long l : (Long[]) returning) 
                     updatedReturning.add(l);
 
                 updatedReturning.addAll(Arrays.asList(-1l, -2l));

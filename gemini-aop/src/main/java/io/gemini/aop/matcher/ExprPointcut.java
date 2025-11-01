@@ -174,9 +174,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
                 FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(typeDescription), null, typeWorld.getWorld());
                 FuzzyBoolean fastMatch = getPointcut().fastMatch(info);
                 return fastMatch.maybeTrue();
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetType: {} \n  PointcutExpression: '{}' \n  Error reason: {} \n", 
-                        typeDescription.getTypeName(), pointcutExpression, t.getMessage(), t);
+                        typeDescription.getTypeName(), pointcutExpression, e.getMessage(), e);
 
                 return false;
             }
@@ -237,9 +237,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
                 Map<String, Generic> pointcutParameters, ExposedState exposedState) {
             int i = 0;
             List<NamedPointcutParameter> parameterBindings = new ArrayList<>(pointcutParameters.size());
-            for(Entry<String, Generic> entry : pointcutParameters.entrySet()) {
+            for (Entry<String, Generic> entry : pointcutParameters.entrySet()) {
                 PointcutParameter var = (PointcutParameter) exposedState.vars[i++];
-                if(var == null)
+                if (var == null)
                     continue;
 
                 parameterBindings.add( 

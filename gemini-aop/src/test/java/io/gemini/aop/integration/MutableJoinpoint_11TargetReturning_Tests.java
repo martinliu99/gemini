@@ -90,7 +90,7 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
         public void typeInitializer(MutableJoinpoint joinpoint) {
             try {
                 joinpoint.getReturning();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                         new AdviceMethod()
                             .withInvoked(true)
@@ -178,7 +178,7 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
         public void targetReturning_before(MutableJoinpoint<Integer, RuntimeException> joinpoint) {
             try {
                 joinpoint.getReturning();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 ExecutionMemento.putAdviceMethodInvoker(TARGET_RETURNING_BEFORE_ADVICE, 
                         new AdviceMethod()
                             .withInvoked(true)
@@ -245,7 +245,7 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
         public void targetReturning_before(MutableJoinpoint joinpoint) {
             try {
                 joinpoint.getReturning();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 ExecutionMemento.putAdviceMethodInvoker(TARGET_RETURNING_BEFORE_ADVICE, 
                         new AdviceMethod()
                             .withInvoked(true)
@@ -315,7 +315,7 @@ public class MutableJoinpoint_11TargetReturning_Tests extends AbstractIntegratio
         public void targetReturning_before(MutableJoinpoint<Integer, RuntimeException> joinpoint) {
             try {
                 joinpoint.getReturning();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 ExecutionMemento.putAdviceMethodInvoker(TARGET_RETURNING_BEFORE_ADVICE, 
                         new AdviceMethod()
                             .withInvoked(true)

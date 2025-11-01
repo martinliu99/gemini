@@ -101,7 +101,7 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
         try {
             new RuntimeException_Object(new RuntimeException("expected")).throwRuntimeException();
             assertThat(false).isTrue();
-        } catch(Throwable actualException) {
+        } catch (Throwable actualException) {
             {
                 AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(RuntimeException_Aspect.THROW_RUNTIME_EXCEPTION_RAW_TYPE);
                 assertThat(beforeAdviceMethodInvoker).isNotNull();
@@ -171,7 +171,7 @@ public class MutableJoinpoint_22ParametrizedThrowingType_Tests extends AbstractI
         try {
             new MultiException_Object(new MultiException_Object.ExceptionA_Object("expected")).throwMultiExceptions();
             assertThat(false).isTrue();
-        } catch(Throwable actualException) {
+        } catch (Throwable actualException) {
             {
                 AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(MultiException_Aspect.THROW_RUNTIME_EXCEPTION_RAW_TYPE);
                 assertThat(beforeAdviceMethodInvoker).isNotNull();

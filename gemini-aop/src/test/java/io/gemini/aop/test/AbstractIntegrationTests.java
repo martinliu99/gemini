@@ -63,7 +63,7 @@ public abstract class AbstractIntegrationTests {
     @BeforeAll
     public static void beforeAllTests() throws Exception {
         // launch AopLauncher and load all advisors
-        if(LAUNCHED == false) {
+        if (LAUNCHED == false) {
             launch();
             LAUNCHED = true;
         }
@@ -77,13 +77,13 @@ public abstract class AbstractIntegrationTests {
         CodeSource codeSource = AbstractIntegrationTests.class.getProtectionDomain().getCodeSource();
         String launchLocation = new File(codeSource.getLocation().toURI()).getParentFile().getPath() + File.separator + "int-test" + File.separator;
         Path launchPath = Paths.get(launchLocation);
-        if(Files.exists(launchPath) == false)
+        if (Files.exists(launchPath) == false)
             Files.createDirectory( launchPath);
 
         List<String> classPaths = ClassLoaderUtils.getClassPaths();
         List<URL> classPathURLs = new ArrayList<>(classPaths.size());
         Map<String, URL> resourceFileURLs = new LinkedHashMap<>();
-        for(String classPath : classPaths) {
+        for (String classPath : classPaths) {
             collectURLs(classPath, classPathURLs, resourceFileURLs);
         }
 
@@ -123,7 +123,7 @@ public abstract class AbstractIntegrationTests {
 
     private static void collectURLs(String classPath, List<URL> classPathURLs, Map<String, URL> resourceFileURLs) {
         Path rootPath = Paths.get(classPath).normalize();
-        if(Files.exists(rootPath) == false)
+        if (Files.exists(rootPath) == false)
             return;
 
         URL rootUrl = null;
@@ -134,7 +134,7 @@ public abstract class AbstractIntegrationTests {
         }
 
         // collect class path URL
-        if(Files.isRegularFile(rootPath) || rootPath.endsWith("test-classes") == false) {
+        if (Files.isRegularFile(rootPath) || rootPath.endsWith("test-classes") == false) {
             classPathURLs.add(rootUrl);
             return;
         }

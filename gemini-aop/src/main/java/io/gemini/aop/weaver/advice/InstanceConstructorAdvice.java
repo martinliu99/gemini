@@ -39,7 +39,7 @@ public class InstanceConstructorAdvice {
             ) throws Throwable {
         // 1.create dispatcher
         dispatcher = BootstrapAdvice.Bridger.dispacther(descriptor, null, arguments);
-        if(dispatcher == null)
+        if (dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return;
 
@@ -47,7 +47,7 @@ public class InstanceConstructorAdvice {
         dispatcher.dispatch();
 
         // check invocation result
-        if(dispatcher.hasAdviceThrowing())
+        if (dispatcher.hasAdviceThrowing())
             throw dispatcher.getAdviceThrowing();
 
         // 3.replace arguments
@@ -64,7 +64,7 @@ public class InstanceConstructorAdvice {
 //            @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
-        if(dispatcher == null)
+        if (dispatcher == null)
             return;
 
         // 1.set target returning
@@ -75,7 +75,7 @@ public class InstanceConstructorAdvice {
         dispatcher.dispatch();
 
         // check invocation result
-        if(dispatcher.hasAdviceThrowing()) 
+        if (dispatcher.hasAdviceThrowing()) 
             throw dispatcher.getAdviceThrowing();
     }
 }

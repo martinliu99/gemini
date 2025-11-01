@@ -155,7 +155,7 @@ public class Advisor_21JoinpointVisibility_Tests extends AbstractIntegrationTest
             new TargetThrowingVisibility_Object( new TargetThrowingVisibility_Object.ExceptionA_Object("expected") )
             .accessTargetThrowing();
             assertThat(false).isTrue();
-        } catch(Exception actualException) {
+        } catch (Exception actualException) {
             {
                 AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetThrowingVisibility_Aspect.ACCESS_TARGET_THROWING_AFTER_ADVICE);
                 assertThat(afterAdviceMethodInvoker).isNull();
@@ -253,7 +253,7 @@ public class Advisor_21JoinpointVisibility_Tests extends AbstractIntegrationTest
             new ParametrizedThrowingingVisibility_Object( new ParametrizedThrowingingVisibility_Object.ExceptionA_Object("expected") )
             .accessParametrizedThrowinging();
             assertThat(false).isTrue();
-        } catch(Exception actualException) {
+        } catch (Exception actualException) {
             {
                 AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParametrizedThrowingingVisibility_Aspect.ACCESS_TARGET_THROWING_AFTER_ADVICE);
                 assertThat(afterAdviceMethodInvoker).isNull();

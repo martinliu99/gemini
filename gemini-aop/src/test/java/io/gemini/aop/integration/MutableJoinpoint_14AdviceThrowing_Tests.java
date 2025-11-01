@@ -45,7 +45,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
         {
             try {
                 new TypeInitilizer_BeforeAdvice_Object();
-            } catch(ExceptionInInitializerError e) {
+            } catch (ExceptionInInitializerError e) {
                 AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
                 assertThat(adviceMethodInvoker).isNotNull();
                 assertThat(adviceMethodInvoker.isInvoked()).isTrue();
@@ -58,7 +58,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
 
             try {
                 new TypeInitilizer_BeforeAdvice_Object();
-            } catch(Throwable t) {
+            } catch (Throwable t) {
                 assertThat(t).isInstanceOf(NoClassDefFoundError.class);
             }
         }
@@ -78,7 +78,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
         {
             try {
                 new TypeInitilizer_AfterAdvice_Object();
-            } catch(ExceptionInInitializerError e) {
+            } catch (ExceptionInInitializerError e) {
                 AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
                 assertThat(adviceMethodInvoker).isNotNull();
                 assertThat(adviceMethodInvoker.isInvoked()).isTrue();
@@ -91,7 +91,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
 
             try {
                 new TypeInitilizer_AfterAdvice_Object();
-            } catch(Throwable t) {
+            } catch (Throwable t) {
                 assertThat(t).isInstanceOf(NoClassDefFoundError.class);
             }
         }
@@ -242,7 +242,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
     public void testClassMethod() {
         try {
             ClassMethod_Object.beforeAdviceThrowing();
-        } catch(Throwable expected) {
+        } catch (Throwable expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.BEFORE_ADVICE_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
@@ -257,7 +257,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
 
         try {
             ClassMethod_Object.afterAdviceThrowing();
-        } catch(Throwable expected) {
+        } catch (Throwable expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.AFTER_ADVICE_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
@@ -350,7 +350,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
     public void testInstanceConstructor() {
         try {
             new InstanceConstructor_Object(true);
-        } catch(Throwable expected) {
+        } catch (Throwable expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.BEFORE_ADVICE_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
@@ -365,7 +365,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
 
         try {
             new InstanceConstructor_Object( (byte)1);
-        } catch(Throwable expected) {
+        } catch (Throwable expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.AFTER_ADVICE_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
@@ -457,7 +457,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
 
         try {
             thisObject.beforeAdviceThrowing();
-        } catch(Throwable expected) {
+        } catch (Throwable expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.BEFORE_ADVICE_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
@@ -472,7 +472,7 @@ public class MutableJoinpoint_14AdviceThrowing_Tests extends AbstractIntegration
 
         try {
             thisObject.afterAdviceThrowing();
-        } catch(Throwable expected) {
+        } catch (Throwable expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.AFTER_ADVICE_THROWING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
             assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();

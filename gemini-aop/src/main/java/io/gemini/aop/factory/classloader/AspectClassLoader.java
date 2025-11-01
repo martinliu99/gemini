@@ -117,7 +117,7 @@ public class AspectClassLoader extends URLClassLoader {
         synchronized (super.getClassLoadingLock(name)) {
             // 1.check local cache
             Class<?> type = this.findLoadedClass(name);
-            if(type != null)
+            if (type != null)
                 return type;
 
 
@@ -129,13 +129,13 @@ public class AspectClassLoader extends URLClassLoader {
                 }
 
                 return type;
-            } catch(ClassNotFoundException ignored) { /* ignored */ }
+            } catch (ClassNotFoundException ignored) { /* ignored */ }
 
 
             ClassLoader joinpointCL = getJoinpointClassLoader();
 
             // 3.delegate to joinpoint CL to load joinpoint only classes
-            if(joinpointCL != null && this.joinpointTypeMatcher.matches(name) == true) {
+            if (joinpointCL != null && this.joinpointTypeMatcher.matches(name) == true) {
                 // load classes by subclass-defined JoinpointClassLoader
                 return this.loadClassFromJoinpointCL(joinpointCL, name, resolve);
             }
@@ -144,7 +144,7 @@ public class AspectClassLoader extends URLClassLoader {
             // 4.delegate to current CL and joinpoint CL
             // load Aspect relevant classes by current ClassLoader
             type = this.loadClassFromCurrentCL(name, resolve, joinpointCL == null);
-            if(type != null) {
+            if (type != null) {
                 return type;
             }
 
@@ -161,8 +161,8 @@ public class AspectClassLoader extends URLClassLoader {
             }
 
             return type;
-        } catch(ClassNotFoundException e) {
-            if(throwException) throw e;
+        } catch (ClassNotFoundException e) {
+            if (throwException) throw e;
         }
 
         return null;
@@ -193,7 +193,7 @@ public class AspectClassLoader extends URLClassLoader {
 
         // 1.delegate to parent CL(AopClassLoader) to load AOP framework resources
         URL url = this.getParent().getResource(name);
-        if(url != null) {
+        if (url != null) {
             return url;
         }
 
@@ -201,7 +201,7 @@ public class AspectClassLoader extends URLClassLoader {
         ClassLoader joinpointCL = getJoinpointClassLoader();
 
         // 2.delegate to joinpoint CL to load joinpoint only resources
-        if(joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
+        if (joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
             // load resource by subclass-defined JoinpointClassLoader
             return this.findResourceWithJoinpointCL(joinpointCL, name);
         }
@@ -210,7 +210,7 @@ public class AspectClassLoader extends URLClassLoader {
         // 3.delegate to joinpoint CL and current CL
         // load resource by current ClassLoader
         url = this.findResource(name);
-        if(url != null) {
+        if (url != null) {
             return url;
         }
 
@@ -244,7 +244,7 @@ public class AspectClassLoader extends URLClassLoader {
 
         // 1.delegate to parent CL(AopClassLoader) to load AOP framework resources
         urls = super.getResources(name);
-        if(urls != null) {
+        if (urls != null) {
             urlsList.add(urls);
         }
 
@@ -252,10 +252,10 @@ public class AspectClassLoader extends URLClassLoader {
         ClassLoader joinpointCL = getJoinpointClassLoader();
 
         // 2.delegate to joinpoint CL to load joinpoint only resources
-        if(joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
+        if (joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
             // load resources by subclass-defined JoinpointClassLoader
             urls = this.findResourcesWithJoinpointCL(joinpointCL, name);
-            if(urls != null) {
+            if (urls != null) {
                 urlsList.add(urls);
             }
 
@@ -266,13 +266,13 @@ public class AspectClassLoader extends URLClassLoader {
         // 3.delegate to joinpoint CL and current CL
         // load resources by current ClassLoader
         urls = this.findResources(name);
-        if(urls != null) {
+        if (urls != null) {
             urlsList.add(urls);
         }
 
         // load resources by subclass-defined JoinpointClassLoader
         urls = joinpointCL != null ? this.findResourcesWithJoinpointCL(joinpointCL, name) : null;
-        if(urls != null) {
+        if (urls != null) {
             urlsList.add(urls);
         }
 

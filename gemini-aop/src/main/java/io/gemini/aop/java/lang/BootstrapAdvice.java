@@ -110,7 +110,7 @@ public interface BootstrapAdvice {
                  bsmMethod = Bridger.class.getMethod("createDescriptorCallSite", MethodHandles.Lookup.class, String.class, MethodType.class, Object[].class);
                  bsmMethod.setAccessible(true);
             } catch (Exception e) {
-                System.err.println("Failed to fetch BootstrapAdvice.Bridger#createDescriptorCallSite() method, error reason: " + e);
+                System.err.println("Failed to fetch BootstrapAdvice.Bridger#createDescriptorCallSite() method. \n  Error reason: " + e.getMessage());
             }
             CREATE_DESCRIPTOR_INDY_BSM = bsmMethod;
 
@@ -119,20 +119,20 @@ public interface BootstrapAdvice {
             try {
                 regularMethod = BootstrapAdvice.Bridger.class.getMethod("createDescriptor", Lookup.class, Object[].class);
                 regularMethod.setAccessible(true);
-            } catch(Exception e) {
-                System.err.println("Failed to fetch BootstrapAdvice.Bridger#createDescriptor() method, error reason: " + e);
+            } catch (Exception e) {
+                System.err.println("Failed to fetch BootstrapAdvice.Bridger#createDescriptor() method. \n  Error reason: " + e.getMessage());
             }
             CREATE_DESCRIPTOR_METHOD = regularMethod;
         }
 
 
         public static void setFactory(Factory factory) {
-            if(FACTORY != null) {
+            if (FACTORY != null) {
                 System.err.println("BootstrapAdvice.Bridger.FACTORY already initialized with " + FACTORY);
                 return;
             }
 
-            if(factory == null) {
+            if (factory == null) {
                 throw new IllegalArgumentException("BootstrapAdvice.Bridger.FACTORY must not be null.");
             }
 

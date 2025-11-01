@@ -52,12 +52,12 @@ public class AspectJExprPointcutTests {
             boolean result = pointcut.matches(type);
             LOGGER.info("Matched '{}' for type {}", result, type);
             
-            for(MethodDescription.InDefinedShape method : type.getDeclaredMethods()) {
+            for (MethodDescription.InDefinedShape method : type.getDeclaredMethods()) {
                 result = pointcut.getMethodMatcher().matches(method);
 
                 LOGGER.info("Matched '{}' for method '{}' with expression '{}' ", result, method, expression);
             }
-        } catch(Throwable t) {
+        } catch (Throwable t) {
             t.printStackTrace(System.out);            
         }
         

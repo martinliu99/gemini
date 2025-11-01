@@ -34,7 +34,7 @@ public class DemoServiceRunner {
         long startedAt = System.nanoTime();
         LOGGER.info("started to init class loader");
 
-        for(int i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             DemoServiceRunner demoServiceRunner = new DemoServiceRunner();
     
             RunnerClassLoader classLoader = new RunnerClassLoader(loadResource(), DemoServiceRunner.class.getClassLoader());
@@ -99,18 +99,18 @@ public class DemoServiceRunner {
         try {
             String pathname = "../../gemini-release/demoapps/gemini-demo-service";
             File lib = new File(pathname + "/lib").getCanonicalFile();;
-            if(lib.exists() == false) {
+            if (lib.exists() == false) {
                 throw new RuntimeException("unexisted dir: " + lib.getAbsolutePath());
             }
 
-            if(lib.isDirectory()) {
+            if (lib.isDirectory()) {
                 File[] jarFiles = lib.listFiles(new FilenameFilter() {  
                     public boolean accept(File dir, String name) {  
                         return name.endsWith(".jar") || name.endsWith(".zip");  
                     }  
                 });
 
-                for(int i=0; i<jarFiles.length; i++) {
+                for (int i=0; i<jarFiles.length; i++) {
                     try {
                         urls.add(jarFiles[i].toURI().toURL());
                     } catch (MalformedURLException e) {

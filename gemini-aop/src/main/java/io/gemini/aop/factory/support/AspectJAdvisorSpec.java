@@ -128,7 +128,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
 
     public Map<String, Generic> getPointcutParameterTypes() {
         Map<String, Generic> parameterTypes = new LinkedHashMap<>(pointcutParameterNames.size());
-        for(String parameterName : pointcutParameterNames)
+        for (String parameterName : pointcutParameterNames)
             parameterTypes.put(parameterName, this.parameterDescriptionMap.get(parameterName).getType());
         return parameterTypes;
     }
@@ -157,7 +157,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
     @Override
     public boolean match(MethodDescription methodDescription, List<NamedPointcutParameter> pointcutParameters) {
         // 1.match parameter count and type
-        if(pointcutParameters == null || pointcutParameters.size() != pointcutParameterNames.size()) {
+        if (pointcutParameters == null || pointcutParameters.size() != pointcutParameterNames.size()) {
             LOGGER.warn("Ignored advice method with advice parameters is different to target method's resolved parameters. \n" 
                     + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    AdviceParameters: {} \n  TargetMethod: {} \n    ResolvedParameters: {} \n",
                     getAdvisorName(),
@@ -172,9 +172,9 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             return false;
         }
 
-        for(NamedPointcutParameter pointcutParameterBinding : pointcutParameters) {
+        for (NamedPointcutParameter pointcutParameterBinding : pointcutParameters) {
             String name = pointcutParameterBinding.getParamName();
-            if(pointcutParameterNames.contains(name) == false) {
+            if (pointcutParameterNames.contains(name) == false) {
                 LOGGER.warn("Ignored advice method with advice parameters do not contain target method's resolved parameter '{}'. \n" 
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    AdviceParameters: {} \n  TargetMethod: {} \n    ResolvedParameters: {} \n",
                         name, 
@@ -191,7 +191,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             }
 
             TypeDescription paramType = parameterDescriptionMap.get(pointcutParameterBinding.getParamName()).getType().asErasure();
-            if(ClassUtils.isVisibleTo(paramType, methodDescription.getDeclaringType().asErasure()) == false) {
+            if (ClassUtils.isVisibleTo(paramType, methodDescription.getDeclaringType().asErasure()) == false) {
                 LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under Joinpoint ClassLoader. \n"
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    parameter '{}': {} {} \n",
                         getAdvisorName(),
@@ -230,13 +230,13 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
         private static Map<String, AdviceCategory> VALUE_MAP;
         static {
             VALUE_MAP = new HashMap<>(AdviceCategory.values().length);
-            for(AdviceCategory adviceCategory : AdviceCategory.values())
+            for (AdviceCategory adviceCategory : AdviceCategory.values())
                 VALUE_MAP.put(adviceCategory.toString().replace("_", ""), adviceCategory);
         }
 
         public static AdviceCategory parse(String value) {
             AdviceCategory adviceCategory = VALUE_MAP.get(value.trim().toUpperCase());
-            if(adviceCategory != null)
+            if (adviceCategory != null)
                 return adviceCategory;
 
             throw new IllegalArgumentException("Unsupported AdviceCategory '" + value + "'.");
@@ -298,7 +298,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             AnnotationValue<?, ?> annotationValue = aspectJAnnotation.getValue("value");
             String pointcutExpression = annotationValue == null ? null : annotationValue.resolve(String.class).trim();
 
-            if(StringUtils.hasText(pointcutExpression) == false) {
+            if (StringUtils.hasText(pointcutExpression) == false) {
                 annotationValue = aspectJAnnotation.getValue("pointcut");
                 pointcutExpression = annotationValue == null ? null : annotationValue.resolve(String.class).trim();
             }
@@ -307,13 +307,13 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             String argNamesStr = annotationValue.resolve(String.class).toString();
 
             String returningParameter = null;
-            if(adviceCategory.isAfterReturning()) {
+            if (adviceCategory.isAfterReturning()) {
                 annotationValue = aspectJAnnotation.getValue("returning");
                 returningParameter = annotationValue == null ? null : annotationValue.resolve(String.class).trim();
             }
 
             String throwingParameter = null;
-            if(adviceCategory.isAfterThrowing()) {
+            if (adviceCategory.isAfterThrowing()) {
                 annotationValue = aspectJAnnotation.getValue("throwing");
                 throwingParameter = annotationValue == null ? null : annotationValue.resolve(String.class).trim();
             }
@@ -358,7 +358,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             ParameterList<ParameterDescription.InDefinedShape> parameters = aspectJMethod.asDefined().getParameters();
 
             List<String> parameterNames = resolveParameterNames(advisorName, aspectJMethod, argNamesStr, parameters);
-            if(parameterNames == null)
+            if (parameterNames == null)
                 return null;
 
             Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap = createParameterDescriptionMap(parameters, parameterNames);
@@ -371,26 +371,26 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
                     parameterDescriptionMap, namedPointcutParameters, pointcutParameterNames);
 
             Generic returningParameterType = null;
-            if(adviceCategory.isAfterReturning()) {
+            if (adviceCategory.isAfterReturning()) {
                 returningParameterType = resolveAdviceReturningParamBinding(
                         advisorName, aspectJMethod, parameterDescriptionMap, 
                         adviceCategory, namedPointcutParameters, 
                         returningParameter);
 
-                if(returningParameterType == null)
+                if (returningParameterType == null)
                     return null;
                 else
                     pointcutParameterNames.remove(returningParameter);
             }
 
             Generic throwingParameterType = null;
-            if(adviceCategory.isAfterThrowing()) {
+            if (adviceCategory.isAfterThrowing()) {
                 throwingParameterType = resolveAdviceThrowingParamBinding(
                         advisorName, aspectJMethod, parameterDescriptionMap, 
                         adviceCategory, namedPointcutParameters,
                         throwingParameter);
 
-                if(throwingParameterType == null)
+                if (throwingParameterType == null)
                     return null;
                 else
                     pointcutParameterNames.remove(throwingParameter);
@@ -407,7 +407,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
 
         private static List<String> resolveParameterNames(String advisorName, MethodDescription aspectJMethod, 
                 String argNamesStr, ParameterList<ParameterDescription.InDefinedShape> parameters) {
-            if(parameters.size() == 0)
+            if (parameters.size() == 0)
                 return Collections.emptyList();
 
             ParameterDescription.InDefinedShape index0Param = parameters.get(0);
@@ -416,11 +416,11 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             // 1.fetch 'argNames' value in annotation
             StringTokenizer st = new StringTokenizer(argNamesStr, ",");
             List<String> argNames = new ArrayList<>(st.countTokens());
-            while(st.hasMoreTokens())
+            while (st.hasMoreTokens())
                 argNames.add(st.nextToken().trim());
 
-            if(argNames.size() > 0) {
-                if(argNames.size() != parameters.size() && argNames.size() != parameters.size() - 1) {
+            if (argNames.size() > 0) {
+                if (argNames.size() != parameters.size() && argNames.size() != parameters.size() - 1) {
                     LOGGER.warn("Ignored AspectJ advice method with parameters is inconsistent with 'argNames' annotation attribute. \n"
                             + "  AdvisorSpec: {} \n  AdviceMethod: {} \n  ArgNames: {} \n", 
                             advisorName, 
@@ -432,7 +432,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
                 }
 
                 // first parameter should be joinpoint
-                if(argNames.size() == parameters.size() - 1) {
+                if (argNames.size() == parameters.size() - 1) {
                     parameterNames.add(index0Param.getName());
                 }
                 parameterNames.addAll(argNames);
@@ -442,7 +442,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
 
             // 2.parse parameter names in MethodParameters section
             // validate parameter name for index0 parameter
-            if(index0Param.getName().equals(index0Param.getActualName()) == false) {
+            if (index0Param.getName().equals(index0Param.getActualName()) == false) {
                 LOGGER.warn("Ignored AspectJ advice method without parameter reflection support and 'argNames' annotation attribute. \n"
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n {} \n {} \n",
                         advisorName, 
@@ -460,13 +460,13 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
 
         private static Map<String, ParameterDescription.InDefinedShape> createParameterDescriptionMap(
                 ParameterList<ParameterDescription.InDefinedShape> parameters, List<String> parameterNames) {
-            if(parameterNames.size() == 0)
+            if (parameterNames.size() == 0)
                 return Collections.emptyMap();
 
             Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap = new LinkedHashMap<>(parameters.size());
 
             // access by parameter index other than parameter name which might NOT contain in bytecode file
-            for(int index = 0; index < parameters.size(); index++) {
+            for (int index = 0; index < parameters.size(); index++) {
                 ParameterDescription.InDefinedShape paramType = parameters.get(index);
                 parameterDescriptionMap.put(parameterNames.get(index), paramType);
             }
@@ -477,7 +477,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
         private static void resolveJoinpointParamBinding(MethodDescription methodDescription, 
                 Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
                 Map<String, NamedPointcutParameter> pointcutParameters, List<String> pointcutParameterNames) {
-            if(parameterDescriptionMap.size() == 0) 
+            if (parameterDescriptionMap.size() == 0) 
                 return;
 
             // bind first parameter
@@ -485,15 +485,15 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
             String parameterName = parameterDescription.getName();
             TypeDescription parameterType = parameterDescription.getType().asErasure();
 
-            if(JOINPOINT_TYPE.equals(parameterType)) {
+            if (JOINPOINT_TYPE.equals(parameterType)) {
                 pointcutParameters.put(parameterName, 
                         new PointcutParameter.Default(parameterName, parameterDescription.getType(), PointcutParameter.ParamCategory.JOINPOINT_PARAM));
                 pointcutParameterNames.remove(parameterName);
-            } else if(MUTABLE_JOINPOINT_TYPE.equals(parameterType)) {
+            } else if (MUTABLE_JOINPOINT_TYPE.equals(parameterType)) {
                 pointcutParameters.put(parameterName, 
                         new PointcutParameter.Default(parameterName, parameterDescription.getType(), PointcutParameter.ParamCategory.MUTABLE_JOINPOINT_PARAM));
                 pointcutParameterNames.remove(parameterName);
-            } else if(ACCESSIBLE_OBJECTS.contains(parameterType)) {
+            } else if (ACCESSIBLE_OBJECTS.contains(parameterType)) {
                 pointcutParameters.put(parameterName, 
                         new PointcutParameter.Default(parameterName, parameterDescription.getType(), PointcutParameter.ParamCategory.STATIC_PART_PARAM));
                 pointcutParameterNames.remove(parameterName);
@@ -504,7 +504,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
                 Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
                 AdviceCategory adviceCategory, Map<String, NamedPointcutParameter> pointcutParameters, String returningParameter) {
             // resolve returning parameters
-            if(StringUtils.hasText(returningParameter) == false) {
+            if (StringUtils.hasText(returningParameter) == false) {
                 LOGGER.warn("Ignored AspectJ @AfterReturning advice method without 'returning' annotation attribute. \n"
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    returning: {} \n",
                         advisorName,
@@ -515,7 +515,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
                 return null;
             }
 
-            if(parameterDescriptionMap.containsKey(returningParameter) == false) { 
+            if (parameterDescriptionMap.containsKey(returningParameter) == false) { 
                 LOGGER.warn("Ignored AspectJ @AfterReturning advice method with 'returning' annotation attribute referring to nonexistent parameter. \n"
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    returning: {} \n",
                         advisorName,
@@ -537,7 +537,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
                 Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap, 
                 AdviceCategory adviceCategory, Map<String, NamedPointcutParameter> pointcutParameters, String throwingParameter) {
             // resolve throwing parameters
-            if(StringUtils.hasText(throwingParameter) == false) {
+            if (StringUtils.hasText(throwingParameter) == false) {
                 LOGGER.warn("Ignored AspectJ @AfterThrowing advice method without 'throwing' annotation attribute. \n"
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    throwing: {} \n",
                         advisorName,
@@ -548,7 +548,7 @@ class AspectJAdvisorSpec extends AdvisorSpec.AbstractBase implements PointcutPar
                 return null;
             }
 
-            if(parameterDescriptionMap.containsKey(throwingParameter) == false) {
+            if (parameterDescriptionMap.containsKey(throwingParameter) == false) {
                 LOGGER.warn("Ignored AspectJ @AfterThrowing advice method with 'throwing' annotation attribute referring to nonexistent parameter. \n"
                         + "  AdvisorSpec: {} \n  AdviceMethod: {} \n    throwing: {} \n",
                         advisorName,

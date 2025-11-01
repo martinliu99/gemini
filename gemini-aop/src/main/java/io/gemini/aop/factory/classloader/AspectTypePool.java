@@ -44,9 +44,9 @@ public class AspectTypePool extends TypePool.Default {
         // check AspectClassLoader
         try {
             Resolution resolution = super.describe(name);
-            if(resolution != null && resolution.isResolved())
+            if (resolution != null && resolution.isResolved())
                 return resolution;
-        } catch(Exception e) { }
+        } catch (Exception e) { }
 
         // check JoinpointClassLoader
         return doResolveViaJoinpointTypePool(name);
@@ -54,7 +54,7 @@ public class AspectTypePool extends TypePool.Default {
 
     private Resolution doResolveViaJoinpointTypePool(String name) {
         ClassLoader joinpointCL = aspectClassLoader.getJoinpointClassLoader();
-        if(joinpointCL == null)
+        if (joinpointCL == null)
             return new Resolution.Illegal(name);
 
         TypePool typePool = this.typePoolFactory.createTypePool(joinpointCL, null);

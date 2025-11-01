@@ -39,7 +39,7 @@ public class RequestAspect {
     @After("execution(* org.framework.demo.api.Request.getInput())")
     public Object after(MutableJoinpoint<List<String>, RuntimeException> joinpoint) throws Throwable {
         Object rtn = joinpoint.getReturning();
-        if(rtn instanceof List) {
+        if (rtn instanceof List) {
             ((List) rtn).add("after");
         }
 

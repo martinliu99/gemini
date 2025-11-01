@@ -320,7 +320,7 @@ public class Advisor_11AdviceParamBinding_Tests extends AbstractIntegrationTests
             new TargetThrowingBinding_Object( new TargetThrowingBinding_Object.ExceptionA_Object("expected") )
             .bindTargetThrowing();
             assertThat(false).isTrue();
-        } catch(Exception actualException) {
+        } catch (Exception actualException) {
             {
                 AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetThrowingBinding_Aspect.BIND_TARGET_THROWING_AFTER_ADVICE);
                 assertThat(afterAdviceMethodInvoker).isNotNull();

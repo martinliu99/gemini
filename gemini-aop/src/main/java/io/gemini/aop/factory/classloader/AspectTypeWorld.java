@@ -52,9 +52,9 @@ public class AspectTypeWorld extends BytebuddyWorld {
     public ResolvedType resolve(UnresolvedType unresolvedType, boolean allowMissing) {
         try {
             ResolvedType resolvedType = super.resolve(unresolvedType, allowMissing);
-            if(resolvedType != null && resolvedType.isMissing() == false)
+            if (resolvedType != null && resolvedType.isMissing() == false)
                 return resolvedType;
-        } catch(Exception e) {}
+        } catch (Exception e) {}
 
         TypeWorld joinpointTypeWorld = getJoinpointTypeWorld();
         return joinpointTypeWorld == null ? null : joinpointTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
@@ -70,7 +70,7 @@ public class AspectTypeWorld extends BytebuddyWorld {
      */
     @Override
     public TypeDescription describeType(String typeName) {
-        if("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
+        if ("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
         return ((AspectTypePool) typePool).describeAspectType(typeName).resolve();
     }

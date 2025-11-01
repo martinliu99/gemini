@@ -130,7 +130,7 @@ public class DefaultAopLauncher implements AopLauncher {
                     } );
             Runtime.getRuntime().addShutdownHook(shutdownHook);
         } finally {
-            if(bootstraperMetrics != null) {
+            if (bootstraperMetrics != null) {
                 bootstraperMetrics.setLauncherStartupTime(System.nanoTime() - launcherConfig.getLaunchedAt());
             }
 

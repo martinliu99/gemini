@@ -41,7 +41,7 @@ public class InstanceMethodAdvice {
             ) throws Throwable {
         // 1.create dispatcher
         dispatcher = BootstrapAdvice.Bridger.dispacther(descriptor, thisObject, arguments);
-        if(dispatcher == null)
+        if (dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return false;
 
@@ -61,14 +61,14 @@ public class InstanceMethodAdvice {
             @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = Constants.LOCAL_VARIABLE_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
-        if(dispatcher == null)
+        if (dispatcher == null)
             return;
 
         // 1.assign return value if BeforeAdvices marked return before execute instrumented method
-        if(dispatcher.hasAdviceThrowing()) {
+        if (dispatcher.hasAdviceThrowing()) {
             throwing = dispatcher.getAdviceThrowing();
             return;
-        } else if(dispatcher.hasAdviceReturning()) {
+        } else if (dispatcher.hasAdviceReturning()) {
             returning = dispatcher.getAdviceReturning();
             return;
         }
@@ -81,9 +81,9 @@ public class InstanceMethodAdvice {
         dispatcher.dispatch();
 
         // check invocation result
-        if(dispatcher.hasAdviceThrowing()) {
+        if (dispatcher.hasAdviceThrowing()) {
             throwing = dispatcher.getAdviceThrowing();
-        } else if(dispatcher.hasAdviceReturning()) {
+        } else if (dispatcher.hasAdviceReturning()) {
             returning = dispatcher.getAdviceReturning();
         }
     }

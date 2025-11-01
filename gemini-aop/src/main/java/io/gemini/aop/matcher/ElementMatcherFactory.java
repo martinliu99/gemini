@@ -65,29 +65,29 @@ public enum ElementMatcherFactory {
 
     private <T> ElementMatcher.Junction<T> doCreateElementMatcher(String ruleName, Collection<String> expressions, 
             Function<String, ElementMatcher<T>> parser, ElementMatcher.Junction<T> defaultMatcher) {
-        if(CollectionUtils.isEmpty(expressions))
+        if (CollectionUtils.isEmpty(expressions))
             return ElementMatchers.none();
 
         List<ElementMatcher<? super T>> elementMatchers = new ArrayList<>(expressions.size());
-        for(String expression : expressions) {
+        for (String expression : expressions) {
             expression = expression.trim();
-            if(STAR.equals(expression))
+            if (STAR.equals(expression))
                 return ElementMatchers.any();
 
             try {
                 elementMatchers.add(
                         parser.apply(expression) );
-            } catch(ExprParser.ExprParseException e) {
+            } catch (ExprParser.ExprParseException e) {
                 LOGGER.warn("Ignored unparsable expression. \n  Rule: {} \n  Expression: {} \n  Syntax Error: {} \n", 
                         ruleName, expression, e.getMessage());
-            } catch(ExprParser.ExprLintException e) {
+            } catch (ExprParser.ExprLintException e) {
                 LOGGER.warn("Ignored lint expression. \n  Rule: {} \n  Expression: {} \n  Lint message: {} \n", 
                         ruleName, expression, e.getMessage());
-            } catch(ExprParser.ExprUnknownException e) {
+            } catch (ExprParser.ExprUnknownException e) {
                 Throwable cause = e.getCause();
                 LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {} \n", 
                         ruleName, expression, cause.getMessage(), cause);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {} \n", 
                         ruleName, expression, e.getMessage());
             }

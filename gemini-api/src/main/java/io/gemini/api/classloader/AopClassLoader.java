@@ -92,7 +92,7 @@ public abstract class AopClassLoader extends URLClassLoader {
             private final List<ParentFirstFilter> chain = new ArrayList<>();
 
             public FilterChain addFilter(ParentFirstFilter parentFirstFilter) {
-                if(parentFirstFilter == null)
+                if (parentFirstFilter == null)
                     return this;
 
                 this.chain.add(parentFirstFilter);
@@ -104,8 +104,8 @@ public abstract class AopClassLoader extends URLClassLoader {
              */
             @Override
             public boolean isParentFirstClass(String name) {
-                for(ParentFirstFilter filter : chain) {
-                    if(filter.isParentFirstClass(name))
+                for (ParentFirstFilter filter : chain) {
+                    if (filter.isParentFirstClass(name))
                         return true;
                 }
 
@@ -117,8 +117,8 @@ public abstract class AopClassLoader extends URLClassLoader {
              */
             @Override
             public boolean isParentFirstResource(String name) {
-                for(ParentFirstFilter filter : chain) {
-                    if(filter.isParentFirstResource(name))
+                for (ParentFirstFilter filter : chain) {
+                    if (filter.isParentFirstResource(name))
                         return true;
                 }
 
@@ -161,7 +161,7 @@ public abstract class AopClassLoader extends URLClassLoader {
             private final List<TypeFilter> chain = new ArrayList<>();
 
             public FilterChain addFilter(TypeFilter typeFilter) {
-                if(typeFilter == null)
+                if (typeFilter == null)
                     return this;
 
                 this.chain.add(typeFilter);
@@ -173,7 +173,7 @@ public abstract class AopClassLoader extends URLClassLoader {
              */
             @Override
             public String filterTypeName(String name) {
-                for(TypeFilter typeFilter : chain) {
+                for (TypeFilter typeFilter : chain) {
                     name = typeFilter.filterTypeName(name);
                 }
                 return name;
@@ -184,7 +184,7 @@ public abstract class AopClassLoader extends URLClassLoader {
              */
             @Override
             public String filterResourceName(String name) {
-                for(TypeFilter typeFilter : chain) {
+                for (TypeFilter typeFilter : chain) {
                     name = typeFilter.filterResourceName(name);
                 }
                 return name;
@@ -234,7 +234,7 @@ public abstract class AopClassLoader extends URLClassLoader {
             private final List<TypeFinder> chain = new ArrayList<>();
 
             public FinderChain addFilter(TypeFinder typeFinder) {
-                if(typeFinder == null)
+                if (typeFinder == null)
                     return this;
 
                 this.chain.add(typeFinder);
@@ -244,9 +244,9 @@ public abstract class AopClassLoader extends URLClassLoader {
 
             @Override
             public byte[] findByteCode(String name) {
-                for(TypeFinder finder : chain) {
+                for (TypeFinder finder : chain) {
                     byte[] byteCode = finder.findByteCode(name);
-                    if(byteCode != null)
+                    if (byteCode != null)
                         return byteCode;
                 }
 
@@ -256,9 +256,9 @@ public abstract class AopClassLoader extends URLClassLoader {
 
             @Override
             public URL findResource(String name) {
-                for(TypeFinder finder : chain) {
+                for (TypeFinder finder : chain) {
                     URL resource = finder.findResource(name);
-                    if(resource != null)
+                    if (resource != null)
                         return resource;
                 }
 
@@ -267,9 +267,9 @@ public abstract class AopClassLoader extends URLClassLoader {
 
             @Override
             public Enumeration<URL> findResources(String name) throws IOException {
-                for(TypeFinder finder : chain) {
+                for (TypeFinder finder : chain) {
                     Enumeration<URL> resources = finder.findResources(name);
-                    if(resources != null)
+                    if (resources != null)
                         return resources;
                 }
 

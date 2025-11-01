@@ -23,6 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopMetrics;
+import io.gemini.core.DiagnosticLevel;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.agent.builder.AgentBuilder;
 
 public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStrategy.Listener {
@@ -32,46 +34,54 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
     private static final int DEFAULT = -1;
 
     private long startedAt = DEFAULT;
-;
+
+    private final DiagnosticLevel diagnosticLevel;
     private final AopMetrics.BootstraperMetrics bootstraperMetrics;
 
 
-    public DefaultRedefinitionListener(AopMetrics aopMetrics) {
+    public DefaultRedefinitionListener(DiagnosticLevel diagnosticLevel, AopMetrics aopMetrics) {
+        this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
         bootstraperMetrics = aopMetrics.getBootstraperMetrics();
     }
 
     @Override
     public void onBatch(int index, List<Class<?>> batch, List<Class<?>> types) {
-        if(this.startedAt == DEFAULT) {
+        if (this.startedAt == DEFAULT) {
             this.startedAt = System.nanoTime();
         }
 
         /* do nothing */
-        if(LOGGER.isInfoEnabled())
-            LOGGER.info("^Instrumenting loaded types '{}' in batch (round {}).", batch, index);
+        if (diagnosticLevel.isSimpleEnabled())
+            LOGGER.info("^Redefining {}/{} loaded types in batch {}.", 
+                    batch.size(), types.size(), index);
     }
 
     @Override
     public Iterable<? extends List<Class<?>>> onError(int index, List<Class<?>> batch, Throwable throwable, List<Class<?>> types) {
-        LOGGER.warn("Failed to instrument loaded types '{}' in batch (round {}).", batch, index, throwable);
+        if (LOGGER.isWarnEnabled())
+            LOGGER.warn("Failed to redefine {}/{} loaded types in batch {}. \n"
+                    + "  Error reason: {} \n"
+                    + "  Types: \n    {} \n", 
+                    batch.size(), types.size(), index, 
+                    throwable.getMessage(),
+                    StringUtils.join(batch, Class::toString, "\n    "),
+                    throwable);
 
         return Collections.emptyList();
     }
 
     @Override
     public void onComplete(int amount, List<Class<?>> types, Map<List<Class<?>>, Throwable> failures) {
-        if(startedAt == DEFAULT)
+        if (startedAt == DEFAULT)
             return;
 
         long time = System.nanoTime() - startedAt;
-        this.bootstraperMetrics.incrTypeRedefiningCount(types.size());
 
         /* do nothing */
-        if(failures.size() > 0) {
-            LOGGER.warn("$Took '{}' seconds to instrument loaded types '{}'.", time / AopMetrics.NANO_TIME, types, failures.get(types));
-        } else {
-            if(LOGGER.isInfoEnabled())
-                LOGGER.info("$Took '{}' seconds to instrument loaded types '{}'.", time / AopMetrics.NANO_TIME, types);
-        }
+        if (types.size() > 0 && LOGGER.isInfoEnabled())
+            LOGGER.info("$Took '{}' seconds to redefine {} loaded types in {} batchs.", 
+                    time / AopMetrics.NANO_TIME, types.size(), amount);
+
+        this.bootstraperMetrics.incrTypeRedefiningCount(types.size());
     }
 }

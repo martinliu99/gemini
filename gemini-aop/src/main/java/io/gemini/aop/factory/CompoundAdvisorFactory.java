@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
+import io.gemini.core.util.MethodUtils;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
@@ -47,26 +49,37 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
 
     public CompoundAdvisorFactory(AopContext aopContext) {
+        long startedAt = System.nanoTime();
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating CompoundAdvisorFactory.");
+
+
         this.factoriesContext = new FactoriesContext(aopContext);
 
         Map<String, FactoryContext> factoryContextMap = factoriesContext.getFactoryContextMap();
 
         this.advisorFactoryMap = createAdvisorFactoryMap(aopContext, factoriesContext, factoryContextMap);
+
+
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled())
+            LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory, \n"
+                    + "  {} \n", 
+                    (System.nanoTime() - startedAt) / 1e9,
+                    StringUtils.join(getAdvisorSpecNum().entrySet(), 
+                            entry -> entry.getKey() + ": " + entry.getValue() + " AdvisorSpecs", 
+                            "\n  ") 
+            );
     }
 
     private Map<FactoryContext, DefaultAdvisorFactory> createAdvisorFactoryMap(AopContext aopContext, 
             FactoriesContext factoriesContext,
             Map<String, FactoryContext> factoryContextMap) {
-        long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled())
-            LOGGER.info("^Creating CompoundAdvisorFactory.");
-
         Map<FactoryContext, DefaultAdvisorFactory> advisorFactoryMap = new LinkedHashMap<>();
-        for(FactoryContext factoryContext : factoryContextMap.values()) {
+        for (FactoryContext factoryContext : factoryContextMap.values()) {
             String factoryName = factoryContext.getFactoryName();
 
             // filter aspect
-            if(factoriesContext.isEnabledFactory(factoryName) == false) 
+            if (factoriesContext.isEnabledFactory(factoryName) == false) 
                 return null;
 
             // create AdvisorFactory
@@ -74,8 +87,6 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             advisorFactoryMap.put(factoryContext, advisorFactory);
         }
 
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled())
-            LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory. {}", (System.nanoTime() - startedAt) / 1e9);
         return advisorFactoryMap;
     }
 
@@ -95,12 +106,52 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             ClassLoader joinpointClassLoader, JavaModule javaModule) {
         Map<MethodDescription, List<Advisor>> methodAdvisorMap = new HashMap<>();
         // collect advisors per method
-        for(AdvisorFactory advisorFactory : advisorFactoryMap.values()) {
-            for(Entry<? extends MethodDescription, List<? extends Advisor>> entry : advisorFactory
-                    .getAdvisors(typeDescription, joinpointClassLoader, javaModule).entrySet()) {
+        for (Entry<FactoryContext, DefaultAdvisorFactory> entry: advisorFactoryMap.entrySet()) {
+            FactoryContext factoryContext = entry.getKey();
+            AdvisorFactory advisorFactory = entry.getValue();
+
+            // diagnostic log
+            String typeName = typeDescription.getTypeName();
+            if (factoryContext.getAopContext().isDiagnosticClass(typeName)) {
+                LOGGER.info("Getting Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.", 
+                        typeName, joinpointClassLoader, factoryContext.getFactoryName());
+            }
+
+            // get advisors per AdvisorFactory
+            Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = advisorFactory
+                    .getAdvisors(typeDescription, joinpointClassLoader, javaModule);
+
+            if(factoryContext.getAopContext().isDiagnosticClass(typeName)) {
+                if(advisorMap.size() == 0)
+                    LOGGER.info("Did not get Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.",
+                            typeName, joinpointClassLoader, factoryContext.getFactoryName()
+                    );
+                else
+                    LOGGER.info("Got Advisors for type '{}' in AdvisorFactory, \n"
+                            + "  AdvisorFactory: {} \n"
+                            + "  ClassLoader: {} \n"
+                            + "  {} \n",
+                            typeName, 
+                            factoryContext.getFactoryName(),
+                            joinpointClassLoader, 
+                            StringUtils.join(
+                                    advisorMap.entrySet(), 
+                                    methodAdvisorEntry -> 
+                                        new StringBuilder("Method: ")
+                                            .append( MethodUtils.getMethodSignature( methodAdvisorEntry.getKey() ) )
+                                            .append("\n   Advices: ")
+                                            .append( StringUtils.join(methodAdvisorEntry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
+                                    "\n  "
+                            )
+                    );
+            }
+
+
+            // merge advisors
+            for (Entry<? extends MethodDescription, List<? extends Advisor>> methodAdvisorEntry : advisorMap.entrySet()) {
                 methodAdvisorMap
-                .computeIfAbsent(entry.getKey(), key -> new ArrayList<>() )
-                .addAll(entry.getValue());
+                .computeIfAbsent(methodAdvisorEntry.getKey(), key -> new ArrayList<>() )
+                .addAll(methodAdvisorEntry.getValue());
             }
         }
 
@@ -109,7 +160,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
     @Override
     public void close() throws IOException {
-        for(Closeable closeable : advisorFactoryMap.values()) {
+        for (Closeable closeable : advisorFactoryMap.values()) {
             closeable.close();
         }
 

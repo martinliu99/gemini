@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.core.DiagnosticLevel;
+
 /**
  * 
  */
@@ -35,11 +37,11 @@ public class TaskExecutorTests {
 
     @Test
     public void testTaskExeution() {
-        TaskExecutor taskExecutor = TaskExecutor.create("test", true);
+        TaskExecutor taskExecutor = TaskExecutor.create(DiagnosticLevel.SIMPLE, "test", true);
 
         int count = 140;
         List<Function<Integer, Integer>> tasks = new ArrayList<>(count);
-        for(int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++) {
             tasks.add( index -> {
                 try {
                     Thread.sleep(10);

@@ -18,10 +18,16 @@ package io.gemini.aop.weaver.support;
 import java.lang.instrument.Instrumentation;
 import java.util.Collections;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.gemini.core.util.Assert;
+import io.gemini.core.util.Throwables;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy.DiscoveryStrategy;
 
 public class DiscoveryStrategyAdapter implements DiscoveryStrategy {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DiscoveryStrategyAdapter.class);
 
     private final DiscoveryStrategy delegatee;
     private final Listener listern;
@@ -37,17 +43,19 @@ public class DiscoveryStrategyAdapter implements DiscoveryStrategy {
 
     @Override
     public Iterable<Iterable<Class<?>>> resolve(Instrumentation instrumentation) {
-        if(listern != null) {
+        if (listern != null) {
             try {
                 listern.onStart();
-            } catch(Throwable t) {
-                t.printStackTrace();
+            } catch (Throwable t) {
+                LOGGER.warn("Failed to invoke onStart() method of '{}", listern.getClass());
+
+                Throwables.throwIfRequired(t);
             }
         }
 
         // collector garbage before instrumenting loaded classes 
         // avoid exception such as 'IllegalStateException zip file closed'
-        if(disabled == false)
+        if (disabled == false)
             System.gc();
 
         return disabled 

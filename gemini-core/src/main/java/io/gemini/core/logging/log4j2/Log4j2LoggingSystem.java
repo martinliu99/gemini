@@ -17,7 +17,6 @@ package io.gemini.core.logging.log4j2;
 
 import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.Collection;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +37,7 @@ import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.StringUtils;
+import io.gemini.core.util.Throwables;
 
 
 public class Log4j2LoggingSystem implements LoggingSystem {
@@ -59,35 +59,34 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     private final Level allLogLevel;
 
 
-    Log4j2LoggingSystem(String configLocation, ConfigView configView,
-            DiagnosticLevel diagnosticLevel) {
-        this.diagnosticLevel = diagnosticLevel;
+    Log4j2LoggingSystem(String configLocation, ConfigView configView, DiagnosticLevel diagnosticLevel) {
+        this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
 
         this.configSource =  new ConfigViewAdapter(configView, diagnosticLevel.isDebugEnabled());
 
 
-        if(StringUtils.hasText(configLocation))
+        if (StringUtils.hasText(configLocation))
             this.configLocation = configLocation;
-        else if(this.configSource.containsKey(LOGGER_CONFIG_LOCATION_KEY))
+        else if (this.configSource.containsKey(LOGGER_CONFIG_LOCATION_KEY))
             this.configLocation = this.configSource.getProperty(LOGGER_CONFIG_LOCATION_KEY).trim();
         else
             this.configLocation = INTERNAL_CONFIGURATION_FILE;
 
 
-        if(this.configSource.containsProperty(SIMPLE_INITIALIZATION_KEY)) {
+        if (this.configSource.containsProperty(SIMPLE_INITIALIZATION_KEY)) {
             String value = this.configSource.getProperty(SIMPLE_INITIALIZATION_KEY);
             this.simpleInitialization = value == null || Boolean.valueOf(value) == true ? true : false;
         } else {
             this.simpleInitialization = true;
         }
 
-        if(this.configSource.containsProperty(ConfigViewAdapter.STATUS_LOG_LEVEL_KEY)) {
+        if (this.configSource.containsProperty(ConfigViewAdapter.STATUS_LOG_LEVEL_KEY)) {
             String logLevel = this.configSource.getProperty(ConfigViewAdapter.STATUS_LOG_LEVEL_KEY).toString().trim();
             this.statusLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
         } else
             this.statusLevel = null;
 
-        if(this.configSource.containsProperty(LOGGER_ALL_LOG_LEVEL_KEY)) {
+        if (this.configSource.containsProperty(LOGGER_ALL_LOG_LEVEL_KEY)) {
             String logLevel = this.configSource.getProperty(LOGGER_ALL_LOG_LEVEL_KEY).toString().trim();
             this.allLogLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
         } else
@@ -97,25 +96,17 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     @Override
     public void initialize(ClassLoader currentClassLoader) {
         long startedAt = System.nanoTime();
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Initializing LogbackLoggingSystem, ");
 
         StatusConsoleListener fallbackListener = LOGGER.getFallbackListener();
         try {
             // 1.set status log level
-            if(diagnosticLevel.isSimpleEnabled()) {
+            if (diagnosticLevel.isSimpleEnabled()) {
                 fallbackListener.setLevel(Level.INFO);
-
-                Collection<String> loggerPropertyNames = configSource.getLoggerPropertyNames();
-                LOGGER.info("^Initializing LoggingSystem with settings, \n"
-                        + "  defaultStatusLevel: {} \n  statusLevel: {} \n"
-                        + "  allLogLevel: {} \n  configLocation: {} "
-                        + "{} ",
-                        defaultStatusLevel, statusLevel,
-                        allLogLevel, configLocation,
-                        StringUtils.join(loggerPropertyNames, name -> name + ": " + configSource.getProperty(name), "\n  ", "\n  ", "\n")
-                );
             }
 
-            if(statusLevel != null && defaultStatusLevel.compareTo(statusLevel) < 0) {
+            if (statusLevel != null && defaultStatusLevel.compareTo(statusLevel) < 0) {
                 fallbackListener.setLevel(statusLevel);
             }
 
@@ -128,15 +119,36 @@ public class Log4j2LoggingSystem implements LoggingSystem {
 
             this.customizeConfiguration(configuration);
 
-        } catch(Throwable t) {
-            LOGGER.warn("$Failed to initialize LoggingSystem.", t);
+        } catch (Throwable t) {
+            LOGGER.warn("$Failed to initialize LogbackLoggingSystem with settings, \n"
+                    + "  defaultStatusLevel: {} \n  statusLevel: {} \n"
+                    + "  allLogLevel: {} \n  configLocation: {} \n"
+                    + "  {} \n",
+                    defaultStatusLevel, statusLevel,
+                    allLogLevel, configLocation,
+                    StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  "),
+                    t
+            );
+
+            Throwables.throwIfRequired(t);
         } finally {
             fallbackListener.setLevel(defaultStatusLevel);
 
             Logger logger = LoggerFactory.getLogger(LoggingSystem.class);
-            if(diagnosticLevel.isSimpleEnabled()) {
-                logger.info("$Took '{}' seconds to initialize LoggingSystem.", (System.nanoTime() - startedAt) / 1e9);
-            }
+            if (diagnosticLevel.isDebugEnabled()) 
+                logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
+                        + "  defaultStatusLevel: {} \n  statusLevel: {} \n"
+                        + "  allLogLevel: {} \n  configLocation: {} \n"
+                        + "  {} \n",
+                        (System.nanoTime() - startedAt) / 1e9,
+                        defaultStatusLevel, statusLevel,
+                        allLogLevel, configLocation,
+                        StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  ")
+                );
+            else if (diagnosticLevel.isSimpleEnabled()) 
+                logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings. ",
+                        (System.nanoTime() - startedAt) / 1e9
+                );
         }
     }
 
@@ -149,7 +161,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
                 configFile == null ? null : configFile.toURI(), 
                 new SimpleEntry<>(ConfigSourceLookup.CONFIG_SOURCE_KEY, configSource));
         loggerContext.start();
-        if(LOGGER.isDebugEnabled()) {
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Took '{}' seconds to start loggerContext '{}'.", 
                     (System.nanoTime() - startedAt) / 1e9, CONTEXT_NAME);
         }
@@ -167,7 +179,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
         loggerContext.setName(CONTEXT_NAME);
         loggerContext.putObject(ConfigSourceLookup.CONFIG_SOURCE_KEY, configSource);
 
-        if(LOGGER.isDebugEnabled()) {
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Took '{}' seconds to create LoggerContext '{}'.", 
                     (System.nanoTime() - startedAt) / 1e9, CONTEXT_NAME);
         }
@@ -179,12 +191,12 @@ public class Log4j2LoggingSystem implements LoggingSystem {
         URL configFile = loadConfigurationFile(currentClassLoader);
 
         Configuration configuration = null;
-        if(configFile != null) {
+        if (configFile != null) {
             ConfigurationSource configurationSource = new ConfigurationSource(configFile.openStream());
             configuration = new XmlConfiguration(loggerContext, configurationSource);
         }
 
-        if(LOGGER.isDebugEnabled()) {
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Took '{}' seconds to create Configuration '{}'.", 
                     (System.nanoTime() - startedAt) / 1e9, configFile);
         }
@@ -192,11 +204,11 @@ public class Log4j2LoggingSystem implements LoggingSystem {
 
         // 3.start LoggerContext
         startedAt = System.nanoTime();
-        if(configuration != null)
+        if (configuration != null)
             loggerContext.start(configuration);
         else
             loggerContext.start();
-        if(LOGGER.isDebugEnabled()) {
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Took '{}' seconds to start loggerContext '{}'.", 
                     (System.nanoTime() - startedAt) / 1e9, CONTEXT_NAME);
         }
@@ -207,8 +219,8 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     private URL loadConfigurationFile(ClassLoader currentClassLoader) {
         // load user-defined configuration file, or built-in configuration file
         URL configFile = currentClassLoader.getResource(configLocation);
-        if(configFile != null) {
-            if(LOGGER.isDebugEnabled()) {
+        if (configFile != null) {
+            if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Loaded config file '{}'.", configLocation);
             }
 
@@ -221,12 +233,12 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     }
 
     private void customizeConfiguration(Configuration configuration) {
-        if(allLogLevel == null)
+        if (allLogLevel == null)
             return;
 
-        for(LoggerConfig loggerConfig : configuration.getLoggers().values()) {
+        for (LoggerConfig loggerConfig : configuration.getLoggers().values()) {
             Level currentLevel = loggerConfig.getLevel();
-            if(currentLevel.compareTo(allLogLevel) >= 0)
+            if (currentLevel.compareTo(allLogLevel) >= 0)
                 continue;
 
             loggerConfig.setLevel(allLogLevel);

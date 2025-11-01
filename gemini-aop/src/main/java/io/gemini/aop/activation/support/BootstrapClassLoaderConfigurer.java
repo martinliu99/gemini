@@ -30,10 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
-import io.gemini.aop.AopException;
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.AopMetrics.BootstraperMetrics;
 import io.gemini.aop.java.lang.BootstrapClassProvider;
+import io.gemini.api.aop.AopException;
 import io.gemini.core.object.ClassRenamer;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
@@ -70,13 +70,14 @@ public class BootstrapClassLoaderConfigurer {
 
 
     public Map<String, String> configure(ClassLoader sourceClassLoader) {
+        long startedAt = System.nanoTime();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("^Configuring BoostrapClassLoader with BootstrapClasses, ");
+        }
+
+
         // check input arguments
         Assert.notNull(sourceClassLoader, "'sourceClassLoader' must not be null.");
-
-        long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-            LOGGER.info("^Configuring BoostrapClassLoader with BootstrapClasses,");
-        }
 
         Map<String, String> nameMapping = null;
         BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
@@ -89,11 +90,14 @@ public class BootstrapClassLoaderConfigurer {
 
             long time = System.nanoTime() - startedAt;
             bootstraperMetrics.setBootstrapCLConfigTime(time);
-            if(aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-                LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass. \n  {} \n", 
+            if (aopContext.getDiagnosticLevel().isDebugEnabled())
+                LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
+                        + "  {} \n", 
                         time / AopMetrics.NANO_TIME, 
                         StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  ") 
                 );
+            else if (aopContext.getDiagnosticLevel().isSimpleEnabled())
+                LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader.", time / AopMetrics.NANO_TIME);
 
             return nameMapping;
         } catch (Exception e) {
@@ -118,9 +122,9 @@ public class BootstrapClassLoaderConfigurer {
 
         // 2.validate bootstrap class package name
         Map<String, String> nameMapping = new LinkedHashMap<>(bootstrapClassNames.size());
-        for(String bootstrapClassName : bootstrapClassNames) {
+        for (String bootstrapClassName : bootstrapClassNames) {
             int pos = bootstrapClassName.indexOf(".java.");
-            if(pos == -1) {
+            if (pos == -1) {
                 LOGGER.warn("Ignored candidate bootstrap class '{}' since full class name should be 'xxx.yyy.java.*'.",  bootstrapClassName);
                 continue;
             }
@@ -142,7 +146,7 @@ public class BootstrapClassLoaderConfigurer {
 
         // load byte code of bootstrap classes
         Map<String, byte[]> classByteCodeMap = new LinkedHashMap<>(nameMapping.size());
-        for(Entry<String, String> entry : nameMapping.entrySet()) {
+        for (Entry<String, String> entry : nameMapping.entrySet()) {
             String oldClassName = entry.getKey();
             String oldClassPath = ClassUtils.convertClassToResource(oldClassName, true);
             byte[] byteCode = IOUtils.toByteArray(
@@ -159,7 +163,7 @@ public class BootstrapClassLoaderConfigurer {
         // inject into bootstrap class loader with ClassInjector
         // Instrumentation.appendToBootstrapClassLoaderSearch(...) does NOT support java.lang.* class injection
         ClassInjector classInjector = null;
-        if(ClassInjector.UsingLookup.isAvailable()) {
+        if (ClassInjector.UsingLookup.isAvailable()) {
             // 1. use MethodHandles.privateLookup::defineClass on JDK9 or later
             Class<String> type = String.class;
             JavaModule typeModule = JavaModule.ofType(type);

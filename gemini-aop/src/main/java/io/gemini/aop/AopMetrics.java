@@ -136,34 +136,35 @@ public class AopMetrics {
     public void startupLauncher() {
         this.launcherStartupSummary = this.newWeaverSummary();
 
-        if(diagnosticLevel.isSimpleEnabled() == false) {
+        if (diagnosticLevel.isSimpleEnabled() == false) 
             LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics) );
-        } else {
+        else
             LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}{}\n", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics),
                     bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary, true) : "",
-                    launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary, false) : "" );
-        }
+                    launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary, false) : "" 
+            );
     }
 
     public void startupApplication() {
         this.appStartupSummary = this.newWeaverSummary();
 
-        if(diagnosticLevel.isSimpleEnabled() == false) {
+        if (diagnosticLevel.isSimpleEnabled() == false) 
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n",
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
-                    renderAppStartupSummaryTemplate(bootstraperMetrics) );
-        } else {
+                    renderAppStartupSummaryTemplate(bootstraperMetrics) 
+            );
+        else
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}\n",
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics),
-                    renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary, true) );
-        }
+                    renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary, true) 
+            );
     }
 
 
@@ -203,8 +204,8 @@ public class AopMetrics {
         valueMap = format(valueMap);
 
         StringBuilder advisorSepcs = new StringBuilder();
-        if(CollectionUtils.isEmpty(bootstraperMetrics.getAdvisorSpecs()) == false) {
-            for(Entry<String, Integer> entry : bootstraperMetrics.getAdvisorSpecs().entrySet()) {
+        if (CollectionUtils.isEmpty(bootstraperMetrics.getAdvisorSpecs()) == false) {
+            for (Entry<String, Integer> entry : bootstraperMetrics.getAdvisorSpecs().entrySet()) {
                 advisorSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
             }
             advisorSepcs.delete(advisorSepcs.length()-2, advisorSepcs.length());
@@ -240,7 +241,7 @@ public class AopMetrics {
     private String renderWeaverMetricsTemplate(String phaseName, WeaverSummary weaverStats, boolean withHead) {
         StringBuilder renderResult = new StringBuilder();
 
-        if(withHead)
+        if (withHead)
             renderResult.append(this.weaverSummrayHeaderTemplate);
 
         // 1.render summary metrics
@@ -275,8 +276,8 @@ public class AopMetrics {
         }
 
         // 2.render detail metrics per ClassLoader and Advisor
-        for(WeaverMetrics weaverMetrics : weaverStats.getWeaverMetricsList()) {
-            if(weaverMetrics.getTypeLoadingCount() <= 1 && weaverMetrics.getAdvisorCreationCount() == 0)
+        for (WeaverMetrics weaverMetrics : weaverStats.getWeaverMetricsList()) {
+            if (weaverMetrics.getTypeLoadingCount() <= 1 && weaverMetrics.getAdvisorCreationCount() == 0)
                 continue;
 
             Map<String, Object> valueMap = new HashMap<>();
@@ -310,11 +311,11 @@ public class AopMetrics {
                             new ConfigView.Builder().parent(configView).configSource("valueMap", valueMap).build() )
                     .replace(weaverSummrayPerCLTemplate) );
 
-            if(this.summarizeMetricsDetail) {
+            if (this.summarizeMetricsDetail) {
                 Map<Advisor, AtomicLong> advisorMethodMatchingType = weaverMetrics.getAdvisorTypeMatchingTimeMap();
-                for(Entry<Advisor, AtomicLong> advisorEntry : weaverMetrics.getAdvisorTypeFastMatchingTimeMap().entrySet()) {
+                for (Entry<Advisor, AtomicLong> advisorEntry : weaverMetrics.getAdvisorTypeFastMatchingTimeMap().entrySet()) {
                     // TODO: just top 10
-                    if(advisorEntry.getValue().get() != 0) {
+                    if (advisorEntry.getValue().get() != 0) {
                         valueMap = new HashMap<>();
                         Advisor advisorName = advisorEntry.getKey();
                         valueMap.put("advisorName", advisorName);
@@ -328,12 +329,12 @@ public class AopMetrics {
             }
         }
         int length = renderResult.length();
-        if(length > 0) {
-            for(int i=0; i<2; i++) {
+        if (length > 0) {
+            for (int i=0; i<2; i++) {
                 length = renderResult.length();
                 char lastChar = renderResult.charAt(length-1);
 
-                if('\r' == lastChar || '\n' == lastChar)
+                if ('\r' == lastChar || '\n' == lastChar)
                     renderResult.deleteCharAt(length-1);
             }
         }
@@ -348,16 +349,16 @@ public class AopMetrics {
     }
 
     private Object format(Object item) {
-        if(item instanceof String) {
+        if (item instanceof String) {
             String str = (String) item;
             str = str.length() < ITEM_NAME_LENGTH ? str : str.substring(0, ITEM_NAME_LENGTH);
             return String.format("%" + ITEM_NAME_LENGTH + "s", str);
         }
 
-        if(item instanceof Float || item instanceof Double)
+        if (item instanceof Float || item instanceof Double)
             return String.format("%9.6f", item);
 
-        if(item instanceof Integer || item instanceof Long) 
+        if (item instanceof Integer || item instanceof Long) 
             return String.format("%6d", item);
 
         return item;
@@ -679,7 +680,7 @@ public class AopMetrics {
 
         public void incrAdvisorTypeFastMatchingTime(Advisor advisor, long time) {
             AtomicLong totalTime = this.advisorTypeFastMatchingTimeMap.get(advisor);
-            if(totalTime == null)
+            if (totalTime == null)
                 return;
             totalTime.addAndGet(time);
         }
@@ -698,7 +699,7 @@ public class AopMetrics {
 
         public void incrAdvisorTypeMatchingTime(Advisor advisor, long time) {
             AtomicLong totalTime = this.advisorTypeMatchingTimeMap.get(advisor);
-            if(totalTime == null)
+            if (totalTime == null)
                 return;
             totalTime.addAndGet(time);
         }

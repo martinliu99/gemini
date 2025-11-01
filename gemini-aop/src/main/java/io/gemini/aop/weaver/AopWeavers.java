@@ -90,10 +90,9 @@ public class AopWeavers {
 
         // 2.initialize BootstrapAdvice.Bridger
         BootstrapAdvice.Bridger.setFactory(aopWeaver);
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
                     aopWeaver, AopWeavers.class.getClassLoader());
-        }
 
         bootstraperMetrics.setAopWeaverCreationTime(System.nanoTime() - startedAt);
 
@@ -106,8 +105,8 @@ public class AopWeavers {
             WeaverContext weaverContext,
             AopWeaver aopWeaver) {
         long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-            LOGGER.info("^Installing ByteBuddy.");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("^Installing ByteBuddy, ");
         }
 
         AtomicLong typeRetransformationStartedAt = new AtomicLong(0);
@@ -117,13 +116,12 @@ public class AopWeavers {
             public void onStart() {
                 long time = System.nanoTime() - startedAt;
                 bootstraperMetrics.setBytebuddyInstallationTime(time);
-                if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-                    LOGGER.info("$Took '{}' seconds to install ByteBuddy.", time / 1e9);
-                }
+                if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+                    LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / 1e9);
 
                 typeRetransformationStartedAt.set( System.nanoTime() );
-                if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-                    LOGGER.info("^Redefining loaded types.");
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("^Redefining loaded types, ");
                 }
             }
 
@@ -149,16 +147,17 @@ public class AopWeavers {
             .with( RedefinitionStrategy.DISABLED != weaverContext.getRedefinitionStrategy()
                     ? weaverContext.getRedefinitionStrategy() 
                     : RedefinitionStrategy.RETRANSFORMATION )
+            .with( RedefinitionStrategy.BatchAllocator.ForFixedSize.ofSize(20) )
             .with( new DiscoveryStrategyAdapter(
                     RedefinitionStrategy.DiscoveryStrategy.Reiterating.INSTANCE, 
                     discoveryStrategyListern,
                     RedefinitionStrategy.DISABLED == weaverContext.getRedefinitionStrategy() ) ) 
-            .with( new DefaultRedefinitionListener(aopContext.getAopMetrics()) )
+            .with( new DefaultRedefinitionListener(aopContext.getDiagnosticLevel(), aopContext.getAopMetrics()) )
             .with( FallbackStrategy.ByThrowableType.ofOptionalTypes() )
             // warn up bootstrap ClassLoader
             .warmUp( System.class )
             .with( new DefaultTransformerInstallationListener() )
-            .with( new DefaultTransformationListener() )
+            .with( new DefaultTransformationListener(aopContext) )
             .disableClassFormatChanges()
             .type( aopWeaver )
             .transform( aopWeaver )
@@ -167,8 +166,7 @@ public class AopWeavers {
 
         long time = System.nanoTime() - typeRetransformationStartedAt.get();
         bootstraperMetrics.setTypeRedefiningTime(time);
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to redefine loaded types.", time / 1e9);
-        }
     }
 }

@@ -68,6 +68,11 @@ class FactoriesContext implements Closeable {
 
 
     public FactoriesContext(AopContext aopContext) {
+        long startedAt = System.nanoTime();
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating FactoriesContext, ");
+
+
         Assert.notNull(aopContext, "'aopContext' must not be null.");
         this.aopContext = aopContext;
 
@@ -77,6 +82,16 @@ class FactoriesContext implements Closeable {
 
         // 2.initialize properties
         this.factoryContextMap = createFactoryContextMap(aopContext);
+
+
+        if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create FactoriesContext with FactoryContexts, \n"
+                    + "  {} \n", 
+                    (System.nanoTime() - startedAt) / 1e9,
+                    StringUtils.join(factoryContextMap.keySet(), "\n  ")
+            );
+        else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create FactoriesContext.", (System.nanoTime() - startedAt) / 1e9);
     }
 
     private void loadSettings(AopContext aopContext) {
@@ -86,7 +101,7 @@ class FactoriesContext implements Closeable {
         {
             Set<String> enabledFactoryExpressions = configView.getAsStringSet(
                     FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
-            if(enabledFactoryExpressions.size() > 0) {
+            if (enabledFactoryExpressions.size() > 0) {
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
                         enabledFactoryExpressions.size(), FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY,
                         StringUtils.join(enabledFactoryExpressions, "\n  ")
@@ -109,22 +124,22 @@ class FactoriesContext implements Closeable {
     }
 
     List<Set<String>> parseConflictJoinpointClassLoaders(String conflictJoinpointClassLoadersStr) {
-        if(StringUtils.hasText(conflictJoinpointClassLoadersStr) == false)
+        if (StringUtils.hasText(conflictJoinpointClassLoadersStr) == false)
             return Collections.emptyList();
 
         StringTokenizer groupSt = new StringTokenizer(conflictJoinpointClassLoadersStr, ";");
 
         List<Set<String>> groupList = new ArrayList<>(groupSt.countTokens());
-        while(groupSt.hasMoreTokens()) {
+        while (groupSt.hasMoreTokens()) {
             String classLoadersStr = groupSt.nextToken().trim();
             StringTokenizer classLoaderNameSt = new StringTokenizer(classLoadersStr, ",");
 
             Set<String> classLoaderNames = new LinkedHashSet<>(classLoaderNameSt.countTokens());
             groupList.add(classLoaderNames);
-            while(classLoaderNameSt.hasMoreTokens()) {
+            while (classLoaderNameSt.hasMoreTokens()) {
                 String classLoaderName = classLoaderNameSt.nextToken().trim();
 
-                if(StringUtils.hasText(classLoadersStr))
+                if (StringUtils.hasText(classLoadersStr))
                     classLoaderNames.add(classLoaderName);
             }
         }
@@ -133,25 +148,15 @@ class FactoriesContext implements Closeable {
     }
 
     private Map<String, FactoryContext> createFactoryContextMap(AopContext aopContext) {
-        long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-            LOGGER.info("^Creating FactoryContexts.");
+        Map<String, URL[]> aspectAppResourceURLs = aopContext.getAspectAppResourceMap();
+
+        Map<String, FactoryContext> factoryContexts = new HashMap<>(aspectAppResourceURLs.size());
+        for (Entry<String, URL[]> entry : aspectAppResourceURLs.entrySet()) {
+            factoryContexts.put(entry.getKey(), 
+                    new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) );
         }
 
-        try {
-            Map<String, URL[]> aspectAppResourceURLs = aopContext.getAspectAppResourceMap();
-
-            Map<String, FactoryContext> factoryContexts = new HashMap<>(aspectAppResourceURLs.size());
-            for(Entry<String, URL[]> entry : aspectAppResourceURLs.entrySet()) {
-                factoryContexts.put(entry.getKey(), 
-                        new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) );
-            }
-
-            return factoryContexts;
-        } finally {
-            if(aopContext.getDiagnosticLevel().isSimpleEnabled())
-                LOGGER.info("$Took '{}' seconds to create FactoryContexts.", (System.nanoTime() - startedAt) / 1e9);
-        }
+        return factoryContexts;
     }
 
 
@@ -180,7 +185,7 @@ class FactoriesContext implements Closeable {
 
     @Override
     public void close() throws IOException {
-        for(Closeable closeable : this.factoryContextMap.values()) {
+        for (Closeable closeable : this.factoryContextMap.values()) {
             closeable.close();
         }
     }

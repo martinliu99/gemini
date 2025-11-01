@@ -30,9 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
-import io.gemini.aop.AopException;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.matcher.ElementMatcherFactory;
+import io.gemini.api.aop.AopException;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.object.ClassRenamer;
 import io.gemini.core.util.Assert;
@@ -74,8 +74,8 @@ public class AopClassLoaderConfigurer {
 
     public void configure(AopClassLoader aopClassLoader, Map<String, String> nameMapping) {
         long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-            LOGGER.info("^Configuring AopClassLoader with settings,");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("^Configuring AopClassLoader, ");
         }
 
         // 1.create ParentFirstFilter with parentFirstTypeExpressions and parentFirstResourceExpressions
@@ -93,14 +93,19 @@ public class AopClassLoaderConfigurer {
         // 3.create BootstrapClassConsumerTypeFilter
         configureBootstrapClassConsumerClassFinder(aopClassLoader, nameMapping);
 
+
         long time =  System.nanoTime() - startedAt;
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-            LOGGER.info("$Took '{}' seconds to configure AopClassLoader. \n"
-                    + "  parentFirstTypeExpressions: {}  parentFirstResourceExpressions: {}", 
+        if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
+            LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
+                    + "  parentFirstTypeExpressions: \n    {} \n"
+                    + "  parentFirstResourceExpressions: \n    {} \n", 
                     time / 1e9,
-                    StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
-                    StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
+                    StringUtils.join(parentFirstTypeExpressions, "\n    "), 
+                    StringUtils.join(parentFirstResourceExpressions, "\n    ")
             );
+        else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+            LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / 1e9);
+
         aopContext.getAopMetrics().getBootstraperMetrics().setAopCLConfigTime(time);
     }
 
@@ -112,7 +117,7 @@ public class AopClassLoaderConfigurer {
         parentFirstTypeExpressions.addAll(
                 aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstTypeExpressions", Collections.emptySet()) );
 
-        if(aopContext.isScanClassesFolder())
+        if (aopContext.isScanClassesFolder())
             parentFirstTypeExpressions.addAll( CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES );
 
         parentFirstTypeExpressions.addAll( nameMapping.values() );
@@ -158,7 +163,7 @@ public class AopClassLoaderConfigurer {
 
             @Override
             public String filterTypeName(String name) {
-                if(bootstrapClassMatcher.matches(name)) {
+                if (bootstrapClassMatcher.matches(name)) {
                     throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via " 
                             + BootstrapClassConsumer.class.getName() );
                 }
@@ -168,7 +173,7 @@ public class AopClassLoaderConfigurer {
 
             @Override
             public String filterResourceName(String name) {
-                if(bootstrapResourceMatcher.matches(name)) {
+                if (bootstrapResourceMatcher.matches(name)) {
                     throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via "
                             + BootstrapClassConsumer.class.getName() );
                 }
@@ -191,7 +196,7 @@ public class AopClassLoaderConfigurer {
         Map<String, byte[]> classesTypeMap = new LinkedHashMap<>();
         Map<String, URL> classResourceMap = new LinkedHashMap<>(consumerClassNames.size());
         try {
-            for(String className : consumerClassNames) {
+            for (String className : consumerClassNames) {
                 String path = ClassUtils.convertClassToResource(className, true);
                 InputStream inputStream = aopClassLoader.getResourceAsStream(path);
 
@@ -200,7 +205,7 @@ public class AopClassLoaderConfigurer {
                 classesTypeMap.put(className, byteCode);
                 classResourceMap.put(path, IOUtils.toURL(path, byteCode));
             }
-        } catch(Exception e) {
+        } catch (Exception e) {
             LOGGER.warn("Failed to load BootstrapClass consumer class", e);
             throw new AopException(e);
         }

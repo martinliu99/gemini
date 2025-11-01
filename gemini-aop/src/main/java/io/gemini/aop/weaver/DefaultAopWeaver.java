@@ -45,6 +45,9 @@ import io.gemini.aop.weaver.advice.DescriptorOffset;
 import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.pool.TypePools.ExplicitTypePool;
 import io.gemini.core.util.CollectionUtils;
+import io.gemini.core.util.MethodUtils;
+import io.gemini.core.util.StringUtils;
+import io.gemini.core.util.Throwables;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.asm.Advice.WithCustomMapping;
 import net.bytebuddy.description.method.MethodDescription;
@@ -75,16 +78,16 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
 
     public DefaultAopWeaver(AopContext aopContext, AdvisorFactory advisorFactory, WeaverContext weaverContext) {
         long startedAt = System.nanoTime();
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
-            LOGGER.info("^Creating AopWeaver with '{}'.", weaverContext);
-        }
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating AopWeaver with '{}'.", weaverContext);
+
 
         this.aopContext = aopContext;
         this.advisorFactory = advisorFactory;
         this.weaverContext = weaverContext;
 
         // set bytebuddy setting to dump byte code
-        if(aopContext.isDumpByteCode()) {
+        if (aopContext.isDumpByteCode()) {
             String byteCodeDumpPath = aopContext.getByteCodeDumpPath();
             File path = new File(byteCodeDumpPath + File.separator + "byte-buddy");
             path.mkdirs();
@@ -94,9 +97,9 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
 
         this.initialize(weaverContext);
 
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled()) {
+
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled())
             LOGGER.info("$Took '{}' seconds to create AopWeaver.", (System.nanoTime() - startedAt) / 1e9);
-        }
     }
 
     private void initialize(WeaverContext weaverContext) {
@@ -113,7 +116,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
 
         String typeName = typeDescription.getTypeName();
         // diagnostic log
-        if(aopContext.isDiagnosticClass(typeName)) {
+        if (aopContext.isDiagnosticClass(typeName)) {
             LOGGER.info("Matching type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
         }
 
@@ -121,7 +124,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
         // check cached result since bytebuddy will enter this method twice when class redefinition, or retransmission
         {
             TypeCache typeCache = weaverCache.getTypeCache(joinpointClassLoader, typeName);
-            if(typeCache != null && typeCache.isMatched() == true)
+            if (typeCache != null && typeCache.isMatched() == true)
                 return true;
         }
 
@@ -133,16 +136,16 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             // 1.filter type by classloaderMatcher and TypeMatcher in Weaver level
             try {
                 // filter type by classLoaderMatcher
-                if(weaverContext.isAcceptableClassLoader(joinpointClassLoader) == false)
+                if (weaverContext.acceptClassLoader(joinpointClassLoader) == false)
                     return false;
 
                 weaverMetrics = aopContext.getAopMetrics().createWeaverMetrics(joinpointClassLoader, javaModule);
 
                 // filter type by typeMatcher
-                if(weaverContext.isAcceptableType(typeName) == false)
+                if (weaverContext.acceptType(typeName) == false)
                     return false;
             } finally {
-                if(weaverMetrics != null) {
+                if (weaverMetrics != null) {
                     weaverMetrics.incrTypeAcceptingCount();
                     weaverMetrics.incrTypeAcceptingTime(System.nanoTime() - startedAt);
                 }
@@ -158,9 +161,10 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                 Map<? extends MethodDescription, List<? extends Advisor>> methodDescriptionAdvisors = 
                         this.advisorFactory.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
 
-                if(CollectionUtils.isEmpty(methodDescriptionAdvisors) == true) {
-                    if(aopContext.isDiagnosticClass(typeName))
+                if (CollectionUtils.isEmpty(methodDescriptionAdvisors) == true) {
+                    if (aopContext.isDiagnosticClass(typeName)) {
                         LOGGER.info("Did not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
+                    }
 
                     return false;
                 }
@@ -169,18 +173,37 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                 weaverCache.putTypeCache(joinpointClassLoader, typeCache);
                 typeCache.setMethodDescriptionAdvisors(methodDescriptionAdvisors);
 
+                if (aopContext.isDiagnosticClass(typeName)) {
+                    LOGGER.info("Matched type '{}' in AopWeaver, \n"
+                            + "  ClassLoader: {} \n"
+                            + "  {} \n", 
+                            typeName, joinpointClassLoader,
+                            StringUtils.join(
+                                    methodDescriptionAdvisors.entrySet(), 
+                                    entry -> 
+                                        new StringBuilder("Method: ")
+                                        .append( MethodUtils.getMethodSignature( entry.getKey() ) )
+                                        .append("\n   Advices: ")
+                                        .append( StringUtils.join(entry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
+                                    "\n  "
+                            )
+                    );
+                }
+
                 return true;
             } finally {
                 // release cached typeDescription
                 typePool.removeTypeDescription(typeName);
             }
-        } catch(Throwable t) {
+        } catch (Throwable t) {
             LOGGER.warn("Failed to match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader, t);
+
+            Throwables.throwIfRequired(t);
             return false;
         } finally {
             ThreadContext.setContextClassLoader(existingClassLoader);
 
-            if(weaverMetrics != null) {
+            if (weaverMetrics != null) {
                 weaverMetrics.incrTypeLoadingCount();
                 weaverMetrics.incrTypeLoadingTime(System.nanoTime() - startedAt);
             }
@@ -201,7 +224,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
 
             // diagnostic log
-            if(aopContext.isDiagnosticClass(typeName)) {
+            if (aopContext.isDiagnosticClass(typeName)) {
                 LOGGER.info("Transforming type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
             }
 
@@ -210,18 +233,20 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             weaverMetrics.incrTypeTransformationCount();
 
             // 1.check if cached advisorChain exists
-            if(typeCache.isMatched() == false)
+            if (typeCache.isMatched() == false)
                 return builder;
 
 
             // 2.transform type
-            for(Entry<String, MethodDescription> entry : typeCache.getMethodSignatureMap().entrySet()) {
+            for (Entry<String, MethodDescription> entry : typeCache.getMethodSignatureMap().entrySet()) {
                 builder = this.transformMatchedMethods(builder, typeDescription, entry.getKey(), entry.getValue());
             }
 
-            if(Boolean.TRUE == typeCache.setTransformed(true)) {
+            if (Boolean.TRUE == typeCache.setTransformed(true)) {
                 LOGGER.error("Reweaved type '{}' loaded by ClassLoader '{}' since it was already transformed!\n", typeName, joinpointClassLoader);
             }
+
+            // log transformation in DefaultTransformationListener
 
             return builder;
         } finally {
@@ -243,8 +268,8 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                 )
                 ;
 
-        if(methodDescription.isStatic()) {
-            if(methodDescription.isTypeInitializer()) {
+        if (methodDescription.isStatic()) {
+            if (methodDescription.isTypeInitializer()) {
                 builder = builder.visit(
                         withCustomMapping
                         .to(this.weaverContext.getClassInitializerAdvice())
@@ -256,12 +281,12 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                             .on(ElementMatchers.is(methodDescription) ) );
             }
         } else {
-            if(methodDescription.isConstructor()) {
+            if (methodDescription.isConstructor()) {
                 builder = builder.visit(
                         withCustomMapping
                             .to(this.weaverContext.getInstanceConstructorAdvice())
                             .on(ElementMatchers.is(methodDescription) ) );  
-            } else if(methodDescription.isMethod()) {
+            } else if (methodDescription.isMethod()) {
                 builder = builder.visit(
                         withCustomMapping
                             .to(this.weaverContext.getInstanceMethodAdvice())

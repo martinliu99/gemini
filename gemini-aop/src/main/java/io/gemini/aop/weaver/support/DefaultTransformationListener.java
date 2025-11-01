@@ -18,6 +18,7 @@ package io.gemini.aop.weaver.support;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.aop.AopContext;
 import net.bytebuddy.agent.builder.AgentBuilder.Listener;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
@@ -27,38 +28,55 @@ public class DefaultTransformationListener implements Listener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultTransformationListener.class);
 
+    private final AopContext aopContext;
 
-    public DefaultTransformationListener() {
+
+    public DefaultTransformationListener(AopContext aopContext) {
+        this.aopContext = aopContext;
     }
 
     @Override
     public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        if(LOGGER.isTraceEnabled())
-            LOGGER.trace("Type '{}' is on discovery and loaded '{}' by ClassLoader '{}'.", typeName, loaded, classLoader);
+        if (aopContext.isDiagnosticClass(typeName))
+            LOGGER.info("Discovering {} type '{}' loaded by ClassLoader '{}'.", 
+                    loaded ? "loaded" : "", typeName, classLoader
+            );
     }
 
     @Override
     public void onTransformation(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule,
             boolean loaded, DynamicType dynamicType) {
-        if(LOGGER.isInfoEnabled())
+        if (aopContext.getDiagnosticLevel().isDebugEnabled())
             LOGGER.info("{} type '{}' loaded by ClassLoader '{}'.", 
-                    loaded ? "Retransformed" : "Transformed", typeDescription.getTypeName(), classLoader);
+                    loaded ? "Redefined loaded" : "Transformed", typeDescription.getTypeName(), classLoader
+            );
     }
 
     @Override
     public void onIgnored(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
+        String typeName = typeDescription.getTypeName();
+        if (aopContext.isDiagnosticClass(typeName))
+            LOGGER.info("Ignored {} type '{}' loaded by ClassLoader '{}'.", 
+                    loaded ? "loaded" : "", typeName, classLoader
+            );
     }
 
     @Override
     public void onError(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded,
             Throwable throwable) {
-        LOGGER.warn("Failed to transform type '{}' loaded by ClassLoader '{}'.", typeName, classLoader, throwable);
+        if (LOGGER.isWarnEnabled())
+            LOGGER.warn("Failed to {} type '{}' loaded by ClassLoader '{}'. \n"
+                    + "  Error reason: {} \n", 
+                    loaded ? "redefine loaded" : "transform", typeName, classLoader, 
+                    throwable.getMessage(), throwable
+            );
     }
 
     @Override
     public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        if(LOGGER.isTraceEnabled())
-            LOGGER.trace("Type '{}' is on complete and loaded '{}' by ClassLoader '{}'.", typeName, loaded, classLoader);
+        if (aopContext.isDiagnosticClass(typeName))
+            LOGGER.info("Finished to {} type '{}' loaded by ClassLoader '{}'.", 
+                    loaded ? "redefine loaded" : "transform", typeName, classLoader);
     }
 
 }

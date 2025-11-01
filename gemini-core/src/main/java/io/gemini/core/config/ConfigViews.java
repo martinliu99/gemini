@@ -46,6 +46,10 @@ public class ConfigViews {
 
     public static ConfigView createConfigView(Map<String, String> launchArgs, Map<String, Object> builtinSettings,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating ConfigView, ");
+
+
         launchArgs = launchArgs == null ? Collections.emptyMap() : launchArgs;
 
         // built-in settings, can NOT be overrode
@@ -61,14 +65,14 @@ public class ConfigViews {
         Map<String, Object> defaultSettings = new LinkedHashMap<>();
 
         String configName = "BuiltinSettings";
-        if(internalConfigLocation != null)
+        if (internalConfigLocation != null)
             loadSettings(classLoader, 
                     internalConfigLocation, configName,  
                     builtinSettings, defaultSettings);
 
 
         // 2.load user-defined settings
-        for(Entry<String, String> entry : userDefinedConfigLocations.entrySet()) {
+        for (Entry<String, String> entry : userDefinedConfigLocations.entrySet()) {
             String userDefinedConfigLocation = entry.getKey();
 
             Map<String, Object> userDefinedSettings = new LinkedHashMap<>();
@@ -83,10 +87,15 @@ public class ConfigViews {
                 .configSource("DefaultSettings", defaultSettings)
                 .build();
 
-        if(getDiagnosticLevel(configView).isSimpleEnabled())
-            LOGGER.info("Created ConfigView for AopContext with settings, \n"
+
+        DiagnosticLevel diagnosticLevel = getDiagnosticLevel(configView);
+        if (diagnosticLevel.isDebugEnabled()) 
+            LOGGER.info("Created ConfigView with settings, \n"
                     + "  LaunchArgs: {} \n  InternalConfigLocation: {} \n  UserDefinedConfigLocation: {} \n",
-                    launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() );
+                    launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() 
+            );
+        else if (diagnosticLevel.isSimpleEnabled()) 
+            LOGGER.info("Created ConfigView. ");
 
         return configView;
     }
@@ -94,7 +103,7 @@ public class ConfigViews {
     public static ConfigView createConfigView(ConfigView parentConfigView,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
         ConfigView.Builder builder = new ConfigView.Builder();
-        if(parentConfigView != null)
+        if (parentConfigView != null)
             builder = builder.parent(parentConfigView);
 
         // built-in settings, can NOT be overrode
@@ -107,14 +116,14 @@ public class ConfigViews {
         // 1.load built-in and default settings
         // default settings, can be overrode by user-defined settings
         Map<String, Object> defaultSettings = new LinkedHashMap<>();
-        if(internalConfigLocation != null)
+        if (internalConfigLocation != null)
             loadSettings(classLoader, 
                     internalConfigLocation, configName, 
                     builtinSettings, defaultSettings);
 
 
         // 2.load user-defined settings
-        for(Entry<String, String> entry : userDefinedConfigLocations.entrySet()) {
+        for (Entry<String, String> entry : userDefinedConfigLocations.entrySet()) {
             String userDefinedConfigLocation = entry.getKey();
 
             Map<String, Object> userDefinedSettings = new LinkedHashMap<>();
@@ -134,7 +143,7 @@ public class ConfigViews {
             String propertiesFileLocation, String configName, 
             Map<String, Object> builtinSettings, Map<String, Object> settings) {
         InputStream inStream = classLoader.getResourceAsStream(propertiesFileLocation);
-        if(inStream == null) {
+        if (inStream == null) {
             LOGGER.error("Did NOT find properties file '{} for '{}'. \n", propertiesFileLocation, configName);
             return;
         }
@@ -143,17 +152,17 @@ public class ConfigViews {
             OrderedProperties properties = new OrderedProperties();
             properties.load(inStream);
 
-            for(String key : properties.stringPropertyNames()) {
+            for (String key : properties.stringPropertyNames()) {
                 String value = properties.getProperty(key);
 
                 // built-in or regular setting
-                if(builtinSettings != null && key.startsWith(BUILTIN_SETTING_PREFIX)) {
+                if (builtinSettings != null && key.startsWith(BUILTIN_SETTING_PREFIX)) {
                     builtinSettings.put(key.substring(1), value);
                 } else {
                     settings.put(key, value);
                 }
             }
-        } catch(IOException e) {
+        } catch (IOException e) {
             LOGGER.error("Failed to load properties file '{} for '{}'. \n", propertiesFileLocation, configName);
             e.printStackTrace(System.out);
         } finally {
@@ -163,11 +172,11 @@ public class ConfigViews {
 
 
     public static DiagnosticLevel getDiagnosticLevel(ConfigView configView) {
-        if(configView.containsKey(DIAGNOSTIC_LEVEL_KEY)) {
+        if (configView.containsKey(DIAGNOSTIC_LEVEL_KEY)) {
             String level = configView.getAsString(DIAGNOSTIC_LEVEL_KEY).toUpperCase();
             try {
                 return DiagnosticLevel.valueOf(level);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 LOGGER.warn("Ignored illegal setting '" + level + "' and disabled diagnostic mode.\n");
             }
         }

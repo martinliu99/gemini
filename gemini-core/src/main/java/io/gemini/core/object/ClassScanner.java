@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import io.gemini.api.annotation.NoScanning;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.Assert;
+import io.gemini.core.util.Throwables;
 import io.github.classgraph.AnnotationInfo;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassGraph.ClasspathElementFilter;
@@ -99,9 +100,13 @@ public interface ClassScanner {
                 Set<ClassLoader> scannedClassLoaders, Set<URL> overrideClasspaths, 
                 Set<String> acceptJarPatterns, Set<String> acceptPackages, 
                 int workThreads, Set<URL> filteredClasspathElementUrls) {
+            long startedAt = System.nanoTime();
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("^Creating ClassScanner, ");
+
+
             // 1.check input arguments
-            Assert.notNull(diagnosticLevel, "'diagnosticLevel' must not be null.");
-            this.diagnosticLevel = diagnosticLevel;
+            this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
 
             Assert.isTrue( !(scannedClassLoaders.size() == 0 && overrideClasspaths.size() == 0), 
                     "'scannedClassLoaders' and 'overrideClasspaths' must not be both empty.");
@@ -113,19 +118,6 @@ public interface ClassScanner {
             Assert.notEmpty(filteredClasspathElementUrls, "'filteredClasspathElementUrls' must not be empty.");
             this.filteredClasspathElementUrls = filteredClasspathElementUrls;
 
-            long startedAt = System.nanoTime();
-            if(diagnosticLevel.isSimpleEnabled()) {
-                LOGGER.info("^Creating ClassScanner with settings, \n"
-                        + "  enableVerbose: {} \n  diagnosticLevel: {} \n"
-                        + "  scannedClassLoaders: {} \n  overrideClasspaths: {}\n"
-                        + "  acceptPackages: {} \n  acceptJarPatterns: {} \n"
-                        + "  workThreads: {} \n  filteredClasspathElementUrls: {} \n",
-                        enableVerbose, diagnosticLevel, 
-                        scannedClassLoaders, overrideClasspaths,
-                        acceptPackages, acceptJarPatterns, 
-                        workThreads, filteredClasspathElementUrls
-                );
-            }
 
             // 2.scan ClassLoader at startup
             ScanResult result = null;
@@ -145,17 +137,17 @@ public interface ClassScanner {
                                     ? new AllClasspathElementFilter() : new DefaultClasspathElementFilter(formattedJarPatterns) )
                         ;
 
-                if(overrideClasspaths.size() > 0) {
-                    for(URL overrideClasspath : overrideClasspaths) {
+                if (overrideClasspaths.size() > 0) {
+                    for (URL overrideClasspath : overrideClasspaths) {
                         classGraph.overrideClasspath(overrideClasspath);
                     }
                 } else {
-                    for(ClassLoader classLoader : scannedClassLoaders) {
+                    for (ClassLoader classLoader : scannedClassLoaders) {
                         classGraph.addClassLoader(classLoader);
                     }
                 }
 
-                if(workThreads > NO_WORK_THREAD)
+                if (workThreads > NO_WORK_THREAD)
                     result = classGraph.scan(workThreads);
                 else 
                     result = classGraph.scan();
@@ -166,16 +158,30 @@ public interface ClassScanner {
                         .filter(NoScanningClassInfoFilter.INSTANCE)
                         ;
             } finally {
-                if(result != null) {
+                if (result != null) {
                     try {
                         result.close();
-                    } catch(Exception ignored) {
+                    } catch (Exception ignored) {
                         /* ignore */
                     }
                 }
 
-                if(diagnosticLevel.isSimpleEnabled())
-                    LOGGER.info("$Took '{}' seconds to create ClassScanner.", (System.nanoTime() - startedAt) / 1e9 );
+                if (diagnosticLevel.isDebugEnabled())
+                    LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
+                            + "  enableVerbose: {} \n  diagnosticLevel: {} \n"
+                            + "  scannedClassLoaders: {} \n  overrideClasspaths: {}\n"
+                            + "  acceptPackages: {} \n  acceptJarPatterns: {} \n"
+                            + "  workThreads: {} \n  filteredClasspathElementUrls: {} \n",
+                            (System.nanoTime() - startedAt) / 1e9, 
+                            enableVerbose, diagnosticLevel, 
+                            scannedClassLoaders, overrideClasspaths,
+                            acceptPackages, acceptJarPatterns, 
+                            workThreads, filteredClasspathElementUrls
+                    );
+                else if (diagnosticLevel.isSimpleEnabled())
+                    LOGGER.info("$Took '{}' seconds to create ClassScanner with settings.",
+                            (System.nanoTime() - startedAt) / 1e9
+                    );
             }
         }
 
@@ -183,9 +189,9 @@ public interface ClassScanner {
             Assert.notEmpty(acceptJars, "'acceptJars' must not be empty.");
 
             Set<Pattern> patterns = new LinkedHashSet<>(acceptJars.size());
-            for(String jarPattern : acceptJars) {
+            for (String jarPattern : acceptJars) {
                 // if contain '*' element, accept all jars
-                if(STAR.equals(jarPattern))
+                if (STAR.equals(jarPattern))
                     return ACCEPT_ALL_JARS;
                 else
                     patterns.add( AcceptReject.globToPattern(jarPattern, true) );
@@ -198,9 +204,9 @@ public interface ClassScanner {
 
             String[] packages = new String[acceptPackages.size()];
             int index = 0;
-            for(String classPackage : acceptPackages) {
+            for (String classPackage : acceptPackages) {
                 // if contain '*' element, accept all class
-                if(STAR.equals(classPackage))
+                if (STAR.equals(classPackage))
                     return ACCEPT_ALL_PACKAGES;
                 else
                     packages[index++] = classPackage;
@@ -210,7 +216,7 @@ public interface ClassScanner {
 
         protected Default(ClassScanner classScanner, Set<URL> filteredClasspathElementUrls) {
             Assert.notNull(classScanner, "'classScanner' must not be null.");
-            if(classScanner instanceof Default == false)
+            if (classScanner instanceof Default == false)
                 throw new IllegalArgumentException("classScanner must be instanceof ClassScanner.Default");
 
             Assert.notNull(filteredClasspathElementUrls, "'filteredClasspathElementUrls' must not be empty.");
@@ -240,7 +246,7 @@ public interface ClassScanner {
             Assert.hasText(typeName, "'typeName' must not be empty");
 
             ClassInfo classInfo = this.classInfoList.get(typeName);
-            if(classInfo == null)
+            if (classInfo == null)
                 return new ClassInfoList();
 
             return filterClasses(classInfo.getClassesImplementing(), filteredClasspathElementUrls);
@@ -265,7 +271,7 @@ public interface ClassScanner {
             Assert.hasText(annotationName, "'annotationName' must not be empty");
 
             ClassInfo classInfo = this.classInfoList.get(annotationName);
-            if(classInfo == null)
+            if (classInfo == null)
                 return new ClassInfoList();
 
             return filterClasses(classInfo.getClassesWithAnnotation(), filteredClasspathElementUrls);
@@ -299,13 +305,13 @@ public interface ClassScanner {
             @Override
             public boolean includeClasspathElement(String classpathElementPathStr) {
                 // 1) scan Automatic classfile 
-                for(String suffix : AUTOMATIC_PACKAGE_ROOT_SUFFIXES) {
-                    if(classpathElementPathStr.endsWith(suffix))
+                for (String suffix : AUTOMATIC_PACKAGE_ROOT_SUFFIXES) {
+                    if (classpathElementPathStr.endsWith(suffix))
                         return true;
                 }
 
-                for(Pattern pattern : acceptJarPatterns) {
-                    if(pattern.matcher(JarUtils.leafName(classpathElementPathStr)).matches() == true)
+                for (Pattern pattern : acceptJarPatterns) {
+                    if (pattern.matcher(JarUtils.leafName(classpathElementPathStr)).matches() == true)
                         return true;
                 }
 
@@ -324,8 +330,8 @@ public interface ClassScanner {
             @Override
             public boolean accept(ClassInfo classInfo) {
                 // filter annotation
-                for(AnnotationInfo annotationInfo : classInfo.getAnnotationInfo()) {
-                    if(NO_SCANNING_TYPE.equals(annotationInfo.getClassInfo().getName()) == true)
+                for (AnnotationInfo annotationInfo : classInfo.getAnnotationInfo()) {
+                    if (NO_SCANNING_TYPE.equals(annotationInfo.getClassInfo().getName()) == true)
                         return false;
                 }
 
@@ -346,13 +352,15 @@ public interface ClassScanner {
                 try {
                     // filter classpath
                     URL classUrl = classInfo.getClasspathElementURL();
-                    for(URL url : this.classpathElementURLs) {
-                        if(classUrl.equals(url))
+                    for (URL url : this.classpathElementURLs) {
+                        if (classUrl.equals(url))
                             return true;
                     }
                     return false;
-                } catch(Throwable t) {
+                } catch (Throwable t) {
                     LOGGER.warn("Failed to compare ClasspathElement of class '{}'", classInfo.getName(), t);
+
+                    Throwables.throwIfRequired(t);
                     return true;
                 }
             }
@@ -379,7 +387,7 @@ public interface ClassScanner {
     public class Builder {
 
         private boolean enableVerbose = false;
-        private DiagnosticLevel diagnosticLevel = DiagnosticLevel.DISABLED;
+        private DiagnosticLevel diagnosticLevel;
 
         private final Set<ClassLoader> scannedClassLoaders;
         private final Set<URL> overrideClasspaths;
@@ -417,35 +425,35 @@ public interface ClassScanner {
         }
 
         public Builder scannedClassLoaders(ClassLoader... classLoaders) {
-            if(classLoaders != null)
+            if (classLoaders != null)
                 this.scannedClassLoaders.addAll( Arrays.asList(classLoaders) );
 
             return this;
         }
 
         public Builder scannedClassLoaders(Collection<ClassLoader> classLoaders) {
-            if(classLoaders != null)
+            if (classLoaders != null)
                 this.scannedClassLoaders.addAll( classLoaders );
 
             return this;
         }
 
         public Builder overrideClasspaths(URL... overrideClasspaths) {
-            if(overrideClasspaths != null)
+            if (overrideClasspaths != null)
                 this.overrideClasspaths.addAll( Arrays.asList(overrideClasspaths) );
 
             return this;
         }
 
         public Builder overrideClasspaths(Collection<URL> overrideClasspaths) {
-            if(overrideClasspaths != null)
+            if (overrideClasspaths != null)
                 this.overrideClasspaths.addAll( overrideClasspaths );
 
             return this;
         }
 
         public Builder acceptJarPatterns(String... acceptJarPatterns) {
-            if(acceptJarPatterns != null) {
+            if (acceptJarPatterns != null) {
                 this.acceptJarPatterns.addAll( Arrays.asList(acceptJarPatterns) );
             }
 
@@ -453,7 +461,7 @@ public interface ClassScanner {
         }
 
         public Builder acceptJarPatterns(Collection<String> acceptJarPatterns) {
-            if(acceptJarPatterns != null) {
+            if (acceptJarPatterns != null) {
                 this.acceptJarPatterns.addAll( acceptJarPatterns );
             }
 
@@ -461,7 +469,7 @@ public interface ClassScanner {
         }
 
         public Builder acceptPackages(String... acceptPackages) {
-            if(acceptPackages != null) {
+            if (acceptPackages != null) {
                 this.acceptPackages.addAll( Arrays.asList(acceptPackages) );
             }
 
@@ -469,7 +477,7 @@ public interface ClassScanner {
         }
 
         public Builder acceptPackages(Collection<String> acceptPackages) {
-            if(acceptPackages != null) {
+            if (acceptPackages != null) {
                 this.acceptPackages.addAll(acceptPackages);
             }
 
@@ -489,7 +497,7 @@ public interface ClassScanner {
         }
 
         public Builder filteredClasspathElementUrls(URL... classpathElementUrls) {
-            if(classpathElementUrls != null) {
+            if (classpathElementUrls != null) {
                 this.filteredClasspathElementUrls.addAll( Arrays.asList(classpathElementUrls) );
             }
 
@@ -497,7 +505,7 @@ public interface ClassScanner {
         }
 
         public Builder filteredClasspathElementUrls(Collection<URL> classpathElementUrls) {
-            if(classpathElementUrls != null) {
+            if (classpathElementUrls != null) {
                 this.filteredClasspathElementUrls.addAll( classpathElementUrls );
             }
 

@@ -22,6 +22,7 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.object.ObjectFactory.AbstractBase;
 
 public abstract class AbstractSpringObjectFactory extends AbstractBase {
@@ -31,9 +32,9 @@ public abstract class AbstractSpringObjectFactory extends AbstractBase {
     private ConfigurableBeanFactory beanFactory;
 
 
-    public AbstractSpringObjectFactory(ClassLoader classLoader,
-            ClassScanner classScanner) {
-        super(classLoader, classScanner);
+    public AbstractSpringObjectFactory(DiagnosticLevel diagnosticLevel,
+            ClassLoader classLoader, ClassScanner classScanner) {
+        super(diagnosticLevel, classLoader, classScanner);
     }
 
 

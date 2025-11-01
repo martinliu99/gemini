@@ -35,9 +35,11 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.StringUtils;
+import io.gemini.core.util.Throwables;
 
 /**
  * 
@@ -49,8 +51,6 @@ import io.gemini.core.util.StringUtils;
 public interface ObjectFactory extends Closeable {
 
     void start();
-
-    ClassScanner getClassScanner();
 
     void registerSingleton(String objectName, Object existingObject);
 
@@ -69,12 +69,17 @@ public interface ObjectFactory extends Closeable {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(ObjectFactory.class);
 
+        private final DiagnosticLevel diagnosticLevel;
+
         private final ClassLoader classLoader;
         private final ClassScanner classScanner;
 
 
-        protected AbstractBase(ClassLoader classLoader,
-                ClassScanner classScanner) {
+        protected AbstractBase(DiagnosticLevel diagnosticLevel,
+                ClassLoader classLoader, ClassScanner classScanner) {
+            Assert.notNull(classLoader, "'diagnosticLevel' must not be null");
+            this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
+
             Assert.notNull(classLoader, "'classLoader' must not be null");
             this.classLoader = classLoader;
 
@@ -82,12 +87,15 @@ public interface ObjectFactory extends Closeable {
             this.classScanner = classScanner;
         }
 
+        protected DiagnosticLevel getDiagnosticLevel() {
+            return diagnosticLevel;
+        }
+
         protected ClassLoader getClassLoader() {
             return this.classLoader;
         }
 
-
-        public ClassScanner getClassScanner() {
+        protected ClassScanner getClassScanner() {
             return classScanner;
         }
 
@@ -119,19 +127,20 @@ public interface ObjectFactory extends Closeable {
             List<String> classNames = classScanner.getClassNamesImplementing(clazz.getName());
 
             List<T> objects = new ArrayList<>(classNames.size());
-            for(String className : classNames) {
+            for (String className : classNames) {
                 Class<T> canidateType = (Class<T>) this.loadClass(className);
-                if(isInstantiatable(canidateType) == false) 
+                if (isInstantiatable(canidateType) == false) 
                     continue;
 
                 objects.add(this.createObject(canidateType));
             }
 
-            LOGGER.info("Created '{}' objects implemeting '{}'. {}", 
-                    objects.size(),
-                    clazz.getName(),
-                    StringUtils.join(objects, obj -> obj.toString(), "\n  ", "\n  ", "\n")
-            );
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("Instantiated '{}' objects implemeting '{}'. \n"
+                        + "  {} \n", 
+                        objects.size(), clazz.getName(),
+                        StringUtils.join(objects, obj -> obj.toString(), "\n  ")
+                );
 
             return objects;
         }
@@ -165,8 +174,8 @@ public interface ObjectFactory extends Closeable {
             INJECTION_ANNOTATION.add("org.springframework.beans.factory.annotation.Autowired");
         }
 
-        protected Simple(ClassLoader classLoader, ClassScanner classScanner) {
-            super(classLoader, classScanner);
+        protected Simple(DiagnosticLevel diagnosticLevel, ClassLoader classLoader, ClassScanner classScanner) {
+            super(diagnosticLevel, classLoader, classScanner);
 
             this.objectMap = new ConcurrentHashMap<>();
         }
@@ -186,8 +195,8 @@ public interface ObjectFactory extends Closeable {
 
             try {
                 Constructor<?> defaultConstructor = null;
-                for(Constructor<?> constructor : constructors) {
-                    if(constructor.getParameterCount() == 0) {
+                for (Constructor<?> constructor : constructors) {
+                    if (constructor.getParameterCount() == 0) {
                         defaultConstructor = constructor;
                         continue;
                     }
@@ -195,26 +204,26 @@ public interface ObjectFactory extends Closeable {
                     int i = 0;
                     Object[] arguments = new Object[constructor.getParameterCount()];
                     boolean candidate = false;
-                    for(Parameter parameter : constructor.getParameters()) {
+                    for (Parameter parameter : constructor.getParameters()) {
                         // check annotation
-                        for(Annotation annotation : parameter.getAnnotations()) {
-                            if(INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
+                        for (Annotation annotation : parameter.getAnnotations()) {
+                            if (INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
                                 candidate = true;
                                 break;
                             }
                         }
-                        if(candidate == false)
+                        if (candidate == false)
                             continue;
 
                         // check parameter name and type
                         String paramName = parameter.getName();
-                        if(this.objectMap.containsKey(paramName) == false) {
+                        if (this.objectMap.containsKey(paramName) == false) {
                             candidate = false;
                             break;
                         }
 
                         Object depentObj = this.objectMap.get(paramName);
-                        if(depentObj == null || parameter.getType() != depentObj.getClass()) {
+                        if (depentObj == null || parameter.getType() != depentObj.getClass()) {
                             candidate = false;
                             break;
                         }
@@ -223,7 +232,7 @@ public interface ObjectFactory extends Closeable {
                     }
 
                     // try to instantiate object with candidate constructor
-                    if(candidate) {
+                    if (candidate) {
                         T object = this.instantiateObject(clazz, constructor, arguments);
 
                         return this.initializeObject(clazz, object);
@@ -231,12 +240,12 @@ public interface ObjectFactory extends Closeable {
                 }
 
                 // try to instantiate object with default constructor
-                if(defaultConstructor != null) {
+                if (defaultConstructor != null) {
                     T object = this.instantiateObject(clazz, defaultConstructor, null);
 
                     return this.initializeObject(clazz, object);
                 }
-            } catch(Exception e) {
+            } catch (Exception e) {
                 throw new ObjectsException(e);
             }
 
@@ -250,7 +259,7 @@ public interface ObjectFactory extends Closeable {
             T object = arguments == null 
                     ? (T) constructor.newInstance() : (T) constructor.newInstance(arguments);
 
-            if(LOGGER.isDebugEnabled())
+            if (LOGGER.isDebugEnabled())
                 LOGGER.debug("Instantiated '{}' type with constructor '{}.", clazz, constructor);
 
             return object;
@@ -258,30 +267,30 @@ public interface ObjectFactory extends Closeable {
 
         private <T> T initializeObject(Class<T> clazz, T object) throws Exception {
             // inject property
-            for(Method method : clazz.getDeclaredMethods()) {
-                if(method.getParameterCount() != 1) 
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.getParameterCount() != 1) 
                     continue;
 
                 Parameter parameter = method.getParameters()[0];
 
                 boolean candidate = false;
-                for(Annotation annotation : method.getParameters()[0].getAnnotations()) {
-                    if(INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
+                for (Annotation annotation : method.getParameters()[0].getAnnotations()) {
+                    if (INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
                         candidate = true;
                         break;
                     }
                 }
-                if(candidate == false) 
+                if (candidate == false) 
                     continue;
 
                 // check parameter name and type
                 String paramName = parameter.getName();
-                if(this.objectMap.containsKey(paramName) == false) {
+                if (this.objectMap.containsKey(paramName) == false) {
                     continue;
                 }
 
                 Object depentObj = this.objectMap.get(paramName);
-                if(depentObj == null || parameter.getType() != depentObj.getClass()) {
+                if (depentObj == null || parameter.getType() != depentObj.getClass()) {
                     continue;
                 }
 
@@ -290,28 +299,28 @@ public interface ObjectFactory extends Closeable {
             }
 
             // inject field
-            for(Field field : clazz.getDeclaredFields()) {
-                if(Modifier.isFinal(field.getModifiers()))
+            for (Field field : clazz.getDeclaredFields()) {
+                if (Modifier.isFinal(field.getModifiers()))
                     continue;
 
                 boolean candidate = false;
-                for(Annotation annotation : field.getAnnotations()) {
-                    if(INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
+                for (Annotation annotation : field.getAnnotations()) {
+                    if (INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
                         candidate = true;
                         continue;
                     }
                 }
-                if(candidate == false) 
+                if (candidate == false) 
                     continue;
 
                 // check field name and type
                 String fieldName = field.getName();
-                if(this.objectMap.containsKey(fieldName) == false) {
+                if (this.objectMap.containsKey(fieldName) == false) {
                     continue;
                 }
 
                 Object depentObj = this.objectMap.get(fieldName);
-                if(depentObj == null || field.getType() != depentObj.getClass()) {
+                if (depentObj == null || field.getType() != depentObj.getClass()) {
                     continue;
                 }
 
@@ -333,8 +342,17 @@ public interface ObjectFactory extends Closeable {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(Builder.class);
 
+        private DiagnosticLevel diagnosticLevel;
+
         private ClassLoader classLoader;
         private ClassScanner classScanner;
+
+
+        public Builder diagnosticLevel(DiagnosticLevel diagnosticLevel) {
+            this.diagnosticLevel = diagnosticLevel;
+
+            return this;
+        }
 
         public Builder classScanner(ClassScanner classScanner) {
             Assert.notNull(classScanner, "'classScanner' must not be null.");
@@ -351,35 +369,39 @@ public interface ObjectFactory extends Closeable {
         }
 
         public ObjectFactory build(boolean simple) {
-            if(simple)
-                return new Simple(classLoader, classScanner);
+            if (simple)
+                return new Simple(diagnosticLevel, classLoader, classScanner);
 
             // find ObjectFactory implementation
             List<String> classNames = this.classScanner.getClassNamesImplementing( ObjectFactory.class.getName() );
-            for(String className : classNames) {
+            for (String className : classNames) {
                 // find and return first ObjectFactory implementation
                 ObjectFactory objectFactory = null;
                 try {
                     Class<?> clazz = classLoader.loadClass(className);
-                    if(clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers()) ) {
+                    if (clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers()) ) {
                         continue;
                     }
 
-                    Constructor<?> constructor = clazz.getDeclaredConstructor(ClassLoader.class, ClassScanner.class);
-                    if(constructor == null) {
+                    Constructor<?> constructor = clazz.getDeclaredConstructor(
+                            DiagnosticLevel.class, ClassLoader.class, ClassScanner.class);
+                    if (constructor == null) {
                         continue;
                     }
 
-                    objectFactory = (ObjectFactory) constructor.newInstance(classLoader, this.classScanner);
+                    objectFactory = (ObjectFactory) constructor.newInstance(
+                            diagnosticLevel, classLoader, this.classScanner);
                     objectFactory.start();
 
                     return objectFactory;
-                } catch (Exception e) {
-                    LOGGER.info("Failed to start ObjectFactory '{}'.", className, e);
+                } catch (Throwable t) {
+                    LOGGER.warn("Failed to start ObjectFactory '{}'.", className, t);
+
+                    Throwables.throwIfRequired(t);
                 }
             }
 
-            return new Simple(classLoader, classScanner);
+            return new Simple(diagnosticLevel, classLoader, classScanner);
         }
     }
 }

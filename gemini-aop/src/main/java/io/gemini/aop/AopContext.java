@@ -18,6 +18,7 @@ package io.gemini.aop;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,9 @@ public class AopContext implements Closeable {
             ConfigView configView,
             DiagnosticLevel diagnosticLevel) {
         long startedAt = System.nanoTime();
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating AopContext, ");
+
 
         // 1.check input arguments and initialize properties
         Assert.notNull(launcherConfig, "'launcherConfig' must not be null.");
@@ -107,16 +111,6 @@ public class AopContext implements Closeable {
 
         Assert.notNull(diagnosticLevel, "'diagnosticLevel' must not be null.");
         this.diagnosticLevel = diagnosticLevel;
-
-        if(diagnosticLevel.isSimpleEnabled()) 
-            LOGGER.info("^Creating AopContext with settings, \n"
-                    + "  isDefaultProfile: {} \n  activeProfile: {} \n"
-                    + "  internalConfigLocation: {} \n  userDefinedConfigLocation: {} \n  diagnosticStrategy: {} \n"
-                    + "  classLoader: {} \n",
-                    launcherConfig.isDefaultProfile(), launcherConfig.getActiveProfile(),
-                    launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation(), diagnosticLevel,
-                    aopClassLoader
-            );
 
 
         // 2.create helper classes
@@ -140,13 +134,23 @@ public class AopContext implements Closeable {
         this.typeWorldFactory = createTypeWorldFactory(typePoolFactory);
 
         boolean processInParallel = configView.getAsBoolean("aop.globalTaskExecutor.parallel", false);
-        this.globalTaskExecutor = TaskExecutor.create("globalTaskExecutor", processInParallel);
+        this.globalTaskExecutor = TaskExecutor.create(diagnosticLevel, "globalTaskExecutor", processInParallel);
 
 
         long time = System.nanoTime() - startedAt;
-        if(diagnosticLevel.isSimpleEnabled()) {
-            LOGGER.info("$Took '{}' seconds to create AopContext.", time / 1e9);
-        }
+        if (diagnosticLevel.isDebugEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create AopContext with settings, \n" 
+                    + "  isDefaultProfile: {} \n  activeProfile: {} \n"
+                    + "  internalConfigLocation: {} \n  userDefinedConfigLocation: {} \n  diagnosticStrategy: {} \n"
+                    + "  classLoader: {} \n",
+                    time / 1e9,
+                    launcherConfig.isDefaultProfile(), launcherConfig.getActiveProfile(),
+                    launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation(), diagnosticLevel,
+                    aopClassLoader
+            );
+        else if (diagnosticLevel.isSimpleEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create AopContext. ", time / 1e9);
+
         aopMetrics.getBootstraperMetrics().setAopContextCreationTime(time);
     }
 
@@ -157,7 +161,7 @@ public class AopContext implements Closeable {
         }
 
         {
-            if(diagnosticLevel.isDebugEnabled()) {
+            if (diagnosticLevel.isDebugEnabled()) {
                 builtinSettings.put(AOP_LAUNCHER_DUMP_BYTE_CODE_KEY, true);
             }
 
@@ -169,17 +173,13 @@ public class AopContext implements Closeable {
     private ClassScanner createClassScanner(BootstraperMetrics bootstraperMetrics) {
         long startedAt = System.nanoTime();
 
-        if(this.diagnosticLevel.isDebugEnabled()) {
-            builtinSettings.put(CLASS_SCANNER_ENABLE_VERBOSE_KEY, "true");
-        }
-
         ClassScanner.Builder builder = new ClassScanner.Builder()
                 .enableVerbose( configView.getAsBoolean(CLASS_SCANNER_ENABLE_VERBOSE_KEY, false) )
                 .diagnosticLevel( this.diagnosticLevel )
                 ;
 
         builder = builder.overrideClasspaths( aopClassLoader.getUrls() );
-        for(URL[] URLs : this.launcherConfig.getAspectAppClassPathURLs().values()) {
+        for (URL[] URLs : this.launcherConfig.getAspectAppClassPathURLs().values()) {
             builder = builder.overrideClasspaths( URLs );
         }
 
@@ -198,6 +198,7 @@ public class AopContext implements Closeable {
 
     private ObjectFactory createObjectFactory() {
         return new ObjectFactory.Builder()
+                .diagnosticLevel(diagnosticLevel)
                 .classLoader(aopClassLoader)
                 .classScanner(classScanner)
                 .build(true);
@@ -225,17 +226,21 @@ public class AopContext implements Closeable {
     }
 
     public boolean isDiagnosticClass(String typeName) {
-        return DiagnosticLevel.DEBUG == diagnosticLevel && diagnosticClasses.contains(typeName);
+        return DiagnosticLevel.DISABLED != diagnosticLevel && diagnosticClasses.contains(typeName);
+    }
+
+    public boolean isDiagnosticClass(Class<?>... types) {
+        return isDiagnosticClass( Arrays.asList(types) );
     }
 
     public boolean isDiagnosticClass(List<Class<?>> types) {
-        if(CollectionUtils.isEmpty(types) == true)
+        if (CollectionUtils.isEmpty(types) == true)
             return false;
-        if(DiagnosticLevel.DEBUG != diagnosticLevel)
+        if (DiagnosticLevel.DISABLED == diagnosticLevel)
             return false;
 
-        for(Class<?> clazz : types) {
-            if(diagnosticClasses.contains(clazz.getName()))
+        for (Class<?> clazz : types) {
+            if (diagnosticClasses.contains(clazz.getName()))
                 return true;
         }
         return false;

@@ -34,7 +34,7 @@ public class FileUtils {
 
     public static Map<String, URL[]> toURL( Map<Path, List<Path>> pathResources) throws MalformedURLException {
         Map<String, URL[]> result = new LinkedHashMap<>(pathResources.size());
-        for(Entry<Path, List<Path>> entry : pathResources.entrySet()) {
+        for (Entry<Path, List<Path>> entry : pathResources.entrySet()) {
             result.put(entry.getKey().getFileName().toString(), toURL(entry.getValue()));
         }
 
@@ -49,7 +49,7 @@ public class FileUtils {
     public static URL[] toURL(List<Path> resources) throws MalformedURLException {
         URL[] urls = new URL[resources.size()];
         int i = 0;
-        for(Path resource : resources) {
+        for (Path resource : resources) {
             urls[i++] = resource.toUri().toURL();
         }
         return urls;

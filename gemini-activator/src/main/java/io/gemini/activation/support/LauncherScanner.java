@@ -52,17 +52,17 @@ public interface LauncherScanner {
         public URL[] scanClassPathURLs() throws IOException {
             List<Path> launchClassPaths = new ArrayList<>();
 
-            if(launchFile != null)
+            if (launchFile != null)
                 launchClassPaths.add(launchFile);
 
             // 1.include conf folder
             Path confPath = launchPath.resolve("conf");
-            if(Files.exists(confPath))
+            if (Files.exists(confPath))
                 launchClassPaths.add( confPath );
 
             // 2.scan lib folder
             Path libPath = launchPath.resolve("lib");
-            if(Files.exists(libPath)) {
+            if (Files.exists(libPath)) {
                 Files.list( libPath )
                 .filter( Files::isRegularFile )
                 .sorted( Comparator.comparing(p -> p.getFileName().toString()) )    // sort by filename

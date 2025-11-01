@@ -52,7 +52,7 @@ public interface AspectAppScanner {
 
 
         public Default(Path aspectAppsPath) {
-            if(Files.exists(aspectAppsPath) == false || Files.isDirectory(aspectAppsPath) == false) {
+            if (Files.exists(aspectAppsPath) == false || Files.isDirectory(aspectAppsPath) == false) {
                 System.err.println("Illegal aspectAppsPath: " + aspectAppsPath);
                 this.aspectAppsPath = null;
             } else
@@ -61,11 +61,11 @@ public interface AspectAppScanner {
 
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
-            if(aspectAppsPath == null)
+            if (aspectAppsPath == null)
                 return Collections.emptyMap();
 
             Map<Path, List<Path>> aspectClassPaths = new LinkedHashMap<>();
-            for(Iterator<Path> iterator = Files.list(aspectAppsPath).filter( Files::isDirectory ).iterator(); iterator.hasNext(); ) {
+            for (Iterator<Path> iterator = Files.list(aspectAppsPath).filter( Files::isDirectory ).iterator(); iterator.hasNext(); ) {
                 Path aspectAppPath = iterator.next();
                 aspectClassPaths.put(aspectAppPath, this.getAspectAppClassPaths(aspectAppPath));
             }
@@ -77,15 +77,15 @@ public interface AspectAppScanner {
             List<Path> classPaths = new ArrayList<>();
 
             Path confPath = aspectAppPath.resolve("conf");
-            if(Files.exists(confPath))
+            if (Files.exists(confPath))
                 classPaths.add( confPath );
 
             Path aspectsPath = aspectAppPath.resolve("aspects");
-            if(Files.exists(aspectsPath))
+            if (Files.exists(aspectsPath))
                 scanPath(Files.list(aspectsPath), classPaths);
 
             Path libPath = aspectAppPath.resolve("lib");
-            if(Files.exists(libPath))
+            if (Files.exists(libPath))
                 scanPath(Files.list(libPath), classPaths);
 
             return classPaths;
@@ -114,9 +114,9 @@ public interface AspectAppScanner {
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
 //          // retrieve folder from classpath
           List<Path> candidatePaths = new ArrayList<>();
-          for(String classPath : getClassPaths()) {
-              for(String suffix : scannedClassFolders) {
-                  if(classPath.endsWith(suffix))
+          for (String classPath : getClassPaths()) {
+              for (String suffix : scannedClassFolders) {
+                  if (classPath.endsWith(suffix))
                       candidatePaths.add( Paths.get(classPath) );
               }
           }
@@ -131,7 +131,7 @@ public interface AspectAppScanner {
             String[] classPathValues = classpathStr.split(File.pathSeparator);
 
             List<String> classPaths = new ArrayList<>(classPathValues.length);
-            for(String classPath : classPathValues) {
+            for (String classPath : classPathValues) {
                 classPath = classPath.trim();
                 classPath = classPath.charAt(classPath.length()-1) == File.pathSeparatorChar ? classPath.substring(0, classPath.length()-1) : classPath;
                 classPaths.add(classPath);
@@ -158,7 +158,7 @@ public interface AspectAppScanner {
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
             Map<String, URL[]> classPathURLs = new LinkedHashMap<>();
-            for(AspectAppScanner aspectAppScanner : aspectAppScanners) {
+            for (AspectAppScanner aspectAppScanner : aspectAppScanners) {
                 classPathURLs.putAll( aspectAppScanner.scanClassPathURLs() );
             }
 

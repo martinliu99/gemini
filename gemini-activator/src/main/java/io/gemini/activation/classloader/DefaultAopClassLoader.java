@@ -66,7 +66,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
 //        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.");
 //        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("net.bytebuddy.");
 
-        for(String classPrefix : BUILTIN_PARENT_FIRST_CLASS_PREFIXES)
+        for (String classPrefix : BUILTIN_PARENT_FIRST_CLASS_PREFIXES)
             BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES.add(classPrefix.replace(".", "/"));
     }
 
@@ -93,21 +93,21 @@ public class DefaultAopClassLoader extends AopClassLoader {
     }
 
     public void addParentFirstFilter(ParentFirstFilter parentFirstFilter) {
-        if(parentFirstFilter == null) 
+        if (parentFirstFilter == null) 
             return;
 
         this.parentFirstFilters.addFilter(parentFirstFilter);
     }
 
     public void addTypeFilter(TypeFilter typeilter) {
-        if(typeilter == null)
+        if (typeilter == null)
             return;
 
         this.typeFilters.addFilter(typeilter);
     }
 
     public void addTypeFinder(TypeFinder typeFinder) {
-        if(typeFinder == null)
+        if (typeFinder == null)
             return;
 
         this.typeFinders.addFilter(typeFinder);
@@ -119,7 +119,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
      */
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        if(name == null || "".equals(name.trim()))
+        if (name == null || "".equals(name.trim()))
             throw new IllegalArgumentException("'name' must not be empty.");
 
         synchronized (super.getClassLoadingLock(name)) {
@@ -130,17 +130,15 @@ public class DefaultAopClassLoader extends AopClassLoader {
             }
 
             // 2.if delegation loading is required, try to load from actual parent ClassLoader.
-            if(this.parentFirstFilters.isParentFirstClass(name) == true) {
-                try {
-                    type = this.deletgateClassLoader.loadClass(name);
-                    if(type != null) {
-                        if(resolve == true) {
-                            this.resolveClass(type);
-                        }
-
-                        return type;
+            if (this.parentFirstFilters.isParentFirstClass(name) == true) {
+                type = this.deletgateClassLoader.loadClass(name);
+                if (type != null) {
+                    if (resolve == true) {
+                        this.resolveClass(type);
                     }
-                } catch(ClassNotFoundException ignored) { /* ignored */ }
+
+                    return type;
+                }
             }
 
             // 3.try to load class
@@ -161,15 +159,15 @@ public class DefaultAopClassLoader extends AopClassLoader {
      * {@inheritDoc}
      */
     public URL getResource(String name) {
-        if(name == null || "".equals(name.trim()))
+        if (name == null || "".equals(name.trim()))
             throw new IllegalArgumentException("'name' must not be empty.");
 
         URL url = null;
 
         // 1.if delegation loading is required, try to load from actual parent ClassLoader.
-        if(this.parentFirstFilters.isParentFirstResource(name) == true) {
+        if (this.parentFirstFilters.isParentFirstResource(name) == true) {
             url = this.deletgateClassLoader.getResource(name);
-            if(url != null) {
+            if (url != null) {
                 return url;
             }
         }
@@ -193,7 +191,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
      */
     public Enumeration<URL> getResources(String name) throws IOException {
         // 1.if delegation loading is required, try to load from actual parent ClassLoader.
-        if(this.parentFirstFilters.isParentFirstResource(name) == true) {
+        if (this.parentFirstFilters.isParentFirstResource(name) == true) {
             return this.deletgateClassLoader.getResources(name);
         }
 
@@ -219,8 +217,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
         @Override
         public boolean isParentFirstClass(String name) {
-            for(String classPrefix : BUILTIN_PARENT_FIRST_CLASS_PREFIXES) {
-                if(name.startsWith(classPrefix))
+            for (String classPrefix : BUILTIN_PARENT_FIRST_CLASS_PREFIXES) {
+                if (name.startsWith(classPrefix))
                     return true;
             }
 
@@ -229,8 +227,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
         @Override
         public boolean isParentFirstResource(String name) {
-            for(String resourcePrefix : BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES) {
-                if(name.startsWith(resourcePrefix))
+            for (String resourcePrefix : BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES) {
+                if (name.startsWith(resourcePrefix))
                     return true;
             }
 

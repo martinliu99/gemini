@@ -64,7 +64,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
         this.launchedAt = System.nanoTime();
 
         this.launchPath = launchPath;
-        if(Files.exists(launchPath) == false || Files.isDirectory(launchPath) == false)
+        if (Files.exists(launchPath) == false || Files.isDirectory(launchPath) == false)
             throw new IllegalArgumentException("Illegal launchPath: " + this.launchPath);
 
         this.launchArgs = Collections.unmodifiableMap(
@@ -72,30 +72,30 @@ public class UnpackedArchiveConfig implements LauncherConfig {
 
         this.activeProfile = this.parseActiveProfile(launchArgs);
 
-        if(launcherScanner == null)
+        if (launcherScanner == null)
             launcherScanner = new LauncherScanner.Default(launchPath, launchFile);
         this.launchResourceURLs = launcherScanner.scanClassPathURLs();
 
         this.scanClassesFolder = scanClassesFolder;
 
-        if(aspectAppScanner == null)
+        if (aspectAppScanner == null)
             aspectAppScanner = new AspectAppScanner.Default( launchPath.resolve(FOLDER_ASPECTAPPS) );
         this.aspectAppResourceURLs = aspectAppScanner.scanClassPathURLs();
     }
 
     private Map<String, String> parseLaunchArgs(String launchArgsStr) {
-        if(launchArgsStr == null)
+        if (launchArgsStr == null)
             return Collections.emptyMap();
 
         Map<String, String> agentArgs = new LinkedHashMap<>();
 
         // 1.try to load from JVM -javaagent:jar=key1=value1,key2=value2
         StringTokenizer st = new StringTokenizer(launchArgsStr, ",");
-        while(st.hasMoreTokens()) {
+        while (st.hasMoreTokens()) {
             String keyValuePair = st.nextToken();
 
             int pos = keyValuePair.indexOf("=");
-            if(pos == -1 || pos >= keyValuePair.length())
+            if (pos == -1 || pos >= keyValuePair.length())
                 continue;   // ignore
 
             String key = keyValuePair.substring(0, pos).trim();

@@ -30,14 +30,14 @@ public class ServiceLoaders {
 
     public static <T> T loadClass(Class<T> serviceClass, ClassLoader classLoader) {
         Set<T> services = new LinkedHashSet<>();
-        for(Iterator<T> it = ServiceLoader.load(serviceClass, classLoader).iterator(); it.hasNext(); ) {
+        for (Iterator<T> it = ServiceLoader.load(serviceClass, classLoader).iterator(); it.hasNext(); ) {
             services.add(it.next());
         }
 
-        if(services.size() == 0 ) {
+        if (services.size() == 0 ) {
             throw new IllegalStateException("No " + serviceClass.getName() + " found.");
         }
-        if(services.size() > 1) {
+        if (services.size() > 1) {
             throw new IllegalStateException("More than one " + serviceClass.getName() + " found, " + services);
         }
 

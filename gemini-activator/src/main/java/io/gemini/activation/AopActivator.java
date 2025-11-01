@@ -62,7 +62,7 @@ public class AopActivator {
     private static void doActivateAop(String agentArgs, Instrumentation instrumentation, 
             LauncherConfig launchConfig, AopClassLoader aopClassLoader) throws URISyntaxException, IOException {
         // initialize LaunchConfig
-        if(launchConfig == null) {
+        if (launchConfig == null) {
             Path launchFile = Paths.get(ACTIVATOR_CLASS.getProtectionDomain().getCodeSource().getLocation().toURI());
             launchConfig = new UnpackedArchiveConfig(launchFile.getParent(), launchFile, agentArgs);
         }
@@ -83,7 +83,7 @@ public class AopActivator {
         try {
             callable.call();
         } catch (Throwable t) {
-            System.out.println("Failed to activate Gemini at " + currentDate() + ", error reason: " + t);
+            System.out.println("Failed to activate Gemini at " + currentDate() + ". \n  Error reason: " + t.getMessage());
             t.printStackTrace();
         }
     }

@@ -47,13 +47,13 @@ public abstract class ClassLoaderUtils {
 
 
     public static void validate(ClassLoader classLoader) {
-        if(classLoader == null)
+        if (classLoader == null)
             return;
 
         try {
             Enumeration<URL> indexLists = classLoader.getResources("META-INF/INDEX.LIST");
             List<URL> urls = Collections.list(indexLists);
-            if(urls.size() > 0) {
+            if (urls.size() > 0) {
                 System.err.println("Below jars contain INDEX.LIST files might impact ClassLoader::getResources().");
                 System.err.println("  " + urls);
                 System.err.println("For more details, please refer to https://bugs.openjdk.org/browse/JDK-8305597");
@@ -67,7 +67,7 @@ public abstract class ClassLoaderUtils {
         String[] classPathValues = classpathStr.split(File.pathSeparator);
 
         List<String> classPaths = new ArrayList<>(classPathValues.length);
-        for(String classPath : classPathValues) {
+        for (String classPath : classPathValues) {
             classPath = classPath.trim();
             classPath = classPath.charAt(classPath.length()-1) == File.pathSeparatorChar ? classPath.substring(0, classPath.length()-1) : classPath;
             classPaths.add(classPath);

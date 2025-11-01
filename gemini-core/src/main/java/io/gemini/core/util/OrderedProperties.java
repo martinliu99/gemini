@@ -62,8 +62,8 @@ public class OrderedProperties extends Properties {
     @Override
     public Set<String> stringPropertyNames() {
         Set<String> allKeys = new LinkedHashSet<>();
-        for(Object key : this.keys) {
-            if(key instanceof String)
+        for (Object key : this.keys) {
+            if (key instanceof String)
                 allKeys.add( (String) key);
         }
 
@@ -105,7 +105,7 @@ public class OrderedProperties extends Properties {
     }
 
     public synchronized void load(InputStream inStream) throws IOException {
-        if(inStream == null)
+        if (inStream == null)
             return;
 
         this.load(inStream, UTF_8);
@@ -119,10 +119,10 @@ public class OrderedProperties extends Properties {
      * @throws IOException
      */
     public synchronized void load(InputStream inStream, Charset charset) throws IOException {
-        if(inStream == null)
+        if (inStream == null)
             return;
 
-        if(charset == null)
+        if (charset == null)
             charset = UTF_8;
 
         Reader reader = new InputStreamReader(inStream, charset);

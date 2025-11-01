@@ -99,7 +99,7 @@ public abstract class ClassUtils {
             throws ClassNotFoundException {
         Assert.notNull(className, "'className' must not be null.");
         Class<?> clazz = resolvePrimitieType(className, classLoader);
-        if(clazz != null)
+        if (clazz != null)
             return clazz;
 
         try {
@@ -115,15 +115,15 @@ public abstract class ClassUtils {
 
 
     public static String abbreviateClassName(String className) {
-        if(StringUtils.hasText(className) == false)
+        if (StringUtils.hasText(className) == false)
             return "";
 
         String[] items = className.split("\\"+PACKAGE_SEPARATOR);
-        if(items.length == 0)
+        if (items.length == 0)
             return className;
 
         StringBuilder sb = new StringBuilder();
-        for(int index = 0; index < items.length - 1; index++) {
+        for (int index = 0; index < items.length - 1; index++) {
             sb.append(items[index].charAt(0)).append(PACKAGE_SEPARATOR);
         }
         sb.append(items[items.length-1]);
@@ -144,7 +144,7 @@ public abstract class ClassUtils {
         String methodName = methodDescription.getName();
 
         List<Class<?>> parameterTypes = new ArrayList<>(methodDescription.getParameters().size());
-        for(ParameterDescription paramDescription : methodDescription.getParameters()) {
+        for (ParameterDescription paramDescription : methodDescription.getParameters()) {
             TypeDescription parameterType = paramDescription.getType().asErasure();
             parameterTypes.add( ClassUtils.forName(parameterType.getTypeName(), false, classLoader) );
         }
@@ -166,10 +166,10 @@ public abstract class ClassUtils {
      * @return
      */
     public static boolean isAssignableFrom(Class<?> leftType, Class<?> rightType) {
-        if(leftType == null || rightType == null)
+        if (leftType == null || rightType == null)
             return false;
 
-        if(isAssignablePrimitiveFrom(leftType, rightType) == true) {
+        if (isAssignablePrimitiveFrom(leftType, rightType) == true) {
             return true;
         }
 
@@ -182,12 +182,12 @@ public abstract class ClassUtils {
      * @return
      */
     private static boolean isAssignablePrimitiveFrom(Class<?> leftType, Class<?> rightType) {
-        if(leftType.isPrimitive() && rightType.isPrimitive()) {
+        if (leftType.isPrimitive() && rightType.isPrimitive()) {
             return leftType.equals(rightType);
-        } else if(leftType.isPrimitive()) {
+        } else if (leftType.isPrimitive()) {
             Class<?> _leftType = PRIMITIVE_WRAPPER_MAP.get(leftType);
             return _leftType != null && _leftType.isAssignableFrom(rightType);
-        } else if(rightType.isPrimitive()) {
+        } else if (rightType.isPrimitive()) {
             Class<?> _rightType = PRIMITIVE_WRAPPER_MAP.get(rightType);
             return _rightType != null && leftType.isAssignableFrom(_rightType);
         } else {
@@ -205,15 +205,15 @@ public abstract class ClassUtils {
      * @return
      */
     public static boolean isAssignableFrom(Generic leftType, Generic rightType) {
-        if(leftType == null || rightType == null)
+        if (leftType == null || rightType == null)
             return false;
 
         // 1.void return
-        if(leftType.represents(void.class))
+        if (leftType.represents(void.class))
             return true;
 
         // 2.primitive return
-        if(isAssignablePrimitiveFrom(leftType, rightType) == true)
+        if (isAssignablePrimitiveFrom(leftType, rightType) == true)
             return true;
 
         // 3.reference return 
@@ -221,12 +221,12 @@ public abstract class ClassUtils {
     }
 
     private static boolean isAssignablePrimitiveFrom(Generic leftType, Generic rightType) {
-        if(leftType.isPrimitive() && rightType.isPrimitive()) {
+        if (leftType.isPrimitive() && rightType.isPrimitive()) {
             return leftType.equals(rightType);
-        } else if(leftType.isPrimitive()) {
+        } else if (leftType.isPrimitive()) {
             TypeDescription _leftType = PRIMITIVE_TYPE_DEFINITION_MAP.get(leftType.asErasure());
             return _leftType != null && _leftType.isAssignableFrom(rightType.asErasure());
-        } else if(rightType.isPrimitive()) {
+        } else if (rightType.isPrimitive()) {
             TypeDescription _rightType = PRIMITIVE_TYPE_DEFINITION_MAP.get(rightType.asErasure());
             return _rightType != null && leftType.asErasure().isAssignableFrom(_rightType);
         }
@@ -242,22 +242,22 @@ public abstract class ClassUtils {
      * @return
      */
     public static boolean equals(Generic leftType, Generic rightType) {
-        if(leftType== null || rightType == null)
+        if (leftType== null || rightType == null)
             return false;
 
-        if(isSamePrimitive(leftType, rightType) == true)
+        if (isSamePrimitive(leftType, rightType) == true)
             return true;
 
         return leftType.equals(rightType);
     }
 
     private static boolean isSamePrimitive(Generic leftType, Generic rightType) {
-        if(leftType.isPrimitive() && rightType.isPrimitive()) {
+        if (leftType.isPrimitive() && rightType.isPrimitive()) {
             return leftType.equals(rightType);
-        } else if(leftType.isPrimitive()) {
+        } else if (leftType.isPrimitive()) {
             TypeDescription _leftType = PRIMITIVE_TYPE_DEFINITION_MAP.get(leftType.asErasure());
             return _leftType != null && _leftType.equals(rightType.asErasure());
-        } else if(rightType.isPrimitive()) {
+        } else if (rightType.isPrimitive()) {
             TypeDescription _rightType = PRIMITIVE_TYPE_DEFINITION_MAP.get(rightType.asErasure());
             return _rightType != null && leftType.asErasure().equals(_rightType);
         }
@@ -274,7 +274,7 @@ public abstract class ClassUtils {
      * @return
      */
     public static boolean isVisibleTo(TypeDescription calleeType, TypeDescription callerType) {
-        if(calleeType.isPrimitive())
+        if (calleeType.isPrimitive())
             return true;
 
         // public or same package protected type
@@ -289,7 +289,7 @@ public abstract class ClassUtils {
     }
 
     public static String convertClassToResource(String className, boolean appendClassFileExt) {
-        if(StringUtils.hasText(className) == false)
+        if (StringUtils.hasText(className) == false)
             return className;
 
         return className.replace(PACKAGE_SEPARATOR, RESOURCE_SPERATOR) 

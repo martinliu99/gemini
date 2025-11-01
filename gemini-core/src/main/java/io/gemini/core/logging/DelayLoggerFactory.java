@@ -47,7 +47,7 @@ import org.slf4j.spi.LocationAwareLogger;
  * 
  * This class is a enhanced {@code LocationAwareLogger} version of {@code org.slf4j.helpers.SubstituteLoggerFactory}.
  * 
- * @author liy17657
+ * @author martin.liu
  */
 public class DelayLoggerFactory {
 
@@ -108,7 +108,7 @@ public class DelayLoggerFactory {
     }
 
     protected void setPostInitialization(Level loggerLevel) {
-        if(postInitialization == true)
+        if (postInitialization == true)
             return;
 
         // mark logging system initialized
@@ -132,7 +132,7 @@ public class DelayLoggerFactory {
 
             // adjust Logback LoggerContext;
             ILoggerFactory iLoggerFactory = LoggerFactory.getILoggerFactory();
-            if(LOGGER_CONTEXT_CLASS.isAssignableFrom(iLoggerFactory.getClass())) {
+            if (LOGGER_CONTEXT_CLASS.isAssignableFrom(iLoggerFactory.getClass())) {
                 try {
                     @SuppressWarnings({ "unchecked", "unused" })
                     List<String> frameworkPackages = (List<String>) GET_FRAMEWORK_PACKAGES_METHOD.invoke(iLoggerFactory);
@@ -144,7 +144,7 @@ public class DelayLoggerFactory {
     private void replayMessages(Level loggerLevel) {
         final LinkedBlockingQueue<DelayMessage> queue = eventQueue;
         int queueSize = queue.size();
-        if(queueSize == 0) return;
+        if (queueSize == 0) return;
 
         StringBuilder sBuilder = new StringBuilder()
                 .append(") of logging calls during the initialization phase have been intercepted and are now being replayed. "
@@ -162,7 +162,7 @@ public class DelayLoggerFactory {
                 break;
 
             for (DelayMessage message : messages) {
-                if(message.getLevel() < loggerLevel.toInt()) continue;
+                if (message.getLevel() < loggerLevel.toInt()) continue;
 
                 msgCount++;
                 formatMessage(sBuilder, dateFormatter, message);
@@ -173,7 +173,7 @@ public class DelayLoggerFactory {
 
         sBuilder.append("Replayed delay messages. \n");
 
-        if(msgCount == 0) return;
+        if (msgCount == 0) return;
 
         sBuilder.insert(0, "A number (" + msgCount);
         LoggerFactory.getLogger(DelayLoggerFactory.class).info(sBuilder.toString());
@@ -216,7 +216,7 @@ public class DelayLoggerFactory {
             this.name = name;
             this.eventQueue = eventQueue;
 
-            if(postInitialization)
+            if (postInitialization)
                 this.setPostInitialization();
         }
 
@@ -225,7 +225,7 @@ public class DelayLoggerFactory {
         }
 
         public void setPostInitialization() {
-            if(postInitialization == true)
+            if (postInitialization == true)
                 return;
 
             postInitialization = true;
@@ -281,9 +281,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.TRACE.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.TRACE.toInt(), msg, null, null);
                 else
                     delegate.trace(msg);
@@ -295,9 +295,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.TRACE.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.TRACE.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.trace(format, arg);
@@ -309,9 +309,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.TRACE.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.TRACE.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.trace(format, arg1, arg2);
@@ -323,9 +323,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.TRACE.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.TRACE.toInt(), format, arguments, null);
                 else
                     delegate.trace(format, arguments);
@@ -337,9 +337,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.TRACE.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.TRACE.toInt(), msg, null, t);
                 else
                     delegate.trace(msg, t);
@@ -351,9 +351,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.TRACE.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.TRACE.toInt(), msg, null, null);
                 else
                     delegate.trace(marker, msg);
@@ -365,9 +365,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.TRACE.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.TRACE.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.trace(marker, format, arg);
@@ -379,9 +379,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.TRACE.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.TRACE.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.trace(marker, format, arg1, arg2);
@@ -393,9 +393,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.TRACE.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.TRACE.toInt(), format, arguments, null);
                 else
                     delegate.trace(marker, format, arguments);
@@ -406,9 +406,9 @@ public class DelayLoggerFactory {
             if (isTraceEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.TRACE.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.TRACE.toInt(), msg, null, t);
                 else
                     delegate.trace(marker, msg, t);
@@ -419,9 +419,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.DEBUG.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.DEBUG.toInt(), msg, null, null);
                 else
                     delegate.debug(msg);
@@ -432,9 +432,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.DEBUG.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.DEBUG.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.debug(format, arg);
@@ -445,9 +445,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.DEBUG.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.DEBUG.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.debug(format, arg1, arg2);
@@ -458,9 +458,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.DEBUG.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.DEBUG.toInt(), format, arguments, null);
                 else
                     delegate.debug(format, arguments);
@@ -471,9 +471,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.DEBUG.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.DEBUG.toInt(), msg, null, t);
                 else
                     delegate.debug(msg, t);
@@ -484,9 +484,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.DEBUG.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.DEBUG.toInt(), msg, null, null);
                 else
                     delegate.debug(marker, msg);
@@ -497,9 +497,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.DEBUG.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.DEBUG.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.debug(marker, format, arg);
@@ -510,9 +510,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.DEBUG.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.DEBUG.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.debug(marker, format, arg1, arg2);
@@ -523,9 +523,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.DEBUG.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.DEBUG.toInt(), format, arguments, null);
                 else
                     delegate.debug(marker, format, arguments);
@@ -536,9 +536,9 @@ public class DelayLoggerFactory {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.DEBUG.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.DEBUG.toInt(), msg, null, t);
                 else
                     delegate.debug(marker, msg, t);
@@ -549,9 +549,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.INFO.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.INFO.toInt(), msg, null, null);
                 else
                     delegate.info(msg);
@@ -562,9 +562,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.INFO.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.INFO.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.info(format, arg);
@@ -575,9 +575,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.INFO.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.INFO.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.info(format, arg1, arg2);
@@ -588,9 +588,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.INFO.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.INFO.toInt(), format, arguments, null);
                 else
                     delegate.info(format, arguments);
@@ -601,9 +601,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.INFO.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.INFO.toInt(), msg, null, t);
                 else
                     delegate.info(msg, t);
@@ -614,9 +614,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.INFO.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.INFO.toInt(), msg, null, null);
                 else
                     delegate.info(marker, msg);
@@ -627,9 +627,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.INFO.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.INFO.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.info(marker, format, arg);
@@ -640,9 +640,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.INFO.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.INFO.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.info(marker, format, arg1, arg2);
@@ -653,9 +653,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.INFO.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.INFO.toInt(), format, arguments, null);
                 else
                     delegate.info(marker, format, arguments);
@@ -666,9 +666,9 @@ public class DelayLoggerFactory {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.INFO.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.INFO.toInt(), msg, null, t);
                 else
                     delegate.info(marker, msg, t);
@@ -679,9 +679,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.WARN.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.WARN.toInt(), msg, null, null);
                 else
                     delegate.warn(msg);
@@ -692,9 +692,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.WARN.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.WARN.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.warn(format, arg);
@@ -705,9 +705,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.WARN.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.WARN.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.warn(format, arg1, arg2);
@@ -718,9 +718,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.WARN.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.WARN.toInt(), format, arguments, null);
                 else
                     delegate.warn(format, arguments);
@@ -731,9 +731,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.WARN.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.WARN.toInt(), msg, null, t);
                 else
                     delegate.warn(msg, t);
@@ -744,9 +744,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.WARN.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.WARN.toInt(), msg, null, null);
                 else
                     delegate.warn(marker, msg);
@@ -757,9 +757,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.WARN.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.WARN.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.warn(marker, format, arg);
@@ -770,9 +770,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.WARN.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.WARN.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.warn(marker, format, arg1, arg2);
@@ -783,9 +783,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.WARN.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.WARN.toInt(), format, arguments, null);
                 else
                     delegate.warn(marker, format, arguments);
@@ -796,9 +796,9 @@ public class DelayLoggerFactory {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.WARN.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.WARN.toInt(), msg, null, t);
                 else
                     delegate.warn(marker, msg, t);
@@ -809,9 +809,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.ERROR.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.ERROR.toInt(), msg, null, null);
                 else
                     delegate.error(msg);
@@ -822,9 +822,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.ERROR.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.ERROR.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.error(format, arg);
@@ -835,9 +835,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.ERROR.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.ERROR.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.error(format, arg1, arg2);
@@ -848,9 +848,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.ERROR.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.ERROR.toInt(), format, arguments, null);
                 else
                     delegate.error(format, arguments);
@@ -861,9 +861,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(null, Level.ERROR.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(null, FQCN, Level.ERROR.toInt(), msg, null, t);
                 else
                     delegate.error(msg, t);
@@ -874,9 +874,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.ERROR.toInt(), msg, null, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.ERROR.toInt(), msg, null, null);
                 else
                     delegate.error(marker, msg);
@@ -887,9 +887,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.ERROR.toInt(), format, new Object[] {arg}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.ERROR.toInt(), format, new Object[] {arg}, null);
                 else
                     delegate.error(marker, format, arg);
@@ -900,9 +900,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.ERROR.toInt(), format, new Object[] {arg1, arg2}, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.ERROR.toInt(), format, new Object[] {arg1, arg2}, null);
                 else
                     delegate.error(marker, format, arg1, arg2);
@@ -913,9 +913,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.ERROR.toInt(), format, arguments, null);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.ERROR.toInt(), format, arguments, null);
                 else
                     delegate.error(marker, format, arguments);
@@ -926,9 +926,9 @@ public class DelayLoggerFactory {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
 
-                if(delegate == null)
+                if (delegate == null)
                     recordMessage(marker, Level.ERROR.toInt(), msg, null, t);
-                else if(delegate instanceof LocationAwareLogger)
+                else if (delegate instanceof LocationAwareLogger)
                     ((LocationAwareLogger) delegate).log(marker, FQCN, Level.ERROR.toInt(), msg, null, t);
                 else
                     delegate.error(marker, msg, t);

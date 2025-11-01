@@ -20,6 +20,8 @@ import java.net.URLClassLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.gemini.core.DiagnosticLevel;
+
 /**
  *
  *
@@ -40,7 +42,7 @@ public class ObjectFactoryTests {
                 .filteredClasspathElementUrls( ( (URLClassLoader)classLoader ).getURLs() )
                 .build();
 
-        objectFactory = new ObjectFactory.Simple(classLoader, classScanner);
+        objectFactory = new ObjectFactory.Simple(DiagnosticLevel.SIMPLE, classLoader, classScanner);
     }
 
 

@@ -76,10 +76,10 @@ public interface ClassRenamer {
                 boolean dumpByteCode, String byteCodeDumpPath) {
             nameMapping = nameMapping == null ? Collections.emptyMap() : nameMapping;
             this.nameMapping = new LinkedHashMap<>(nameMapping.size());
-            for(Entry<String, String> entry : nameMapping.entrySet()) {
+            for (Entry<String, String> entry : nameMapping.entrySet()) {
                 String oldName = entry.getKey();
                 String newName = entry.getValue();
-                if(StringUtils.hasText(oldName) == false || StringUtils.hasText(newName) == false)
+                if (StringUtils.hasText(oldName) == false || StringUtils.hasText(newName) == false)
                     continue;
 
                 this.nameMapping.put(
@@ -91,8 +91,8 @@ public interface ClassRenamer {
             removedAnnotations = removedAnnotations == null ? Collections.emptySet() : removedAnnotations;
             this.removedInnerClasses = new HashSet<String>(removedAnnotations.size());
             this.removedAnnotationDescriptors = new HashSet<String>(removedAnnotations.size());
-            for(String annotationName : removedAnnotations) {
-                if(StringUtils.hasText(annotationName) == false)
+            for (String annotationName : removedAnnotations) {
+                if (StringUtils.hasText(annotationName) == false)
                     continue;
 
                 String descriptor = annotationName.replace(ClassUtils.PACKAGE_SEPARATOR, ClassUtils.RESOURCE_SPERATOR);
@@ -103,7 +103,7 @@ public interface ClassRenamer {
             this.dumpByteCode = dumpByteCode;
             this.byteCodeDumpPath = byteCodeDumpPath + File.separator + "class-renamer" + File.separator;
 
-            if(dumpByteCode) {
+            if (dumpByteCode) {
                 File path = new File(this.byteCodeDumpPath);
                 path.mkdirs();
             }
@@ -127,7 +127,7 @@ public interface ClassRenamer {
 
             ClassWriter writer = new ClassWriter(null, 0);
             ClassVisitor visitor = new ClassRemapper(writer, new SimpleRemapper(nameMapping));
-            if(CollectionUtils.isEmpty(removedAnnotationDescriptors) == false) {
+            if (CollectionUtils.isEmpty(removedAnnotationDescriptors) == false) {
                 visitor = new AnnotationRemover(visitor, removedAnnotationDescriptors);
             }
 
@@ -136,7 +136,7 @@ public interface ClassRenamer {
 
             try {
                 dumpByteCode(className, originByteCode, mappedByteCode);
-            } catch(IOException e) {
+            } catch (IOException e) {
                 LOGGER.warn("Failed to dump renamed class '{}'.", className, e);
             }
 
@@ -144,7 +144,7 @@ public interface ClassRenamer {
         }
 
         private void dumpByteCode(String className, byte[] originByteCode, byte[] mappedByteCode) throws IOException {
-            if(dumpByteCode == false)
+            if (dumpByteCode == false)
                 return;
 
             long timestamp = System.currentTimeMillis();
@@ -168,7 +168,7 @@ public interface ClassRenamer {
             }
 
             public void visitInnerClass(final String name, final String outerName, final String innerName, final int access) {
-                if(removedInnerClasses.contains(name) == false)
+                if (removedInnerClasses.contains(name) == false)
                     super.visitInnerClass(name, outerName, innerName, access);
             }
 

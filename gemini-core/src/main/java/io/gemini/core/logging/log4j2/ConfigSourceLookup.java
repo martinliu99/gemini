@@ -43,7 +43,7 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
 
     @Override
     public void setLoggerContext(LoggerContext loggerContext) {
-        if(loggerContext == null)
+        if (loggerContext == null)
             return;
 
         this.configSource = (ConfigSource) loggerContext.getObject(CONFIG_SOURCE_KEY);
@@ -52,11 +52,11 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
 
     @Override
     public String lookup(LogEvent event, String key) {
-        if(configSource.containsKey(key) == false)
+        if (configSource.containsKey(key) == false)
             return null;
 
         Object value = configSource.getValue(key);
-        if(value instanceof String) {
+        if (value instanceof String) {
             return (String) value;
         }
         return null;

@@ -22,22 +22,22 @@ import java.util.Map.Entry;
 public abstract class Converters {
 
     public static <T> Map<String, Object> to(Map<String, T> source) {
-        if(source == null)
+        if (source == null)
             return null;
 
         Map<String, Object> dest = new LinkedHashMap<>();
-        for(Entry<String, T> entry : source.entrySet()) {
+        for (Entry<String, T> entry : source.entrySet()) {
             dest.put(entry.getKey(), entry.getValue());
         }
         return dest;
     }
 
     public static Map<String, Object> to(OrderedProperties source) {
-        if(source == null)
+        if (source == null)
             return null;
 
         Map<String, Object> dest = new LinkedHashMap<>();
-        for(String key : source.stringPropertyNames()) {
+        for (String key : source.stringPropertyNames()) {
             dest.put(key, source.getProperty(key));
         }
         return dest;

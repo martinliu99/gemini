@@ -96,7 +96,7 @@ public interface PlaceholderHelper {
 
             <T> WithMap(Map<String, T> valueMap) {
                 Map<String, String> stringValueMap = new HashMap<>();
-                for(Entry<String, T> entry : valueMap.entrySet()) {
+                for (Entry<String, T> entry : valueMap.entrySet()) {
                     String value = entry.getValue() == null ? null : entry.getValue().toString();
                     stringValueMap.put(entry.getKey(), value);
                 }
@@ -181,7 +181,7 @@ public interface PlaceholderHelper {
             Assert.notNull(valueMap, "'valueMap' must not be null.");
 
             Map<String, String> _valueMap = new HashMap<>();
-            for(Entry<String, T> entry : valueMap.entrySet()) {
+            for (Entry<String, T> entry : valueMap.entrySet()) {
                 String value = entry.getValue() == null ? null : entry.getValue().toString();
                 _valueMap.put(entry.getKey(), value);
             }

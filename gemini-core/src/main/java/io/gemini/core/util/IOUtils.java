@@ -121,14 +121,14 @@ public abstract class IOUtils {
 
     public static void closeQuietly(InputStream inStream) {
         try {
-            if(inStream != null)
+            if (inStream != null)
                 inStream.close();
         } catch (IOException ignored) { /**/ }
     }
 
     public static void closeQuietly(OutputStream outStream) {
         try {
-            if(outStream != null)
+            if (outStream != null)
                 outStream.close();
         } catch (IOException ignored) { /**/ }
     }

@@ -41,7 +41,7 @@ public class CallerSoucreConverter extends ClassicConverter {
 
     @Override
     public String convert(ILoggingEvent event) {
-        if(this.includeLocation) {
+        if (this.includeLocation) {
             StackTraceElement[] cda = event.getCallerData();
             if (cda != null && cda.length > 0) {
                 return cda[0].getFileName() + ":" + Integer.toString(cda[0].getLineNumber());

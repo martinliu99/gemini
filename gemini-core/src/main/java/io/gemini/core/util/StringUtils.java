@@ -100,7 +100,7 @@ public abstract class StringUtils {
     public static <T, S extends CharSequence> String join(Collection<? extends T> elements, 
             Function<T, S> mapper,
             CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
-        if(CollectionUtils.isEmpty(elements))
+        if (CollectionUtils.isEmpty(elements))
             return "";
 
         return join(elements.stream().map(mapper), delimiter, prefix, suffix);
@@ -108,7 +108,7 @@ public abstract class StringUtils {
 
     protected static <S extends CharSequence> String join(Stream<S> elements, 
             CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
-        if(elements == null)
+        if (elements == null)
             return "";
 
         return elements

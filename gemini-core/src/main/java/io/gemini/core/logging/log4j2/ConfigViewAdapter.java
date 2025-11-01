@@ -72,15 +72,15 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
         this.keys = new LinkedHashSet<>();
 
         // filter out null && empty setting value
-        for(String key : configView.keys()) {
+        for (String key : configView.keys()) {
             String value = configView.getAsString(key, null);
-            if(value == null || StringUtils.hasText(value) == false)
+            if (value == null || StringUtils.hasText(value) == false)
                 continue;
 
             this.keys.add(key);
         }
 
-        if(debug)
+        if (debug)
             this.keys.addAll(DEBUG_SETTINGS.keySet());
     }
 
@@ -108,23 +108,23 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
     @Override
     public String getProperty(String key) {
         String value = doGetProperty(SETTING_KEY_PREFIX + key);
-        if(value != null)
+        if (value != null)
             return (String) value;
 
         value = doGetProperty(key);
-        if(value == null)
+        if (value == null)
             return null;
 
-        if(value instanceof String)
+        if (value instanceof String)
             return (String) value;
 
         throw new IllegalStateException("value '" + value + "' is not String.");
     }
 
     private String doGetProperty(String key) {
-        if(debug) {
+        if (debug) {
             String value = DEBUG_SETTINGS.get(key);
-            if(value != null)
+            if (value != null)
                 return value;
         }
 
@@ -134,14 +134,14 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
     @Override
     public boolean containsProperty(String key) {
         boolean contains = doContainsProperty(SETTING_KEY_PREFIX + key);
-        if(contains)
+        if (contains)
             return true;
 
         return doContainsProperty(key);
     }
 
     private boolean doContainsProperty(String key) {
-        if(debug && DEBUG_SETTINGS.containsKey(key))
+        if (debug && DEBUG_SETTINGS.containsKey(key))
             return true;
 
         return this.keys.contains(key);

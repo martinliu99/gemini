@@ -37,7 +37,7 @@ public abstract class MethodUtils {
                     typeDescription.getDeclaredMethods(), 
                     new MethodDescription.Latent.TypeInitializer(typeDescription)
             );
-        } catch(NoClassDefFoundError e) {
+        } catch (NoClassDefFoundError e) {
             return Collections.emptyList();
         }
     }
@@ -49,7 +49,7 @@ public abstract class MethodUtils {
      * @return
      */
     public static String getMethodName(MethodDescription methodDescription) {
-        if(methodDescription == null) return "";
+        if (methodDescription == null) return "";
 
         return methodDescription.isTypeInitializer() 
                 ? MethodDescription.TYPE_INITIALIZER_INTERNAL_NAME 
@@ -57,16 +57,16 @@ public abstract class MethodUtils {
     }
 
     public static String getMethodSignature(MethodDescription methodDescription) {
-        if(methodDescription == null)
+        if (methodDescription == null)
             return "";
 
         try {
             return methodDescription.toGenericString();
-        } catch(Exception e) {
+        } catch (Exception e) {
             // get generic signature from LazyMethodDescription
             try {
                 return methodDescription.getGenericSignature();
-            } catch(Exception e2) {
+            } catch (Exception e2) {
                 return methodDescription.getDeclaringType().getTypeName() + "." + methodDescription.getName() + "(...)";
             }
         }

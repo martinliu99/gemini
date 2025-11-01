@@ -110,7 +110,7 @@ public interface ConfigSource {
             Assert.notEmpty(configSources, "'configSources' must not be empty.");
 
             this.configSources = new ArrayList<>(configSources.length);
-            for(ConfigSource configSource : configSources) {
+            for (ConfigSource configSource : configSources) {
                 this.configSources.add(configSource);
             }
         }
@@ -122,7 +122,7 @@ public interface ConfigSource {
         @Override
         public Collection<String> keys() {
             Set<String> keys = new LinkedHashSet<>();
-            for(ConfigSource configSource : this.configSources) {
+            for (ConfigSource configSource : this.configSources) {
                 keys.addAll(configSource.keys());
             }
             return keys;
@@ -130,8 +130,8 @@ public interface ConfigSource {
 
         @Override
         public boolean containsKey(String key) {
-            for(ConfigSource source : this.configSources) {
-                if(source.containsKey(key))
+            for (ConfigSource source : this.configSources) {
+                if (source.containsKey(key))
                     return true;
             }
             return false;
@@ -139,8 +139,8 @@ public interface ConfigSource {
 
         @Override
         public Object getValue(String key) {
-            for(ConfigSource source : this.configSources) {
-                if(source.containsKey(key))
+            for (ConfigSource source : this.configSources) {
+                if (source.containsKey(key))
                     return source.getValue(key);
             }
 

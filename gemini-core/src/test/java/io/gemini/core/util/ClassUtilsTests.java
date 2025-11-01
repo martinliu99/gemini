@@ -38,7 +38,7 @@ public class ClassUtilsTests {
 
     @Test
     public void name() {
-        for(Class<?> clazz : Arrays.asList(int.class, int[].class, int[][][].class, String.class, String[][].class, List.class)) {
+        for (Class<?> clazz : Arrays.asList(int.class, int[].class, int[][][].class, String.class, String[][].class, List.class)) {
             TypeDescription type = TypeDescription.ForLoadedType.of(clazz);
             LOGGER.info("Class'{}' details: name '{}', descriptor '{}', type name '{}, canonical name '{}', internal name '{}', actual name '{}'", 
                     clazz, type.getName(), type.getDescriptor(), type.getTypeName(), type.getCanonicalName(), type.getInternalName(), type.getActualName());
@@ -47,7 +47,7 @@ public class ClassUtilsTests {
 
     @Test
     public void forName() {
-        for(Class<?> expectedType : new Class<?>[] {
+        for (Class<?> expectedType : new Class<?>[] {
             int.class, int[][][].class,
             String.class, String[].class,
             List.class,
@@ -57,7 +57,7 @@ public class ClassUtilsTests {
 
             try {
                 loadedType = ClassUtils.forName(typeName, false, null);
-            } catch(Throwable t) {
+            } catch (Throwable t) {
                 t.printStackTrace();
             }
             LOGGER.info("Type '{}' is loaded, '{}'.", typeName, loadedType);

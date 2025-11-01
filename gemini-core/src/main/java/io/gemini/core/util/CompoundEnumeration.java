@@ -41,9 +41,9 @@ public class CompoundEnumeration<E> implements Enumeration<E> {
     }
 
     private boolean next() {
-        if(currentEnum != null && currentEnum.hasMoreElements())
+        if (currentEnum != null && currentEnum.hasMoreElements())
             return true;
-        else if(iterator.hasNext()) {
+        else if (iterator.hasNext()) {
             currentEnum = iterator.next();
             return next();
         } else

@@ -36,17 +36,17 @@ public abstract class ObjectUtils {
 
 
     public static boolean equals(Object left, Object right) {
-        if(left == right)
+        if (left == right)
             return true;
 
-        if(left == null || right == null)
+        if (left == null || right == null)
             return false;
 
         return left.equals(right);
     }
 
     public static int hashCode(Object obj) {
-        if(obj == null)
+        if (obj == null)
             return 0;
 
         return obj.hashCode();

@@ -23,14 +23,14 @@ import java.lang.reflect.Modifier;
 public abstract class ReflectionUtils {
 
     public static Constructor<?> getDefaultConstructor(Class<?> type) {
-        if(type == null) 
+        if (type == null) 
             return null;
 
-        if(type.isInterface() || Modifier.isAbstract(type.getModifiers()) ) 
+        if (type.isInterface() || Modifier.isAbstract(type.getModifiers()) ) 
             return null;
 
-        for(Constructor<?> constructor : type.getDeclaredConstructors()) {
-            if(constructor.getParameterCount() == 0)
+        for (Constructor<?> constructor : type.getDeclaredConstructors()) {
+            if (constructor.getParameterCount() == 0)
                 return constructor;
         }
 

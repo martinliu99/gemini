@@ -94,7 +94,7 @@ public interface ConfigView {
             @Override
             public Boolean convert(Object object) {
                 
-                if(object instanceof Boolean) return (Boolean) object;
+                if (object instanceof Boolean) return (Boolean) object;
                 return Boolean.valueOf( object.toString().trim() );
             }
         }
@@ -105,7 +105,7 @@ public interface ConfigView {
 
             @Override
             public String convert(Object object) {
-                if(object instanceof String) return (String) object;
+                if (object instanceof String) return (String) object;
                 return object.toString().trim();
             }
         }
@@ -119,10 +119,10 @@ public interface ConfigView {
                 StringTokenizer st = new StringTokenizer(object.toString(), VALUE_DELIMITER);
                 List<String> list = new ArrayList<>(st.countTokens());
 
-                while(st.hasMoreTokens()) {
+                while (st.hasMoreTokens()) {
                     String element = st.nextToken().trim();
 
-                    if(StringUtils.hasText(element))
+                    if (StringUtils.hasText(element))
                         list.add(element);
                 }
 
@@ -139,10 +139,10 @@ public interface ConfigView {
                 StringTokenizer st = new StringTokenizer(object.toString(), VALUE_DELIMITER);
                 Set<String> list = new LinkedHashSet<>(st.countTokens());
 
-                while(st.hasMoreTokens()) {
+                while (st.hasMoreTokens()) {
                     String element = st.nextToken().trim();
 
-                    if(StringUtils.hasText(element))
+                    if (StringUtils.hasText(element))
                         list.add(element);
                 }
 
@@ -159,10 +159,10 @@ public interface ConfigView {
                 StringTokenizer st = new StringTokenizer(object.toString(), VALUE_DELIMITER);
                 List<String> value = new ArrayList<>(st.countTokens());
 
-                while(st.hasMoreTokens()) {
+                while (st.hasMoreTokens()) {
                     String element = st.nextToken().trim();
 
-                    if(StringUtils.hasText(element))
+                    if (StringUtils.hasText(element))
                         value.add(element);
                 }
 
@@ -176,7 +176,7 @@ public interface ConfigView {
 
             @Override
             public Integer convert(Object object) {
-                if(object instanceof Integer) return (Integer) object;
+                if (object instanceof Integer) return (Integer) object;
                 return Integer.valueOf( object.toString().trim() );
             }
         }
@@ -237,8 +237,8 @@ public interface ConfigView {
             Assert.hasText(keyPrefix, "'keyPrefix' must not be empty");
 
             Set<String> keys = new LinkedHashSet<>();
-            for(String key : this.keys()) {
-                if(key != null && key.startsWith(keyPrefix)) {
+            for (String key : this.keys()) {
+                if (key != null && key.startsWith(keyPrefix)) {
                     keys.add(key);
                 }
             }
@@ -261,15 +261,15 @@ public interface ConfigView {
 
         @Override
         public <T> T getValue(String key, Converter<T> converter, boolean resolvePlaceholders) {
-            if(this.containsKey(key) == false)
+            if (this.containsKey(key) == false)
                 throw new ConfigNotFoundException(key);
 
             Object value = this.doGetValue(key);
-            if(null == value || "".equals(value))
+            if (null == value || "".equals(value))
                 throw new ConfigNotFoundException(key);
 
             // try to replace placeholders
-            if(resolvePlaceholders == true && value instanceof String) {
+            if (resolvePlaceholders == true && value instanceof String) {
                 value = this.placeholderHelper.replace( (String)value );
             }
 
@@ -279,13 +279,13 @@ public interface ConfigView {
 
         @Override
         public <T> T getValue(String key, T defaultValue, Converter<T> converter, boolean resolvePlaceholders) {
-            if(this.containsKey(key) == false)
+            if (this.containsKey(key) == false)
                 return defaultValue;
 
             Object value = this.doGetValue(key);
 
             // try to replace placeholders
-            if(resolvePlaceholders == true && value instanceof String) {
+            if (resolvePlaceholders == true && value instanceof String) {
                 value = this.placeholderHelper.replace( (String)value );
             }
 
@@ -422,7 +422,7 @@ public interface ConfigView {
 
         @Override
         public boolean containsKey(String key) {
-            if(super.containsKey(key) == true)
+            if (super.containsKey(key) == true)
                 return true;
 
             return parent.containsKey(key);
@@ -430,7 +430,7 @@ public interface ConfigView {
 
         @Override
         public <T> T getValue(String key, Converter<T> converter, boolean resolvePlaceholders) {
-            if(super.containsKey(key))
+            if (super.containsKey(key))
                 return super.getValue(key, converter, resolvePlaceholders);
 
             return parent.getValue(key, converter, resolvePlaceholders);
@@ -438,7 +438,7 @@ public interface ConfigView {
 
         @Override
         public <T> T getValue(String key, T defaultValue, Converter<T> converter, boolean resolvePlaceholders) {
-            if(super.containsKey(key))
+            if (super.containsKey(key))
                 return super.getValue(key, defaultValue, converter, resolvePlaceholders);
 
             return parent.getValue(key, defaultValue, converter, resolvePlaceholders);
@@ -474,7 +474,7 @@ public interface ConfigView {
 
         public Builder configSource(ConfigSource configSource) {
             Assert.notNull(configSource, "'configSource' must not be null");
-            if(configSource instanceof Compound) {
+            if (configSource instanceof Compound) {
                 this.configSources.addAll( ((Compound)configSource).getConfigSources() );
             } else {
                 this.configSources.add(configSource);

@@ -59,8 +59,8 @@ public class PointcutExprTests extends AbstractTests {
     }
 
     private boolean matchSignature(BytebuddyWorld typeWorld, Pointcut pointcut, TypeDescription typeDescription) {
-        for(MethodDescription MethodDescription : typeDescription.getDeclaredMethods()) {
-            if(pointcut.match(typeWorld.makeShadow(MethodDescription)).alwaysTrue())
+        for (MethodDescription MethodDescription : typeDescription.getDeclaredMethods()) {
+            if (pointcut.match(typeWorld.makeShadow(MethodDescription)).alwaysTrue())
                 return true;
         }
         return false;

@@ -207,21 +207,21 @@ public class ElementExprTests {
 
         {
             List<ElementMatcher<String>> elementMatchers = new ArrayList<>(typeNameExpressions.length);
-            for(String typeNameExpression : typeNameExpressions) {
+            for (String typeNameExpression : typeNameExpressions) {
                 elementMatchers.add(
                         ExprParser.INSTANCE.parseTypeNameExpr(typeNameExpression) );
             }
             ElementMatcher<String> elementExpr = new ElementMatcher.Junction.Disjunction(elementMatchers);
 
             long startedAt = System.nanoTime();
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
                 elementExpr.matches( getClass().getName() + i );
             LOGGER.info("Took {} seconds to match type name {} times.", (System.nanoTime() - startedAt)/1e9, count);
         }
 
         {
             List<ElementMatcher<ClassLoader>> elementMatchers = new ArrayList<>(typeNameExpressions.length);
-            for(String typeNameExpression : typeNameExpressions) {
+            for (String typeNameExpression : typeNameExpressions) {
                 elementMatchers.add(
                         ExprParser.INSTANCE.parseClassLoaderExpr(typeNameExpression) );
             }
@@ -229,7 +229,7 @@ public class ElementExprTests {
 
             long startedAt = System.nanoTime();
             LOGGER.info("classloader {}", getClass().getClassLoader());
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
                 elementExpr.matches( getClass().getClassLoader() );
             LOGGER.info("Took {} seconds to match classloader {} times.", (System.nanoTime() - startedAt)/1e9, count);
         }

@@ -56,7 +56,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
                 takesArguments(0).and( isPublic() ).and( not( isStatic() ) ) );
 
         this.nameValuePair = new HashMap<>(properties.size());
-        for(MethodDescription.InDefinedShape methodDescription : properties) {
+        for (MethodDescription.InDefinedShape methodDescription : properties) {
             nameValuePair.put(methodDescription.getName(), annotationDescription.getValue(methodDescription));
         }
     }
@@ -79,8 +79,8 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
         if (nameValuePair.size() > 0) {
             builder.append("(");
             int i = 0;
-            for(Entry<String, AnnotationValue<?, ?>> entry : nameValuePair.entrySet()) {
-                if(i > 0)
+            for (Entry<String, AnnotationValue<?, ?>> entry : nameValuePair.entrySet()) {
+                if (i > 0)
                     builder.append(", ");
 
                 builder.append(entry.getKey()).append("=").append(entry.getValue().resolve().toString());
@@ -98,8 +98,8 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
         if (nameValuePair.size() > 0) {
             builder.append(" ");
             int i = 0;
-            for(Entry<String, AnnotationValue<?, ?>> entry : nameValuePair.entrySet()) {
-                if(i > 0)
+            for (Entry<String, AnnotationValue<?, ?>> entry : nameValuePair.entrySet()) {
+                if (i > 0)
                     builder.append(", ");
 
                 builder.append(entry.getKey()).append("=").append(entry.getValue().resolve().toString());
@@ -132,7 +132,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
             return Collections.emptySet();
 
         Set<String> targets = new HashSet<>(annotationDescription.getElementTypes().size());
-        for(ElementType elementType : annotationDescription.getElementTypes()) {
+        for (ElementType elementType : annotationDescription.getElementTypes()) {
             targets.add(elementType.name());
         }
         return targets;

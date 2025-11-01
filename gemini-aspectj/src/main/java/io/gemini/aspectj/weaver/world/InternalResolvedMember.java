@@ -149,7 +149,7 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         ResolvedType[] annotationTypes = new ResolvedType[declaredAnnotations.size()];
         Map<ResolvedType, AnnotationDescription> annotationTypeMap = new LinkedHashMap<>(declaredAnnotations.size());
         int i = 0;
-        for(AnnotationDescription annotationDescription : declaredAnnotations) {
+        for (AnnotationDescription annotationDescription : declaredAnnotations) {
             ResolvedType resolvedType = typeWorld.resolve(annotationDescription.getAnnotationType().getTypeName());
 
             annotationTypes[i++] = resolvedType;
@@ -163,7 +163,7 @@ class InternalResolvedMember extends ResolvedMemberImpl {
 
     @Override
     public String getAnnotationDefaultValue() {
-        if(methodDescription== null) return null;
+        if (methodDescription== null) return null;
 
         AnnotationValue<?, ?> defaultValue = methodDescription.getDefaultValue();
         return defaultValue == null ? null : defaultValue.toString();
@@ -174,20 +174,20 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         if (parameterAnnotationTypes != null) 
             return parameterAnnotationTypes;
 
-        if(methodDescription != null)
+        if (methodDescription != null)
             return NO_PARAMETER_ANNOTATIONS;
 
         ParameterList<?> parameterList = methodDescription.getParameters();
 
         ResolvedType[][] parameterAnnotationTypes = new ResolvedType[parameterList.size()][];
         int i = 0;
-        for(ParameterDescription parameterDescription : parameterList) {
+        for (ParameterDescription parameterDescription : parameterList) {
             AnnotationList annotationList = parameterDescription.getDeclaredAnnotations();
             ResolvedType[] annotationTypes = new ResolvedType[annotationList.size()];
             parameterAnnotationTypes[i++] = annotationTypes;
 
             int j = 0;
-            for(AnnotationDescription annotationDescription : annotationList) {
+            for (AnnotationDescription annotationDescription : annotationList) {
                 annotationTypes[j++] = typeWorld.resolve(annotationDescription.getAnnotationType().getTypeName());
             }
         }

@@ -49,7 +49,7 @@ public class HasPatternParser extends PatternParser {
     @Override
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
-        if(typePattern instanceof WildTypePattern == false)
+        if (typePattern instanceof WildTypePattern == false)
             return typePattern;
 
         return new HasTypePattern( (WildTypePattern) typePattern);
@@ -89,7 +89,7 @@ public class HasPatternParser extends PatternParser {
         @Override
         public TypePattern resolveBindings(IScope scope, Bindings bindings, boolean allowBinding, boolean requireExactType) {
             TypePattern typePattern = super.resolveBindings(scope, bindings, allowBinding, requireExactType);
-            if(typePattern instanceof ExactTypePattern == false) 
+            if (typePattern instanceof ExactTypePattern == false) 
                 return typePattern;
 
             ExactTypePattern exactTypePattern = (ExactTypePattern) typePattern;
@@ -102,7 +102,7 @@ public class HasPatternParser extends PatternParser {
         @Override
         public TypePattern parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
             TypePattern typePattern = super.parameterizeWith(typeVariableMap, w);
-            if(typePattern instanceof WildTypePattern == false)
+            if (typePattern instanceof WildTypePattern == false)
                 return typePattern;
 
             return new HasTypePattern( (WildTypePattern) typePattern);
@@ -169,18 +169,18 @@ public class HasPatternParser extends PatternParser {
         public SignaturePattern resolveBindings(IScope scope, Bindings bindings) {
             SignaturePattern signaturePattern = super.resolveBindings(scope, bindings);
 
-            if(this.isExactDeclaringTypePattern() == false)
+            if (this.isExactDeclaringTypePattern() == false)
                 return signaturePattern;
 
             ExactTypePattern exactTypePattern = (ExactTypePattern) this.getDeclaringType();
             ResolvedType resolvedType = exactTypePattern.getResolvedExactType(scope.getWorld());
-            if(resolvedType.isMissing())
+            if (resolvedType.isMissing())
                 return signaturePattern;
 
             // try to fetch type and validate field or method members
             for (Iterator<ResolvedMember> iter = this.matchField ? resolvedType.getFields() : resolvedType.getMethods(true, true); iter.hasNext();) {
                 Member method = iter.next();
-                if(super.matches(method, scope.getWorld(), true) == true)
+                if (super.matches(method, scope.getWorld(), true) == true)
                     existSignature = true;
             }
 

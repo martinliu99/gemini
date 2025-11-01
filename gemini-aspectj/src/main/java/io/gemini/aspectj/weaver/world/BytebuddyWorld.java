@@ -107,7 +107,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
 
     @Override
     public ResolvedType resolve(TypeDescription typeDescription) {
-        if(typeDescription == null)
+        if (typeDescription == null)
             return null;
 
         String typeName = typeDescription.getTypeName();
@@ -128,7 +128,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
                     this, 
                     describeType(referenceType.getName()), 
                     referenceType);
-        } catch(Exception e) {
+        } catch (Exception e) {
             return null;
         }
     }
@@ -138,7 +138,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
      * {@inheritDoc}
      */
     public TypeDescription describeType(String typeName) {
-        if("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
+        if ("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
         return this.typePool.describe(typeName).resolve();
     }
@@ -156,7 +156,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
      */
     @Override
     public Shadow makeShadow(Member member) {
-        if(member == null)
+        if (member == null)
             return null;
 
         ResolvedMember resolvedMember = this.doResolve(member);
@@ -190,7 +190,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
     protected ResolvedType[] convertType(List<? extends TypeDefinition> typeDefinitions) {
-        if(CollectionUtils.isEmpty(typeDefinitions))
+        if (CollectionUtils.isEmpty(typeDefinitions))
             return new ResolvedType[0];
 
         ResolvedType[] resolvedTypes = new ResolvedType[typeDefinitions.size()];

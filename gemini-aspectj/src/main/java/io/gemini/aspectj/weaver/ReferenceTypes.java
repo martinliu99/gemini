@@ -48,7 +48,7 @@ public interface ReferenceTypes {
 
         @Override
         public ReferenceTypeDelegate getDelegate() {
-            if(super.getDelegate() == null) {
+            if (super.getDelegate() == null) {
                 // initialize delegate with lazily resolved referenceType
                 super.setDelegate(getDelegateReferenceType().getDelegate());
             }
@@ -58,7 +58,7 @@ public interface ReferenceTypes {
 
 
         private ReferenceType getDelegateReferenceType() {
-            if(delegateReferenceType == null) {
+            if (delegateReferenceType == null) {
                 delegateReferenceType = this.doResolveDelegateReferenceType();
             }
             return delegateReferenceType;
@@ -84,10 +84,10 @@ public interface ReferenceTypes {
                 ResolvedType resolvedType= (ResolvedType) other;
 
                 // quickly compare signature
-                if(this.getSignature().equals(resolvedType.getSignature()) == false)
+                if (this.getSignature().equals(resolvedType.getSignature()) == false)
                     return false;
 
-                if(other instanceof WithDelegation)
+                if (other instanceof WithDelegation)
                     // fetch delegatee
                     other = ((WithDelegation) other).getDelegateReferenceType();
             }
@@ -143,7 +143,7 @@ public interface ReferenceTypes {
          */
         @Override
         protected ReferenceType doResolveDelegateReferenceType() {
-            if(typeDescription != null)
+            if (typeDescription != null)
                 return (ReferenceType) typeWorld.resolve(typeDescription);
             else
                 return (ReferenceType) typeWorld.resolve(typeName);

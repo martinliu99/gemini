@@ -147,7 +147,7 @@ public class PointcutParser {
                     ExprParser.buildResolutionScope(typeWorld, pointcutDeclarationScope, pointcutParameters) );
 
             return pointcut;
-        } catch(Exception e) {
+        } catch (Exception e) {
             ExprParser.handleException(pointcutExpression, e);
             return null;
         }

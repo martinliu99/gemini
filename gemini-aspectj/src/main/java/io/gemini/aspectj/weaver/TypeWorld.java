@@ -143,7 +143,7 @@ public interface TypeWorld {
         }
 
         public ResolvedType resolve(TypeDescription typeDescription) {
-            if(typeDescription == null)
+            if (typeDescription == null)
                 return null;
 
             ResolvedType resolvedType = getDelegate().getWorld().getTypeMap().get(typeDescription.getTypeName());
@@ -178,7 +178,7 @@ public interface TypeWorld {
          */
         @Override
         public ResolvedType resolve(TypeDescription typeDescription) {
-            if(typeDescription == null) return null;
+            if (typeDescription == null) return null;
 
             return doResolve(typeDescription).resolvedType;
         }
@@ -188,7 +188,7 @@ public interface TypeWorld {
          */
         @Override
         public Shadow makeShadow(Member member) {
-            if(member == null) return null;
+            if (member == null) return null;
 
             return doResolve(member.getDeclaringType().asErasure()).shadowCache.computeIfAbsent(
                     member, 
@@ -206,7 +206,7 @@ public interface TypeWorld {
 
 
         public void releaseCache(TypeDefinition typeDefinition) {
-            if(typeDefinition == null) return;
+            if (typeDefinition == null) return;
 
             resolutionCache.remove(typeDefinition);
         }

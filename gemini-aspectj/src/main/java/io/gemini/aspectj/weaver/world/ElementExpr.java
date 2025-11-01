@@ -95,11 +95,11 @@ public interface ElementExpr<T> extends ElementMatcher<T> {
         }
 
         private String getName(ClassLoader classLoader) {
-            if(ClassLoaders.isBootstrapClassLoader(classLoader))
+            if (ClassLoaders.isBootstrapClassLoader(classLoader))
                 return ClassLoaders.BOOTSTRAP_CLASSLOADER_NAME;
-            else if(ClassLoaders.isExtClassLoader(classLoader))
+            else if (ClassLoaders.isExtClassLoader(classLoader))
                 return ClassLoaders.EXT_CLASSLOADER_NAME;
-            else if(ClassLoaders.isAppClassLoader(classLoader))
+            else if (ClassLoaders.isAppClassLoader(classLoader))
                 return ClassLoaders.APP_CLASSLOADER_NAME;
             else
                 return classLoader.getClass().getName();
@@ -146,10 +146,10 @@ public interface ElementExpr<T> extends ElementMatcher<T> {
         }
 
         private String getName(String resourceName) {
-            if(resourceName != null) {
+            if (resourceName != null) {
                 resourceName = resourceName.replace(ClassUtils.RESOURCE_SPERATOR, ClassUtils.PACKAGE_SEPARATOR);
 
-                if(resourceName.endsWith(ClassUtils.CLASS_FILE_EXTENSION)) 
+                if (resourceName.endsWith(ClassUtils.CLASS_FILE_EXTENSION)) 
                     resourceName = resourceName.replace(ClassUtils.CLASS_FILE_EXTENSION, "");
             }
 

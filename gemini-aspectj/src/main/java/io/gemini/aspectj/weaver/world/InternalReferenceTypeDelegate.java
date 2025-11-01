@@ -165,12 +165,12 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
     protected Map<ResolvedType, AnnotationDescription> getAnnotationTypeMap() {
-        if(annotationTypeMap != null)
+        if (annotationTypeMap != null)
             return annotationTypeMap;
 
         AnnotationList annotationList = typeDescription.getDeclaredAnnotations();
         Map<ResolvedType, AnnotationDescription> annotationTypeMap = new LinkedHashMap<>( annotationList.size() );
-        for(AnnotationDescription annotationDescription : annotationList) {
+        for (AnnotationDescription annotationDescription : annotationList) {
             ResolvedType resolvedType = typeWorld.resolve(annotationDescription.getAnnotationType().getName());
 
             annotationTypeMap.put(resolvedType, annotationDescription);
@@ -233,7 +233,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     @Override
     public ResolvedType getSuperclass() {
         // Superclass of object is null
-        if(this.typeDescription.represents(Object.class))
+        if (this.typeDescription.represents(Object.class))
             return null;
 
         if (superclass != null) 
@@ -272,7 +272,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         for (i = 0; i < typeVariableList.size(); i++) {
             TypeVariableReferenceType typeVariableReference = ((TypeVariableReferenceType) typeWorld.convertType(typeVariableList.get(i)));
             TypeVariable tv = typeVariableReference.getTypeVariable();
-            if(tv == null) {
+            if (tv == null) {
                 continue;
             }
 
@@ -333,7 +333,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         // attempt to resolve *any* of the pointcuts
         // resolution can sometimes cause us to recurse, and this two stage
         // process allows us to cope with that
-        for(int i = 0; i < pointcutMethods.size(); i++) {
+        for (int i = 0; i < pointcutMethods.size(); i++) {
             PointcutMethod pointcutMethod = pointcutMethods.get(i);
             pointcuts[i] = new ResolvedPointcutDefinition(
                     getResolvedTypeX(), 
@@ -344,7 +344,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
         // phase 2, now go back round and resolve in-place all of the pointcuts
         List<Map<String, ? extends TypeDefinition>> formalParameterList = new ArrayList<>(pointcutMethods.size());
-        for(int i = 0; i < pointcutMethods.size(); i++) {
+        for (int i = 0; i < pointcutMethods.size(); i++) {
             PointcutMethod pointcutMethod = pointcutMethods.get(i);
 
             // validate parameters
@@ -361,7 +361,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             // parse Pointcut expression
             Map<String, TypeDefinition> formalParameters = new LinkedHashMap<>(parameterTypes.length);
             formalParameterList.add(formalParameters);
-            for(int j = 0; j < parameterNames.length; j++) {
+            for (int j = 0; j < parameterNames.length; j++) {
                 formalParameters.put(parameterNames[j], parameterTypes[j]);
             }
 
@@ -373,7 +373,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         }
 
         // phase 3, now concretize them all
-        for(int i = 0; i < pointcuts.length; i++) {
+        for (int i = 0; i < pointcuts.length; i++) {
             pointcuts[i].setPointcut(pointcutParser.concretizePointcutExpression(pointcuts[i].getPointcut(), this.typeDescription, formalParameterList.get(i)));
         }
 
@@ -385,7 +385,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         for (MethodDescription methodDescription : typeDescription.getDeclaredMethods()) {
             AnnotationList filter = methodDescription.getDeclaredAnnotations().filter(
                     ElementMatchers.annotationType(org.aspectj.lang.annotation.Pointcut.class));
-            if(filter.size() == 0) continue;
+            if (filter.size() == 0) continue;
 
             pointcutMethods.add(
                     new PointcutMethod(methodDescription, typeWorld.getPlaceholderHelper(), filter.get(0)) );
@@ -400,7 +400,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
         int i = 0;
         String[] ret = new String[parameterList.size()];
-        for(ParameterDescription parameterDescription : parameterList) {
+        for (ParameterDescription parameterDescription : parameterList) {
             ret[i++] = parameterDescription.getName();
         }
         return ret;
@@ -520,7 +520,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             this.methodDescription = methodDescription;
 
             String pointcutExpression = annotationDescription.getValue("value").resolve().toString();
-            if(placeholderHelper != null) {
+            if (placeholderHelper != null) {
                 pointcutExpression = placeholderHelper.replace(pointcutExpression);
             }
             this.pointcutExpression = pointcutExpression;
@@ -556,7 +556,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
          * The pointcut parameter types.
          */
         public TypeDescription[] getParameterTypes() {
-            if(parameterTypes != null)
+            if (parameterTypes != null)
                 return parameterTypes;
 
             ParameterList<?> baseParamTypes =  methodDescription.getParameters();

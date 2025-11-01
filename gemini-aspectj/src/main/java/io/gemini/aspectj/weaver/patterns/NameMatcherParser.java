@@ -41,13 +41,13 @@ enum NameMatcherParser {
     private final String STAR = "*";
 
     public ElementMatcher<String> parseMatcher(Collection<String> expressions) {
-        if(CollectionUtils.isEmpty(expressions))
+        if (CollectionUtils.isEmpty(expressions))
             return ElementMatchers.none();
 
         List<ElementMatcher<? super String>> matchers = new ArrayList<>(expressions.size());
-        for(String expression : expressions) {
+        for (String expression : expressions) {
             ElementMatcher<String> matcher = parseMatcher(expression);
-            if(matcher != null)
+            if (matcher != null)
                 matchers.add(matcher);
         }
 
@@ -55,19 +55,19 @@ enum NameMatcherParser {
     }
 
     public ElementMatcher<String> parseMatcher(String expression) {
-        if(StringUtils.hasText(expression) == false)
+        if (StringUtils.hasText(expression) == false)
             return ElementMatchers.none();
 
         expression = expression.trim();
-        if(isStar(expression))
+        if (isStar(expression))
             return ElementMatchers.any();
 
-        if(hasSpaceAnnotationPlus(expression, 0))
+        if (hasSpaceAnnotationPlus(expression, 0))
             return null;
 
 
         boolean mightStartWith = expression.endsWith(STAR);
-        if(mightStartWith) {
+        if (mightStartWith) {
             int length = expression.length();
             expression = expression.endsWith("..*") && length > 3
                     ? expression.substring(0, length - 2)
@@ -75,20 +75,20 @@ enum NameMatcherParser {
         }
 
         boolean mightEndWith = expression.startsWith(STAR);
-        if(mightEndWith) {
+        if (mightEndWith) {
             int length = expression.length();
             expression = expression.startsWith("*..") && length > 3
                     ? expression.substring(3)
                     : expression.substring(1);
         }
 
-        if(expression.indexOf("..") != -1 || expression.indexOf(STAR) != -1)
+        if (expression.indexOf("..") != -1 || expression.indexOf(STAR) != -1)
             return null;
-        else if(mightStartWith && mightEndWith)
+        else if (mightStartWith && mightEndWith)
             return new StringMatcher(expression, StringMatcher.Mode.CONTAINS );
-        else if(mightStartWith)
+        else if (mightStartWith)
             return new StringMatcher(expression, StringMatcher.Mode.STARTS_WITH );
-        else if(mightEndWith)
+        else if (mightEndWith)
             return new StringMatcher(expression, StringMatcher.Mode.ENDS_WITH );
         else
             return new StringMatcher(expression, StringMatcher.Mode.EQUALS_FULLY );

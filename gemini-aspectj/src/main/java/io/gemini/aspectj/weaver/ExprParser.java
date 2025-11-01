@@ -266,8 +266,8 @@ public enum ExprParser {
             ResolvedType resolvedType = exactTypePatterns.get(0).getResolvedExactType(typeWorld.getWorld());
             TypeDescription typeDescription = typeWorld.describeType(resolvedType.getName());
 
-            for(MethodDescription methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
-                if(signaturePattern.matches(typeWorld.resolve(methodDescription), typeWorld.getWorld(), false))
+            for (MethodDescription methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
+                if (signaturePattern.matches(typeWorld.resolve(methodDescription), typeWorld.getWorld(), false))
                     return methodDescription;
             }
             return null;
@@ -299,7 +299,7 @@ public enum ExprParser {
 
         FormalBinding[] formalBindings = new FormalBinding[pointcutParameters.size()];
         int i = 0;
-        for(Entry<String, ? extends TypeDefinition> entry : pointcutParameters.entrySet()) {
+        for (Entry<String, ? extends TypeDefinition> entry : pointcutParameters.entrySet()) {
             formalBindings[i] = new FormalBinding.ImplicitFormalBinding(toUnresolvedType(entry.getValue()), entry.getKey(), i++);
         }
 
@@ -337,11 +337,11 @@ public enum ExprParser {
     }
 
     public static void handleException(String expression, Exception exp) {
-        if(exp instanceof ParserException) {
+        if (exp instanceof ParserException) {
             throw new ExprParseException(expression, (ParserException) exp);
-        } else if(exp instanceof TypeWorld.WorldLintException) {
+        } else if (exp instanceof TypeWorld.WorldLintException) {
             throw new ExprLintException(expression, (TypeWorld.WorldLintException) exp);
-        } else if(exp instanceof ExprParseException || exp instanceof ExprLintException 
+        } else if (exp instanceof ExprParseException || exp instanceof ExprLintException 
                 || exp instanceof ExprUnknownException || exp instanceof RuntimeException) {
             throw (RuntimeException) exp;
         }else {

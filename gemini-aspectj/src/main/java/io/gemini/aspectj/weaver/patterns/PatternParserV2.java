@@ -48,7 +48,7 @@ public class PatternParserV2 extends PatternParser {
 
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
-        if(typePattern instanceof WildTypePattern == false)
+        if (typePattern instanceof WildTypePattern == false)
             return typePattern;
 
         return new WildTypePatternV2( (WildTypePattern) typePattern);
@@ -56,7 +56,7 @@ public class PatternParserV2 extends PatternParser {
 
     public Pointcut parseSinglePointcut() {
         Pointcut pointcut = super.parseSinglePointcut();
-        if(pointcut instanceof KindedPointcut == false)
+        if (pointcut instanceof KindedPointcut == false)
             return pointcut;
 
         return new KindedPointcutV2( (KindedPointcut) pointcut );
@@ -92,11 +92,11 @@ public class PatternParserV2 extends PatternParser {
         @Override
         public TypePattern resolveBindings(IScope scope, Bindings bindings, boolean allowBinding, boolean requireExactType) {
             TypePattern typePattern = super.resolveBindings(scope, bindings, allowBinding, requireExactType);
-            if(typePattern instanceof ExactTypePattern == false)
+            if (typePattern instanceof ExactTypePattern == false)
                 return typePattern;
 
             ExactTypePattern exactTypePattern = (ExactTypePattern) typePattern;
-            if(exactTypePattern.getType() instanceof ReferenceType == false)
+            if (exactTypePattern.getType() instanceof ReferenceType == false)
                 return exactTypePattern;
 
             ReferenceType type = (ReferenceType) exactTypePattern.getType();
@@ -110,7 +110,7 @@ public class PatternParserV2 extends PatternParser {
         @Override
         public TypePattern parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
             TypePattern typePattern = super.parameterizeWith(typeVariableMap, w);
-            if(typePattern instanceof WildTypePattern == false)
+            if (typePattern instanceof WildTypePattern == false)
                 return typePattern;
 
             return new WildTypePatternV2( (WildTypePattern) typePattern);
@@ -118,7 +118,7 @@ public class PatternParserV2 extends PatternParser {
 
         @Override
         protected boolean matchesExactly(ResolvedType type, ResolvedType annotatedType) {
-            if(type instanceof ReferenceType == false)
+            if (type instanceof ReferenceType == false)
                 return super.matchesExactly(type, annotatedType);
 
             return super.matchesExactly(
@@ -164,7 +164,7 @@ public class PatternParserV2 extends PatternParser {
         public FuzzyBoolean fastMatch(FastMatchInfo info) {
             Kind infoKind = info.getKind();
             Kind kind = this.getKind();
-            if(infoKind != null && infoKind != kind)
+            if (infoKind != null && infoKind != kind)
                 return FuzzyBoolean.NO;
 
             if (this.getSignature().isExactDeclaringTypePattern()) {
@@ -172,11 +172,11 @@ public class PatternParserV2 extends PatternParser {
 
                 // TODO: traverse type hierarchy is expensive to load supper class and interfaces
                 boolean traverseTypeHierarchy = false;
-                if(typePattern.isIncludeSubtypes() == true) {
+                if (typePattern.isIncludeSubtypes() == true) {
                     traverseTypeHierarchy = false;
                 }
 
-                if( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
+                if ( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
                         || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
                     return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
                 }

@@ -101,7 +101,7 @@ public class TypeNamePatternParser extends PatternParser {
         public boolean matchesStatically(ResolvedType type) {
             String typeName = type.getName();
 
-            if(nameMatcher != null)
+            if (nameMatcher != null)
                 return nameMatcher.matches(typeName);
 
             try {

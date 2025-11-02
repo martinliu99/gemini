@@ -37,7 +37,7 @@ public class TaskExecutorTests {
 
     @Test
     public void testTaskExeution() {
-        TaskExecutor taskExecutor = TaskExecutor.create(DiagnosticLevel.SIMPLE, "test", true);
+        TaskExecutor taskExecutor = TaskExecutor.create(DiagnosticLevel.SIMPLE, "test", true, 0);
 
         int count = 140;
         List<Function<Integer, Integer>> tasks = new ArrayList<>(count);

@@ -42,7 +42,7 @@ import io.gemini.core.DiagnosticLevel;
 public interface TaskExecutor {
 
     static final int DEFAULT_BATCH_COUNT = Runtime.getRuntime().availableProcessors() - 1;
-    static final int DEFAULT_TIMEOUT_MS = 1000;
+    static final int DEFAULT_TIMEOUT_MS = 0;
 
 
     /**
@@ -63,18 +63,17 @@ public interface TaskExecutor {
      * @return
      */
     <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
-            boolean parallel, int batchCount, int taskTimeout,
-            Function<Supplier<Collection<R>>, Collection<R>> executionWrapper);
+            boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper);
 
     default <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor) {
         return executeTasks(tasks, taskExecutor, 
-                isParallel(), DEFAULT_BATCH_COUNT, DEFAULT_TIMEOUT_MS, null);
+                isParallel(), DEFAULT_BATCH_COUNT, null);
     }
 
     default <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
             Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
         return executeTasks(tasks, taskExecutor, 
-                isParallel(), Default.DEFAULT_BATCH_COUNT, DEFAULT_TIMEOUT_MS, executionWrapper);
+                isParallel(), Default.DEFAULT_BATCH_COUNT, executionWrapper);
     }
 
 
@@ -85,11 +84,11 @@ public interface TaskExecutor {
 
 
     public static TaskExecutor create(DiagnosticLevel diagnosticLevel, String executorName) {
-        return new Default(diagnosticLevel, executorName, true);
+        return new Default(diagnosticLevel, executorName, true, DEFAULT_TIMEOUT_MS);
     }
 
-    public static TaskExecutor create(DiagnosticLevel diagnosticLevel, String executorName, boolean parallel) {
-        return new Default(diagnosticLevel, executorName, parallel);
+    public static TaskExecutor create(DiagnosticLevel diagnosticLevel, String executorName, boolean parallel, int taskTimeoutMs) {
+        return new Default(diagnosticLevel, executorName, parallel, taskTimeoutMs);
     }
 
 
@@ -101,16 +100,18 @@ public interface TaskExecutor {
 
         private final String executorName;
         private final boolean inParallel;
+        private final int taskTimeoutMs;
 
         private volatile boolean terminated = false;
         private ExecutorService executorService = null;
 
 
-        protected Default(DiagnosticLevel diagnosticLevel, String executorName, boolean inParallel) {
+        protected Default(DiagnosticLevel diagnosticLevel, String executorName, boolean inParallel, int taskTimeoutMs) {
             this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED :diagnosticLevel;
 
             this.executorName = executorName;
             this.inParallel = inParallel;
+            this.taskTimeoutMs = taskTimeoutMs;
 
             if (this.inParallel == true) {
                 executorService = Executors.newCachedThreadPool( 
@@ -139,8 +140,7 @@ public interface TaskExecutor {
          */
         @Override
         public <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
-                boolean parallel, int batchCount, int taskTimeout,
-                Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
+                boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
             if (tasks.size() == 0 || taskExecutor == null)
                 return Collections.emptyList();
 
@@ -148,7 +148,7 @@ public interface TaskExecutor {
             if (parallel == false || inParallel == false || terminated == true)
                 return executeTaskSequentially(tasks, taskExecutor);
 
-            return executeTasksInParallel(splitTasks(tasks, batchCount), taskExecutor, taskTimeout, executionWrapper, tasks.size());
+            return executeTasksInParallel(splitTasks(tasks, batchCount), taskExecutor, executionWrapper, tasks.size());
         }
 
         private <T, R> Collection<R> executeTaskSequentially(Collection<T> tasks, Function<T, R> taskExecutor) {
@@ -195,7 +195,7 @@ public interface TaskExecutor {
          * @param taskCount
          * @return
          */
-        private <T, R> List<R> executeTasksInParallel(List<List<T>> splitedTaskList, Function<T, R> taskExecutor, int taskTimeout, 
+        private <T, R> List<R> executeTasksInParallel(List<List<T>> splitedTaskList, Function<T, R> taskExecutor,
                 Function<Supplier<Collection<R>>, Collection<R>> executionWrapper, int taskCount) {
             // submit splitTasks
             List<Future<Collection<R>>> futures = new ArrayList<>(splitedTaskList.size());
@@ -213,7 +213,11 @@ public interface TaskExecutor {
             List<R> resultList = new ArrayList<R>(taskCount);
             for (Future<Collection<R>> future : futures) {
                 try {
-                    for (R result : future.get(taskTimeout, TimeUnit.MILLISECONDS)) {
+                    Collection<R> results = taskTimeoutMs > 0 
+                            ? future.get(taskTimeoutMs, TimeUnit.MILLISECONDS)
+                            : future.get();
+
+                    for (R result : results) {
                         if (result != null) resultList.add(result);
                     }
                 } catch (TimeoutException e) {

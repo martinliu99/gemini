@@ -17,7 +17,7 @@ package io.gemini.core.util;
 
 import java.lang.reflect.AccessibleObject;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,7 +47,7 @@ public abstract class ClassUtils {
 
 
     static {
-        PRIMITIVE_WRAPPER_MAP = new HashMap<>();
+        PRIMITIVE_WRAPPER_MAP = new LinkedHashMap<>();
 
         PRIMITIVE_WRAPPER_MAP.put(boolean.class, Boolean.class);
         PRIMITIVE_WRAPPER_MAP.put(byte.class, Byte.class);

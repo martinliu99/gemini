@@ -18,7 +18,6 @@ package io.gemini.aop.factory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +103,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
     @Override
     public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
             ClassLoader joinpointClassLoader, JavaModule javaModule) {
-        Map<MethodDescription, List<Advisor>> methodAdvisorMap = new HashMap<>();
+        Map<MethodDescription, List<Advisor>> methodAdvisorMap = new LinkedHashMap<>();
         // collect advisors per method
         for (Entry<FactoryContext, DefaultAdvisorFactory> entry: advisorFactoryMap.entrySet()) {
             FactoryContext factoryContext = entry.getKey();
@@ -121,8 +120,8 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = advisorFactory
                     .getAdvisors(typeDescription, joinpointClassLoader, javaModule);
 
-            if(factoryContext.getAopContext().isDiagnosticClass(typeName)) {
-                if(advisorMap.size() == 0)
+            if (factoryContext.getAopContext().isDiagnosticClass(typeName)) {
+                if (advisorMap.size() == 0)
                     LOGGER.info("Did not get Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.",
                             typeName, joinpointClassLoader, factoryContext.getFactoryName()
                     );
@@ -130,7 +129,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
                     LOGGER.info("Got Advisors for type '{}' in AdvisorFactory, \n"
                             + "  AdvisorFactory: {} \n"
                             + "  ClassLoader: {} \n"
-                            + "  {} \n",
+                            + "  {} ",
                             typeName, 
                             factoryContext.getFactoryName(),
                             joinpointClassLoader, 
@@ -155,7 +154,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             }
         }
 
-        return new HashMap<MethodDescription, List<? extends Advisor>>(methodAdvisorMap);
+        return new LinkedHashMap<MethodDescription, List<? extends Advisor>>(methodAdvisorMap);
     }
 
     @Override

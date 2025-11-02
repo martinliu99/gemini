@@ -134,7 +134,8 @@ public class AopContext implements Closeable {
         this.typeWorldFactory = createTypeWorldFactory(typePoolFactory);
 
         boolean processInParallel = configView.getAsBoolean("aop.globalTaskExecutor.parallel", false);
-        this.globalTaskExecutor = TaskExecutor.create(diagnosticLevel, "globalTaskExecutor", processInParallel);
+        int taskTimeoutMs = configView.getAsInteger("aop.globalTaskExecutor.taskTimeoutMs", 0);
+        this.globalTaskExecutor = TaskExecutor.create(diagnosticLevel, "globalTaskExecutor", processInParallel, taskTimeoutMs);
 
 
         long time = System.nanoTime() - startedAt;

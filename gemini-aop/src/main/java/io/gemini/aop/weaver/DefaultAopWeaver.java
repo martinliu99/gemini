@@ -176,7 +176,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                 if (aopContext.isDiagnosticClass(typeName)) {
                     LOGGER.info("Matched type '{}' in AopWeaver, \n"
                             + "  ClassLoader: {} \n"
-                            + "  {} \n", 
+                            + "  {} ", 
                             typeName, joinpointClassLoader,
                             StringUtils.join(
                                     methodDescriptionAdvisors.entrySet(), 

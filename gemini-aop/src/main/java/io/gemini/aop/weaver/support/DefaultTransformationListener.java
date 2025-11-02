@@ -46,10 +46,9 @@ public class DefaultTransformationListener implements Listener {
     @Override
     public void onTransformation(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule,
             boolean loaded, DynamicType dynamicType) {
-        if (aopContext.getDiagnosticLevel().isDebugEnabled())
-            LOGGER.info("{} type '{}' loaded by ClassLoader '{}'.", 
-                    loaded ? "Redefined loaded" : "Transformed", typeDescription.getTypeName(), classLoader
-            );
+        LOGGER.info("{} type '{}' loaded by ClassLoader '{}'.", 
+                loaded ? "Redefined loaded" : "Transformed", typeDescription.getTypeName(), classLoader
+        );
     }
 
     @Override

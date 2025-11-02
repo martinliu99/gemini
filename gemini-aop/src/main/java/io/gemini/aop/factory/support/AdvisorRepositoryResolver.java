@@ -73,7 +73,7 @@ public interface AdvisorRepositoryResolver {
         .collect( Collectors.toList() );
 
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
+        if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisorRepositories.size() > 0) 
             LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}' \n"
                     + "  {} \n",
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName,

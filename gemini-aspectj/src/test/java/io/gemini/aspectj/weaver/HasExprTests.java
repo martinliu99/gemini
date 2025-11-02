@@ -170,7 +170,7 @@ public class HasExprTests extends AbstractTests {
 
 
     protected ReflectionWorld createReflectionWorld() {
-        ReflectionWorld world = new ReflectionWorld(this.getClass().getClassLoader().getSystemClassLoader());
+        ReflectionWorld world = new ReflectionWorld(ClassLoader.getSystemClassLoader());
         world.setBehaveInJava5Way(true);
         world.setXHasMemberSupportEnabled(true);
         return world;

@@ -22,8 +22,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -194,7 +194,7 @@ interface Joinpoints {
                 this.arguments = args;
             }
 
-            this.invocationContext = new HashMap<>();
+            this.invocationContext = new LinkedHashMap<>();
         }
 
         Descriptor getDescriptor() {
@@ -417,7 +417,7 @@ interface Joinpoints {
 
                 initialize(descriptor);
             } catch (Throwable t) {
-                if(LOGGER.isWarnEnabled())
+                if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Failed to create joinpoint of type '{}',"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
@@ -510,7 +510,7 @@ interface Joinpoints {
 
                 return null;
             } catch (Throwable t) {
-                if(LOGGER.isWarnEnabled())
+                if (LOGGER.isWarnEnabled())
                     LOGGER.warn("$Failed to invoke {} for joinpoint of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
@@ -548,7 +548,7 @@ interface Joinpoints {
                 try {
                     advice.before(joinpoint);
                 } catch (Throwable t) {
-                    if(LOGGER.isWarnEnabled())
+                    if (LOGGER.isWarnEnabled())
                         LOGGER.warn("$Failed to invoke joinpoint of type '{}', \n"
                                 + "  CurrentAdvice: {}", 
                                 getThisClass().getTypeName(),
@@ -717,7 +717,7 @@ interface Joinpoints {
 
                 joinpoint = new DefaultProceedingJoinpoint<T>(descriptor, thisObject, arguments);
             } catch (Throwable t) {
-                if(LOGGER.isWarnEnabled())
+                if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Failed to create joinpoint of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
@@ -758,7 +758,7 @@ interface Joinpoints {
 
                 return joinpoint.proceed();
             } catch (Throwable t) {
-                if(LOGGER.isWarnEnabled())
+                if (LOGGER.isWarnEnabled())
                     LOGGER.warn("$Failed to proceed joinpoint of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"

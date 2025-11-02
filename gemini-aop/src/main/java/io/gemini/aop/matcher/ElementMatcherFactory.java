@@ -66,7 +66,7 @@ public enum ElementMatcherFactory {
     private <T> ElementMatcher.Junction<T> doCreateElementMatcher(String ruleName, Collection<String> expressions, 
             Function<String, ElementMatcher<T>> parser, ElementMatcher.Junction<T> defaultMatcher) {
         if (CollectionUtils.isEmpty(expressions))
-            return ElementMatchers.none();
+            return defaultMatcher;
 
         List<ElementMatcher<? super T>> elementMatchers = new ArrayList<>(expressions.size());
         for (String expression : expressions) {

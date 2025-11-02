@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.AccessibleObject;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -136,8 +136,8 @@ class WeaverCache implements Closeable {
 
 
         public void setMethodDescriptionAdvisors(Map<? extends MethodDescription, List<? extends Advisor>> methodDescriptionAdvisors) {
-            Map<String /* methodSignature */, MethodDescription> methodSignatureMap = new HashMap<>(methodDescriptionAdvisors.size());
-            Map<String /* methodSignature */, List<? extends Advisor>> methodSignatureAdvisorMap = new HashMap<>(methodDescriptionAdvisors.size());
+            Map<String /* methodSignature */, MethodDescription> methodSignatureMap = new LinkedHashMap<>(methodDescriptionAdvisors.size());
+            Map<String /* methodSignature */, List<? extends Advisor>> methodSignatureAdvisorMap = new LinkedHashMap<>(methodDescriptionAdvisors.size());
             for (Entry<? extends MethodDescription, List<? extends Advisor>> e : methodDescriptionAdvisors.entrySet()) {
                 String methodSignature = e.getKey().toGenericString();
 
@@ -191,7 +191,7 @@ class WeaverCache implements Closeable {
                         ? null
                         : this.createJoinpointDescriptor(lookup, methodSignature, thisClass, this.methodSignatureMap.get(methodSignature), advisorChain);
 
-                if(weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
+                if (weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
                         || weaverContext.getAopContext().isDiagnosticClass(typeName))
                     LOGGER.info("Created joinpoint descriptor for type '{}', \n"
                             + "  ClassLoader: {} \n"

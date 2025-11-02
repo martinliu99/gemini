@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +150,7 @@ class FactoriesContext implements Closeable {
     private Map<String, FactoryContext> createFactoryContextMap(AopContext aopContext) {
         Map<String, URL[]> aspectAppResourceURLs = aopContext.getAspectAppResourceMap();
 
-        Map<String, FactoryContext> factoryContexts = new HashMap<>(aspectAppResourceURLs.size());
+        Map<String, FactoryContext> factoryContexts = new LinkedHashMap<>(aspectAppResourceURLs.size());
         for (Entry<String, URL[]> entry : aspectAppResourceURLs.entrySet()) {
             factoryContexts.put(entry.getKey(), 
                     new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) );

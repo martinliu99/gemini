@@ -23,8 +23,8 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -55,7 +55,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
         MethodList<MethodDescription.InDefinedShape> properties = annotationDescription.getAnnotationType().getDeclaredMethods().filter(
                 takesArguments(0).and( isPublic() ).and( not( isStatic() ) ) );
 
-        this.nameValuePair = new HashMap<>(properties.size());
+        this.nameValuePair = new LinkedHashMap<>(properties.size());
         for (MethodDescription.InDefinedShape methodDescription : properties) {
             nameValuePair.put(methodDescription.getName(), annotationDescription.getValue(methodDescription));
         }

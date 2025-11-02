@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -220,7 +220,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
     private Map<MethodDescription, List<? extends Advisor>> matchAdvisors(TypeDescription typeDescription, 
             ClassLoader joinpointClassLoader, List<Advisor.PointcutAdvisor> pointcutAdvisors, WeaverMetrics weaverMetrics) {
-        Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new HashMap<>();
+        Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new LinkedHashMap<>();
         MethodGraph.Linked methodGraph = null;
         for (InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
             // ignore synthetic method?

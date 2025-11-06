@@ -236,7 +236,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
         // adjust log level
         for (Logger logger : loggerContext.getLoggerList()) {
             Level currentLevel = logger.getEffectiveLevel();
-            if (currentLevel.isGreaterOrEqual(allLogLevel))
+            if (currentLevel.isGreaterOrEqual(allLogLevel) == false)
                 continue;
 
             logger.setLevel(allLogLevel);

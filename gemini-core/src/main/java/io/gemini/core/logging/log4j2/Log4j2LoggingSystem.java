@@ -238,7 +238,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
 
         for (LoggerConfig loggerConfig : configuration.getLoggers().values()) {
             Level currentLevel = loggerConfig.getLevel();
-            if (currentLevel.compareTo(allLogLevel) >= 0)
+            if (currentLevel.compareTo(allLogLevel) < 0)
                 continue;
 
             loggerConfig.setLevel(allLogLevel);

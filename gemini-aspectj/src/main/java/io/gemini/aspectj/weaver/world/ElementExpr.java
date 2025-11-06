@@ -21,6 +21,7 @@ import org.aspectj.weaver.patterns.TypePattern;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.util.ClassUtils;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
@@ -61,6 +62,9 @@ public interface ElementExpr<T> extends ElementMatcher<T> {
          */
         @Override
         public boolean matches(T target) {
+            if (target == null || (target instanceof String && StringUtils.hasText( (String) target) == false))
+                return false;
+
             ResolvedType resolvedType = doResolveType(typeWorld, target);
 
             return typePattern.matchesStatically(resolvedType);

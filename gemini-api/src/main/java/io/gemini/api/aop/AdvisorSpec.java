@@ -16,11 +16,9 @@
 package io.gemini.api.aop;
 
 import io.gemini.api.annotation.NoScanning;
-import io.gemini.api.aop.condition.ConditionContext;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
-import net.bytebuddy.matcher.ElementMatchers;
 
 /**
  *
@@ -30,60 +28,128 @@ import net.bytebuddy.matcher.ElementMatchers;
  */
 public interface AdvisorSpec {
 
-    ElementMatcher<ConditionContext> TRUE = ElementMatchers.any();
+    static final ElementMatcher<MatchingContext> DEFAULT_CONDITION = null;
+
+    static final boolean DEFAULT_INHERIT_CLASSLOADER_MATCHER = true;
+    static final boolean DEFAULT_INHERIT_TYPE_MATCHER = true;
+
+    static final boolean DEFAULT_PER_INSTANCE = false;
+
+    static final int DEFAULT_ORDER = Integer.MAX_VALUE;
 
 
     default String getAdvisorName() {
-        return this.getClass().getName();
+        return null;
     }
 
-    default ElementMatcher<ConditionContext> getCondition() {
-        return AdvisorSpec.TRUE;
+
+    default ElementMatcher<MatchingContext> getCondition() {
+        return DEFAULT_CONDITION;
     }
 
-    boolean isPerInstance();
+    default boolean isInheritClassLoaderMatcher() {
+        return DEFAULT_INHERIT_CLASSLOADER_MATCHER;
+    }
+
+    default boolean isInheritTypeMatcher() {
+        return DEFAULT_INHERIT_TYPE_MATCHER;
+    }
+
 
     String getAdviceClassName();
+
+    boolean isPerInstance();
 
     int getOrder();
 
 
     abstract class AbstractBase implements AdvisorSpec {
 
-        protected final String advisorName;
-
-        private final ElementMatcher<ConditionContext> condition;
-
-        protected final boolean perInstance;
-        protected final String adviceClassName;
-
-        protected final int order;
+        private String advisorName;
 
 
-        public AbstractBase(ElementMatcher<ConditionContext> condition, boolean perInstance, String adviceClassName, int order) {
-            this(null, condition, perInstance, adviceClassName, order);
+        private ElementMatcher<MatchingContext> condition = DEFAULT_CONDITION;
+
+        private boolean inheritClassLoaderMatcher = DEFAULT_INHERIT_CLASSLOADER_MATCHER;
+        private boolean inheritTypeMatcher = DEFAULT_INHERIT_TYPE_MATCHER;
+
+
+        private String adviceClassName;
+
+        private boolean perInstance = DEFAULT_PER_INSTANCE;
+        private int order = DEFAULT_ORDER;
+
+
+        public AbstractBase() {
         }
 
-        public AbstractBase(String advisorName, ElementMatcher<ConditionContext> condition, 
-                boolean perInstance, String adviceClassName, int order) {
-            this.advisorName = advisorName == null ? AdvisorSpec.super.getAdvisorName() : advisorName;
+        public AbstractBase(String advisorName, ElementMatcher<MatchingContext> condition, 
+                boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher,
+                String adviceClassName, boolean perInstance, int order) {
+            this();
 
-            this.condition = condition == null ? AdvisorSpec.TRUE : condition;
+            if (hasText(advisorName))
+                this.advisorName = advisorName;
 
-            this.perInstance = perInstance;
+
+            this.condition = condition;
+
+            this.inheritClassLoaderMatcher = inheritClassLoaderMatcher;
+            this.inheritTypeMatcher = inheritTypeMatcher;
+
+
             this.adviceClassName = adviceClassName;
 
+            this.perInstance = perInstance;
             this.order = order;
         }
+
 
         @Override
         public String getAdvisorName() {
             return advisorName;
         }
 
+        protected void setAdvisorName(String advisorName) {
+            this.advisorName = advisorName;
+        }
+
+
         @Override
-        public ElementMatcher<ConditionContext> getCondition() {
+        public ElementMatcher<MatchingContext> getCondition() {
             return condition;
+        }
+
+        protected void setCondition(ElementMatcher<MatchingContext> condition) {
+            this.condition = condition;
+        }
+
+        @Override
+        public boolean isInheritClassLoaderMatcher() {
+            return inheritClassLoaderMatcher;
+        }
+
+        protected void setInheritClassLoaderMatcher(boolean inheritClassLoaderMatcher) {
+            this.inheritClassLoaderMatcher = inheritClassLoaderMatcher;
+        }
+
+        @Override
+        public boolean isInheritTypeMatcher() {
+            return inheritTypeMatcher;
+        }
+
+        protected void setInheritTypeMatcher(boolean inheritTypeMatcher) {
+            this.inheritTypeMatcher = inheritTypeMatcher;
+        }
+
+
+        @Override
+        public String getAdviceClassName() {
+            return adviceClassName;
+        }
+
+        protected void setAdviceClassName(String adviceClassName) {
+            this.adviceClassName = adviceClassName;
         }
 
         @Override
@@ -91,14 +157,22 @@ public interface AdvisorSpec {
             return perInstance;
         }
 
-        @Override
-        public String getAdviceClassName() {
-            return adviceClassName;
+        protected void setPerInstance(boolean perInstance) {
+            this.perInstance = perInstance;
         }
 
         @Override
         public int getOrder() {
             return order;
+        }
+
+        protected void setOrder(int order) {
+            this.order = order;
+        }
+
+
+        private boolean hasText(String string) {
+            return string != null && "".equals(string.trim()) == false;
         }
 
         @Override
@@ -107,16 +181,21 @@ public interface AdvisorSpec {
         }
     }
 
-    abstract class BaseBuilder<T extends BaseBuilder<T>> {
 
-        protected String advisorName;
+    abstract class AdvisorSpecBuilder<T extends AdvisorSpecBuilder<T>> {
 
-        protected ElementMatcher<ConditionContext> condition;
+        private String advisorName;
 
-        protected boolean perInstance = false;
-        protected String adviceClassName;
+        private ElementMatcher<MatchingContext> condition;
 
-        protected int order = 0;
+        private boolean inheritClassLoaderMatcher = PointcutAdvisorSpec.DEFAULT_INHERIT_CLASSLOADER_MATCHER;
+        private boolean inheritTypeMatcher = PointcutAdvisorSpec.DEFAULT_INHERIT_TYPE_MATCHER;
+
+
+        private String adviceClassName;
+
+        private boolean perInstance = DEFAULT_PER_INSTANCE;
+        private int order = DEFAULT_ORDER;
 
 
         @SuppressWarnings("unchecked")
@@ -129,9 +208,46 @@ public interface AdvisorSpec {
             return self();
         }
 
-        public T condition(ElementMatcher<ConditionContext> condition) {
+        protected String getAdvisorName() {
+            return advisorName;
+        }
+
+
+        public T condition(ElementMatcher<MatchingContext> condition) {
             this.condition = condition;
             return self();
+        }
+
+        protected ElementMatcher<MatchingContext> getCondition() {
+            return condition;
+        }
+
+        public T inheritClassLoaderMatcher(boolean inheritClassLoaderMatcher) {
+            this.inheritClassLoaderMatcher = inheritClassLoaderMatcher;
+            return self();
+        }
+
+        protected boolean isInheritClassLoaderMatcher() {
+            return inheritClassLoaderMatcher;
+        }
+
+        public T inheritTypeMatcher(boolean inheritTypeMatcher) {
+            this.inheritTypeMatcher = inheritTypeMatcher;
+            return self();
+        }
+
+        protected boolean isInheritTypeMatcher() {
+            return inheritTypeMatcher;
+        }
+
+
+        public T adviceClassName(String adviceClassName) {
+            this.adviceClassName = adviceClassName;
+            return self();
+        }
+
+        protected String getAdviceClassName() {
+            return adviceClassName;
         }
 
         public T perInstance(boolean perInstance) {
@@ -139,41 +255,75 @@ public interface AdvisorSpec {
             return self();
         }
 
-        public T adviceClassName(String adviceClassName) {
-            this.adviceClassName = adviceClassName;
-            return self();
+        protected boolean isPerInstance() {
+            return perInstance;
         }
 
         public T order(int order) {
             this.order = order;
             return self();
         }
+
+        protected int getOrder() {
+            return order;
+        }
     }
 
 
-    interface PojoPointcutSpec extends AdvisorSpec {
+    interface PointcutAdvisorSpec extends AdvisorSpec {
+
+        abstract class AbstractBase extends AdvisorSpec.AbstractBase implements PointcutAdvisorSpec {
+
+            public AbstractBase() {
+                super();
+            }
+
+            public AbstractBase(String advisorName, ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher,
+                    String adviceClassName, boolean perInstance, int order) {
+                super(advisorName, 
+                        condition, inheritClassLoaderMatcher, inheritTypeMatcher,
+                        adviceClassName, perInstance, order);
+            }
+        }
+
+
+        abstract class PointcutAdvisorSpecBuilder<T extends PointcutAdvisorSpecBuilder<T>> extends AdvisorSpecBuilder<T> {
+        }
+    }
+
+
+    interface PojoPointcutSpec extends AdvisorSpec.PointcutAdvisorSpec {
 
         Pointcut getPointcut();
 
 
         @NoScanning
-        class Default extends AdvisorSpec.AbstractBase implements PojoPointcutSpec {
+        class Default extends AdvisorSpec.PointcutAdvisorSpec.AbstractBase implements PojoPointcutSpec {
 
             private final Pointcut pointcut;
 
 
-            public Default(boolean perInstance, String adviceClassName, Pointcut pointcut, int order) {
-                this(null, null, perInstance, adviceClassName, pointcut, order);
+            public Default(Pointcut pointcut, String adviceClassName, boolean perInstance, int order) {
+                this(null, DEFAULT_CONDITION, 
+                        DEFAULT_INHERIT_CLASSLOADER_MATCHER, DEFAULT_INHERIT_TYPE_MATCHER, pointcut, 
+                        adviceClassName, perInstance, order);
             }
 
-            public Default(ElementMatcher<ConditionContext> condition, boolean perInstance, 
-                    String adviceClassName, Pointcut pointcut, int order) {
-                this(null, condition, perInstance, adviceClassName, pointcut, order);
+            public Default(ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher, Pointcut pointcut, 
+                    String adviceClassName, boolean perInstance, int order) {
+                this(null, condition, 
+                        inheritClassLoaderMatcher, inheritTypeMatcher, pointcut, 
+                        adviceClassName, perInstance, order);
             }
 
-            public Default(String advisorName, ElementMatcher<ConditionContext> condition, boolean perInstance, 
-                    String adviceClassName, Pointcut pointcut, int order) {
-                super(advisorName, condition, perInstance, adviceClassName, order);
+            public Default(String advisorName, ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher, Pointcut pointcut, 
+                    String adviceClassName, boolean perInstance, int order) {
+                super(advisorName, condition, 
+                        inheritClassLoaderMatcher, inheritTypeMatcher,
+                        adviceClassName, perInstance, order);
 
                 this.pointcut = pointcut;
             }
@@ -185,7 +335,7 @@ public interface AdvisorSpec {
         }
 
 
-        class Builder extends AdvisorSpec.BaseBuilder<Builder> {
+        class Builder extends AdvisorSpec.PointcutAdvisorSpec.PointcutAdvisorSpecBuilder<Builder> {
 
             private ElementMatcher<TypeDescription> typeMatcher;
             private ElementMatcher<MethodDescription> methodMatcher;
@@ -202,10 +352,16 @@ public interface AdvisorSpec {
             }
 
             public PojoPointcutSpec builder() {
-                return new Default(condition,
-                        perInstance, 
-                        adviceClassName, 
-                        new Pointcut.Default(typeMatcher, methodMatcher), order);
+                return new Default(
+                        getAdviceClassName(),
+                        getCondition(),
+                        isInheritClassLoaderMatcher(),
+                        isInheritTypeMatcher(),
+                        new Pointcut.Default(typeMatcher, methodMatcher), 
+                        getAdviceClassName(), 
+                        isPerInstance(), 
+                        getOrder()
+                );
             }
         }
 
@@ -218,44 +374,111 @@ public interface AdvisorSpec {
     }
 
 
-    interface ExprPointcutSpec extends AdvisorSpec {
+    interface ExprPointcutSpec extends AdvisorSpec.PointcutAdvisorSpec {
+
+        static final String DEFAULT_CLASSLOADER_EXPRESSION = null;
+
+        default String getClassLoaderExpression() {
+            return DEFAULT_CLASSLOADER_EXPRESSION;
+        }
 
         String getPointcutExpression();
 
 
         @NoScanning
-        class Default extends AdvisorSpec.AbstractBase implements ExprPointcutSpec {
+        abstract class AbstractBase extends AdvisorSpec.PointcutAdvisorSpec.AbstractBase implements ExprPointcutSpec {
 
-            private final String pointcutExpression;
+            private String classLoaderExpression = DEFAULT_CLASSLOADER_EXPRESSION;
+            private String pointcutExpression;
 
 
-            public Default(boolean perInstance, String adviceClassName, String pointcutExpression, int order) {
-                this(null, null, perInstance, adviceClassName, pointcutExpression, order);
+            public AbstractBase() {}
+
+            public AbstractBase(ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher,
+                    String classLoaderExpression, String pointcutExpression, 
+                    String adviceClassName, boolean perInstance, int order) {
+                this(null, condition, 
+                        DEFAULT_INHERIT_CLASSLOADER_MATCHER, DEFAULT_INHERIT_TYPE_MATCHER, 
+                        classLoaderExpression, pointcutExpression, 
+                        adviceClassName, perInstance, order);
             }
 
-            public Default(ElementMatcher<ConditionContext> condition, boolean perInstance, 
-                    String adviceClassName, String pointcutExpression, int order) {
-                this(null, condition, perInstance, adviceClassName, pointcutExpression, order);
-            }
+            public AbstractBase(String advisorName, ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher,
+                    String classLoaderExpression, String pointcutExpression,  
+                    String adviceClassName, boolean perInstance, int order) {
+                super(advisorName, condition, 
+                        inheritClassLoaderMatcher, inheritTypeMatcher,
+                        adviceClassName, perInstance, order);
 
-            public Default(String advisorName, ElementMatcher<ConditionContext> condition, boolean perInstance, 
-                    String adviceClassName, String pointcutExpression, int order) {
-                super(advisorName, condition, perInstance, adviceClassName, order);
-
+                this.classLoaderExpression = classLoaderExpression;
                 this.pointcutExpression = pointcutExpression;
+            }
+
+
+            @Override
+            public String getClassLoaderExpression() {
+                return classLoaderExpression;
+            }
+
+            protected void setClassLoaderExpression(String classLoaderExpression) {
+                this.classLoaderExpression = classLoaderExpression;
             }
 
             @Override
             public String getPointcutExpression() {
                 return pointcutExpression;
             }
+
+            protected void setPointcutExpression(String pointcutExpression) {
+                this.pointcutExpression = pointcutExpression;
+            }
         }
 
 
-        class Builder extends AdvisorSpec.BaseBuilder<Builder> {
+        @NoScanning
+        class Default extends AbstractBase {
 
+            public Default(String pointcutExpression, String adviceClassName, boolean perInstance, int order) {
+                this(null, DEFAULT_CONDITION, 
+                        DEFAULT_INHERIT_CLASSLOADER_MATCHER, DEFAULT_INHERIT_TYPE_MATCHER, 
+                        DEFAULT_CLASSLOADER_EXPRESSION, pointcutExpression, 
+                        adviceClassName, perInstance, order);
+            }
+
+            public Default(ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher,
+                    String classLoaderExpression, String pointcutExpression, 
+                    String adviceClassName, boolean perInstance, int order) {
+                super(null, condition, 
+                        DEFAULT_INHERIT_CLASSLOADER_MATCHER, DEFAULT_INHERIT_TYPE_MATCHER, 
+                        classLoaderExpression, pointcutExpression, 
+                        adviceClassName, perInstance, order);
+            }
+
+            public Default(String advisorName, ElementMatcher<MatchingContext> condition, 
+                    boolean inheritClassLoaderMatcher, boolean inheritTypeMatcher,
+                    String classLoaderExpression, String pointcutExpression,  
+                    String adviceClassName, boolean perInstance, int order) {
+                super(advisorName, condition, 
+                        inheritClassLoaderMatcher, inheritTypeMatcher,
+                        classLoaderExpression, pointcutExpression,
+                        adviceClassName, perInstance, order);
+            }
+        }
+
+
+        class Builder extends AdvisorSpec.PointcutAdvisorSpec.PointcutAdvisorSpecBuilder<Builder> {
+
+            private String classLoaderExpression;
             private String pointcutExpression;
 
+
+            public Builder classLoaderExpression(String classLoaderExpression) {
+                this.classLoaderExpression = classLoaderExpression;
+                return this;
+            }
 
             public Builder pointcutExpression(String pointcutExpression) {
                 this.pointcutExpression = pointcutExpression;
@@ -263,10 +486,17 @@ public interface AdvisorSpec {
             }
 
             public ExprPointcutSpec builder() {
-                return new Default(condition,
-                        perInstance, 
-                        adviceClassName, 
-                        pointcutExpression, order);
+                return new Default(
+                        getAdviceClassName(),
+                        getCondition(),
+                        isInheritClassLoaderMatcher(),
+                        isInheritTypeMatcher(),
+                        classLoaderExpression,
+                        pointcutExpression, 
+                        getAdviceClassName(), 
+                        isPerInstance(), 
+                        getOrder()
+                );
             }
         }
 

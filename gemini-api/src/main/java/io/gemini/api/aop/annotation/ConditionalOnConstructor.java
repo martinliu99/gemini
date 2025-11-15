@@ -13,30 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.api.aop.condition;
+/**
+ * 
+ */
+package io.gemini.api.aop.annotation;
 
-import net.bytebuddy.pool.TypePool;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-
-public interface ConditionContext {
-
-    TypePool getTypePool();
-
-    boolean isBootstrapClassLoader();
-
-    boolean isExtClassLoader();
-
-    boolean isAppClassLoader();
-
-    boolean isAccesptableClassLoader(String accesptableClassLoaderExpression);
+import io.gemini.api.aop.condition.OnConstructorCondition;
 
 
-    boolean hasRequiredType(String requiredTypeExpression);
+@Target( {ElementType.TYPE, ElementType.METHOD} )
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Conditional(OnConstructorCondition.class)
+public @interface ConditionalOnConstructor {
 
-    boolean hasRequiredFiled(String requiredFieldExpression);
-
-    boolean hasRequiredConstructor(String requiredConstructorExpression);
-
-    boolean hasRequiredMethod(String requiredMethodsExpression);
-
+    String constructorExpression();
 }

@@ -13,37 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * 
+ */
 package io.gemini.api.aop.condition;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
+import io.gemini.api.annotation.Initializer;
+import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  * 
- * 
- * @author   martin.liu
- * @since    1.0
  */
-@Target( {ElementType.TYPE, ElementType.METHOD} )
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface Conditional {
+public class OnMethodCondition implements ElementMatcher<MatchingContext> {
 
-    Class<? extends ElementMatcher<ConditionContext>>[] value() default {};
+    private final String methodExpression;
 
-    String[] acceptableClassLoaderExpressions() default {};
 
-    String[] requiredTypeExpressions() default {};
+    @Initializer
+    public OnMethodCondition(String methodExpression) {
+        this.methodExpression = methodExpression;
+    }
 
-    String[] requiredFieldExpressions() default {};
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean matches(MatchingContext context) {
+        if (context.hasMethod(methodExpression) == false)
+            throw new MissingElementException("Missing method required by expression.", methodExpression);
 
-    String[] requiredConstructorExpressions() default {};
-
-    String[] requiredMethodExpressions() default {};
-
+        return true;
+    }
 }

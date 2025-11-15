@@ -231,23 +231,17 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
-        @SuppressWarnings("unchecked")
         public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter) {
-            Assert.notNull(converter, "'converter' must not be null.");
-
             Object value = getValue(key, resolvePlaceholders);
 
-            return (T) ((Converter<Object, Object>) converter).convert(value);
+            return conversionService.convert(value, converter);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        @SuppressWarnings("unchecked")
         public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter) {
-            Assert.notNull(converter, "'converter' must not be null.");
-
             Object value = null;
             try {
                 value = getValue(key, resolvePlaceholders);
@@ -255,7 +249,7 @@ public interface ConfigView {
                 return (T) defaultValue;
             }
 
-            return (T) ((Converter<Object, Object>) converter).convert(value);
+            return conversionService.convert(value, converter);
         }
 
 
@@ -276,7 +270,6 @@ public interface ConfigView {
         }
 
         protected abstract Object doGetValue(String key);
-
     }
 
 

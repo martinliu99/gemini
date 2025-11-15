@@ -34,6 +34,7 @@ import io.gemini.core.converter.Converter.StringToStringList;
 import io.gemini.core.converter.Converter.StringToStringSet;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
+import io.gemini.core.util.Throwables;
 import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
@@ -52,6 +53,9 @@ public interface ConversionService {
     <T> T convert(Object source, Class<T> targetType);
 
     <T> T convert(Object source, Generic targetType);
+
+
+    <T> T convert(Object source, Converter<?, ?> converter);
 
 
     static ConversionService createConversionService() {
@@ -101,17 +105,24 @@ public interface ConversionService {
         public void addConverter(Converter<?, ?> converter) {
             Assert.notNull(converter, "'converter' must not be null.");
 
-            TypeList.Generic typeArguments = TypeDefinition.Sort
-                    .describe(converter.getClass())
-                    .getInterfaces()
-                    .filter( ElementMatchers.erasure( ElementMatchers.is(Converter.class) ) )
-                    .get(0)
-                    .getTypeArguments();
+            TypeList.Generic typeArguments = getConverterTypeArguments(converter);
 
             this.converterMap.put(
                     new ConverterCacheKey(typeArguments.get(0), typeArguments.get(1)),
                     converter
             );
+        }
+
+        private TypeList.Generic getConverterTypeArguments(Converter<?, ?> converter) {
+            Generic convterType = TypeDefinition.Sort.describe(converter.getClass());
+
+            // TODO: iterate type hierarchy
+
+            return convterType
+                    .getInterfaces()
+                    .filter( ElementMatchers.erasure( ElementMatchers.is(Converter.class) ) )
+                    .get(0)
+                    .getTypeArguments();
         }
 
 
@@ -135,6 +146,8 @@ public interface ConversionService {
          */
         @Override
         public <T> T convert(Object source, Class<T> targetType) {
+            Assert.notNull(targetType, "'targetType' must not be null.");
+
             return convert(source, TypeDefinition.Sort.describe(targetType));
         }
 
@@ -147,8 +160,10 @@ public interface ConversionService {
             if (source == null)
                 return null;
 
-            Generic sourceType = TypeDefinition.Sort.describe(source.getClass());
+            Assert.notNull(targetType, "'targetType' must not be null.");
 
+
+            Generic sourceType = TypeDefinition.Sort.describe(source.getClass());
             ConverterCacheKey cacheKey = new ConverterCacheKey(
                     sourceType,
                     targetType
@@ -161,7 +176,31 @@ public interface ConversionService {
             if (ClassUtils.isAssignableFrom(targetType, sourceType))
                 return (T) source;
 
-            throw new ConversionException("Cannot convert from [" + source + "] to [" + targetType + "]");
+            throw new ConversionException("Cannot convert from [" + source.getClass() + "] to [" + targetType + "]");
+        }
+
+
+        /* {@inheritDoc}
+         */
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T convert(Object source, Converter<?, ?> converter) {
+            if (source == null)
+                return null;
+
+            Assert.notNull(converter, "'converter' must not be null.");
+
+            try {
+                return (T) ((Converter<Object, Object>) converter).convert(source);
+            } catch (Exception e) {
+                // failback to default converters.
+                TypeList.Generic typeArguments = getConverterTypeArguments(converter);
+                if (typeArguments != null)
+                    return convert(source, typeArguments.get(1));
+
+                Throwables.propagate(e);
+                return null;
+            }
         }
 
 

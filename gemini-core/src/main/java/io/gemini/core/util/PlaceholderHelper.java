@@ -28,7 +28,6 @@ import ch.qos.logback.core.spi.PropertyContainer;
 import ch.qos.logback.core.spi.ScanException;
 import ch.qos.logback.core.subst.NodeToStringTransformer;
 import io.gemini.core.config.ConfigView;
-import io.gemini.core.config.ConfigView.Converter;
 
 
 public interface PlaceholderHelper {
@@ -127,7 +126,7 @@ public interface PlaceholderHelper {
              */
             @Override
             public String getProperty(String key) {
-                return configView.getValue(key, null, Converter.ToString.INSTANCE, false);
+                return configView.getValue(key, null, false, String.class);
             }
         }
     }

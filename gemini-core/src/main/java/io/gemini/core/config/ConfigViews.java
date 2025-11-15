@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 
 import io.gemini.core.DiagnosticLevel;
+import io.gemini.core.converter.ConversionService;
 import io.gemini.core.logging.DelayLoggerFactory;
 import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.OrderedProperties;
@@ -91,7 +92,9 @@ public class ConfigViews {
         DiagnosticLevel diagnosticLevel = getDiagnosticLevel(configView);
         if (diagnosticLevel.isDebugEnabled()) 
             LOGGER.info("Created ConfigView with settings, \n"
-                    + "  LaunchArgs: {} \n  InternalConfigLocation: {} \n  UserDefinedConfigLocation: {} \n",
+                    + "  LaunchArgs: {} \n"
+                    + "  InternalConfigLocation: {} \n"
+                    + "  UserDefinedConfigLocation: {} \n",
                     launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() 
             );
         else if (diagnosticLevel.isSimpleEnabled()) 
@@ -100,11 +103,13 @@ public class ConfigViews {
         return configView;
     }
 
-    public static ConfigView createConfigView(ConfigView parentConfigView,
+    public static ConfigView createConfigView(ConfigView parentConfigView, ConversionService conversionService,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
         ConfigView.Builder builder = new ConfigView.Builder();
         if (parentConfigView != null)
             builder = builder.parent(parentConfigView);
+
+        builder = builder.conversionService(conversionService);
 
         // built-in settings, can NOT be overrode
         Map<String, Object> builtinSettings = new LinkedHashMap<>();
@@ -163,7 +168,7 @@ public class ConfigViews {
                 }
             }
         } catch (IOException e) {
-            LOGGER.error("Failed to load properties file '{} for '{}'. \n", propertiesFileLocation, configName);
+            LOGGER.error("Could not load properties file '{} for '{}'. \n", propertiesFileLocation, configName);
             e.printStackTrace(System.out);
         } finally {
             IOUtils.closeQuietly(inStream);

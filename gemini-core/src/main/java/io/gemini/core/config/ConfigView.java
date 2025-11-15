@@ -17,177 +17,144 @@ package io.gemini.core.config;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
 
+import io.gemini.api.FrameworkException;
 import io.gemini.core.config.ConfigSource.Compound;
 import io.gemini.core.config.ConfigSource.MapConfigSource;
 import io.gemini.core.config.ConfigView.ConfigException.ConfigNotFoundException;
-import io.gemini.core.config.ConfigView.Converter.ToBoolean;
-import io.gemini.core.config.ConfigView.Converter.ToInteger;
-import io.gemini.core.config.ConfigView.Converter.ToString;
-import io.gemini.core.config.ConfigView.Converter.ToStringArray;
-import io.gemini.core.config.ConfigView.Converter.ToStringList;
-import io.gemini.core.config.ConfigView.Converter.ToStringSet;
+import io.gemini.core.converter.ConversionService;
+import io.gemini.core.converter.Converter;
+import io.gemini.core.converter.Converter.StringToBoolean;
+import io.gemini.core.converter.Converter.StringToInteger;
+import io.gemini.core.converter.Converter.StringToStringArray;
+import io.gemini.core.converter.Converter.StringToStringList;
+import io.gemini.core.converter.Converter.StringToStringSet;
+import io.gemini.core.converter.Converters;
 import io.gemini.core.util.Assert;
-import io.gemini.core.util.Converters;
 import io.gemini.core.util.OrderedProperties;
 import io.gemini.core.util.PlaceholderHelper;
-import io.gemini.core.util.StringUtils;
+import net.bytebuddy.description.type.TypeDefinition;
+import net.bytebuddy.description.type.TypeDescription.Generic;
 
 public interface ConfigView {
 
+
     Collection<String> keys();
 
-    Collection<String> keys(String keyPrefix);
+    default Collection<String> keys(String keyPrefix) {
+        if (keyPrefix == null)
+            return Collections.emptyList();
+
+        Set<String> keys = new LinkedHashSet<>();
+        for (String key : this.keys()) {
+            if (key != null && key.startsWith(keyPrefix)) {
+                keys.add(key);
+            }
+        }
+        return keys;
+    }
+
 
     boolean containsKey(String key);
 
 
-    <T> T getValue(String key, Converter<T> converter);
+    default <T> T getValue(String key, Class<T> targetType) {
+        return getValue(key, true, TypeDefinition.Sort.describe(targetType));
+    }
 
-    <T> T getValue(String key, T defaultValue, Converter<T> converter);
+    default <T> T getValue(String key, T defaultValue, Class<T> targetType) {
+        return getValue(key, defaultValue, true, TypeDefinition.Sort.describe(targetType));
+    }
 
-    <T> T getValue(String key, Converter<T> converter, boolean resolvePlaceholders);
-
-    <T> T getValue(String key, T defaultValue, Converter<T> converter, boolean resolvePlaceholders);
-
-
-    Boolean getAsBoolean(String key);
-
-    Boolean getAsBoolean(String key, Boolean defaultValue);
-
-    String getAsString(String key);
-
-    String getAsString(String key, String defaultValue);
-
-    List<String> getAsStringList(String key);
-
-    List<String> getAsStringList(String key, List<String> defaultValue);
-
-    Set<String> getAsStringSet(String key);
-
-    Set<String> getAsStringSet(String key, Set<String> defaultValue);
-
-    String[] getAsStrings(String key);
-
-    String[] getAsStrings(String key, String[] defaultValue);
-
-    Integer getAsInteger(String key);
-
-    Integer getAsInteger(String key, Integer defaultValue);
-
-
-    interface Converter<T> {
-
-        String VALUE_DELIMITER = ",";
-
-        T convert(Object object);
-
-        enum ToBoolean implements Converter<Boolean> {
-
-            INSTANCE;
-
-            @Override
-            public Boolean convert(Object object) {
-                
-                if (object instanceof Boolean) return (Boolean) object;
-                return Boolean.valueOf( object.toString().trim() );
-            }
-        }
-
-        enum ToString implements Converter<String> {
-
-            INSTANCE;
-
-            @Override
-            public String convert(Object object) {
-                if (object instanceof String) return (String) object;
-                return object.toString().trim();
-            }
-        }
-
-        enum ToStringList implements Converter<List<String>> {
-
-            INSTANCE;
-
-            @Override
-            public List<String> convert(Object object) {
-                StringTokenizer st = new StringTokenizer(object.toString(), VALUE_DELIMITER);
-                List<String> list = new ArrayList<>(st.countTokens());
-
-                while (st.hasMoreTokens()) {
-                    String element = st.nextToken().trim();
-
-                    if (StringUtils.hasText(element))
-                        list.add(element);
-                }
-
-                return list;
-            }
-        }
-
-        enum ToStringSet implements Converter<Set<String>> {
-
-            INSTANCE;
-
-            @Override
-            public Set<String> convert(Object object) {
-                StringTokenizer st = new StringTokenizer(object.toString(), VALUE_DELIMITER);
-                Set<String> list = new LinkedHashSet<>(st.countTokens());
-
-                while (st.hasMoreTokens()) {
-                    String element = st.nextToken().trim();
-
-                    if (StringUtils.hasText(element))
-                        list.add(element);
-                }
-
-                return list;
-            }
-        }
-
-        enum ToStringArray implements Converter<String[]> {
-
-            INSTANCE;
-
-            @Override
-            public String[] convert(Object object) {
-                StringTokenizer st = new StringTokenizer(object.toString(), VALUE_DELIMITER);
-                List<String> value = new ArrayList<>(st.countTokens());
-
-                while (st.hasMoreTokens()) {
-                    String element = st.nextToken().trim();
-
-                    if (StringUtils.hasText(element))
-                        value.add(element);
-                }
-
-                return value.toArray(new String[] {});
-            }
-        }
-
-        enum ToInteger implements Converter<Integer> {
-
-            INSTANCE;
-
-            @Override
-            public Integer convert(Object object) {
-                if (object instanceof Integer) return (Integer) object;
-                return Integer.valueOf( object.toString().trim() );
-            }
-        }
+    default <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Class<T> targetType) {
+        return this.getValue(key, defaultValue, resolvePlaceholders, TypeDefinition.Sort.describe(targetType));
     }
 
 
-    public class ConfigException extends RuntimeException {
+    <T> T getValue(String key, boolean resolvePlaceholders, Generic targetType);
 
-        /**
-         * 
-         */
+    <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Generic targetType);
+
+
+    <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter);
+
+    <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter);
+
+
+    default Boolean getAsBoolean(String key) {
+        return this.getValue(key, true, StringToBoolean.INSTANCE);
+    }
+
+    default Boolean getAsBoolean(String key, Boolean defaultValue) {
+        return this.getValue(key, defaultValue, true, StringToBoolean.INSTANCE);
+    }
+
+
+    default String getAsString(String key) {
+        String value = this.getValue(key, true, TypeDefinition.Sort.describe(String.class));
+        return value == null ? null : value.trim();
+
+    }
+
+    default String getAsString(String key, String defaultValue) {
+        String value =this.getValue(key, defaultValue, true, TypeDefinition.Sort.describe(String.class));
+        return value == null ? null : value.trim();
+    }
+
+
+    default List<String> getAsStringList(String key) {
+        return this.getValue(key, true, StringToStringList.INSTANCE);
+    }
+
+    default List<String> getAsStringList(String key, List<String> defaultValue) {
+        return this.getValue(key, defaultValue, true, StringToStringList.INSTANCE);
+    }
+
+
+    default Set<String> getAsStringSet(String key) {
+        return this.getValue(key, true, StringToStringSet.INSTANCE);
+    }
+
+    default Set<String> getAsStringSet(String key, Set<String> defaultValue) {
+        return this.getValue(key, defaultValue, true, StringToStringSet.INSTANCE);
+    }
+
+
+
+    default String[] getAsStrings(String key) {
+        return this.getValue(key, true, StringToStringArray.INSTANCE);
+    }
+
+    default String[] getAsStrings(String key, String[] defaultValue) {
+        return this.getValue(key, defaultValue, true, StringToStringArray.INSTANCE);
+    }
+
+
+    default Integer getAsInteger(String key) {
+        return this.getValue(key, true, StringToInteger.INSTANCE);
+    }
+
+    default Integer getAsInteger(String key, Integer defaultValue) {
+        return this.getValue(key, defaultValue, true, StringToInteger.INSTANCE);
+    }
+
+
+    default <T> Class<T> getAsClass(String key) {
+        return this.getValue(key, true, TypeDefinition.Sort.describe(Class.class));
+    }
+
+    default <T> Class<T> getAsClass(String key, Class<T> defaultValue) {
+        return this.getValue(key, defaultValue, true, TypeDefinition.Sort.describe(Class.class));
+    }
+
+
+    public class ConfigException extends FrameworkException {
+
         private static final long serialVersionUID = -4610045854862146968L;
 
 
@@ -206,9 +173,6 @@ public interface ConfigView {
 
         public static class ConfigNotFoundException extends ConfigException {
 
-            /**
-             * 
-             */
             private static final long serialVersionUID = 5539369009779917061L;
 
             public ConfigNotFoundException(String key) {
@@ -221,46 +185,81 @@ public interface ConfigView {
 
     abstract class AbstractBase implements ConfigView {
 
+        private final ConversionService conversionService;
         private final PlaceholderHelper placeholderHelper;
 
 
-        protected AbstractBase() {
+        protected AbstractBase(ConversionService conversionService) {
+            this.conversionService = conversionService != null 
+                    ? conversionService : ConversionService.createConversionService();
+
             this.placeholderHelper = PlaceholderHelper.create(this);
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public abstract Collection<String> keys();
+        public <T> T getValue(String key, boolean resolvePlaceholders, Generic targetType) {
+            Assert.notNull(targetType, "'targetType' must not be null.");
 
+            Object value = getValue(key, resolvePlaceholders);
+
+            return conversionService.convert(value, targetType);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public Collection<String> keys(String keyPrefix) {
-            Assert.hasText(keyPrefix, "'keyPrefix' must not be empty");
+        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Generic targetType) {
+            Assert.notNull(targetType, "'targetType' must not be null.");
 
-            Set<String> keys = new LinkedHashSet<>();
-            for (String key : this.keys()) {
-                if (key != null && key.startsWith(keyPrefix)) {
-                    keys.add(key);
-                }
+            Object value = null;
+            try {
+                value = getValue(key, resolvePlaceholders);
+            } catch (ConfigNotFoundException e) {
+                return (T) defaultValue;
             }
-            return keys;
+
+            return conversionService.convert(value, targetType);
         }
 
-        @Override
-        public abstract boolean containsKey(String key);
 
-
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public <T> T getValue(String key, Converter<T> converter) {
-            return this.getValue(key, converter, true);
+        @SuppressWarnings("unchecked")
+        public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter) {
+            Assert.notNull(converter, "'converter' must not be null.");
+
+            Object value = getValue(key, resolvePlaceholders);
+
+            return (T) ((Converter<Object, Object>) converter).convert(value);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public <T> T getValue(String key, T defaultValue, Converter<T> converter) {
-            return this.getValue(key, defaultValue, converter, true);
+        @SuppressWarnings("unchecked")
+        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter) {
+            Assert.notNull(converter, "'converter' must not be null.");
+
+            Object value = null;
+            try {
+                value = getValue(key, resolvePlaceholders);
+            } catch (ConfigNotFoundException e) {
+                return (T) defaultValue;
+            }
+
+            return (T) ((Converter<Object, Object>) converter).convert(value);
         }
 
-        @Override
-        public <T> T getValue(String key, Converter<T> converter, boolean resolvePlaceholders) {
+
+        private Object getValue(String key, boolean resolvePlaceholders) throws ConfigNotFoundException {
             if (this.containsKey(key) == false)
                 throw new ConfigNotFoundException(key);
 
@@ -273,86 +272,11 @@ public interface ConfigView {
                 value = this.placeholderHelper.replace( (String)value );
             }
 
-            Assert.notNull(converter, "'converter' must not be null.");
-            return converter.convert(value);
-        }
-
-        @Override
-        public <T> T getValue(String key, T defaultValue, Converter<T> converter, boolean resolvePlaceholders) {
-            if (this.containsKey(key) == false)
-                return defaultValue;
-
-            Object value = this.doGetValue(key);
-
-            // try to replace placeholders
-            if (resolvePlaceholders == true && value instanceof String) {
-                value = this.placeholderHelper.replace( (String)value );
-            }
-
-            Assert.notNull(converter, "'converter' must not be null.");
-            return null == value || "".equals(value) ? defaultValue : converter.convert(value);
+            return value;
         }
 
         protected abstract Object doGetValue(String key);
 
-
-        @Override
-        public Boolean getAsBoolean(String key) {
-            return this.getValue(key, ToBoolean.INSTANCE);
-        }
-
-        @Override
-        public Boolean getAsBoolean(String key, Boolean defaultValue) {
-            return this.getValue(key, defaultValue, ToBoolean.INSTANCE);
-        }
-
-        @Override
-        public String getAsString(String key) {
-            return this.getValue(key, ToString.INSTANCE);
-        }
-
-        @Override
-        public String getAsString(String key, String defaultValue) {
-            return this.getValue(key, defaultValue, ToString.INSTANCE);
-        }
-
-        @Override
-        public List<String> getAsStringList(String key) {
-            return this.getValue(key, ToStringList.INSTANCE);
-        }
-
-        @Override
-        public List<String> getAsStringList(String key, List<String> defaultValue) {
-            return this.getValue(key, defaultValue, ToStringList.INSTANCE);
-        }
-
-        @Override
-        public Set<String> getAsStringSet(String key) {
-            return this.getValue(key, ToStringSet.INSTANCE);
-        }
-
-        @Override
-        public Set<String> getAsStringSet(String key, Set<String> defaultValue) {
-            return this.getValue(key, defaultValue, ToStringSet.INSTANCE);
-        }
-
-        @Override
-        public String[] getAsStrings(String key) {
-            return this.getValue(key, ToStringArray.INSTANCE);
-        }
-
-        @Override
-        public String[] getAsStrings(String key, String[] defaultValue) {
-            return this.getValue(key, defaultValue, ToStringArray.INSTANCE);
-        }
-
-        public Integer getAsInteger(String key) {
-            return this.getValue(key, ToInteger.INSTANCE);
-        }
-
-        public Integer getAsInteger(String key, Integer defaultValue) {
-            return this.getValue(key, defaultValue, ToInteger.INSTANCE);
-        }
     }
 
 
@@ -361,11 +285,15 @@ public interface ConfigView {
         private final ConfigSource configSource;
 
 
-        protected Default(ConfigSource... configSources) {
+        protected Default(ConversionService conversionService, ConfigSource... configSources) {
+            super(conversionService);
+
             this.configSource = new ConfigSource.Compound(configSources);
         }
 
-        protected Default(List<ConfigSource> configSources) {
+        protected Default(ConversionService conversionService, List<ConfigSource> configSources) {
+            super(conversionService);
+
             this.configSource = new ConfigSource.Compound(configSources);
         }
 
@@ -395,17 +323,18 @@ public interface ConfigView {
     class Hirarchical extends Default {
 
         private final ConfigView parent;
+        private Set<String> keys;
 
 
-        protected Hirarchical(ConfigView parent, ConfigSource... configSources) {
-            super(configSources);
+        protected Hirarchical(ConfigView parent, ConversionService conversionService, ConfigSource... configSources) {
+            super(conversionService, configSources);
 
             Assert.notNull(parent, "'parent' must not be null.");
             this.parent = parent;
         }
 
-        protected Hirarchical(ConfigView parent, List<ConfigSource> configSources) {
-            super(configSources);
+        protected Hirarchical(ConfigView parent, ConversionService conversionService, List<ConfigSource> configSources) {
+            super(conversionService, configSources);
 
             Assert.notNull(parent, "'parent' must not be null.");
             this.parent = parent;
@@ -413,11 +342,14 @@ public interface ConfigView {
 
         @Override
         public Set<String> keys() {
+            if (keys != null)
+                return keys;
+
             Set<String> keys = new LinkedHashSet<>();
             keys.addAll(super.keys());
             keys.addAll(parent.keys());
 
-            return keys;
+            return (this.keys = keys);
         }
 
         @Override
@@ -428,20 +360,38 @@ public interface ConfigView {
             return parent.containsKey(key);
         }
 
-        @Override
-        public <T> T getValue(String key, Converter<T> converter, boolean resolvePlaceholders) {
-            if (super.containsKey(key))
-                return super.getValue(key, converter, resolvePlaceholders);
 
-            return parent.getValue(key, converter, resolvePlaceholders);
+        @Override
+        public <T> T getValue(String key, boolean resolvePlaceholders, Generic targetType) {
+            if (super.containsKey(key))
+                return super.getValue(key, resolvePlaceholders, targetType);
+
+            return parent.getValue(key, resolvePlaceholders, targetType);
         }
 
         @Override
-        public <T> T getValue(String key, T defaultValue, Converter<T> converter, boolean resolvePlaceholders) {
+        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Generic targetType) {
             if (super.containsKey(key))
-                return super.getValue(key, defaultValue, converter, resolvePlaceholders);
+                return super.getValue(key, defaultValue, resolvePlaceholders, targetType);
 
-            return parent.getValue(key, defaultValue, converter, resolvePlaceholders);
+            return parent.getValue(key, defaultValue, resolvePlaceholders, targetType);
+        }
+
+
+        @Override
+        public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter) {
+            if (super.containsKey(key))
+                return super.getValue(key, resolvePlaceholders, converter);
+
+            return parent.getValue(key, resolvePlaceholders, converter);
+        }
+
+        @Override
+        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter) {
+            if (super.containsKey(key))
+                return super.getValue(key, defaultValue, resolvePlaceholders, converter);
+
+            return parent.getValue(key, defaultValue, resolvePlaceholders, converter);
         }
     }
 
@@ -449,10 +399,16 @@ public interface ConfigView {
     class Builder {
 
         private ConfigView parent;
+        private ConversionService conversionService;
         private List<ConfigSource> configSources = new ArrayList<>();
 
         public Builder parent(ConfigView parent) {
             this.parent = parent;
+            return this;
+        }
+
+        public Builder conversionService(ConversionService conversionService) {
+            this.conversionService = conversionService;
             return this;
         }
 
@@ -485,8 +441,8 @@ public interface ConfigView {
 
         public ConfigView build() {
             return parent == null 
-                    ? new Default(configSources)
-                    : new Hirarchical(parent, configSources);
+                    ? new Default(conversionService, configSources)
+                    : new Hirarchical(parent, conversionService, configSources);
         }
     }
 }

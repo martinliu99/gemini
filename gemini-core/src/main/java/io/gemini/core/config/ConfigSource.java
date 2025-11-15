@@ -101,14 +101,11 @@ public interface ConfigSource {
         private final List<ConfigSource> configSources;
 
         protected Compound(List<ConfigSource> configSources) {
-            Assert.notEmpty(configSources, "'configSources' must not be empty.");
-
-            this.configSources = new ArrayList<>(configSources);
+            this.configSources = configSources == null 
+                    ? Collections.emptyList() : new ArrayList<>(configSources);
         }
 
         protected Compound(ConfigSource... configSources) {
-            Assert.notEmpty(configSources, "'configSources' must not be empty.");
-
             this.configSources = new ArrayList<>(configSources.length);
             for (ConfigSource configSource : configSources) {
                 this.configSources.add(configSource);

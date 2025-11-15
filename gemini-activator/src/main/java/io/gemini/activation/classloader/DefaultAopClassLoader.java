@@ -60,7 +60,6 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
         BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.activation.");
         BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.classloader.");
-        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("sun.reflect.MethodAccessorImpl");
 
         // TODO:  support jar mode
 //        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.");
@@ -120,7 +119,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         if (name == null || "".equals(name.trim()))
-            throw new IllegalArgumentException("'name' must not be empty.");
+            throw new IllegalArgumentException("Class name must not be empty.");
 
         synchronized (super.getClassLoadingLock(name)) {
             // 1.find loaded class from local cache.
@@ -131,14 +130,16 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
             // 2.if delegation loading is required, try to load from actual parent ClassLoader.
             if (this.parentFirstFilters.isParentFirstClass(name) == true) {
-                type = this.deletgateClassLoader.loadClass(name);
-                if (type != null) {
-                    if (resolve == true) {
-                        this.resolveClass(type);
-                    }
+                try {
+                    type = this.deletgateClassLoader.loadClass(name);
+                    if (type != null) {
+                        if (resolve == true) {
+                            this.resolveClass(type);
+                        }
 
-                    return type;
-                }
+                        return type;
+                    }
+                } catch (ClassNotFoundException ignored) { /* ignored */ }
             }
 
             // 3.try to load class
@@ -160,7 +161,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
      */
     public URL getResource(String name) {
         if (name == null || "".equals(name.trim()))
-            throw new IllegalArgumentException("'name' must not be empty.");
+            throw new IllegalArgumentException("Resource name must not be empty.");
 
         URL url = null;
 

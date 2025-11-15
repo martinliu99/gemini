@@ -65,7 +65,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
 
         this.launchPath = launchPath;
         if (Files.exists(launchPath) == false || Files.isDirectory(launchPath) == false)
-            throw new IllegalArgumentException("Illegal launchPath: " + this.launchPath);
+            throw new IllegalArgumentException("Illegal launchPath [" + this.launchPath + "]");
 
         this.launchArgs = Collections.unmodifiableMap(
                 parseLaunchArgs(launchArgsStr) );

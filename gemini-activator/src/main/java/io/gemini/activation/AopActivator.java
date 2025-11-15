@@ -83,7 +83,8 @@ public class AopActivator {
         try {
             callable.call();
         } catch (Throwable t) {
-            System.out.println("Failed to activate Gemini at " + currentDate() + ". \n  Error reason: " + t.getMessage());
+            System.out.println("Could not activate Gemini at " + currentDate() + ". \n"
+                    + "  Error reason: " + t.getMessage());
             t.printStackTrace();
         }
     }

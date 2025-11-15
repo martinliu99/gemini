@@ -35,10 +35,10 @@ public class ServiceLoaders {
         }
 
         if (services.size() == 0 ) {
-            throw new IllegalStateException("No " + serviceClass.getName() + " found.");
+            throw new IllegalStateException("Cannot find class implements [" + serviceClass.getName() + "]");
         }
         if (services.size() > 1) {
-            throw new IllegalStateException("More than one " + serviceClass.getName() + " found, " + services);
+            throw new IllegalStateException("Found more than one class " + services + " implements [" + serviceClass.getName() + "]");
         }
 
         return services.iterator().next();

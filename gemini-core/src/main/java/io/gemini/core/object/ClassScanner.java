@@ -168,10 +168,14 @@ public interface ClassScanner {
 
                 if (diagnosticLevel.isDebugEnabled())
                     LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
-                            + "  enableVerbose: {} \n  diagnosticLevel: {} \n"
-                            + "  scannedClassLoaders: {} \n  overrideClasspaths: {}\n"
-                            + "  acceptPackages: {} \n  acceptJarPatterns: {} \n"
-                            + "  workThreads: {} \n  filteredClasspathElementUrls: {} \n",
+                            + "  enableVerbose: {} \n"
+                            + "  diagnosticLevel: {} \n"
+                            + "  scannedClassLoaders: {} \n"
+                            + "  overrideClasspaths: {}\n"
+                            + "  acceptPackages: {} \n"
+                            + "  acceptJarPatterns: {} \n"
+                            + "  workThreads: {} \n"
+                            + "  filteredClasspathElementUrls: {} \n",
                             (System.nanoTime() - startedAt) / 1e9, 
                             enableVerbose, diagnosticLevel, 
                             scannedClassLoaders, overrideClasspaths,
@@ -185,11 +189,11 @@ public interface ClassScanner {
             }
         }
 
-        private Set<Pattern> formatAcceptJarPatterns(Set<String> acceptJars) {
-            Assert.notEmpty(acceptJars, "'acceptJars' must not be empty.");
+        private Set<Pattern> formatAcceptJarPatterns(Set<String> acceptJarPatterns) {
+            Assert.notEmpty(acceptJarPatterns, "'acceptJarPatterns' must not be empty.");
 
-            Set<Pattern> patterns = new LinkedHashSet<>(acceptJars.size());
-            for (String jarPattern : acceptJars) {
+            Set<Pattern> patterns = new LinkedHashSet<>(acceptJarPatterns.size());
+            for (String jarPattern : acceptJarPatterns) {
                 // if contain '*' element, accept all jars
                 if (STAR.equals(jarPattern))
                     return ACCEPT_ALL_JARS;
@@ -358,7 +362,7 @@ public interface ClassScanner {
                     }
                     return false;
                 } catch (Throwable t) {
-                    LOGGER.warn("Failed to compare ClasspathElement of class '{}'", classInfo.getName(), t);
+                    LOGGER.warn("Could not compare ClasspathElement of class '{}'", classInfo.getName(), t);
 
                     Throwables.throwIfRequired(t);
                     return true;

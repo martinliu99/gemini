@@ -226,7 +226,7 @@ public interface TaskExecutor {
                     Thread.currentThread().interrupt();
                     future.cancel(true);
                 } catch (ExecutionException e) {
-                    LOGGER.warn("Failed to execute task {} with TaskExecutor '{}'.", taskExecutor, executorName, e.getCause());
+                    LOGGER.warn("Could not execute task {} with TaskExecutor '{}'.", taskExecutor, executorName, e.getCause());
                 }
             }
             return resultList;

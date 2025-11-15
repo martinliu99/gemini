@@ -136,7 +136,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
             // 5.stop delay logger
             DelayLoggerFactory.setLoggerInitialized(allSlf4jLogLevel);
         } catch (Throwable t) {
-            LOGGER.warn("$Failed to initialize LogbackLoggingSystem with settings, \n"
+            LOGGER.warn("$Could not initialize LogbackLoggingSystem with settings, \n"
                     + "  {} \n", 
                     StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  "),
                     t

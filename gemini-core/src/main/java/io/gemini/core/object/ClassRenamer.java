@@ -137,7 +137,7 @@ public interface ClassRenamer {
             try {
                 dumpByteCode(className, originByteCode, mappedByteCode);
             } catch (IOException e) {
-                LOGGER.warn("Failed to dump renamed class '{}'.", className, e);
+                LOGGER.warn("Could not dump renamed class '{}'.", className, e);
             }
 
             return mappedByteCode;

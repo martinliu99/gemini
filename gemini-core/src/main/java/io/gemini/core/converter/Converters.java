@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.core.util;
+package io.gemini.core.converter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import io.gemini.core.util.OrderedProperties;
 
 public abstract class Converters {
 

@@ -24,13 +24,16 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.ObjectUtils;
 import io.gemini.core.util.StringUtils;
 
-public interface Advisor {
+public interface Advisor extends Ordered {
 
     String getAdvisorName();
 
     Advice getAdvice();
 
     Class<? extends Advice> getAdviceClass();
+
+    @Override
+    int getOrder();
 
 
     /**
@@ -46,7 +49,7 @@ public interface Advisor {
     boolean isPerInstance();
 
 
-    interface PointcutAdvisor extends Advisor, Ordered {
+    interface PointcutAdvisor extends Advisor {
 
         Pointcut getPointcut();
 

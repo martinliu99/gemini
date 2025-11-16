@@ -18,6 +18,7 @@ package io.gemini.aop.factory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,10 +38,12 @@ import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.aop.factory.classloader.AspectTypePool;
 import io.gemini.aop.factory.classloader.AspectTypeWorld;
+import io.gemini.aop.factory.support.AdvisorConditionParser;
 import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.aop.matcher.ElementMatcherFactory;
+import io.gemini.api.aop.MatchingContext;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
@@ -48,6 +51,8 @@ import io.gemini.core.OrderComparator;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
+import io.gemini.core.converter.ConversionService;
+import io.gemini.core.converter.Converter;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.pool.TypePoolFactory;
@@ -55,6 +60,7 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import io.gemini.core.util.StringUtils;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.pool.TypePool;
@@ -69,10 +75,9 @@ public class FactoryContext implements Closeable {
     private static final String FACTORY_JOINPOINT_TYPE_EXPRESSIONS = "aop.factory.joinpointTypeExpressions";
     private static final String FACTORY_JOINPOINT_RESOURCE_EXPRESSIONS = "aop.factory.joinpointResourceExpressions";
 
-    private static final String FACTORY_MATCHER_MATCH_JOINPOINT_KEY = "aop.factory.matchJoinpoint";
+    private static final String FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factory.factoryClassLoaderExpressions";
+    private static final String FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY = "aop.factory.factoryTypeExpressions";
 
-    private static final String FACTORY_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factory.acceptableClassLoaderExpressions";
-    private static final String FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY = "aop.factory.acceptableTypeExpressions";
     private static final String FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY = "aop.factory.enabledAdvisorExpressions";
 
 
@@ -88,6 +93,9 @@ public class FactoryContext implements Closeable {
 
     private final AspectClassLoader classLoader;
 
+    private final ClassScanner classScanner;
+    private final ObjectFactory objectFactory;
+
     private final ConfigView configView;
     private final PlaceholderHelper placeholderHelper;
 
@@ -95,19 +103,13 @@ public class FactoryContext implements Closeable {
     private ElementMatcher<String> joinpointTypesMatcher;
     private ElementMatcher<String> joinpointResourcesMatcher;
 
-
-    private boolean matchJoinpoint;
-
-    private ElementMatcher<ClassLoader> acceptableClassLoaderMatcher;
-    private ElementMatcher<String> acceptableTypeMatcher;
+    private ElementMatcher<MatchingContext> factoryClassLoaderMatcher;
+    private ElementMatcher<TypeDescription> factoryTypeMatcher;
 
     private ElementMatcher<String> enabledAdvisorMatcher;
 
     private boolean shareAspectClassLoader;
     private List<Set<String>> conflictJoinpointClassLoaders;
-
-    private final ClassScanner classScanner;
-    private final ObjectFactory objectFactory;
 
     private final TypePoolFactory typePoolFactory;
     private final TypeWorldFactory typeWorldFactory;
@@ -119,6 +121,8 @@ public class FactoryContext implements Closeable {
     private final List<AdvisorSpecPostProcessor> advisorSpecPostProcessors;
     private final List<AdvisorRepositoryResolver> advisorRepositoryResolvers;
 
+    private final Map<Class<? extends Annotation>, Class<?>> conditionalAndConditionClasses;
+
     private ConcurrentMap<ClassLoader, AdvisorContext> advisorContextMap;
 
 
@@ -126,8 +130,8 @@ public class FactoryContext implements Closeable {
             FactoriesContext factoriesContext,
             String factoryName, URL[] factoryResourceURLs) {
         long startedAt = System.nanoTime();
-        if(LOGGER.isDebugEnabled())
-            LOGGER.debug("^Creating FactoryContext '{}'", factoryName);
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating FactoryContext '{}', ", factoryName);
 
 
         // 1.check input arguments and initialize properties
@@ -145,8 +149,12 @@ public class FactoryContext implements Closeable {
 
 
         // 2.load settings
+        // create classScanner and objectFactory
+        this.classScanner = this.createClassScanner(this.aopContext);
+        this.objectFactory = this.createObjectFactory(classLoader, this.classScanner);
+
         // create configView
-        this.configView = createConfigView(aopContext, classLoader);
+        this.configView = createConfigView(aopContext, classLoader, objectFactory);
         this.placeholderHelper = PlaceholderHelper.create(configView);
 
         // load factory settings
@@ -154,10 +162,6 @@ public class FactoryContext implements Closeable {
 
 
         // 3.create properties
-        // create classScanner and objectFactory
-        this.classScanner = this.createClassScanner(this.aopContext);
-        this.objectFactory = this.createObjectFactory(classLoader, this.classScanner);
-
         // create typePool and typeWorld
         this.typePoolFactory = aopContext.getTypePoolFactory();
         this.typeWorldFactory = aopContext.getTypeWorldFactory();
@@ -167,53 +171,55 @@ public class FactoryContext implements Closeable {
                 new AspectTypeWorld(typePool, placeholderHelper, classLoader, typeWorldFactory) );
 
         // load advisorSpec relevant interface implementors
-        ObjectFactory objectFactory = aopContext.getObjectFactory();
-        List<AdvisorSpecScanner> advisorSpecScanners = new ArrayList<>();
-        for(AdvisorSpecScanner advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorSpecScanner.class)) {
-            advisorSpecScanners.add(advisorSpecScanner);
-        }
+        this.advisorSpecScanners = objectFactory.createObjectsImplementing(AdvisorSpecScanner.class);
         Collections.sort(advisorSpecScanners, OrderComparator.INSTANCE);
-        this.advisorSpecScanners = advisorSpecScanners;
 
-        List<AdvisorSpecPostProcessor> advisorSpecPostProcessors = new ArrayList<>();
-        for(AdvisorSpecPostProcessor advisorSpecPostProcessor : objectFactory.createObjectsImplementing(AdvisorSpecPostProcessor.class)) {
-            advisorSpecPostProcessors.add(advisorSpecPostProcessor);
-        }
+        this.advisorSpecPostProcessors = objectFactory.createObjectsImplementing(AdvisorSpecPostProcessor.class);
         Collections.sort(advisorSpecPostProcessors, OrderComparator.INSTANCE);
-        this.advisorSpecPostProcessors = advisorSpecPostProcessors;
 
-        List<AdvisorRepositoryResolver> advisorRepositoryResolvers = new ArrayList<>();
-        for(AdvisorRepositoryResolver advisorSpecScanner : objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class)) {
-            advisorRepositoryResolvers.add(advisorSpecScanner);
-        }
+        this.advisorRepositoryResolvers = objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class);
         Collections.sort(advisorRepositoryResolvers, OrderComparator.INSTANCE);
-        this.advisorRepositoryResolvers = advisorRepositoryResolvers;
+
+        this.conditionalAndConditionClasses = AdvisorConditionParser.loadConditionalAndConditionClasses(classScanner, classLoader);
 
         this.advisorContextMap = new ConcurrentReferenceHashMap<>();
 
-        if(LOGGER.isDebugEnabled())
-            LOGGER.debug("$Took '{}' seconds to create FactoryContext '{}'", 
+
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create FactoryContext '{}'.", 
                     (System.nanoTime() - startedAt) / 1e9, factoryName);
     }
 
-    protected ConfigView createConfigView(AopContext aopContext, AspectClassLoader classLoader) {
+    @SuppressWarnings("rawtypes")
+    protected ConfigView createConfigView(AopContext aopContext, AspectClassLoader classLoader, 
+            ObjectFactory objectFactory) {
         Map<String, String> userDefinedConfigs = new LinkedHashMap<>();
 
         String userDefinedConfigLocation = getUserDefinedConfigLocation(aopContext);
         String userDefinedConfig = null;
-        if(classLoader.getResource(userDefinedConfigLocation) != null) {
+        if (classLoader.getResource(userDefinedConfigLocation) != null) {
             userDefinedConfigs.put(userDefinedConfigLocation, factoryName);
             userDefinedConfig = userDefinedConfigLocation;
         }
 
         String internalConfig = classLoader.getResource(FACTORY_INTERNAL_PROPERTIES) == null ? null : FACTORY_INTERNAL_PROPERTIES;
-        ConfigView configView = ConfigViews.createConfigView(aopContext.getConfigView(), classLoader, 
+
+        List<Converter> loadedConverters = objectFactory.createObjectsImplementing(Converter.class);
+        List<Converter<?, ?>> converters = new ArrayList<>(loadedConverters.size());
+        for (Converter<?, ?> converter : loadedConverters) 
+            converters.add(converter);
+
+        ConfigView configView = ConfigViews.createConfigView(
+                aopContext.getConfigView(), 
+                ConversionService.createConversionService(converters),
+                classLoader, 
                 internalConfig, 
                 userDefinedConfigs);
 
-        if(aopContext.getDiagnosticLevel().isSimpleEnabled())
+        if (aopContext.getDiagnosticLevel().isDebugEnabled())
             LOGGER.info("Created ConfigView for Factory '{}' with settings, \n"
-                    + "  InternalConfigLoc: {} \n  UserDefinedConfigLoc: {} \n",
+                    + "  InternalConfigLoc: {} \n"
+                    + "  UserDefinedConfigLoc: {} \n",
                     factoryName, internalConfig, userDefinedConfig);
 
         return configView;
@@ -245,47 +251,47 @@ public class FactoryContext implements Closeable {
         }
 
         {
-            this.matchJoinpoint = configView.getAsBoolean(FACTORY_MATCHER_MATCH_JOINPOINT_KEY, true);
-            if(matchJoinpoint == false) {
-                LOGGER.warn("WARNING! Setting '{}' is false for factory '{}', and switched off aop weaving. \n", 
-                        FACTORY_MATCHER_MATCH_JOINPOINT_KEY, this.factoryName);
-            }
-        }
-
-        {
-            Set<String> acceptableClassLoaderExpressions = configView.getAsStringSet(FACTORY_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
-            if(acceptableClassLoaderExpressions.size() > 0) {
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        acceptableClassLoaderExpressions.size(), FACTORY_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, factoryName,
-                        StringUtils.join(acceptableClassLoaderExpressions, "\n  ")
+            Set<String> classLoaderExpressions = configView.getAsStringSet(FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
+            if (classLoaderExpressions.size() > 0)
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
+                        + "  {} \n", 
+                        classLoaderExpressions.size(), FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(classLoaderExpressions, "\n  ")
                 );
 
-                this.acceptableClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        FACTORY_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions, ElementMatchers.none() );
-            } else {
-                this.acceptableClassLoaderMatcher = ElementMatchers.any();
-            }
-        }
-
-        {
-            Set<String> acceptableTypeExpressions = configView.getAsStringSet(FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-            if(acceptableTypeExpressions.size() > 0) {
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
-                        acceptableTypeExpressions.size(), FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, factoryName,
-                        StringUtils.join(acceptableTypeExpressions, "\n  ")
+            Set<String> typeExpressions = configView.getAsStringSet(FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
+            if (typeExpressions.size() > 0) 
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
+                        + "  {} \n", 
+                        typeExpressions.size(), FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(typeExpressions, "\n  ")
                 );
 
-                this.acceptableTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORY_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions, ElementMatchers.none() );
-            } else {
-                this.acceptableTypeMatcher = ElementMatchers.any();
-            }
+            this.factoryClassLoaderMatcher = new ElementMatcher<MatchingContext>() {
+                @Override
+                public boolean matches(MatchingContext matchingContext) {
+                    if (classLoaderExpressions.size() == 0)
+                        return true;
+
+                    for (String classLoaderExpression : classLoaderExpressions) {
+                        if (matchingContext.isClassLoader(classLoaderExpression) == true) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            };
+
+            ElementMatcher<String> typeNameMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                    FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, typeExpressions, ElementMatchers.any() );
+            this.factoryTypeMatcher = typeDescription -> typeDescription != null && typeNameMatcher.matches(typeDescription.getTypeName());
         }
 
         {
             Set<String> enabledAdvisorExpressions = configView.getAsStringSet(FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY, Collections.emptySet());
-            if(enabledAdvisorExpressions.size() > 0) {
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n  {} \n", 
+            if (enabledAdvisorExpressions.size() > 0) {
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
+                        + "  {} \n", 
                         enabledAdvisorExpressions.size(), FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY, factoryName,
                         StringUtils.join(enabledAdvisorExpressions, "\n  ")
                 );
@@ -329,6 +335,7 @@ public class FactoryContext implements Closeable {
 
     private ObjectFactory createObjectFactory(AspectClassLoader classLoader, ClassScanner classScanner) {
         ObjectFactory objectFactory = new ObjectFactory.Builder()
+                .diagnosticLevel(aopContext.getDiagnosticLevel())
                 .classLoader(classLoader)
                 .classScanner(classScanner)
                 .build(false);
@@ -366,16 +373,12 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public boolean isMatchJoinpoint() {
-        return matchJoinpoint;
+    public ElementMatcher<MatchingContext> getFactoryClassLoaderMatcher() {
+        return factoryClassLoaderMatcher;
     }
 
-    public boolean isAcceptableClassLoader(ClassLoader classLoader) {
-        return acceptableClassLoaderMatcher.matches(classLoader);
-    }
-
-    public boolean isAcceptableType(String typeName) {
-        return this.acceptableTypeMatcher.matches(typeName);
+    public ElementMatcher<TypeDescription> getFactoryTypeMatcher() {
+        return factoryTypeMatcher;
     }
 
     public boolean isEnabledAdvisor(String advisorName) {
@@ -412,6 +415,11 @@ public class FactoryContext implements Closeable {
     }
 
 
+    public Map<Class<? extends Annotation>, Class<?>> getConditionalAndConditionClasses() {
+        return Collections.unmodifiableMap( conditionalAndConditionClasses );
+    }
+
+
     public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule) {
         return createAdvisorContext(joinpointClassLoader, javaModule, false);
     }
@@ -421,7 +429,7 @@ public class FactoryContext implements Closeable {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
 
         boolean sharedMode = useSharedAspectClassLoader(cacheKey);
-        if(sharedMode == true) {
+        if (sharedMode == true) {
             this.advisorContextMap.computeIfAbsent(
                     cacheKey, 
                     key -> doCreateAdvisorContext(joinpointClassLoader, javaModule, sharedMode, validateContext)
@@ -437,25 +445,25 @@ public class FactoryContext implements Closeable {
 
     private boolean useSharedAspectClassLoader(ClassLoader joinpointClassLoader) {
         // 1.use existing AspectClassLoader
-        if(advisorContextMap.containsKey(joinpointClassLoader) == true)
+        if (advisorContextMap.containsKey(joinpointClassLoader) == true)
             return true;
 
 
         // 2.used shared AspectClassLoader for system ClassLoaders
-        if(ClassLoaders.getBuiltinClassLoaders().contains(joinpointClassLoader) == true)
+        if (ClassLoaders.getBuiltinClassLoaders().contains(joinpointClassLoader) == true)
             return true;
 
 
         // 3.check shareAspectClassLoader flag
-        if(shareAspectClassLoader == false) 
+        if (shareAspectClassLoader == false) 
             return false;
 
 
         // 4.check potentially class loading conflict
         // exist ClassLoader is same instance of the joinpointClassLoader
         Class<? extends ClassLoader> classLoaderClass = joinpointClassLoader.getClass();
-        for(ClassLoader existingCL : advisorContextMap.keySet()) {
-            if(existingCL.getClass() == classLoaderClass)
+        for (ClassLoader existingCL : advisorContextMap.keySet()) {
+            if (existingCL.getClass() == classLoaderClass)
                 return false;
         }
 
@@ -465,11 +473,11 @@ public class FactoryContext implements Closeable {
                 .filter( classLoaders -> classLoaders.contains(joinpointCLClassName) )
                 .collect( Collectors.toList() );
 
-        for(ClassLoader existingCL : advisorContextMap.keySet()) {
+        for (ClassLoader existingCL : advisorContextMap.keySet()) {
             String existingCLClassName = ClassLoaderUtils.getClassLoaderName(existingCL);
 
-            for(Set<String> classLoaders : conflictJoinpointClassLoaderList) {
-                if(classLoaders.contains(existingCLClassName))
+            for (Set<String> classLoaders : conflictJoinpointClassLoaderList) {
+                if (classLoaders.contains(existingCLClassName))
                     return false;
             }
         }
@@ -483,7 +491,7 @@ public class FactoryContext implements Closeable {
         // create AspectClassLoader & objectFactory per ClassLoader
         AspectClassLoader classLoader = this.classLoader;
         ObjectFactory objectFactory = this.objectFactory;
-        if(sharedMode == false) {
+        if (sharedMode == false) {
             classLoader = new AspectClassLoader(
                     factoryName, 
                     factoryResourceURLs, 
@@ -535,7 +543,7 @@ public class FactoryContext implements Closeable {
 
     @Override
     public void close() throws IOException {
-        for(Closeable closeable : this.advisorContextMap.values()) {
+        for (Closeable closeable : this.advisorContextMap.values()) {
             closeable.close();
        };
 

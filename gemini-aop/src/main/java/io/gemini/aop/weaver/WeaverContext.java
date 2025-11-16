@@ -23,16 +23,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
-import io.gemini.aop.AopException;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.aop.weaver.advice.ClassInitializerAdvice;
 import io.gemini.aop.weaver.advice.ClassMethodAdvice;
 import io.gemini.aop.weaver.advice.InstanceConstructorAdvice;
 import io.gemini.aop.weaver.advice.InstanceMethodAdvice;
 import io.gemini.api.annotation.NoMatching;
-import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.config.ConfigView;
-import io.gemini.core.config.ConfigView.Converter;
 import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
@@ -54,18 +51,20 @@ class WeaverContext {
 
     private static final String WEAVER_MATCH_JOINPOINT_KEY = "aop.weaver.matchJoinpoint";
 
-    private static final String WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY = "aop.weaver.acceptableClassLoaderExpressions";
+    private static final String WEAVER_CLASS_LOADER_EXPRESSIONS_KEY = "aop.weaver.classLoaderExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
 
-    private static final String WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY = "aop.weaver.acceptableTypeExpressions";
+    private static final String WEAVER_TYPE_EXPRESSIONS_KEY = "aop.weaver.typeExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS = "aop.weaver.defaultExcludedTypeExpressions";
 
+
+    private final AopContext aopContext;
 
     // weaver settings
     private boolean matchJoinpoint;
 
-    private ElementMatcher<ClassLoader> acceptableClassLoaderMatcher;
-    private ElementMatcher<String> acceptableTypeMatcher;
+    private ElementMatcher<ClassLoader> classLoaderMatcher;
+    private ElementMatcher<String> typeMatcher;
 
 
     private Class<?> classInitializerAdvice;
@@ -79,29 +78,41 @@ class WeaverContext {
 
 
     public WeaverContext(AopContext aopContext) {
+        long startedAt = System.nanoTime();
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("^Creating WeaverContext, ");
+
+
+        this.aopContext = aopContext;
+
         // 1.load weaver settings
         this.loadSettings(aopContext);
+
+
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create WeaverContext. ", 
+                    (System.nanoTime() - startedAt) / 1e9);
     }
 
     private void loadSettings(AopContext aopContext) {
         ConfigView configView = aopContext.getConfigView();
-        AopClassLoader aopClassLoader = aopContext.getAopClassLoader();
 
         ClassInfoList noMatchingClassInfoList = aopContext.getClassScanner().getClassesWithAnnotation(NoMatching.class.getName());
 
         // load joinpoint matcher settings
         {
             this.matchJoinpoint = configView.getAsBoolean(WEAVER_MATCH_JOINPOINT_KEY, true);
-            if(matchJoinpoint == false) {
+            if (matchJoinpoint == false) {
                 LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_MATCH_JOINPOINT_KEY);
             }
 
             {
-                Set<String> acceptableClassLoaderExpressions = configView.getAsStringSet(WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
-                if(acceptableClassLoaderExpressions.size() > 0)
-                    LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            acceptableClassLoaderExpressions.size(), WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, 
-                            StringUtils.join(acceptableClassLoaderExpressions, "\n  ")
+                Set<String> classLoaderExpressions = configView.getAsStringSet(WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
+                if (classLoaderExpressions.size() > 0)
+                    LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                            + "  {} \n", 
+                            classLoaderExpressions.size(), WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, 
+                            StringUtils.join(classLoaderExpressions, "\n  ")
                     );
 
 
@@ -111,28 +122,30 @@ class WeaverContext {
                 defaultExcludedClassLoaderExpressions.addAll(
                         noMatchingClassInfoList.filter( this::isClassLoader ).getNames() );
 
-                LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
+                LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                        + "  {} \n", 
                         defaultExcludedClassLoaderExpressions.size(), WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, 
                         StringUtils.join(defaultExcludedClassLoaderExpressions, "\n  ")
                 );
 
 
-                this.acceptableClassLoaderMatcher = ElementMatchers.not(
+                this.classLoaderMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
                                 WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, defaultExcludedClassLoaderExpressions, ElementMatchers.none() ) );
-                if(acceptableClassLoaderExpressions.size() > 0)
-                    this.acceptableClassLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                            WEAVER_ACCEPTABLE_CLASS_LOADER_EXPRESSIONS_KEY, acceptableClassLoaderExpressions, ElementMatchers.any() )
-                        .and( this.acceptableClassLoaderMatcher );
+                if (classLoaderExpressions.size() > 0)
+                    this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                            WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, classLoaderExpressions, ElementMatchers.any() )
+                        .and( this.classLoaderMatcher );
             }
 
 
             {
-                Set<String> acceptableTypeExpressions = configView.getAsStringSet(WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-                if(acceptableTypeExpressions.size() > 0)
-                    LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
-                            acceptableTypeExpressions.size(), WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY,
-                            StringUtils.join(acceptableTypeExpressions, "\n  ") 
+                Set<String> typeExpressions = configView.getAsStringSet(WEAVER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
+                if (typeExpressions.size() > 0)
+                    LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                            + "  {} \n", 
+                            typeExpressions.size(), WEAVER_TYPE_EXPRESSIONS_KEY,
+                            StringUtils.join(typeExpressions, "\n  ") 
                     );
 
 
@@ -143,39 +156,36 @@ class WeaverContext {
                         noMatchingClassInfoList.filter( this::isClass ).getNames() );
                 defaultExcludedTypeExpressions.addAll( aopContext.getBootstrapClassNameMapping().values() );
 
-                LOGGER.info("Loaded {} rules from '{}' setting. \n  {} \n", 
+                LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                        + "  {} \n", 
                         defaultExcludedTypeExpressions.size(), WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS,
                         StringUtils.join(defaultExcludedTypeExpressions, "\n  ")
                 );
 
 
-                this.acceptableTypeMatcher = ElementMatchers.not(
+                this.typeMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
                                 WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, defaultExcludedTypeExpressions, ElementMatchers.none()) );
-                if(acceptableTypeExpressions.size() > 0)
-                    this.acceptableTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            WEAVER_ACCEPTABLE_TYPE_EXPRESSIONS_KEY, acceptableTypeExpressions, ElementMatchers.any())
-                        .and( acceptableTypeMatcher );
+                if (typeExpressions.size() > 0)
+                    this.typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                            WEAVER_TYPE_EXPRESSIONS_KEY, typeExpressions, ElementMatchers.any())
+                        .and( typeMatcher );
             }
         }
 
         // load joinpoint transformer settings
         {
             String settingkey = "aop.weaver.classInitializerAdvice";
-            this.classInitializerAdvice = configView.<Class<?>>getValue(settingkey, ClassInitializerAdvice.class, 
-                    new ToClass(settingkey, aopClassLoader));
+            this.classInitializerAdvice = configView.getAsClass(settingkey, ClassInitializerAdvice.class);
 
             settingkey = "aop.weaver.classMethodAdvice";
-            this.classMethodAdvice = configView.<Class<?>>getValue(settingkey, ClassMethodAdvice.class,
-                    new ToClass(settingkey, aopClassLoader));
+            this.classMethodAdvice = configView.getAsClass(settingkey, ClassMethodAdvice.class);
 
             settingkey = "aop.weaver.instanceConstructorAdvice";
-            this.instanceConstructorAdvice = configView.<Class<?>>getValue(settingkey, InstanceConstructorAdvice.class,
-                    new ToClass(settingkey, aopClassLoader));
+            this.instanceConstructorAdvice = configView.getAsClass(settingkey, InstanceConstructorAdvice.class);
 
             settingkey = "aop.weaver.instanceMethodAdvice";
-            this.instanceMethodAdvice = configView.<Class<?>>getValue(settingkey, InstanceMethodAdvice.class,
-                    new ToClass(settingkey, aopClassLoader));
+            this.instanceMethodAdvice = configView.getAsClass(settingkey, InstanceMethodAdvice.class);
         }
 
         // load weaver installer settings
@@ -184,7 +194,7 @@ class WeaverContext {
 
             try {
                 this.redefinitionStrategy = RedefinitionStrategy.valueOf(strategy);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 LOGGER.warn("Ignored illegal setting '{}' and use default RedefinitionStrategy '{}'. \n", strategy, RedefinitionStrategy.RETRANSFORMATION);
                 this.redefinitionStrategy = RedefinitionStrategy.RETRANSFORMATION;
             }
@@ -201,17 +211,22 @@ class WeaverContext {
     }
 
 
+    public AopContext getAopContext() {
+        return aopContext;
+    }
+
+
     public boolean isMatchJoinpoint() {
         return matchJoinpoint;
     }
 
 
-    public boolean isAcceptableClassLoader(ClassLoader classLoader) {
-        return this.acceptableClassLoaderMatcher.matches(classLoader);
+    public boolean acceptClassLoader(ClassLoader classLoader) {
+        return this.classLoaderMatcher.matches(classLoader);
     }
 
-    public boolean isAcceptableType(String typeName) {
-        return this.acceptableTypeMatcher.matches(typeName);
+    public boolean acceptType(String typeName) {
+        return this.typeMatcher.matches(typeName);
     }
 
 
@@ -234,28 +249,5 @@ class WeaverContext {
 
     public RedefinitionStrategy getRedefinitionStrategy() {
         return redefinitionStrategy;
-    }
-
-
-    private static class ToClass implements Converter<Class<?>> {
-
-        private final String settingKey;
-        private final ClassLoader classLoader;
-
-
-        public ToClass(String settingKey, ClassLoader classLoader) {
-            this.settingKey = settingKey;
-            this.classLoader = classLoader;
-        }
-
-        @Override
-        public Class<?> convert(Object object) {
-            String className = object.toString();
-            try {
-                return Class.forName(className, true, classLoader);
-            } catch (ClassNotFoundException e) {
-                throw new AopException("Setting '" + settingKey + "' referring to unexisting class " + className, e);
-            }
-        }
     }
 }

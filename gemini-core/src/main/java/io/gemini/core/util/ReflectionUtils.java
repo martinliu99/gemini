@@ -15,12 +15,32 @@
  */
 package io.gemini.core.util;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public abstract class ReflectionUtils {
+
+    private static Set<String> BUILTIN_METHOD_NAMES;
+
+    static {
+        BUILTIN_METHOD_NAMES = new HashSet<>();
+
+        for (Method method : Annotation.class.getDeclaredMethods()) {
+            BUILTIN_METHOD_NAMES.add( method.getName() );
+        }
+    }
+
 
     public static Constructor<?> getDefaultConstructor(Class<?> type) {
         if (type == null) 
@@ -50,5 +70,38 @@ public abstract class ReflectionUtils {
                 Modifier.isFinal(field.getModifiers())) && !field.isAccessible()) {
             field.setAccessible(true);
         }
+    }
+
+
+    public static List<Method> getAttributeMethods(Class<? extends Annotation> annotationClass) {
+        Assert.notNull(annotationClass, "'annotationClass' must not be null.");
+
+        Method[] methods = annotationClass.getDeclaredMethods();
+        List<Method> attributeMethods = new ArrayList<>(methods.length);
+        for (Method method : methods) {
+            String methodName = method.getName();
+            if (BUILTIN_METHOD_NAMES.contains(methodName)) 
+                continue;
+
+            if (method.getReturnType() == void.class || method.getParameterCount() > 0)
+                continue;
+
+            attributeMethods.add(method);
+        }
+
+        return attributeMethods;
+    }
+
+    public static Map<String, Object> getAttributeValues(Annotation annotation) 
+            throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        Assert.notNull(annotation, "'annotation' must not be null.");
+
+        List<Method> attributeMethods = ReflectionUtils.getAttributeMethods(annotation.getClass());
+        Map<String, Object> attributeValues = new LinkedHashMap<>(attributeMethods.size());
+        for (Method method : attributeMethods) {
+            attributeValues.put( method.getName(), method.invoke(annotation) );
+        }
+
+        return attributeValues;
     }
 }

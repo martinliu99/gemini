@@ -32,11 +32,14 @@ public class RunAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
         super(
                 context -> context.isBootstrapClassLoader(),
                 false, 
-                RunAdvice.class.getName(), 
+                true, 
                 new Pointcut.Default(
                          nameStartsWith("io.gemini.weaver.transformer").and( TypeMatchers.isExtendedFrom("java.lang.Runnable")),
                         named("run") ), 
-                1);
+                RunAdvice.class.getName(), 
+                false, 
+                1
+        );
     }
 
 }

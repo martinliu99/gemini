@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
 import io.gemini.aop.factory.AdvisorContext;
-import io.gemini.aop.factory.support.AspectJAdvisorSpec.AdviceCategory;
+import io.gemini.aop.factory.support.AspectJPointcutAdvisorSpec.AdviceCategory;
 import io.gemini.aop.matcher.AdviceMethodMatcher;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint;
@@ -83,14 +83,14 @@ interface AdviceClassMaker {
 
 
         private final AopContext aopContext;
-        private final AspectJAdvisorSpec aspectJAdvisorSpec;
+        private final AspectJPointcutAdvisorSpec aspectJAdvisorSpec;
         private final AdviceMethodMatcher adviceMethodMatcher;
 
         private ConcurrentMap<ClassLoader, WeakReference<Class<? extends Advice>>> adviceClassRefMap;
         private DynamicType.Unloaded<? extends Advice> adviceClassUnloaded;
 
 
-        public ByteBuddyMaker(AopContext aopContext, AspectJAdvisorSpec aspectJAdvisorSpec, AdviceMethodMatcher adviceMethodMatcher) {
+        public ByteBuddyMaker(AopContext aopContext, AspectJPointcutAdvisorSpec aspectJAdvisorSpec, AdviceMethodMatcher adviceMethodMatcher) {
             this.aopContext = aopContext;
             this.aspectJAdvisorSpec = aspectJAdvisorSpec;
             this.adviceMethodMatcher = adviceMethodMatcher;
@@ -176,7 +176,7 @@ interface AdviceClassMaker {
 
         @SuppressWarnings("unchecked")
         public DynamicType.Unloaded<? extends Advice> make(AdvisorContext advisorContext, ByteBuddyMaker classMaker) {
-            AspectJAdvisorSpec aspectJAdvisorSpec = classMaker.aspectJAdvisorSpec;
+            AspectJPointcutAdvisorSpec aspectJAdvisorSpec = classMaker.aspectJAdvisorSpec;
             AdviceCategory adviceCategory = aspectJAdvisorSpec.getAdviceCategory();
 
             // 1.define class
@@ -283,13 +283,13 @@ interface AdviceClassMaker {
             private static final MethodDescription.InDefinedShape GET_THROWING_METHOD = MUTABLE_JOINPOINT_TYPE.getDeclaredMethods().filter(named("getThrowing")).getOnly();
 
 
-            private final AspectJAdvisorSpec aspectJAdvisorSpec;
+            private final AspectJPointcutAdvisorSpec aspectJAdvisorSpec;
 
 
             /**
              * @param aspectJAdvisorSpec
              */
-            public AspectJAdviceMethodImplementation(AspectJAdvisorSpec aspectJAdvisorSpec) {
+            public AspectJAdviceMethodImplementation(AspectJPointcutAdvisorSpec aspectJAdvisorSpec) {
                 this.aspectJAdvisorSpec = aspectJAdvisorSpec;
             }
 

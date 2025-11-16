@@ -52,6 +52,14 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
 
     String getPointcutExpression();
 
+
+    @Override
+    ElementMatcher<TypeDescription> getTypeMatcher();
+
+    @Override
+    ElementMatcher<MethodDescription> getMethodMatcher();
+
+
     boolean matches(MethodDescription methodDescription);
 
     boolean matches(MethodDescription methodDescription, PointcutParameterMatcher pointcutParameterMatcher);
@@ -86,7 +94,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         private final TypeWorld typeWorld;
 
         private final String pointcutExpression;
-        private transient Pointcut pointcut;
+        private final Pointcut pointcut;
 
         private final TypeDescription pointcutDeclarationScope;
         private final Map<String, Generic> pointcutParameters;
@@ -128,11 +136,16 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression,
                 TypeDescription declarationScope, Map<String, Generic> pointcutParametes) {
             this.typeWorld = typeWorld;
-            this.pointcutExpression = pointcutExpression;
 
+            this.pointcutExpression = pointcutExpression;
             this.pointcutDeclarationScope = declarationScope;
             this.pointcutParameters = pointcutParametes;
+
+            // Build the underlying pointcut expression.
+            this.pointcut = ExprParser.INSTANCE.parsePointcutExpr(typeWorld, SUPPORTED_PRIMITIVES, 
+                    pointcutExpression, pointcutDeclarationScope, pointcutParameters);
         }
+
 
         /**
          * Return this pointcut's expression.
@@ -156,26 +169,16 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             return this;
         }
 
-        /**
-         * Lazily build the underlying AspectJ pointcut expression.
-         */
-        public Pointcut getPointcut() {
-            if (this.pointcut == null) {
-                // Build the underlying pointcut expression.
-                this.pointcut = ExprParser.INSTANCE.parsePointcutExpr(typeWorld, SUPPORTED_PRIMITIVES, 
-                        pointcutExpression, pointcutDeclarationScope, pointcutParameters);
-            }
-
-            return this.pointcut;
-        }
-
         public boolean matches(TypeDescription typeDescription) {
             try {
                 FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(typeDescription), null, typeWorld.getWorld());
-                FuzzyBoolean fastMatch = getPointcut().fastMatch(info);
+                FuzzyBoolean fastMatch = pointcut.fastMatch(info);
                 return fastMatch.maybeTrue();
             } catch (Exception e) {
-                LOGGER.warn("Failed to match AspectJ ExprPointcut. \n  TargetType: {} \n  PointcutExpression: '{}' \n  Error reason: {} \n", 
+                LOGGER.warn("Could not match AspectJ ExprPointcut. \n"
+                        + "  TargetType: {} \n"
+                        + "  PointcutExpression: {} \n"
+                        + "  Error reason: {} \n", 
                         typeDescription.getTypeName(), pointcutExpression, e.getMessage(), e);
 
                 return false;
@@ -199,7 +202,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
 
         protected boolean doMatch(MethodDescription methodDescription, boolean beanHasIntroductions, PointcutParameterMatcher pointcutParameterMatcher) {
             Shadow shadow = typeWorld.makeShadow(methodDescription);
-            FuzzyBoolean matchResult = getPointcut().match(shadow);
+            FuzzyBoolean matchResult = pointcut.match(shadow);
 
 //            Test residueTest = Literal.TRUE;
             ExposedState exposedState = new ExposedState(pointcutParameters.size());

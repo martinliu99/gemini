@@ -121,7 +121,7 @@ public class AopWeavers {
 
                 typeRetransformationStartedAt.set( System.nanoTime() );
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("^Redefining loaded types, ");
+                    LOGGER.debug("^Matching and redefining loaded types, ");
                 }
             }
 
@@ -167,6 +167,6 @@ public class AopWeavers {
         long time = System.nanoTime() - typeRetransformationStartedAt.get();
         bootstraperMetrics.setTypeRedefiningTime(time);
         if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-            LOGGER.info("$Took '{}' seconds to redefine loaded types.", time / 1e9);
+            LOGGER.info("$Took '{}' seconds to match and redefine loaded types.", time / 1e9);
     }
 }

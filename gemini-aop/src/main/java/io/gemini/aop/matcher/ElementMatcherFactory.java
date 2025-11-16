@@ -78,18 +78,44 @@ public enum ElementMatcherFactory {
                 elementMatchers.add(
                         parser.apply(expression) );
             } catch (ExprParser.ExprParseException e) {
-                LOGGER.warn("Ignored unparsable expression. \n  Rule: {} \n  Expression: {} \n  Syntax Error: {} \n", 
-                        ruleName, expression, e.getMessage());
+                LOGGER.warn("Ignored unparsable expression. \n"
+                        + "  Rule: {} \n"
+                        + "  Expression: {} \n"
+                        + "  Syntax Error: {} \n", 
+                        ruleName, 
+                        expression, 
+                        e.getMessage()
+                );
             } catch (ExprParser.ExprLintException e) {
-                LOGGER.warn("Ignored lint expression. \n  Rule: {} \n  Expression: {} \n  Lint message: {} \n", 
-                        ruleName, expression, e.getMessage());
+                LOGGER.warn("Ignored lint expression. \n"
+                        + "  Rule: {} \n"
+                        + "  Expression: {} \n"
+                        + "  Lint message: {} \n", 
+                        ruleName, 
+                        expression, 
+                        e.getMessage()
+                );
             } catch (ExprParser.ExprUnknownException e) {
                 Throwable cause = e.getCause();
-                LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {} \n", 
-                        ruleName, expression, cause.getMessage(), cause);
+                LOGGER.warn("Ignored illegal expression. \n"
+                        + "  Rule: {} \n"
+                        + "  Expression: {} \n"
+                        + "  Error reason: {} \n", 
+                        ruleName, 
+                        expression, 
+                        cause.getMessage(), 
+                        cause
+                );
             } catch (Exception e) {
-                LOGGER.warn("Ignored illegal expression. \n  Rule: {} \n  Expression: {} \n  Error reason: {} \n", 
-                        ruleName, expression, e.getMessage());
+                LOGGER.warn("Ignored illegal expression. \n"
+                        + "  Rule: {} \n"
+                        + "  Expression: {} \n"
+                        + "  Error reason: {} \n", 
+                        ruleName, 
+                        expression, 
+                        e.getMessage(),
+                        e
+                );
             }
         }
 

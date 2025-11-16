@@ -205,7 +205,7 @@ class WeaverCache implements Closeable {
 
                 return joinpointDescriptor;
             } catch (Throwable t) {
-                LOGGER.warn("Failed to create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n"
+                LOGGER.warn("Could not create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n"
                         + "  Method: {}", 
                         typeName, joinpointClassLoader, 
                         methodSignature, t

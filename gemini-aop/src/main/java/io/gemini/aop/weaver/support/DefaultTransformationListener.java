@@ -64,7 +64,7 @@ public class DefaultTransformationListener implements Listener {
     public void onError(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded,
             Throwable throwable) {
         if (LOGGER.isWarnEnabled())
-            LOGGER.warn("Failed to {} type '{}' loaded by ClassLoader '{}'. \n"
+            LOGGER.warn("Could not {} type '{}' loaded by ClassLoader '{}'. \n"
                     + "  Error reason: {} \n", 
                     loaded ? "redefine loaded" : "transform", typeName, classLoader, 
                     throwable.getMessage(), throwable

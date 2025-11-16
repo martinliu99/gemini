@@ -79,7 +79,7 @@ public class BootstrapClassLoaderConfigurer {
         // check input arguments
         Assert.notNull(sourceClassLoader, "'sourceClassLoader' must not be null.");
 
-        Map<String, String> nameMapping = null;
+        Map<String, String> nameMapping = Collections.emptyMap();
         BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
         try {
             nameMapping = scanClassNameMapping();
@@ -101,7 +101,8 @@ public class BootstrapClassLoaderConfigurer {
 
             return nameMapping;
         } catch (Exception e) {
-            LOGGER.warn("$Failed to configure BootstrapClassLoader with renamed BootstrapClass. \n  ", 
+            LOGGER.warn("$Could not configure BootstrapClassLoader with renamed BootstrapClass. \n"
+                    + "  {}", 
                     StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  "), 
                     e);
 

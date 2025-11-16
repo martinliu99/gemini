@@ -23,6 +23,7 @@ import org.aspectj.weaver.ResolvedType;
 import org.aspectj.weaver.Shadow;
 import org.aspectj.weaver.World;
 
+import io.gemini.api.FrameworkException;
 import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import net.bytebuddy.description.ByteCodeElement.Member;
 import net.bytebuddy.description.type.TypeDefinition;
@@ -54,7 +55,7 @@ public interface TypeWorld {
     Shadow makeShadow(Member member);
 
 
-    class WorldLintException extends RuntimeException {
+    class WorldLintException extends FrameworkException {
 
         private static final long serialVersionUID = 816600136638029684L;
 

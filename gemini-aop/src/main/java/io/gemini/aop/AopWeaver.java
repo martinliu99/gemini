@@ -27,16 +27,18 @@ import net.bytebuddy.utility.JavaModule;
 
 public interface AopWeaver extends RawMatcher, Transformer, Closeable {
 
-
+    @Override
     boolean matches(TypeDescription typeDescription,
             ClassLoader joinpointClassLoader, JavaModule javaModule,
             Class<?> classBeingRedefined, ProtectionDomain protectionDomain);
 
 
+    @Override
     Builder<?> transform(Builder<?> builder, TypeDescription typeDescription, ClassLoader joinpointClassLoader,
             JavaModule javaModule, ProtectionDomain protectionDomain);
 
 
+    @Override
     void close() throws IOException;
 
 }

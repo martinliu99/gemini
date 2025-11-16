@@ -34,6 +34,8 @@ import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.TaskExecutor;
 import io.gemini.core.config.ConfigView;
+import io.gemini.core.converter.ConversionService;
+import io.gemini.core.converter.Converter.ToClass;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.pool.TypePoolFactory;
@@ -114,7 +116,14 @@ public class AopContext implements Closeable {
 
 
         // 2.create helper classes
-        this.configView = configView;
+        ConversionService conversionService = ConversionService.createConversionService();
+        conversionService.addConverter( new ToClass(aopClassLoader) );
+
+        this.configView = new ConfigView.Builder()
+                .parent(configView)
+                .conversionService(conversionService)
+                .build();
+
         this.placeholderHelper = PlaceholderHelper.create(this.getConfigView());
 
         this.aopMetrics = new AopMetrics(configView, diagnosticLevel);
@@ -141,8 +150,11 @@ public class AopContext implements Closeable {
         long time = System.nanoTime() - startedAt;
         if (diagnosticLevel.isDebugEnabled()) 
             LOGGER.info("$Took '{}' seconds to create AopContext with settings, \n" 
-                    + "  isDefaultProfile: {} \n  activeProfile: {} \n"
-                    + "  internalConfigLocation: {} \n  userDefinedConfigLocation: {} \n  diagnosticStrategy: {} \n"
+                    + "  isDefaultProfile: {} \n"
+                    + "  activeProfile: {} \n"
+                    + "  internalConfigLocation: {} \n"
+                    + "  userDefinedConfigLocation: {} \n"
+                    + "  diagnosticStrategy: {} \n"
                     + "  classLoader: {} \n",
                     time / 1e9,
                     launcherConfig.isDefaultProfile(), launcherConfig.getActiveProfile(),

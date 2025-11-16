@@ -102,7 +102,8 @@ class FactoriesContext implements Closeable {
             Set<String> enabledFactoryExpressions = configView.getAsStringSet(
                     FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
             if (enabledFactoryExpressions.size() > 0) {
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n  {} \n", 
+                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n"
+                        + "  {} \n", 
                         enabledFactoryExpressions.size(), FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY,
                         StringUtils.join(enabledFactoryExpressions, "\n  ")
                 );

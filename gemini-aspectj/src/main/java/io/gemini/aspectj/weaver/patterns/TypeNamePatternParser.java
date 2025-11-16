@@ -66,7 +66,7 @@ public class TypeNamePatternParser extends PatternParser {
                 method = clazz.getDeclaredMethod(methodName, String.class, boolean.class, boolean.class);
                 ReflectionUtils.makeAccessible(clazz, method);
             } catch (Exception e) {
-                LOGGER.error("Failed to fetch method {} of class {}", methodName, clazz, e);
+                LOGGER.error("Could not fetch method {} of class {}", methodName, clazz, e);
             }
             MATCHES_EXACTLY_BY_NAME = method;
         }

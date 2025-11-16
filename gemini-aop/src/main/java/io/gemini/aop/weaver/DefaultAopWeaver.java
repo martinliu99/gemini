@@ -196,7 +196,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                 typePool.removeTypeDescription(typeName);
             }
         } catch (Throwable t) {
-            LOGGER.warn("Failed to match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader, t);
+            LOGGER.warn("Could not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader, t);
 
             Throwables.throwIfRequired(t);
             return false;

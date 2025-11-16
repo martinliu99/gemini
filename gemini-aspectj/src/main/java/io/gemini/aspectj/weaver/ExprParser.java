@@ -43,6 +43,7 @@ import org.aspectj.weaver.patterns.SimpleScope;
 import org.aspectj.weaver.patterns.TypePattern;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 
+import io.gemini.api.FrameworkException;
 import io.gemini.aspectj.weaver.TypeWorld.WorldLintException;
 import io.gemini.aspectj.weaver.patterns.HasPatternParser;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
@@ -350,7 +351,7 @@ public enum ExprParser {
     }
 
 
-    public static class ExprParseException extends RuntimeException {
+    public static class ExprParseException extends FrameworkException {
 
         private static final long serialVersionUID = -7800478366126303384L;
 
@@ -395,7 +396,7 @@ public enum ExprParser {
     }
 
 
-    public static class ExprLintException extends RuntimeException {
+    public static class ExprLintException extends FrameworkException {
 
         private static final long serialVersionUID = -7800478366126303384L;
 
@@ -414,7 +415,7 @@ public enum ExprParser {
     }
 
 
-    public static class ExprUnknownException extends RuntimeException {
+    public static class ExprUnknownException extends FrameworkException {
 
         private static final long serialVersionUID = 816600136638029684L;
 

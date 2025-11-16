@@ -275,7 +275,7 @@ interface Joinpoints {
         @Override
         public T getReturning() {
             if (UNDEFINED_RETURNING == this.returning)
-                throw new IllegalStateException("returning is not initialized or unsupported!");
+                throw new IllegalStateException("Uninitialized or unsupported returning");
 
             return returning;
         }
@@ -295,7 +295,7 @@ interface Joinpoints {
         @Override
         public E getThrowing() {
             if (UNDEFINED_THROWING == this.throwing)
-                throw new IllegalStateException("throwing is not initialized!");
+                throw new IllegalStateException("Uninitialized throwing");
 
             return throwing;
         }
@@ -418,7 +418,7 @@ interface Joinpoints {
                 initialize(descriptor);
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Failed to create joinpoint of type '{}',"
+                    LOGGER.warn("Could not create joinpoint of type '{}',"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
                             typeName, 
@@ -511,7 +511,7 @@ interface Joinpoints {
                 return null;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("$Failed to invoke {} for joinpoint of type '{}', \n"
+                    LOGGER.warn("$Could not invoke {} for joinpoint of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Advices: \n"
@@ -549,7 +549,7 @@ interface Joinpoints {
                     advice.before(joinpoint);
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("$Failed to invoke joinpoint of type '{}', \n"
+                        LOGGER.warn("$Could not invoke joinpoint of type '{}', \n"
                                 + "  CurrentAdvice: {}", 
                                 getThisClass().getTypeName(),
                                 advice, 
@@ -571,7 +571,7 @@ interface Joinpoints {
                 try {
                     advice.after(joinpoint);
                 } catch (Throwable t) {
-                    LOGGER.warn("$Failed to invoke joinpoint of type '{}', \n"
+                    LOGGER.warn("$Could not invoke joinpoint of type '{}', \n"
                             + "  CurrentAdvice: {}", 
                             getThisClass().getTypeName(),
                             advice, 
@@ -718,7 +718,7 @@ interface Joinpoints {
                 joinpoint = new DefaultProceedingJoinpoint<T>(descriptor, thisObject, arguments);
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Failed to create joinpoint of type '{}', \n"
+                    LOGGER.warn("Could not create joinpoint of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
                             typeName, 
@@ -759,7 +759,7 @@ interface Joinpoints {
                 return joinpoint.proceed();
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("$Failed to proceed joinpoint of type '{}', \n"
+                    LOGGER.warn("$Could not proceed joinpoint of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Around advices: \n"

@@ -209,7 +209,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                 if (pointcut.getTypeMatcher().matches(typeDescription))
                     matchedAdvisors.add(pointcutAdvisor);
             } catch (Throwable t) {
-                LOGGER.error("Failed to filter advisors {}", advisors, t);
+                LOGGER.error("Could not filter advisors {}", advisors, t);
 
                 Throwables.throwIfRequired(t);
             }
@@ -240,8 +240,17 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     if (pointcut.getMethodMatcher().matches(methodDescription))
                         candidateAdvisors.add(pointcutAdvisor);
                 } catch (Throwable t) {
-                    LOGGER.info("Failed to match joinpoint with pointcut. \n  Joinpoitn: {} \n  Advisor: {} \n  ClassLoader: {} \n  Error reason: {} \n",
-                            MethodUtils.getMethodSignature(methodDescription), pointcutAdvisor, joinpointClassLoader, t.getMessage(), t);
+                    LOGGER.info("Could not match joinpoint with pointcut. \n"
+                            + "  Joinpoitn: {} \n"
+                            + "  Advisor: {} \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Error reason: {} \n",
+                            MethodUtils.getMethodSignature(methodDescription), 
+                            pointcutAdvisor, 
+                            joinpointClassLoader, 
+                            t.getMessage(), 
+                            t
+                    );
 
                     Throwables.throwIfRequired(t);
                 } finally {

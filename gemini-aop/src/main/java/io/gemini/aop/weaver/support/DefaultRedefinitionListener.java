@@ -59,9 +59,10 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
     @Override
     public Iterable<? extends List<Class<?>>> onError(int index, List<Class<?>> batch, Throwable throwable, List<Class<?>> types) {
         if (LOGGER.isWarnEnabled())
-            LOGGER.warn("Failed to redefine {}/{} loaded types in batch {}. \n"
+            LOGGER.warn("Could not redefine {}/{} loaded types in batch {}. \n"
                     + "  Error reason: {} \n"
-                    + "  Types: \n    {} \n", 
+                    + "  Types: \n"
+                    + "    {} \n", 
                     batch.size(), types.size(), index, 
                     throwable.getMessage(),
                     StringUtils.join(batch, Class::toString, "\n    "),

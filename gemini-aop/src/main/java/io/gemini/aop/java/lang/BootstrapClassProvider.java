@@ -33,8 +33,8 @@ import java.lang.annotation.Target;
  * @author   martin.liu
  * @since    1.0
  */
+@Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.CLASS)
-@Target(ElementType.TYPE)
 public @interface BootstrapClassProvider {
 
 }

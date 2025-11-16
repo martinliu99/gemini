@@ -65,8 +65,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
                     + "  {} \n", 
                     (System.nanoTime() - startedAt) / 1e9,
                     StringUtils.join(getAdvisorSpecNum().entrySet(), 
-                            entry -> entry.getKey() + ": " + entry.getValue() + " AdvisorSpecs", 
-                            "\n  ") 
+                            entry -> entry.getKey() + ": " + entry.getValue() + " AdvisorSpecs", "\n  ") 
             );
     }
 

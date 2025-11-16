@@ -117,7 +117,7 @@ public abstract class AbstractIntegrationTests {
 
             AopActivator.activateAop(launchLocation, instrumentation, launcherConfig, aopClassLoader);
         } catch (Throwable t) {
-            throw new IllegalStateException("Failed to a'c't DefaultAopBootstraper.", t);
+            throw new IllegalStateException("Could not activate DefaultAopBootstraper.", t);
         }
     }
 
@@ -149,11 +149,11 @@ public abstract class AbstractIntegrationTests {
                     String path = rootPath.relativize(p.normalize()).toString().replace('\\', ClassUtils.RESOURCE_SPERATOR);
                     resourceFileURLs.put(path, p.toUri().toURL());
                 } catch (MalformedURLException e) {
-                    LOGGER.warn("Failed to convert path: {}", p, e);
+                    LOGGER.warn("Could not convert path: {}", p, e);
                 }
             } );
         } catch (IOException e) {
-            LOGGER.warn("Failed to iterate path: {}", rootPath, e);
+            LOGGER.warn("Could not iterate path: {}", rootPath, e);
         }
     }
 

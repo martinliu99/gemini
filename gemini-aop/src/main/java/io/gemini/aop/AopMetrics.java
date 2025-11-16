@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.config.ConfigView;
-import io.gemini.core.config.ConfigView.Converter.ToString;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.ClassUtils;
@@ -93,14 +92,20 @@ public class AopMetrics {
     private void loadSettings(ConfigView configView) {
         this.summarizeMetricsDetail = configView.getAsBoolean("aop.metrics.summarizeMetricsDetail", false);
 
-        this.bannerTemplate = configView.<String>getValue("aop.metrics.bannerTemplate", "", ToString.INSTANCE, false);
+        this.bannerTemplate = configView.<String>getValue(
+                "aop.metrics.bannerTemplate", "", false, String.class);
 
-        this.launcherStartupSummrayTemplate = configView.<String>getValue("aop.metrics.launcherStartupSummrayTemplate", "", ToString.INSTANCE, false);
-        this.appStartupSummrayTemplate =   configView.<String>getValue("aop.metrics.appStartupSummrayTemplate", "", ToString.INSTANCE, false);
+        this.launcherStartupSummrayTemplate = configView.<String>getValue(
+                "aop.metrics.launcherStartupSummrayTemplate", "", false, String.class);
+        this.appStartupSummrayTemplate =   configView.<String>getValue(
+                "aop.metrics.appStartupSummrayTemplate", "", false, String.class);
 
-        this.weaverSummrayHeaderTemplate = configView.<String>getValue("aop.metrics.weaverSummrayHeaderTemplate", "", ToString.INSTANCE, false);
-        this.weaverSummrayDetailTemplate =  configView.<String>getValue("aop.metrics.weaverSummrayDetailTemplate", "", ToString.INSTANCE, false);
-        this.weaverSummrayPerCLTemplate  = configView.<String>getValue("aop.metrics.weaverSummrayPerCLTemplate", "", ToString.INSTANCE, false);
+        this.weaverSummrayHeaderTemplate = configView.<String>getValue(
+                "aop.metrics.weaverSummrayHeaderTemplate", "", false, String.class);
+        this.weaverSummrayDetailTemplate =  configView.<String>getValue(
+                "aop.metrics.weaverSummrayDetailTemplate", "", false, String.class);
+        this.weaverSummrayPerCLTemplate  = configView.<String>getValue(
+                "aop.metrics.weaverSummrayPerCLTemplate", "", false, String.class);
     }
 
 
@@ -116,11 +121,10 @@ public class AopMetrics {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
         // ignore excluded ClassLoader
-        return weaverMetricsMap
-                .computeIfAbsent(
-                        cacheKey, 
-                        cl -> new WeaverMetrics(index.getAndIncrement(), classLoader)
-                );
+        return weaverMetricsMap.computeIfAbsent(
+                cacheKey, 
+                cl -> new WeaverMetrics(index.getAndIncrement(), classLoader)
+        );
     }
 
     public WeaverMetrics getWeaverMetrics(ClassLoader classLoader, JavaModule javaModule) {

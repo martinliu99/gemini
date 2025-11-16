@@ -75,7 +75,7 @@ public class DefaultAopLauncher implements AopLauncher {
 
             // 1.load AOP settings
             Map<String, Object> builtinSettings = new LinkedHashMap<>();
-            builtinSettings.put("aop.launcher.launchPath", launcherConfig.getLaunchPath());
+            builtinSettings.put("aop.launcher.launchPath", launcherConfig.getLaunchPath().toString());
 
             ConfigView configView = ConfigViews.createConfigView(
                     launcherConfig.getLaunchArgs(), builtinSettings,

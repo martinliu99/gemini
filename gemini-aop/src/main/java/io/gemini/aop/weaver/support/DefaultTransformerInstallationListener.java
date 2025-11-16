@@ -42,7 +42,7 @@ public class DefaultTransformerInstallationListener implements InstallationListe
     @Override
     public Throwable onError(Instrumentation instrumentation, ResettableClassFileTransformer classFileTransformer,
             Throwable throwable) {
-        LOGGER.error("Failed to install Aop Launcher!", throwable);
+        LOGGER.error("Could not install Aop Launcher!", throwable);
         return throwable;
     }
 

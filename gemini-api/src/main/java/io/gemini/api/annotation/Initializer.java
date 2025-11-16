@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.core.object;
+package io.gemini.api.annotation;
 
-public class ObjectsException extends RuntimeException {
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 7286124443140436785L;
+@Target( {ElementType.CONSTRUCTOR} )
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Initializer {
 
-    public ObjectsException(String message) {
-        super(message);
-    }
-
-    public ObjectsException(Throwable t) {
-        super(t);
-    }
-
-    public ObjectsException(String message, Throwable t) {
-        super(message, t);
-    }
 }

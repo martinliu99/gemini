@@ -26,8 +26,10 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -35,8 +37,11 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.api.FrameworkException;
+import io.gemini.api.annotation.Initializer;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.Assert;
+import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
@@ -54,15 +59,38 @@ public interface ObjectFactory extends Closeable {
 
     void registerSingleton(String objectName, Object existingObject);
 
-    Class<?> loadClass(String className) throws ObjectsException;
 
-    <T> T createObject(Class<T> clazz) throws ObjectsException;
+    <T> Class<T> loadClass(String className) throws ObjectsException;
 
     <T> boolean isInstantiatable(Class<T> clazz);
 
+
+    <T> T createObject(Class<T> clazz, Map<String, Object> arguments) throws ObjectsException;
+
+    <T> T createObject(Class<T> clazz) throws ObjectsException;
+
     <T> List<T> createObjectsImplementing(Class<T> clazz) throws ObjectsException;
 
+
     void close() throws IOException;
+
+
+    public class ObjectsException extends FrameworkException {
+
+        private static final long serialVersionUID = 7286124443140436785L;
+
+        public ObjectsException(String message) {
+            super(message);
+        }
+
+        public ObjectsException(Throwable t) {
+            super(t);
+        }
+
+        public ObjectsException(String message, Throwable t) {
+            super(message, t);
+        }
+    }
 
 
     abstract class AbstractBase implements ObjectFactory {
@@ -100,14 +128,91 @@ public interface ObjectFactory extends Closeable {
         }
 
         @Override
-        public Class<?> loadClass(String className) throws ObjectsException {
+        @SuppressWarnings("unchecked")
+        public <T> Class<T> loadClass(String className) throws ObjectsException {
             Assert.hasText(className, "'className' must not be empty.");
 
             try {
-                return this.getClassLoader().loadClass(className);
-            } catch (ClassNotFoundException e) {
-                throw new ObjectsException(e);
+                return (Class<T>) this.getClassLoader().loadClass(className);
+            } catch (Throwable t) {
+                Throwables.throwIfRequired(t);
+
+                throw new ObjectsException(t);
             }
+        }
+
+        @Override
+        public <T> boolean isInstantiatable(Class<T> clazz) {
+            // top level or nested, concrete class
+            return (!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers()) 
+                        && !clazz.isEnum() && !clazz.isAnnotation() )
+                    && ((clazz.getEnclosingConstructor() == null && clazz.getEnclosingMethod() == null)
+                        || Modifier.isStatic(clazz.getModifiers()) )
+            ;
+        }
+
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T createObject(Class<T> clazz, Map<String, Object> arguments) throws ObjectsException {
+            Assert.notNull(clazz, "'clazz' must not be null.");
+            arguments =  arguments == null ? Collections.emptyMap() : arguments;
+
+
+            // find constructor with @Initializer
+            Constructor<T> candidateConstructor = null;
+            for (Constructor<T> constructor : (Constructor<T>[]) clazz.getDeclaredConstructors()) {
+                if (constructor.getAnnotationsByType(Initializer.class) == null)
+                    continue;
+
+                if (candidateConstructor == null)
+                    candidateConstructor = constructor;
+                else
+                    throw new ObjectsException("Class [" + clazz.getName() + "] contains multiple constructors annotated with @" + Initializer.class.getName());
+            }
+
+            if (candidateConstructor == null)
+                return doCreateObject(clazz);
+
+
+            // prepare arguments
+            Object[] invocationArgs = new Object[candidateConstructor.getParameterCount()];
+            int i = 0;
+            for (Parameter parameter : candidateConstructor.getParameters()) {
+                String parameterName = parameter.getName();
+                Class<?> parameterType = parameter.getType();
+
+                Object argument = arguments.get(parameterName);
+                if (argument == null || ClassUtils.isAssignableFrom(parameterType, argument.getClass()) == false)
+                    throw new ObjectsException("Illegal argument type [" + (argument == null ? "null" : argument.getClass())
+                            + "] for parameter [" + parameterName 
+                            + "] of constrcutor [" + candidateConstructor + "]");
+
+                invocationArgs[i++] = argument;
+            }
+
+            // instantiate and class
+            try {
+                return doInstantiateObject(clazz, candidateConstructor, invocationArgs);
+            } catch (Exception e) {
+                throw new ObjectsException("Cannot instantiate class [" + clazz.getName() + "]", e);
+            }
+        }
+
+        protected <T> T doInstantiateObject(Class<T> clazz, Constructor<T> constructor, Object[] arguments) 
+                throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+            ReflectionUtils.makeAccessible(clazz, constructor);
+
+            T object = arguments == null 
+                    ? (T) constructor.newInstance() : (T) constructor.newInstance(arguments);
+
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("Instantiated '{}' type with constructor '{}.", clazz, constructor);
+
+            return object;
         }
 
 
@@ -119,7 +224,6 @@ public interface ObjectFactory extends Closeable {
             return this.doCreateObject(clazz);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public <T> List<T> createObjectsImplementing(Class<T> clazz) throws ObjectsException {
             Assert.notNull(clazz, "'clazz must not be null.'");
@@ -128,11 +232,11 @@ public interface ObjectFactory extends Closeable {
 
             List<T> objects = new ArrayList<>(classNames.size());
             for (String className : classNames) {
-                Class<T> canidateType = (Class<T>) this.loadClass(className);
+                Class<T> canidateType = this.loadClass(className);
                 if (isInstantiatable(canidateType) == false) 
                     continue;
 
-                objects.add(this.createObject(canidateType));
+                objects.add(this.doCreateObject(canidateType));
             }
 
             if (LOGGER.isDebugEnabled())
@@ -143,16 +247,6 @@ public interface ObjectFactory extends Closeable {
                 );
 
             return objects;
-        }
-
-        @Override
-        public <T> boolean isInstantiatable(Class<T> clazz) {
-            // top level or nested, concrete class
-            return (!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers()) 
-                        && !clazz.isEnum() && !clazz.isAnnotation() )
-                    && ((clazz.getEnclosingConstructor() == null && clazz.getEnclosingMethod() == null)
-                        || Modifier.isStatic(clazz.getModifiers()) )
-            ;
         }
 
         protected abstract <T> T doCreateObject(Class<T> clazz) throws ObjectsException;
@@ -190,14 +284,15 @@ public interface ObjectFactory extends Closeable {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected <T> T doCreateObject(Class<T> clazz) throws ObjectsException {
-            Constructor<?>[] constructors = clazz.getDeclaredConstructors();
+            Constructor<T>[] constructors = (Constructor<T>[]) clazz.getDeclaredConstructors();
 
             try {
-                Constructor<?> defaultConstructor = null;
-                for (Constructor<?> constructor : constructors) {
+                Constructor<T> candidateConstructor = null;
+                for (Constructor<T> constructor : constructors) {
                     if (constructor.getParameterCount() == 0) {
-                        defaultConstructor = constructor;
+                        candidateConstructor = constructor;
                         continue;
                     }
 
@@ -233,36 +328,27 @@ public interface ObjectFactory extends Closeable {
 
                     // try to instantiate object with candidate constructor
                     if (candidate) {
-                        T object = this.instantiateObject(clazz, constructor, arguments);
+                        T object = this.doInstantiateObject(clazz, constructor, arguments);
 
                         return this.initializeObject(clazz, object);
                     }
                 }
 
                 // try to instantiate object with default constructor
-                if (defaultConstructor != null) {
-                    T object = this.instantiateObject(clazz, defaultConstructor, null);
+                if (candidateConstructor != null) {
+                    T object = this.doInstantiateObject(clazz, candidateConstructor, null);
 
                     return this.initializeObject(clazz, object);
                 }
-            } catch (Exception e) {
-                throw new ObjectsException(e);
+            } catch (Throwable t) {
+                Throwables.throwIfRequired(t);
+
+                throw new ObjectsException(t);
             }
 
-            LOGGER.warn("Failed to instantiate '{}' type with below constructors,\n  {}.\n", clazz, Arrays.asList(constructors));
-            throw new IllegalArgumentException("Could not instantiate type '" + clazz + "' with required constructor, ");
-        }
-
-        @SuppressWarnings("unchecked")
-        private <T> T instantiateObject(Class<T> clazz, Constructor<?> constructor, Object[] arguments) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-            ReflectionUtils.makeAccessible(clazz, constructor);
-            T object = arguments == null 
-                    ? (T) constructor.newInstance() : (T) constructor.newInstance(arguments);
-
-            if (LOGGER.isDebugEnabled())
-                LOGGER.debug("Instantiated '{}' type with constructor '{}.", clazz, constructor);
-
-            return object;
+            LOGGER.warn("Could not instantiate '{}' type with below constructors,\n"
+                    + "  {}.\n", clazz, Arrays.asList(constructors));
+            throw new IllegalArgumentException("Cannot instantiate class [" + clazz + "] with required constructor");
         }
 
         private <T> T initializeObject(Class<T> clazz, T object) throws Exception {
@@ -331,6 +417,7 @@ public interface ObjectFactory extends Closeable {
             return object;
         }
 
+
         @Override
         public void close() throws IOException {
             this.objectMap.clear();
@@ -395,7 +482,7 @@ public interface ObjectFactory extends Closeable {
 
                     return objectFactory;
                 } catch (Throwable t) {
-                    LOGGER.warn("Failed to start ObjectFactory '{}'.", className, t);
+                    LOGGER.warn("Could not start ObjectFactory '{}'.", className, t);
 
                     Throwables.throwIfRequired(t);
                 }

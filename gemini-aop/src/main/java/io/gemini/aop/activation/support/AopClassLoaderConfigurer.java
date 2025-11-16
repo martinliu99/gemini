@@ -82,7 +82,7 @@ public class AopClassLoaderConfigurer {
         Set<String> parentFirstTypeExpressions = new LinkedHashSet<>();
         Set<String> parentFirstResourceExpressions = new LinkedHashSet<>();
 
-        this.configureParentFirstFilter(aopClassLoader, nameMapping,
+        this.configureParentFirstFilter(aopClassLoader,
                 parentFirstTypeExpressions, parentFirstResourceExpressions);
 
 
@@ -97,8 +97,10 @@ public class AopClassLoaderConfigurer {
         long time =  System.nanoTime() - startedAt;
         if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
             LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
-                    + "  parentFirstTypeExpressions: \n    {} \n"
-                    + "  parentFirstResourceExpressions: \n    {} \n", 
+                    + "  parentFirstTypeExpressions: \n"
+                    + "    {} \n"
+                    + "  parentFirstResourceExpressions: \n"
+                    + "    {} \n", 
                     time / 1e9,
                     StringUtils.join(parentFirstTypeExpressions, "\n    "), 
                     StringUtils.join(parentFirstResourceExpressions, "\n    ")
@@ -109,7 +111,7 @@ public class AopClassLoaderConfigurer {
         aopContext.getAopMetrics().getBootstraperMetrics().setAopCLConfigTime(time);
     }
 
-    private void configureParentFirstFilter(AopClassLoader aopClassLoader, Map<String, String> nameMapping,
+    private void configureParentFirstFilter(AopClassLoader aopClassLoader, 
             Set<String> parentFirstTypeExpressions, Set<String> parentFirstResourceExpressions) {
         // 1.collect parent first type expressions
         parentFirstTypeExpressions.addAll(
@@ -119,8 +121,6 @@ public class AopClassLoaderConfigurer {
 
         if (aopContext.isScanClassesFolder())
             parentFirstTypeExpressions.addAll( CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES );
-
-        parentFirstTypeExpressions.addAll( nameMapping.values() );
 
         ElementMatcher<String> parentFirstClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
                 "ParentFirstClassMatcher", parentFirstTypeExpressions, ElementMatchers.none());
@@ -151,6 +151,7 @@ public class AopClassLoaderConfigurer {
             }
         });
     }
+
 
     private void configureBoostrapClassFilter(AopClassLoader aopClassLoader, Map<String, String> nameMapping) {
         ElementMatcher<String> bootstrapClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
@@ -206,7 +207,7 @@ public class AopClassLoaderConfigurer {
                 classResourceMap.put(path, IOUtils.toURL(path, byteCode));
             }
         } catch (Exception e) {
-            LOGGER.warn("Failed to load BootstrapClass consumer class", e);
+            LOGGER.warn("Could not load BootstrapClass consumer class", e);
             throw new AopException(e);
         }
 

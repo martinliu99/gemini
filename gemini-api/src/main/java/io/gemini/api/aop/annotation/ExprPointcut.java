@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface ExprPointcutSpec {
+public @interface ExprPointcut {
 
     /**
      * @return the pointcut expression where to bind the advice

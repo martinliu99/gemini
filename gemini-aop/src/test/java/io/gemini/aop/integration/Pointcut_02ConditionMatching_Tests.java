@@ -34,8 +34,10 @@ import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
-import io.gemini.api.aop.condition.ConditionContext;
-import io.gemini.api.aop.condition.Conditional;
+import io.gemini.api.aop.MatchingContext;
+import io.gemini.api.aop.annotation.Conditional;
+import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
+import io.gemini.api.aop.annotation.ConditionalOnField;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -85,7 +87,8 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
 
 
     @Aspect
-    @Conditional(value = {Condition1.class, }, acceptableClassLoaderExpressions = "AppClassLoader")
+    @ConditionalOnMark
+    @ConditionalOnClassLoader(classLoaderExpression = "AppClassLoader")
     public static class VoidMatching_Aspect {
 
         private static final String MATCH_VOID_POINTCUT = 
@@ -94,7 +97,7 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Aspect.class.getName() + ".matchVoid_afterAdvice";
 
         @After(MATCH_VOID_POINTCUT)
-        @Conditional(requiredFieldExpressions = "io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
+        @ConditionalOnField(fieldExpression = "io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
         public void matchVoid_afterAdvice(MutableJoinpoint<Void, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(MATCH_VOID_AFTER_ADVICE, 
                     new AdviceMethod()
@@ -127,11 +130,10 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
             return new AdvisorSpec.PojoPointcutSpec.Builder()
                     .adviceClassName(
                             VoidMatching_Advice.class.getName() )
-                    .condition(new ElementMatcher<ConditionContext>() {
-
+                    .condition(new ElementMatcher<MatchingContext>() {
                         @Override
-                        public boolean matches(ConditionContext target) {
-                            return target.hasRequiredMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
+                        public boolean matches(MatchingContext context) {
+                            return context.hasMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
                         }
                     })
                     .typeMatcher(
@@ -144,14 +146,27 @@ public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests
         }
     }
 
-    private static class Condition1 implements ElementMatcher<ConditionContext> {
+
+    @Conditional(OnMarkCondition.class)
+    @interface ConditionalOnMark {
+
+        boolean mark() default false;
+    }
+
+
+    private static class OnMarkCondition implements ElementMatcher<MatchingContext> {
+
+        @SuppressWarnings("unused")
+        public OnMarkCondition(boolean mark) {
+            
+        }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public boolean matches(ConditionContext target) {
-            return target.hasRequiredType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
+        public boolean matches(MatchingContext context) {
+            return context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
         }
         
     }

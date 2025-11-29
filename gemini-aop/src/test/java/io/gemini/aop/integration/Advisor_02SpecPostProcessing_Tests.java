@@ -27,10 +27,11 @@ import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.MatchingContext;
+import io.gemini.api.aop.annotation.Conditional;
+import net.bytebuddy.matcher.ElementMatcher;
 
-/**
- * 
- */
+
 public class Advisor_02SpecPostProcessing_Tests extends AbstractIntegrationTests {
 
     @Test
@@ -44,12 +45,16 @@ public class Advisor_02SpecPostProcessing_Tests extends AbstractIntegrationTests
         }
     }
 
+
     private static class SpecPostPrcoessing_Object {
 
         public long postPrcoessSpec(long input) {
+            new ConditionMatching_Object().conditionMethod();
+
             return input;
         }
     }
+
 
     private static class SpecPostProcessing_ExprPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
@@ -65,5 +70,43 @@ public class Advisor_02SpecPostProcessing_Tests extends AbstractIntegrationTests
                         .withInvoked(true)
                         .withReturning(joinpoint.getReturning()) );
         }
+    }
+
+
+    static class ConditionMatching_Object {
+
+        @SuppressWarnings("unused")
+        private Condition_Object condition_Object; 
+
+        private void conditionMethod() {
+            return;
+        }
+    }
+
+    static class Condition_Object {}
+
+
+    @Conditional(OnMarkCondition.class)
+    @interface ConditionalOnMark {
+
+        boolean mark() default false;
+    }
+
+
+    private static class OnMarkCondition implements ElementMatcher<MatchingContext> {
+
+        @SuppressWarnings("unused")
+        public OnMarkCondition(boolean mark) {
+            
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean matches(MatchingContext context) {
+            return context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
+        }
+        
     }
 }

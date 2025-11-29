@@ -96,9 +96,12 @@ public abstract class ReflectionUtils {
             throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         Assert.notNull(annotation, "'annotation' must not be null.");
 
-        List<Method> attributeMethods = ReflectionUtils.getAttributeMethods(annotation.getClass());
+        Class<? extends Annotation> annotationClass = annotation.getClass();
+        List<Method> attributeMethods = ReflectionUtils.getAttributeMethods(annotationClass);
         Map<String, Object> attributeValues = new LinkedHashMap<>(attributeMethods.size());
         for (Method method : attributeMethods) {
+            makeAccessible(annotationClass, method);
+
             attributeValues.put( method.getName(), method.invoke(annotation) );
         }
 

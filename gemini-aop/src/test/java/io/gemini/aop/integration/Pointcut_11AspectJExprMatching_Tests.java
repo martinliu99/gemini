@@ -173,12 +173,12 @@ public class Pointcut_11AspectJExprMatching_Tests extends AbstractIntegrationTes
         private static final String MATCH_REFERNECE_POINTCUT_AFTER_ADVICE = Placeholder_Aspect.class.getName() + ".matchReferencePointcut_afterAdvice";
 
         @Pointcut("${user.Pointcut_01JoinpointMatching_Tests.placeholderAdvisorsPointcutExpr2}")
-        public void matchPlaceholder() { }
-
-        @Pointcut("${user.Pointcut_01JoinpointMatching_Tests.placeholderAdvisorsPointcutExpr3}")
         public void matchPlaceholder2() { }
 
-        @After("matchPlaceholder() or matchPlaceholder2()")
+        @Pointcut("${user.Pointcut_01JoinpointMatching_Tests.placeholderAdvisorsPointcutExpr3}")
+        public void matchPlaceholder3() { }
+
+        @After("matchPlaceholder2() or matchPlaceholder3()")
         public void matchReferencePointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(MATCH_REFERNECE_POINTCUT_AFTER_ADVICE, 
                     new AdviceMethod()

@@ -19,6 +19,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.AccessibleObject;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -29,15 +30,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.Advisor;
 import io.gemini.aop.weaver.Joinpoints.Descriptor;
-import io.gemini.api.classloader.ThreadContext;
 import io.gemini.core.OrderComparator;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.ClassUtils;
@@ -185,31 +185,38 @@ class WeaverCache implements Closeable {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                List<? extends Advisor> advisorChain = processAdvisors( this.methodSignatureAdvisorsMap.get(methodSignature) );
+                List<? extends Advisor> advisorChain = processAdvisors( 
+                        joinpointClassLoader, methodSignature,
+                        this.methodSignatureAdvisorsMap.get(methodSignature) );
 
                 Descriptor joinpointDescriptor = CollectionUtils.isEmpty(advisorChain)
                         ? null
-                        : this.createJoinpointDescriptor(lookup, methodSignature, thisClass, this.methodSignatureMap.get(methodSignature), advisorChain);
+                        : this.createJoinpointDescriptor(
+                                lookup, methodSignature, thisClass, 
+                                this.methodSignatureMap.get(methodSignature), advisorChain);
 
-                if (weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
-                        || weaverContext.getAopContext().isDiagnosticClass(typeName))
+                if ((weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
+                        || weaverContext.getAopContext().isDiagnosticClass(typeName)) 
+                        && LOGGER.isInfoEnabled())
                     LOGGER.info("Created joinpoint descriptor for type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Advices: \n"
                             + "    {} \n", 
-                            typeName, lookup.lookupClass().getClassLoader(),
+                            typeName, 
+                            joinpointClassLoader,
                             methodSignature,
                             StringUtils.join(advisorChain, Advisor::getAdvisorName, "\n    ")
                     );
 
                 return joinpointDescriptor;
             } catch (Throwable t) {
-                LOGGER.warn("Could not create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n"
-                        + "  Method: {}", 
-                        typeName, joinpointClassLoader, 
-                        methodSignature, t
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n"
+                            + "  Method: {}", 
+                            typeName, joinpointClassLoader, 
+                            methodSignature, t
+                    );
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -218,16 +225,39 @@ class WeaverCache implements Closeable {
             }
         }
 
-        private List<? extends Advisor> processAdvisors(List<? extends Advisor> candidates) {
+        private List<? extends Advisor> processAdvisors(ClassLoader joinpointClassLoader, String methodSignature, 
+                List<? extends Advisor> candidates) {
             // remove null, or duplicate advice classes
             Set<Class<?>> adviceClasses = new LinkedHashSet<>();
-            List<Advisor> advisors = candidates.stream()
-            .filter( advisor -> 
-                    advisor.getAdviceClass() != null 
-                    && adviceClasses.add(advisor.getAdviceClass()) 
-                    && (advisor.isPerInstance() || advisor.getAdvice() != null)
-            )
-            .collect( Collectors.toList() );
+            List<String> ignoredAdvisors = new ArrayList<>();
+            List<Advisor> advisors = new ArrayList<>(candidates.size());
+            for (Advisor advisor : candidates) {
+                Class<?> adviceClass = advisor.getAdviceClass();
+                if (adviceClass == null)
+                    continue;
+
+                if (adviceClasses.add(adviceClass) == false) {
+                    ignoredAdvisors.add(advisor.getAdvisorName());
+                    continue;
+                }
+
+                if (advisor.isPerInstance() == false && advisor.getAdvice() == null)
+                    continue;
+
+                advisors.add(advisor);
+            }
+
+            if (ignoredAdvisors.size() > 0 && LOGGER.isWarnEnabled())
+                LOGGER.warn("Removed duplicate Advice for type '{}', \n"
+                        + "  ClassLoader: {} \n"
+                        + "  Method: {} \n"
+                        + "  RemovedAdvices: \n"
+                        + "    {} \n", 
+                        typeName, 
+                        joinpointClassLoader,
+                        methodSignature,
+                        StringUtils.join(ignoredAdvisors, "\n    ")
+                );
 
             // sort advisor
             OrderComparator.sort(advisors);

@@ -32,6 +32,8 @@ import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.annotation.Advisor;
+import io.gemini.api.aop.annotation.ExprPointcut;
 import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
@@ -63,7 +65,7 @@ public class Advisor_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_AtExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
@@ -185,6 +187,7 @@ public class Advisor_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
+
     public static class SpecScanning_ExprPointcutSpec implements AdvisorSpec.ExprPointcutSpec {
 
         private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutSpec.class.getName() + ".after";
@@ -238,6 +241,7 @@ public class Advisor_01SpecScanning_Tests extends AbstractIntegrationTests {
         }
     }
 
+
     public static class SpecScanning_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
             implements AdvisorSpec.ExprPointcutSpec.Factory {
 
@@ -266,6 +270,26 @@ public class Advisor_01SpecScanning_Tests extends AbstractIntegrationTests {
                     .builder();
         }
     }
+
+
+    @Advisor
+    @ExprPointcut(pointcutExpression = "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))")
+    public static class SpecScanning_AtExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> {
+
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_AtExprPointcutAdvice.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(joinpoint.getReturning()) );
+        }
+    }
+
 
     @Aspect
     public static class SpecScanning_Aspect {

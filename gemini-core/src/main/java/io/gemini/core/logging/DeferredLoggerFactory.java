@@ -35,13 +35,13 @@ import org.slf4j.helpers.NOPLogger;
 import org.slf4j.spi.LocationAwareLogger;
 
 /**
- * Generally, this class is used in logging system startup phase to cache {@code DelayMessage}, 
+ * Generally, this class is used in logging system startup phase to cache {@code DeferredMessage}, 
  * and later replay messages after initialized logging system. 
  * 
  * After initialization, all logger instances, generated before and after initialization, 
  * works like normal logger and records message in real-time.
  *
- * with DelayLoggerFactory,
+ * with DeferredLoggerFactory,
  * <li> in initializing phase, lose location information, e.g., class, method, file, line,
  * <li> might record disordered messages when working with spring boot {@code DeferredLog}.
  * 
@@ -49,7 +49,7 @@ import org.slf4j.spi.LocationAwareLogger;
  * 
  * @author martin.liu
  */
-public class DelayLoggerFactory {
+public class DeferredLoggerFactory {
 
     private static final Class<?> LOGGER_CONTEXT_CLASS;
     private static final Method GET_FRAMEWORK_PACKAGES_METHOD;
@@ -57,11 +57,11 @@ public class DelayLoggerFactory {
     private static final String SPACE = " ";
     private static final Map<Integer, String> LEVEL_MAP;
 
-    private static final DelayLoggerFactory INSTANCE = new DelayLoggerFactory();
+    private static final DeferredLoggerFactory INSTANCE = new DeferredLoggerFactory();
 
 
-    private final Map<String, DelayLogger> loggers = new HashMap<String, DelayLogger>();
-    private final LinkedBlockingQueue<DelayMessage> eventQueue = new LinkedBlockingQueue<DelayMessage>();
+    private final Map<String, DeferredLogger> loggers = new HashMap<String, DeferredLogger>();
+    private final LinkedBlockingQueue<DeferredMessage> eventQueue = new LinkedBlockingQueue<DeferredMessage>();
     private volatile boolean postInitialization = false;
 
 
@@ -85,11 +85,11 @@ public class DelayLoggerFactory {
     }
 
 
-    public static DelayLogger getLogger(String name) {
+    public static DeferredLogger getLogger(String name) {
         return INSTANCE.getOrCreateLogger(name);
     }
 
-    public static DelayLogger getLogger(Class<?> clazz) {
+    public static DeferredLogger getLogger(Class<?> clazz) {
         return INSTANCE.getOrCreateLogger(clazz.getName());
     }
 
@@ -98,10 +98,10 @@ public class DelayLoggerFactory {
     }
 
 
-    synchronized protected DelayLogger getOrCreateLogger(String name) {
-        DelayLogger logger = loggers.get(name);
+    synchronized protected DeferredLogger getOrCreateLogger(String name) {
+        DeferredLogger logger = loggers.get(name);
         if (logger == null) {
-            logger = new DelayLogger(name, eventQueue, postInitialization);
+            logger = new DeferredLogger(name, eventQueue, postInitialization);
             loggers.put(name, logger);
         }
         return logger;
@@ -115,7 +115,7 @@ public class DelayLoggerFactory {
         postInitialization = true;
 
         // lazily initialize delegate logger
-        fixDelayLoggers();
+        fixDeferredLoggers();
 
         // replay log messages
         replayMessages(loggerLevel);
@@ -124,10 +124,10 @@ public class DelayLoggerFactory {
         clear();
     }
 
-    private void fixDelayLoggers() {
+    private void fixDeferredLoggers() {
         synchronized (this) {
-            for (DelayLogger delayLogger : loggers.values()) {
-                delayLogger.setPostInitialization();
+            for (DeferredLogger deferredLogger : loggers.values()) {
+                deferredLogger.setPostInitialization();
             }
 
             // adjust Logback LoggerContext;
@@ -142,7 +142,7 @@ public class DelayLoggerFactory {
     }
 
     private void replayMessages(Level loggerLevel) {
-        final LinkedBlockingQueue<DelayMessage> queue = eventQueue;
+        final LinkedBlockingQueue<DeferredMessage> queue = eventQueue;
         int queueSize = queue.size();
         if (queueSize == 0) return;
 
@@ -152,7 +152,7 @@ public class DelayLoggerFactory {
         loggerLevel = loggerLevel == null ? Level.INFO : loggerLevel;
 
         final int maxDrain = 128;
-        List<DelayMessage> messages = new ArrayList<DelayMessage>(maxDrain);
+        List<DeferredMessage> messages = new ArrayList<DeferredMessage>(maxDrain);
         int msgCount = 0;
         DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
 
@@ -161,7 +161,7 @@ public class DelayLoggerFactory {
             if (numDrained == 0)
                 break;
 
-            for (DelayMessage message : messages) {
+            for (DeferredMessage message : messages) {
                 if (message.getLevel() < loggerLevel.toInt()) continue;
 
                 msgCount++;
@@ -171,15 +171,15 @@ public class DelayLoggerFactory {
             messages.clear();
         }
 
-        sBuilder.append("Replayed delay messages. \n");
+        sBuilder.append("Replayed deferred messages. \n");
 
         if (msgCount == 0) return;
 
         sBuilder.insert(0, "A number (" + msgCount);
-        LoggerFactory.getLogger(DelayLoggerFactory.class).info(sBuilder.toString());
+        LoggerFactory.getLogger(DeferredLoggerFactory.class).info(sBuilder.toString());
     }
 
-    private void formatMessage(StringBuilder sBuilder, DateFormat dateFormatter, DelayMessage message) {
+    private void formatMessage(StringBuilder sBuilder, DateFormat dateFormatter, DeferredMessage message) {
         sBuilder.append(dateFormatter.format(message.getTimeStamp())).append(SPACE)
         .append(
                 LEVEL_MAP.containsKey(message.getLevel()) ? LEVEL_MAP.get(message.getLevel()) : "N/A" ).append(SPACE)
@@ -197,22 +197,22 @@ public class DelayLoggerFactory {
     }
 
 
-    static class DelayLogger implements Logger {
+    static class DeferredLogger implements Logger {
 
         // adjust logging location
-        public static final String FQCN = DelayLogger.class.getName();
+        public static final String FQCN = DeferredLogger.class.getName();
 
         private final static boolean RECORD_ALL_EVENTS = true;
 
         private final String name;
         private volatile Logger delegate;
 
-        private final Queue<DelayMessage> eventQueue;
+        private final Queue<DeferredMessage> eventQueue;
 
         private volatile boolean postInitialization = false;
 
 
-        public DelayLogger(String name, Queue<DelayMessage> eventQueue, boolean postInitialization) {
+        public DeferredLogger(String name, Queue<DeferredMessage> eventQueue, boolean postInitialization) {
             this.name = name;
             this.eventQueue = eventQueue;
 
@@ -936,7 +936,7 @@ public class DelayLoggerFactory {
         }
 
         private void recordMessage(Marker marker, int level, String msg, Object[] args, Throwable throwable) {
-            DelayMessage loggingEvent = new DelayMessage();
+            DeferredMessage loggingEvent = new DeferredMessage();
 
             loggingEvent.setLoggerName(name);
 
@@ -964,7 +964,7 @@ public class DelayLoggerFactory {
             if (o == null || getClass() != o.getClass())
                 return false;
 
-            DelayLogger that = (DelayLogger) o;
+            DeferredLogger that = (DeferredLogger) o;
 
             if (!getName().equals(that.getName()))
                 return false;
@@ -974,7 +974,7 @@ public class DelayLoggerFactory {
     }
 
 
-    static class DelayMessage {
+    static class DeferredMessage {
 
         String loggerName;
         long timeStamp;

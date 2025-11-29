@@ -16,24 +16,24 @@
 package io.gemini.api;
 
 
-public class FrameworkException extends RuntimeException {
+public abstract class BaseException extends RuntimeException {
 
     private static final long serialVersionUID = -3742997966151551674L;
 
 
-    public FrameworkException() {
+    public BaseException() {
         super();
     }
 
-    public FrameworkException(String message) {
+    public BaseException(String message) {
         super(message);
     }
 
-    public FrameworkException(String message, Throwable cause) {
+    public BaseException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public FrameworkException(Throwable cause) {
+    public BaseException(Throwable cause) {
         super(cause);
     }
 }

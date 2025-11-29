@@ -37,7 +37,8 @@ public class OnClassLoaderCondition implements ElementMatcher<MatchingContext> {
     @Initializer
     public OnClassLoaderCondition(String classLoaderExpression, 
             boolean isBootstrapClassLoader, boolean isExtClassLoader, boolean isAppClassLoader) {
-        this.classLoaderExpression = classLoaderExpression;
+        this.classLoaderExpression = classLoaderExpression == null 
+                ? "" : classLoaderExpression.trim();
 
         this.isBootstrapClassLoader = isBootstrapClassLoader;
         this.isExtClassLoader = isExtClassLoader;
@@ -49,15 +50,19 @@ public class OnClassLoaderCondition implements ElementMatcher<MatchingContext> {
      */
     @Override
     public boolean matches(MatchingContext context) {
-        if (isBootstrapClassLoader && context.isBootstrapClassLoader())
-            return true;
+        if (isBootstrapClassLoader) {
+            if (context.isBootstrapClassLoader())
+                return true;
+        } else if (isExtClassLoader) {
+            if (context.isExtClassLoader())
+                return true;
+        } else if (isAppClassLoader) {
+            if (context.isAppClassLoader())
+                return true;
+        } else if (!"".equals(classLoaderExpression)) {
+            return context.isClassLoader(classLoaderExpression);
+        }
 
-        if (isExtClassLoader && context.isExtClassLoader())
-            return true;
-
-        if (isAppClassLoader && context.isExtClassLoader())
-            return true;
-
-        return context.isClassLoader(classLoaderExpression);
+        return false;
     }
 }

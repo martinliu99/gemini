@@ -15,9 +15,9 @@
  */
 package io.gemini.api.aop;
 
-import io.gemini.api.FrameworkException;
+import io.gemini.api.BaseException;
 
-public class AopException extends FrameworkException {
+public class AopException extends BaseException {
 
     private static final long serialVersionUID = 1580062864289647476L;
 

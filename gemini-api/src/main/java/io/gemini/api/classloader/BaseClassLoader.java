@@ -15,21 +15,23 @@
  */
 package io.gemini.api.classloader;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 
-public class ThreadContext {
+/**
+ *
+ *
+ * @author   martin.liu
+ * @since	 1.0
+ */
+public abstract class BaseClassLoader extends URLClassLoader {
 
-    // store contextClassLoader per thread
-    private final static ThreadLocal<ClassLoader> CONTEXT_CLASS_LOADER = new ThreadLocal<>();
-
-    public static ClassLoader getContextClassLoader() {
-        return CONTEXT_CLASS_LOADER.get();
+    /**
+     * @param urls
+     * @param parent
+     */
+    public BaseClassLoader(URL[] urls, ClassLoader parent) {
+        super(urls, parent);
     }
 
-    public static void setContextClassLoader(ClassLoader contextClassLoader) {
-        CONTEXT_CLASS_LOADER.set(contextClassLoader);
-    }
-
-    public static void removeContextClassLoader() {
-        CONTEXT_CLASS_LOADER.remove();
-    }
 }

@@ -33,7 +33,7 @@ import io.gemini.api.aop.condition.OnClassLoaderCondition;
 @Conditional(OnClassLoaderCondition.class)
 public @interface ConditionalOnClassLoader {
 
-    String classLoaderExpression();
+    String classLoaderExpression() default "";
 
     boolean isBootstrapClassLoader() default false;
 

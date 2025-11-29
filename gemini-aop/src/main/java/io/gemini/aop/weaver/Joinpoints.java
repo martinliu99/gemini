@@ -41,7 +41,7 @@ import io.gemini.api.aop.Advice.Before;
 import io.gemini.api.aop.Joinpoint;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Joinpoint.ProceedingJoinpoint;
-import io.gemini.api.classloader.ThreadContext;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
@@ -321,7 +321,10 @@ interface Joinpoints {
 
             Class<?> returnType = getDescriptor().getMethod().getReturnType();
             if (returning == null || ClassUtils.isAssignableFrom(returnType, returning.getClass()) == false) {
-                LOGGER.warn("Ignored advice returning '{}' which must be instance of {}.\n", returning, returnType);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice returning '{}' which must be instance of {}.\n", 
+                            returning, returnType);
+
                 return;
             }
 
@@ -339,7 +342,9 @@ interface Joinpoints {
 
         public void setAdviceThrowing(E throwing) {
             if (throwing == null) {
-                LOGGER.warn("Ignored null advice throwing.\n");
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored null advice throwing.\n");
+
                 return;
             }
 
@@ -367,8 +372,10 @@ interface Joinpoints {
                         : descriptor.isConstructor() 
                             ? descriptor.getConstructor().toString() : descriptor.getMethod().toString();
 
-                LOGGER.warn("Ignored advice throwing '{}' which must be instance of RuntimeException or exception types declared in signature '{}'.\n",
-                        throwing, targetMethod);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice throwing '{}' which must be instance of RuntimeException or exception types declared in signature '{}'.\n",
+                            throwing, targetMethod);
+
                 return;
             }
 
@@ -404,21 +411,21 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName)) {
-                    LOGGER.info("^Creating joinpoint of type '{}', \n"
+                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                    LOGGER.info("^Creating joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
                             typeName, 
                             joinpointClassLoader, 
-                            descriptor.getAccessibleName());
-                }
+                            descriptor.getAccessibleName()
+                    );
 
                 joinpoint = new DefaultMutableJoinpoint<T, E>(descriptor, thisObject, arguments);
 
                 initialize(descriptor);
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not create joinpoint of type '{}',"
+                    LOGGER.warn("Could not create joinpoint instance of type '{}',"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
                             typeName, 
@@ -489,8 +496,8 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName))
-                    LOGGER.info("^Invoking {} for joinpoint of type '{}', \n"
+                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                    LOGGER.info("^Invoking {} for joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Advices: \n"
@@ -511,7 +518,7 @@ interface Joinpoints {
                 return null;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("$Could not invoke {} for joinpoint of type '{}', \n"
+                    LOGGER.warn("$Could not invoke {} for joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Advices: \n"
@@ -549,7 +556,7 @@ interface Joinpoints {
                     advice.before(joinpoint);
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("$Could not invoke joinpoint of type '{}', \n"
+                        LOGGER.warn("$Could not invoke joinpoint instance of type '{}', \n"
                                 + "  CurrentAdvice: {}", 
                                 getThisClass().getTypeName(),
                                 advice, 
@@ -571,11 +578,13 @@ interface Joinpoints {
                 try {
                     advice.after(joinpoint);
                 } catch (Throwable t) {
-                    LOGGER.warn("$Could not invoke joinpoint of type '{}', \n"
-                            + "  CurrentAdvice: {}", 
-                            getThisClass().getTypeName(),
-                            advice, 
-                            t);
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("$Could not invoke joinpoint instance of type '{}', \n"
+                                + "  CurrentAdvice: {}", 
+                                getThisClass().getTypeName(),
+                                advice, 
+                                t
+                        );
 
                     Throwables.throwIfRequired(t);
                 }
@@ -706,19 +715,19 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName)) {
-                    LOGGER.info("^Creating joinpoint of type '{}', \n"
+                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                    LOGGER.info("^Creating joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
                             typeName, 
                             joinpointClassLoader, 
-                            descriptor.getAccessibleName());
-                }
+                            descriptor.getAccessibleName()
+                    );
 
                 joinpoint = new DefaultProceedingJoinpoint<T>(descriptor, thisObject, arguments);
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not create joinpoint of type '{}', \n"
+                    LOGGER.warn("Could not create joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
                             typeName, 
@@ -743,8 +752,8 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName)) {
-                    LOGGER.info("^Proceeding joinpoint of type '{}', \n"
+                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                    LOGGER.info("^Proceeding joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Around advices: \n"
@@ -754,12 +763,11 @@ interface Joinpoints {
                             getAccessibleName(), 
                             StringUtils.join(getAroundAdvice(), e -> e.getClass().getName(), "\n    ")
                     );
-                }
 
                 return joinpoint.proceed();
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("$Could not proceed joinpoint of type '{}', \n"
+                    LOGGER.warn("$Could not proceed joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
                             + "  Around advices: \n"

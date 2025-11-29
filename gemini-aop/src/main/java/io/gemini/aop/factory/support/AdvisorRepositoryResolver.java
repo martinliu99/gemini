@@ -59,7 +59,7 @@ public interface AdvisorRepositoryResolver {
             LOGGER.debug("^Resolving AdvisorSpec under '{}' via AdvisorRepositoryResolvers, \n"
                     + "  {} \n", 
                     factoryName,
-                    StringUtils.join(advisorRepositoryResolvers, AdvisorRepositoryResolver::toString, "\n ")
+                    StringUtils.join(advisorRepositoryResolvers, AdvisorRepositoryResolver::toString, "\n  ")
             );
 
 
@@ -73,13 +73,14 @@ public interface AdvisorRepositoryResolver {
         .collect( Collectors.toList() );
 
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisorRepositories.size() > 0) 
+        if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisorRepositories.size() > 0 
+                && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}' \n"
                     + "  {} \n",
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName,
                     StringUtils.join(advisorRepositories, AdvisorRepository::getAdvisorName, "\n  ")
             );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
                 LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}'. ",
                         (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName
                 );
@@ -128,7 +129,9 @@ public interface AdvisorRepositoryResolver {
             try {
                 return doResolve(factoryContext, (S) advisorSpec);
             } catch (Throwable t) {
-                LOGGER.warn("Could not resolve AdvisorSpec '{}' via '{}'.", advisorSpec, resolverName, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not resolve AdvisorSpec '{}' via '{}'.", 
+                            advisorSpec, resolverName, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -142,9 +145,11 @@ public interface AdvisorRepositoryResolver {
 
             // check advice definition
             if (StringUtils.hasText(advisorSpec.getAdviceClassName()) == false) {
-                LOGGER.warn("Ignored AdvisorSpec with empty adviceClassName. \n"
-                        + "  {}: {} \n", 
-                        getSpecType(), advisorSpec.getAdvisorName() );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AdvisorSpec with empty adviceClassName. \n"
+                            + "  {}: {} \n", 
+                            getSpecType(), advisorSpec.getAdvisorName() );
+
                 return false;
             }
 
@@ -185,9 +190,11 @@ public interface AdvisorRepositoryResolver {
             Pointcut pointcut = advisorSpec.getPointcut();
             if (pointcut == null ||
                     (pointcut.getTypeMatcher() == null && pointcut.getMethodMatcher() == null)) {
-                LOGGER.warn("Ignored AdvisorSpec with null pointuct. \n"
-                        + "  {}: {} \n", 
-                        getSpecType(), advisorSpec.getAdvisorName() );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AdvisorSpec with null pointuct. \n"
+                            + "  {}: {} \n", 
+                            getSpecType(), advisorSpec.getAdvisorName() );
+
                 return false;
             }
 
@@ -235,9 +242,11 @@ public interface AdvisorRepositoryResolver {
         @Override
         protected boolean doVerify(AdvisorSpec.ExprPointcutSpec advisorSpec) {
             if (StringUtils.hasText(advisorSpec.getPointcutExpression()) == false) {
-                LOGGER.warn("Ignored AdvisorSpec with empty pointcutExpression. \n"
-                        + "  {}: {} \n", 
-                        getSpecType(), advisorSpec.getAdvisorName() );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AdvisorSpec with empty pointcutExpression. \n"
+                            + "  {}: {} \n", 
+                            getSpecType(), advisorSpec.getAdvisorName() );
+
                 return false;
             }
 
@@ -284,16 +293,20 @@ public interface AdvisorRepositoryResolver {
         @Override
         protected boolean doVerify(AspectJPointcutAdvisorSpec advisorSpec) {
             if (advisorSpec.getAspectJType() == null) {
-                LOGGER.warn("Ignored AdvisorSpec with empty aspectJClassName. \n"
-                        + "  {}: {} \n", 
-                        getSpecType(), advisorSpec.getAdvisorName() );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AdvisorSpec with empty aspectJClassName. \n"
+                            + "  {}: {} \n", 
+                            getSpecType(), advisorSpec.getAdvisorName() );
+
                 return false;
             }
 
             if (StringUtils.hasText(advisorSpec.getPointcutExpression()) == false) {
-                LOGGER.warn("Ignored AdvisorSpec with empty pointcutExpression. \n"
-                        + "  {}: {} \n", 
-                        getSpecType(), advisorSpec.getAdvisorName() );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AdvisorSpec with empty pointcutExpression. \n"
+                            + "  {}: {} \n", 
+                            getSpecType(), advisorSpec.getAdvisorName() );
+
                 return false;
             }
 

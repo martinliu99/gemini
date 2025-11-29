@@ -37,7 +37,7 @@ public class DefaultTransformationListener implements Listener {
 
     @Override
     public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        if (aopContext.isDiagnosticClass(typeName))
+        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
             LOGGER.info("Discovering {} type '{}' loaded by ClassLoader '{}'.", 
                     loaded ? "loaded" : "", typeName, classLoader
             );
@@ -46,15 +46,16 @@ public class DefaultTransformationListener implements Listener {
     @Override
     public void onTransformation(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule,
             boolean loaded, DynamicType dynamicType) {
-        LOGGER.info("{} type '{}' loaded by ClassLoader '{}'.", 
-                loaded ? "Redefined loaded" : "Transformed", typeDescription.getTypeName(), classLoader
-        );
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("{} type '{}' loaded by ClassLoader '{}'.", 
+                    loaded ? "Redefined loaded" : "Transformed", typeDescription.getTypeName(), classLoader
+            );
     }
 
     @Override
     public void onIgnored(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
         String typeName = typeDescription.getTypeName();
-        if (aopContext.isDiagnosticClass(typeName))
+        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
             LOGGER.info("Ignored {} type '{}' loaded by ClassLoader '{}'.", 
                     loaded ? "loaded" : "", typeName, classLoader
             );
@@ -73,7 +74,7 @@ public class DefaultTransformationListener implements Listener {
 
     @Override
     public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        if (aopContext.isDiagnosticClass(typeName))
+        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
             LOGGER.info("Finished to {} type '{}' loaded by ClassLoader '{}'.", 
                     loaded ? "redefine loaded" : "transform", typeName, classLoader);
     }

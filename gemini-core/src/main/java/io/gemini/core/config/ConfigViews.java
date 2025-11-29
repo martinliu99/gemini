@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.converter.ConversionService;
-import io.gemini.core.logging.DelayLoggerFactory;
+import io.gemini.core.logging.DeferredLoggerFactory;
 import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.OrderedProperties;
 
@@ -38,7 +38,7 @@ import io.gemini.core.util.OrderedProperties;
  */
 public class ConfigViews {
 
-    private static final Logger LOGGER = DelayLoggerFactory.getLogger(ConfigViews.class);
+    private static final Logger LOGGER = DeferredLoggerFactory.getLogger(ConfigViews.class);
 
     private static final String BUILTIN_SETTING_PREFIX = "_";
 
@@ -90,14 +90,14 @@ public class ConfigViews {
 
 
         DiagnosticLevel diagnosticLevel = getDiagnosticLevel(configView);
-        if (diagnosticLevel.isDebugEnabled()) 
+        if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("Created ConfigView with settings, \n"
                     + "  LaunchArgs: {} \n"
                     + "  InternalConfigLocation: {} \n"
                     + "  UserDefinedConfigLocation: {} \n",
                     launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() 
             );
-        else if (diagnosticLevel.isSimpleEnabled()) 
+        else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("Created ConfigView. ");
 
         return configView;
@@ -182,7 +182,9 @@ public class ConfigViews {
             try {
                 return DiagnosticLevel.valueOf(level);
             } catch (Exception e) {
-                LOGGER.warn("Ignored illegal setting '" + level + "' and disabled diagnostic mode.\n");
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored illegal setting '{}' and disabled diagnostic mode.\n",
+                            level);
             }
         }
 

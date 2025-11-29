@@ -90,21 +90,22 @@ public class BootstrapClassLoaderConfigurer {
 
             long time = System.nanoTime() - startedAt;
             bootstraperMetrics.setBootstrapCLConfigTime(time);
-            if (aopContext.getDiagnosticLevel().isDebugEnabled())
+            if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled())
                 LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
                         + "  {} \n", 
                         time / AopMetrics.NANO_TIME, 
                         StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  ") 
                 );
-            else if (aopContext.getDiagnosticLevel().isSimpleEnabled())
+            else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
                 LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader.", time / AopMetrics.NANO_TIME);
 
             return nameMapping;
         } catch (Exception e) {
-            LOGGER.warn("$Could not configure BootstrapClassLoader with renamed BootstrapClass. \n"
-                    + "  {}", 
-                    StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  "), 
-                    e);
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("$Could not configure BootstrapClassLoader with renamed BootstrapClass. \n"
+                        + "  {}", 
+                        StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  "), 
+                        e);
 
             throw new AopException(e);
         }
@@ -126,7 +127,10 @@ public class BootstrapClassLoaderConfigurer {
         for (String bootstrapClassName : bootstrapClassNames) {
             int pos = bootstrapClassName.indexOf(".java.");
             if (pos == -1) {
-                LOGGER.warn("Ignored candidate bootstrap class '{}' since full class name should be 'xxx.yyy.java.*'.",  bootstrapClassName);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored candidate bootstrap class '{}' since full class name should be 'xxx.yyy.java.*'.",  
+                            bootstrapClassName);
+
                 continue;
             }
 

@@ -166,7 +166,7 @@ public interface ClassScanner {
                     }
                 }
 
-                if (diagnosticLevel.isDebugEnabled())
+                if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled())
                     LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
                             + "  enableVerbose: {} \n"
                             + "  diagnosticLevel: {} \n"
@@ -182,7 +182,7 @@ public interface ClassScanner {
                             acceptPackages, acceptJarPatterns, 
                             workThreads, filteredClasspathElementUrls
                     );
-                else if (diagnosticLevel.isSimpleEnabled())
+                else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
                     LOGGER.info("$Took '{}' seconds to create ClassScanner with settings.",
                             (System.nanoTime() - startedAt) / 1e9
                     );
@@ -362,7 +362,9 @@ public interface ClassScanner {
                     }
                     return false;
                 } catch (Throwable t) {
-                    LOGGER.warn("Could not compare ClasspathElement of class '{}'", classInfo.getName(), t);
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Could not compare ClasspathElement of class '{}'", 
+                                classInfo.getName(), t);
 
                     Throwables.throwIfRequired(t);
                     return true;

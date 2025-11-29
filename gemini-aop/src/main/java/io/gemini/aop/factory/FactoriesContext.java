@@ -84,13 +84,12 @@ class FactoriesContext implements Closeable {
         this.factoryContextMap = createFactoryContextMap(aopContext);
 
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create FactoriesContext with FactoryContexts, \n"
-                    + "  {} \n", 
+        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled()) 
+            LOGGER.info("$Took '{}' seconds to create FactoriesContext with FactoryContexts, {}", 
                     (System.nanoTime() - startedAt) / 1e9,
-                    StringUtils.join(factoryContextMap.keySet(), "\n  ")
+                    StringUtils.join(factoryContextMap.keySet(), "\n  ", "\n  ", "\n")
             );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to create FactoriesContext.", (System.nanoTime() - startedAt) / 1e9);
     }
 
@@ -102,11 +101,12 @@ class FactoriesContext implements Closeable {
             Set<String> enabledFactoryExpressions = configView.getAsStringSet(
                     FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, Collections.emptySet());
             if (enabledFactoryExpressions.size() > 0) {
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n"
-                        + "  {} \n", 
-                        enabledFactoryExpressions.size(), FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY,
-                        StringUtils.join(enabledFactoryExpressions, "\n  ")
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("WARNING! Loaded {} rules from '{}' setting. \n"
+                            + "  {} \n", 
+                            enabledFactoryExpressions.size(), FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY,
+                            StringUtils.join(enabledFactoryExpressions, "\n  ")
+                    );
 
                 this.enabledFactoryMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
                         FACTORIES_ENABLED_FACTORY_EXPRESSIONS_KEY, enabledFactoryExpressions, ElementMatchers.none() );

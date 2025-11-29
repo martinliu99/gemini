@@ -126,52 +126,55 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
         String matchingReturningTypeMsg = parameterizedReturningType ? "ParameterizedReturning" : "AdviceReturning";
 
         if (ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
-            LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under Joinpoint ClassLoader. \n"
-                    + "  AdvisorSpec: {} \n"
-                    + "  AdviceMethod: {} \n"
-                    + "    {}: {} {} \n",
-                    matchingReturningTypeMsg,
-                    getAdvisorName(),
-                    MethodUtils.getMethodSignature(adviceMethod),
-                    matchingReturningTypeMsg, adviceReturningType.getVisibility(), adviceReturningType
-            );
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under Joinpoint ClassLoader. \n"
+                        + "  AdvisorSpec: {} \n"
+                        + "  AdviceMethod: {} \n"
+                        + "    {}: {} {} \n",
+                        matchingReturningTypeMsg,
+                        getAdvisorName(),
+                        MethodUtils.getMethodSignature(adviceMethod),
+                        matchingReturningTypeMsg, adviceReturningType.getVisibility(), adviceReturningType
+                );
 
             return false;
         }
 
         if (parameterizedReturningType == true) {
             if (ClassUtils.equals(adviceReturningType, targetReturningType) == false) {
-                LOGGER.warn("Ignored advice method with {} is different to target method's returning type. \n" 
-                        + "  AdvisorSpec: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    {}: {} \n"
-                        + "  TargetMethod: {} \n"
-                        + "    ActualReturning: {} \n",
-                        matchingReturningTypeMsg,
-                        getAdvisorName(),
-                        MethodUtils.getMethodSignature(adviceMethod),
-                        matchingReturningTypeMsg, adviceReturningType, 
-                        MethodUtils.getMethodSignature(methodDescription),
-                        targetReturningType
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice method with {} is different to target method's returning type. \n" 
+                            + "  AdvisorSpec: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    {}: {} \n"
+                            + "  TargetMethod: {} \n"
+                            + "    ActualReturning: {} \n",
+                            matchingReturningTypeMsg,
+                            getAdvisorName(),
+                            MethodUtils.getMethodSignature(adviceMethod),
+                            matchingReturningTypeMsg, adviceReturningType, 
+                            MethodUtils.getMethodSignature(methodDescription),
+                            targetReturningType
+                    );
 
                 return false;
             }
         } else {
             if (ClassUtils.isAssignableFrom(adviceReturningType, targetReturningType) == false) {
-                LOGGER.warn("Ignored advice method with {} is unassignable from target method's returning type. \n" 
-                        + "  AdvisorSpec: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    {}: {} \n"
-                        + "  TargetMethod: {} \n"
-                        + "    ActualReturning: {} \n",
-                        matchingReturningTypeMsg, 
-                        getAdvisorName(),
-                        MethodUtils.getMethodSignature(adviceMethod),
-                        matchingReturningTypeMsg, adviceReturningType, 
-                        MethodUtils.getMethodSignature(methodDescription),
-                        targetReturningType
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice method with {} is unassignable from target method's returning type. \n" 
+                            + "  AdvisorSpec: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    {}: {} \n"
+                            + "  TargetMethod: {} \n"
+                            + "    ActualReturning: {} \n",
+                            matchingReturningTypeMsg, 
+                            getAdvisorName(),
+                            MethodUtils.getMethodSignature(adviceMethod),
+                            matchingReturningTypeMsg, adviceReturningType, 
+                            MethodUtils.getMethodSignature(methodDescription),
+                            targetReturningType
+                    );
 
                 return false;
             }
@@ -184,15 +187,16 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
         String matchingThrowingTypeMsg = parameterizedThrowingType ? "ParameterizedThrowing" : "AdviceThrowing";
 
         if (ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
-            LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under Joinpoint ClassLoader. \n"
-                    + "  AdvisorSpec: {} \n"
-                    + "  AdviceMethod: {} \n"
-                    + "    {}: {} {} \n",
-                    matchingThrowingTypeMsg,
-                    getAdvisorName(),
-                    MethodUtils.getMethodSignature(adviceMethod),
-                    matchingThrowingTypeMsg, adviceThrowingType.getVisibility(), adviceThrowingType
-            );
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under Joinpoint ClassLoader. \n"
+                        + "  AdvisorSpec: {} \n"
+                        + "  AdviceMethod: {} \n"
+                        + "    {}: {} {} \n",
+                        matchingThrowingTypeMsg,
+                        getAdvisorName(),
+                        MethodUtils.getMethodSignature(adviceMethod),
+                        matchingThrowingTypeMsg, adviceThrowingType.getVisibility(), adviceThrowingType
+                );
 
             return false;
         }
@@ -200,17 +204,18 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
         TypeList.Generic exceptionTypes = methodDescription.getExceptionTypes();
         if (exceptionTypes.size() == 0) {
             if (ClassUtils.equals(adviceThrowingType, RUNTIME_EXCEPTION) == false) {
-                LOGGER.warn("Ignored advice method with non RuntimeException throwing type. \n" 
-                        + "  AdvisorSpec: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    {}: {} \n"
-                        + "  TargetMethod: {} \n"
-                        + "    ActualThrowing: RuntimeException \n",
-                        getAdvisorName(),
-                        MethodUtils.getMethodSignature(adviceMethod),
-                        matchingThrowingTypeMsg, adviceThrowingType, 
-                        MethodUtils.getMethodSignature(methodDescription)
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice method with non RuntimeException throwing type. \n" 
+                            + "  AdvisorSpec: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    {}: {} \n"
+                            + "  TargetMethod: {} \n"
+                            + "    ActualThrowing: RuntimeException \n",
+                            getAdvisorName(),
+                            MethodUtils.getMethodSignature(adviceMethod),
+                            matchingThrowingTypeMsg, adviceThrowingType, 
+                            MethodUtils.getMethodSignature(methodDescription)
+                    );
 
                 return false;
             }
@@ -226,18 +231,19 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
         }
 
         if (matched == false) {
-            LOGGER.warn("Ignored advice method with throwing type is unassignable from target method's all throwing types. \n"
-                    + "  AdvisorSpec: {} \n"
-                    + "  AdviceMethod: {} \n"
-                    + "    {}: {} \n"
-                    + "  TargetMethod: {} \n"
-                    + "    ActualThrowing: {} \n",
-                    getAdvisorName(),
-                    MethodUtils.getMethodSignature(adviceMethod),
-                    matchingThrowingTypeMsg, adviceThrowingType, 
-                    MethodUtils.getMethodSignature(methodDescription),
-                    exceptionTypes
-            );
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Ignored advice method with throwing type is unassignable from target method's all throwing types. \n"
+                        + "  AdvisorSpec: {} \n"
+                        + "  AdviceMethod: {} \n"
+                        + "    {}: {} \n"
+                        + "  TargetMethod: {} \n"
+                        + "    ActualThrowing: {} \n",
+                        getAdvisorName(),
+                        MethodUtils.getMethodSignature(adviceMethod),
+                        matchingThrowingTypeMsg, adviceThrowingType, 
+                        MethodUtils.getMethodSignature(methodDescription),
+                        exceptionTypes
+                );
 
             return false;
         }
@@ -332,29 +338,31 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
             TypeList.Generic typeVariables = joinpointType.getTypeArguments();
 
             Generic returningType = typeVariables.get(0);
-            if (TypeDefinition.Sort.NON_GENERIC != returningType.getSort() && TypeDefinition.Sort.PARAMETERIZED != returningType.getSort()) { 
-                LOGGER.warn("Ignored advice method with Generic or WildcardType ParameterizedReturning of MutableJoinpoint. \n"
-                        + "  AdvisorSpec: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    ParameterizedReturning: {} \n",
-                        advisorName,
-                        MethodUtils.getMethodSignature(adviceMethod),
-                        returningType.asErasure().getDescriptor()
-                );
+            if (TypeDefinition.Sort.NON_GENERIC != returningType.getSort() && TypeDefinition.Sort.PARAMETERIZED != returningType.getSort()) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice method with Generic or WildcardType ParameterizedReturning of MutableJoinpoint. \n"
+                            + "  AdvisorSpec: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    ParameterizedReturning: {} \n",
+                            advisorName,
+                            MethodUtils.getMethodSignature(adviceMethod),
+                            returningType.asErasure().getDescriptor()
+                    );
 
                 return null;
             }
 
             Generic throwingType = typeVariables.get(1);
             if (TypeDefinition.Sort.NON_GENERIC != throwingType.getSort() && TypeDefinition.Sort.PARAMETERIZED != throwingType.getSort()) {
-                LOGGER.warn("Ignored advice method with Generic or WildcardType ParameterizedThrowing of MutableJoinpoint. \n"
-                        + "  AdvisorSpec: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    ParameterizedThrowing: {} \n",
-                        advisorName,
-                        MethodUtils.getMethodSignature(adviceMethod),
-                        returningType.asErasure().getDescriptor()
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice method with Generic or WildcardType ParameterizedThrowing of MutableJoinpoint. \n"
+                            + "  AdvisorSpec: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    ParameterizedThrowing: {} \n",
+                            advisorName,
+                            MethodUtils.getMethodSignature(adviceMethod),
+                            returningType.asErasure().getDescriptor()
+                    );
 
                 return null;
             }

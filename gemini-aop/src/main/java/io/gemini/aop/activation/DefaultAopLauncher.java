@@ -35,15 +35,16 @@ import io.gemini.api.activation.AopLauncher;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.DiagnosticLevel;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.concurrent.DaemonThreadFactory;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
-import io.gemini.core.logging.DelayLoggerFactory;
+import io.gemini.core.logging.DeferredLoggerFactory;
 import io.gemini.core.logging.LoggingSystem;
 
 public class DefaultAopLauncher implements AopLauncher {
 
-    private static final Logger LOGGER = DelayLoggerFactory.getLogger(DefaultAopLauncher.class);
+    private static final Logger LOGGER = DeferredLoggerFactory.getLogger(DefaultAopLauncher.class);
 
 
     private AopContext aopContext;
@@ -62,7 +63,7 @@ public class DefaultAopLauncher implements AopLauncher {
     public void start(Instrumentation instrumentation, 
             LauncherConfig launcherConfig,
             AopClassLoader aopClassLoader) {
-        ClassLoader existingClassLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
 
         AopWeaver aopWeaver = null;
         BootstraperMetrics bootstraperMetrics = null;
@@ -70,7 +71,7 @@ public class DefaultAopLauncher implements AopLauncher {
             // set AopClassLoader as T.C. ClassLoader
             // existing T.C. ClassLoader, generally is AppClassLoader, might contain libraries, such as log4j2, 
             // and conflict with AopClassLoader
-            Thread.currentThread().setContextClassLoader(aopClassLoader);
+            ThreadContext.setContextClassLoader(aopClassLoader);
 
 
             // 1.load AOP settings
@@ -134,7 +135,7 @@ public class DefaultAopLauncher implements AopLauncher {
                 bootstraperMetrics.setLauncherStartupTime(System.nanoTime() - launcherConfig.getLaunchedAt());
             }
 
-            Thread.currentThread().setContextClassLoader(existingClassLoader);
+            ThreadContext.setContextClassLoader(existingClassLoader);
         }
     }
 

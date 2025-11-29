@@ -51,7 +51,7 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
         }
 
         /* do nothing */
-        if (diagnosticLevel.isSimpleEnabled())
+        if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
             LOGGER.info("^Redefining {}/{} loaded types in batch {}.", 
                     batch.size(), types.size(), index);
     }

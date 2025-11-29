@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.api.FrameworkException;
+import io.gemini.api.BaseException;
 import io.gemini.api.annotation.Initializer;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.Assert;
@@ -75,7 +75,7 @@ public interface ObjectFactory extends Closeable {
     void close() throws IOException;
 
 
-    public class ObjectsException extends FrameworkException {
+    public class ObjectsException extends BaseException {
 
         private static final long serialVersionUID = 7286124443140436785L;
 
@@ -240,10 +240,9 @@ public interface ObjectFactory extends Closeable {
             }
 
             if (LOGGER.isDebugEnabled())
-                LOGGER.debug("Instantiated '{}' objects implemeting '{}'. \n"
-                        + "  {} \n", 
+                LOGGER.debug("Instantiated '{}' objects implemeting '{}'. {}", 
                         objects.size(), clazz.getName(),
-                        StringUtils.join(objects, obj -> obj.toString(), "\n  ")
+                        StringUtils.join(objects, obj -> obj.toString(), "\n  ", "\n  ", "\n")
                 );
 
             return objects;
@@ -346,8 +345,10 @@ public interface ObjectFactory extends Closeable {
                 throw new ObjectsException(t);
             }
 
-            LOGGER.warn("Could not instantiate '{}' type with below constructors,\n"
-                    + "  {}.\n", clazz, Arrays.asList(constructors));
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Could not instantiate '{}' type with below constructors,\n"
+                        + "  {}.\n", clazz, Arrays.asList(constructors));
+
             throw new IllegalArgumentException("Cannot instantiate class [" + clazz + "] with required constructor");
         }
 
@@ -482,7 +483,8 @@ public interface ObjectFactory extends Closeable {
 
                     return objectFactory;
                 } catch (Throwable t) {
-                    LOGGER.warn("Could not start ObjectFactory '{}'.", className, t);
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Could not start ObjectFactory '{}'.", className, t);
 
                     Throwables.throwIfRequired(t);
                 }

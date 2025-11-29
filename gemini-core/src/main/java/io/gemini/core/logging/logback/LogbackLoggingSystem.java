@@ -40,7 +40,7 @@ import ch.qos.logback.core.util.StatusListenerConfigHelper;
 import ch.qos.logback.core.util.StatusPrinter;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.config.ConfigView;
-import io.gemini.core.logging.DelayLoggerFactory;
+import io.gemini.core.logging.DeferredLoggerFactory;
 import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
@@ -48,7 +48,7 @@ import io.gemini.core.util.Throwables;
 
 public class LogbackLoggingSystem implements LoggingSystem {
 
-    private static final org.slf4j.Logger LOGGER = DelayLoggerFactory.getLogger(LogbackLoggingSystem.class);
+    private static final org.slf4j.Logger LOGGER = DeferredLoggerFactory.getLogger(LogbackLoggingSystem.class);
 
     private static final String INTERNAL_CONFIGURATION_FILE = "META-INF/aop-logback.xml";
 
@@ -133,24 +133,24 @@ public class LogbackLoggingSystem implements LoggingSystem {
             // 4.log initialization
             reportConfigurationErrorsIfNecessary(loggerContext);
 
-            // 5.stop delay logger
-            DelayLoggerFactory.setLoggerInitialized(allSlf4jLogLevel);
+            // 5.stop deferred logger
+            DeferredLoggerFactory.setLoggerInitialized(allSlf4jLogLevel);
         } catch (Throwable t) {
-            LOGGER.warn("$Could not initialize LogbackLoggingSystem with settings, \n"
-                    + "  {} \n", 
-                    StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  "),
-                    t
-            );
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("$Could not initialize LogbackLoggingSystem with settings, {}", 
+                        StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  ", "\n  ", "\n"),
+                        t
+                );
 
             Throwables.throwIfRequired(t);
         } finally {
-            if (diagnosticLevel.isDebugEnabled()) 
+            if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
                 LOGGER.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
                         + "  {} \n", 
                         (System.nanoTime() - startedAt) / 1e9,
                         StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  ")
                 );
-            else if (diagnosticLevel.isSimpleEnabled()) 
+            else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
                 LOGGER.info("$Took '{}' seconds to initialize LogbackLoggingSystem. ",
                         (System.nanoTime() - startedAt) / 1e9
                 );
@@ -222,11 +222,13 @@ public class LogbackLoggingSystem implements LoggingSystem {
         // load user-defined configuration file, or built-in configuration file
         URL configFile = currentClassLoader.getResource(configLocation);
         if (configFile != null) {
-            LOGGER.debug("Loaded config file '{}'.", configLocation);
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("Loaded config file '{}'.", configLocation);
 
             return configFile;
         } else {
-            LOGGER.warn("Did not find config file '{}'.\n", configLocation);
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Did not find config file '{}'.\n", configLocation);
 
             return null;
         }

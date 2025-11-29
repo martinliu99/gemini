@@ -47,7 +47,8 @@ public class DiscoveryStrategyAdapter implements DiscoveryStrategy {
             try {
                 listern.onStart();
             } catch (Throwable t) {
-                LOGGER.warn("Could not invoke onStart() method of '{}", listern.getClass());
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not invoke onStart() method of '{}", listern.getClass());
 
                 Throwables.throwIfRequired(t);
             }

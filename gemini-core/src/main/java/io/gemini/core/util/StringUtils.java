@@ -17,6 +17,7 @@ package io.gemini.core.util;
 
 import java.util.Collection;
 import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -81,38 +82,55 @@ public abstract class StringUtils {
     }
 
 
-    public static <S extends CharSequence> String join(Collection<S> elements, CharSequence delimiter) {
-        return join(elements, delimiter, "", "");
-    }
-
-    public static <S extends CharSequence> String join(Collection<? extends S> elements, 
-            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
-        Stream<? extends S> stream = elements == null ? Stream.empty() : elements.stream();
-
-        return join(stream, delimiter, prefix, suffix);
-    }
-
-    public static <T, S extends CharSequence> String join(Collection<? extends T> elements, 
-            Function<T, S> mapper, CharSequence delimiter) {
-        return join(elements, mapper, delimiter, "", "");
-    }
-
-    public static <T, S extends CharSequence> String join(Collection<? extends T> elements, 
-            Function<T, S> mapper,
-            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+    public static <S extends CharSequence> String join(
+            Collection<S> elements, CharSequence delimiter) {
         if (CollectionUtils.isEmpty(elements))
             return "";
 
-        return join(elements.stream().map(mapper), delimiter, prefix, suffix);
+        return join(elements, delimiter, "", "");
     }
 
-    protected static <S extends CharSequence> String join(Stream<S> elements, 
-            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
-        if (elements == null)
-            return "";
+    public static <T, S extends CharSequence> String join(
+            Collection<? extends T> elements, Function<T, S> mapper, CharSequence delimiter) {
+        return join(elements, mapper, 
+                delimiter, "", "");
+    }
 
+    public static <S extends CharSequence> String join(
+            Collection<S> elements, 
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        if (CollectionUtils.isEmpty(elements))
+            return suffix.toString();
+
+        return joinInternal(elements.stream(), 
+                delimiter, prefix, suffix);
+    }
+
+    public static <T, S extends CharSequence> String join(
+            Collection<? extends T> elements, Function<T, S> mapper,
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        if (CollectionUtils.isEmpty(elements))
+            return suffix.toString();
+
+        return joinInternal(elements.stream().map(mapper),
+                delimiter, prefix, suffix);
+    }
+
+    public static <S extends CharSequence> String join(
+            Stream<S> elements, 
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        if (CollectionUtils.isEmpty(elements))
+            return suffix.toString();
+
+        return joinInternal(elements, 
+                delimiter, prefix, suffix);
+    }
+
+    private static <S extends CharSequence> String joinInternal(Stream<S> elements, 
+            CharSequence delimiter, CharSequence prefix, CharSequence suffix) {
+        Collector<CharSequence, ?, String> joining = Collectors.joining(delimiter, prefix, suffix);
         return elements
-                .collect( Collectors.joining(delimiter, prefix, suffix) );
+                .collect( joining );
     }
 
 }

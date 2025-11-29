@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.gemini.api.FrameworkException;
+import io.gemini.api.BaseException;
 import io.gemini.core.config.ConfigSource.Compound;
 import io.gemini.core.config.ConfigSource.MapConfigSource;
 import io.gemini.core.config.ConfigView.ConfigException.ConfigNotFoundException;
@@ -153,7 +153,7 @@ public interface ConfigView {
     }
 
 
-    public class ConfigException extends FrameworkException {
+    public class ConfigException extends BaseException {
 
         private static final long serialVersionUID = -4610045854862146968L;
 

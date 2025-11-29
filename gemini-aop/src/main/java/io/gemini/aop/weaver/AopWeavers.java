@@ -90,7 +90,7 @@ public class AopWeavers {
 
         // 2.initialize BootstrapAdvice.Bridger
         BootstrapAdvice.Bridger.setFactory(aopWeaver);
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
                     aopWeaver, AopWeavers.class.getClassLoader());
 
@@ -116,7 +116,7 @@ public class AopWeavers {
             public void onStart() {
                 long time = System.nanoTime() - startedAt;
                 bootstraperMetrics.setBytebuddyInstallationTime(time);
-                if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+                if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
                     LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / 1e9);
 
                 typeRetransformationStartedAt.set( System.nanoTime() );
@@ -166,7 +166,7 @@ public class AopWeavers {
 
         long time = System.nanoTime() - typeRetransformationStartedAt.get();
         bootstraperMetrics.setTypeRedefiningTime(time);
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to match and redefine loaded types.", time / 1e9);
     }
 }

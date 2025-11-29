@@ -89,7 +89,7 @@ class WeaverContext {
         this.loadSettings(aopContext);
 
 
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to create WeaverContext. ", 
                     (System.nanoTime() - startedAt) / 1e9);
     }
@@ -102,13 +102,12 @@ class WeaverContext {
         // load joinpoint matcher settings
         {
             this.matchJoinpoint = configView.getAsBoolean(WEAVER_MATCH_JOINPOINT_KEY, true);
-            if (matchJoinpoint == false) {
+            if (matchJoinpoint == false && LOGGER.isWarnEnabled())
                 LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_MATCH_JOINPOINT_KEY);
-            }
 
             {
                 Set<String> classLoaderExpressions = configView.getAsStringSet(WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
-                if (classLoaderExpressions.size() > 0)
+                if (classLoaderExpressions.size() > 0 && LOGGER.isInfoEnabled())
                     LOGGER.info("Loaded {} rules from '{}' setting. \n"
                             + "  {} \n", 
                             classLoaderExpressions.size(), WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, 
@@ -122,11 +121,12 @@ class WeaverContext {
                 defaultExcludedClassLoaderExpressions.addAll(
                         noMatchingClassInfoList.filter( this::isClassLoader ).getNames() );
 
-                LOGGER.info("Loaded {} rules from '{}' setting. \n"
-                        + "  {} \n", 
-                        defaultExcludedClassLoaderExpressions.size(), WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, 
-                        StringUtils.join(defaultExcludedClassLoaderExpressions, "\n  ")
-                );
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                            + "  {} \n", 
+                            defaultExcludedClassLoaderExpressions.size(), WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, 
+                            StringUtils.join(defaultExcludedClassLoaderExpressions, "\n  ")
+                    );
 
 
                 this.classLoaderMatcher = ElementMatchers.not(
@@ -141,7 +141,7 @@ class WeaverContext {
 
             {
                 Set<String> typeExpressions = configView.getAsStringSet(WEAVER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-                if (typeExpressions.size() > 0)
+                if (typeExpressions.size() > 0 && LOGGER.isInfoEnabled())
                     LOGGER.info("Loaded {} rules from '{}' setting. \n"
                             + "  {} \n", 
                             typeExpressions.size(), WEAVER_TYPE_EXPRESSIONS_KEY,
@@ -156,11 +156,12 @@ class WeaverContext {
                         noMatchingClassInfoList.filter( this::isClass ).getNames() );
                 defaultExcludedTypeExpressions.addAll( aopContext.getBootstrapClassNameMapping().values() );
 
-                LOGGER.info("Loaded {} rules from '{}' setting. \n"
-                        + "  {} \n", 
-                        defaultExcludedTypeExpressions.size(), WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS,
-                        StringUtils.join(defaultExcludedTypeExpressions, "\n  ")
-                );
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                            + "  {} \n", 
+                            defaultExcludedTypeExpressions.size(), WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS,
+                            StringUtils.join(defaultExcludedTypeExpressions, "\n  ")
+                    );
 
 
                 this.typeMatcher = ElementMatchers.not(
@@ -195,7 +196,10 @@ class WeaverContext {
             try {
                 this.redefinitionStrategy = RedefinitionStrategy.valueOf(strategy);
             } catch (Exception e) {
-                LOGGER.warn("Ignored illegal setting '{}' and use default RedefinitionStrategy '{}'. \n", strategy, RedefinitionStrategy.RETRANSFORMATION);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored illegal setting '{}' and use default RedefinitionStrategy '{}'. \n", 
+                            strategy, RedefinitionStrategy.RETRANSFORMATION);
+
                 this.redefinitionStrategy = RedefinitionStrategy.RETRANSFORMATION;
             }
         }

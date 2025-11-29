@@ -117,7 +117,7 @@ interface AdviceClassMaker {
                                 .load(cacheKey, new ClassLoadingStrategy.ForUnsafeInjection())
                                 .getLoaded();
 
-                        if (aopContext.getDiagnosticLevel().isDebugEnabled())
+                        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled())
                             LOGGER.info("Took '{}' seconds to inject advisorClass '{}' into classloader '{}'.", 
                                     (System.nanoTime() - startedAt) / 1e9, aspectJAdvisorSpec.getAdviceClassName(), cacheKey
                             );

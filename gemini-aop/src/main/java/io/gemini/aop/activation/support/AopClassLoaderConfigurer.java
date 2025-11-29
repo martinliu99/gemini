@@ -95,17 +95,15 @@ public class AopClassLoaderConfigurer {
 
 
         long time =  System.nanoTime() - startedAt;
-        if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
+        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
-                    + "  parentFirstTypeExpressions: \n"
-                    + "    {} \n"
-                    + "  parentFirstResourceExpressions: \n"
-                    + "    {} \n", 
+                    + "  parentFirstTypeExpressions: {}"
+                    + "  parentFirstResourceExpressions: {}",
                     time / 1e9,
-                    StringUtils.join(parentFirstTypeExpressions, "\n    "), 
-                    StringUtils.join(parentFirstResourceExpressions, "\n    ")
+                    StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
+                    StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
             );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / 1e9);
 
         aopContext.getAopMetrics().getBootstraperMetrics().setAopCLConfigTime(time);
@@ -207,7 +205,9 @@ public class AopClassLoaderConfigurer {
                 classResourceMap.put(path, IOUtils.toURL(path, byteCode));
             }
         } catch (Exception e) {
-            LOGGER.warn("Could not load BootstrapClass consumer class", e);
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Could not load BootstrapClass consumer class", e);
+
             throw new AopException(e);
         }
 

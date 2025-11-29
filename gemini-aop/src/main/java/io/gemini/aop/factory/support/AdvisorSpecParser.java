@@ -194,14 +194,15 @@ public interface AdvisorSpecParser {
                     this.setAdviceCategory(
                             AdviceCategory.parse(adviceCategoryValue) );
                 } catch (Exception e) {
-                    LOGGER.warn("Ignored AspectJ advice method with illegal 'adviceCategory' configuration property. \n"
-                            + "  {}: {} \n"
-                            + "  AdviceMethod: {} \n"
-                            + "    {}: {} \n",
-                            getSpecType(), aspectJType.getTypeName(), 
-                            MethodUtils.getMethodSignature(aspectJMethod),
-                            adviceCategoryKey, adviceCategoryValue
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored AspectJ advice method with illegal 'adviceCategory' configuration property. \n"
+                                + "  {}: {} \n"
+                                + "  AdviceMethod: {} \n"
+                                + "    {}: {} \n",
+                                getSpecType(), aspectJType.getTypeName(), 
+                                MethodUtils.getMethodSignature(aspectJMethod),
+                                adviceCategoryKey, adviceCategoryValue
+                        );
 
                     throw new IgnoredSpecException();
                 }
@@ -476,7 +477,7 @@ public interface AdvisorSpecParser {
             String returningParameter = configView.getAsString(returningKey, "");
             if (adviceCategory.isAfterReturning()) 
                 this.returningParameter = returningParameter;
-            else if (StringUtils.hasText(returningParameter))
+            else if (StringUtils.hasText(returningParameter) && LOGGER.isInfoEnabled())
                 LOGGER.info("Ignored meaningless 'returning' property of non AspectJ @AfterReturning advice method. \n"
                         + "  {}: {} \n"
                         + "  AdviceMethod: {} \n"
@@ -490,7 +491,7 @@ public interface AdvisorSpecParser {
             String throwingParameter = configView.getAsString(throwingKey, "");
             if (adviceCategory.isAfterThrowing()) 
                 this.throwingParameter = throwingParameter;
-            else if (StringUtils.hasText(throwingParameter))
+            else if (StringUtils.hasText(throwingParameter) && LOGGER.isInfoEnabled())
                 LOGGER.info("Ignored meaningless 'throwing' property of non AspectJ @AfterThrowing advice method. \n"
                         + "  {}: {} \n"
                         + "  AdviceMethod: {} \n"
@@ -563,14 +564,15 @@ public interface AdvisorSpecParser {
 
             if (argNames.size() > 0) {
                 if (argNames.size() != parameters.size() && argNames.size() != parameters.size() - 1) {
-                    LOGGER.warn("Ignored AspectJ advice method with parameters is inconsistent with 'argNames' annotation attribute. \n"
-                            + "  {}: {} \n"
-                            + "  AdviceMethod: {} \n"
-                            + "    ArgNames: {} \n", 
-                            getSpecType(), getAdvisorName(), 
-                            MethodUtils.getMethodSignature(aspectJMethod),
-                            argNamesStr
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored AspectJ advice method with parameters is inconsistent with 'argNames' annotation attribute. \n"
+                                + "  {}: {} \n"
+                                + "  AdviceMethod: {} \n"
+                                + "    ArgNames: {} \n", 
+                                getSpecType(), getAdvisorName(), 
+                                MethodUtils.getMethodSignature(aspectJMethod),
+                                argNamesStr
+                        );
 
                     throw new IgnoredSpecException();
                 }
@@ -587,16 +589,17 @@ public interface AdvisorSpecParser {
             // 2.parse parameter names in MethodParameters section
             // validate parameter name for index0 parameter
             if (index0Param.getName().equals(index0Param.getActualName()) == false) {
-                LOGGER.warn("Ignored AspectJ advice method without parameter reflection support and 'argNames' annotation attribute. \n"
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    BinaryMethodName: {} \n"
-                        + "    ActualMethodName: {} \n",
-                        getSpecType(), getAdvisorName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod), 
-                        index0Param.getName(), 
-                        index0Param.getActualName()
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AspectJ advice method without parameter reflection support and 'argNames' annotation attribute. \n"
+                            + "  {}: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    BinaryMethodName: {} \n"
+                            + "    ActualMethodName: {} \n",
+                            getSpecType(), getAdvisorName(), 
+                            MethodUtils.getMethodSignature(aspectJMethod), 
+                            index0Param.getName(), 
+                            index0Param.getActualName()
+                    );
 
                 throw new IgnoredSpecException();
             }
@@ -650,27 +653,29 @@ public interface AdvisorSpecParser {
         private Generic resolveAdviceReturningParamBinding(Map<String, NamedPointcutParameter> pointcutParameters) {
             // resolve returning parameters
             if (StringUtils.hasText(returningParameter) == false) {
-                LOGGER.warn("Ignored AspectJ @AfterReturning advice method without 'returning' annotation attribute. \n"
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    'returning': {} \n",
-                        getSpecType(), getAdvisorName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod),
-                        returningParameter
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AspectJ @AfterReturning advice method without 'returning' annotation attribute. \n"
+                            + "  {}: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    'returning': {} \n",
+                            getSpecType(), getAdvisorName(), 
+                            MethodUtils.getMethodSignature(aspectJMethod),
+                            returningParameter
+                    );
 
                 throw new IgnoredSpecException();
             }
 
             if (parameterDescriptionMap.containsKey(returningParameter) == false) { 
-                LOGGER.warn("Ignored AspectJ @AfterReturning advice method with 'returning' annotation attribute referring to nonexistent parameter. \n"
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    'returning': {} \n",
-                        getSpecType(), getAdvisorName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod),
-                        returningParameter
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AspectJ @AfterReturning advice method with 'returning' annotation attribute referring to nonexistent parameter. \n"
+                            + "  {}: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    'returning': {} \n",
+                            getSpecType(), getAdvisorName(), 
+                            MethodUtils.getMethodSignature(aspectJMethod),
+                            returningParameter
+                    );
 
                 throw new IgnoredSpecException();
             }
@@ -685,27 +690,29 @@ public interface AdvisorSpecParser {
         private Generic resolveAdviceThrowingParamBinding(Map<String, NamedPointcutParameter> pointcutParameters) {
             // resolve throwing parameters
             if (StringUtils.hasText(throwingParameter) == false) {
-                LOGGER.warn("Ignored AspectJ @AfterThrowing advice method without 'throwing' annotation attribute. \n"
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    'throwing': {} \n",
-                        getSpecType(), getAdvisorName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod),
-                        throwingParameter
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AspectJ @AfterThrowing advice method without 'throwing' annotation attribute. \n"
+                            + "  {}: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    'throwing': {} \n",
+                            getSpecType(), getAdvisorName(), 
+                            MethodUtils.getMethodSignature(aspectJMethod),
+                            throwingParameter
+                    );
 
                 throw new IgnoredSpecException();
             }
 
             if (parameterDescriptionMap.containsKey(throwingParameter) == false) {
-                LOGGER.warn("Ignored AspectJ @AfterThrowing advice method with 'throwing' annotation attribute referring to nonexistent parameter. \n"
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    'throwing': {} \n",
-                        getSpecType(), getAdvisorName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod),
-                        throwingParameter
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AspectJ @AfterThrowing advice method with 'throwing' annotation attribute referring to nonexistent parameter. \n"
+                            + "  {}: {} \n"
+                            + "  AdviceMethod: {} \n"
+                            + "    'throwing': {} \n",
+                            getSpecType(), getAdvisorName(), 
+                            MethodUtils.getMethodSignature(aspectJMethod),
+                            throwingParameter
+                    );
 
                 throw new IgnoredSpecException();
             }
@@ -782,34 +789,13 @@ public interface AdvisorSpecParser {
         public boolean match(MethodDescription methodDescription, List<NamedPointcutParameter> pointcutParameters) {
             // 1.match parameter count and type
             if (pointcutParameters == null || pointcutParameters.size() != pointcutParameterNames.size()) {
-                LOGGER.warn("Ignored advice method with advice parameters is different to target method's resolved parameters. \n" 
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n"
-                        + "    AdviceParameters: {} \n"
-                        + "  TargetMethod: {} \n"
-                        + "    ResolvedParameters: {} \n",
-                        getSpecType(), getAdvisorName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod),
-                        pointcutParameterNames,
-                        MethodUtils.getMethodSignature(methodDescription), 
-                        pointcutParameters == null ? null : pointcutParameters.stream()
-                                .map( p -> p.getParamName() )
-                                .collect( Collectors.toList() )
-                );
-
-                return false;
-            }
-
-            for (NamedPointcutParameter pointcutParameterBinding : pointcutParameters) {
-                String name = pointcutParameterBinding.getParamName();
-                if (pointcutParameterNames.contains(name) == false) {
-                    LOGGER.warn("Ignored advice method with advice parameters do not contain target method's resolved parameter '{}'. \n" 
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored advice method with advice parameters is different to target method's resolved parameters. \n" 
                             + "  {}: {} \n"
                             + "  AdviceMethod: {} \n"
                             + "    AdviceParameters: {} \n"
                             + "  TargetMethod: {} \n"
                             + "    ResolvedParameters: {} \n",
-                            name, 
                             getSpecType(), getAdvisorName(), 
                             MethodUtils.getMethodSignature(aspectJMethod),
                             pointcutParameterNames,
@@ -819,19 +805,43 @@ public interface AdvisorSpecParser {
                                     .collect( Collectors.toList() )
                     );
 
+                return false;
+            }
+
+            for (NamedPointcutParameter pointcutParameterBinding : pointcutParameters) {
+                String name = pointcutParameterBinding.getParamName();
+                if (pointcutParameterNames.contains(name) == false) {
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored advice method with advice parameters do not contain target method's resolved parameter '{}'. \n" 
+                                + "  {}: {} \n"
+                                + "  AdviceMethod: {} \n"
+                                + "    AdviceParameters: {} \n"
+                                + "  TargetMethod: {} \n"
+                                + "    ResolvedParameters: {} \n",
+                                name, 
+                                getSpecType(), getAdvisorName(), 
+                                MethodUtils.getMethodSignature(aspectJMethod),
+                                pointcutParameterNames,
+                                MethodUtils.getMethodSignature(methodDescription), 
+                                pointcutParameters == null ? null : pointcutParameters.stream()
+                                        .map( p -> p.getParamName() )
+                                        .collect( Collectors.toList() )
+                        );
+
                     return false;
                 }
 
                 TypeDescription paramType = parameterDescriptionMap.get(pointcutParameterBinding.getParamName()).getType().asErasure();
                 if (ClassUtils.isVisibleTo(paramType, methodDescription.getDeclaringType().asErasure()) == false) {
-                    LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under Joinpoint ClassLoader. \n"
-                            + "  AdvisorSpec: {} \n"
-                            + "  AdviceMethod: {} \n"
-                            + "    parameter '{}': {} {} \n",
-                            getSpecType(), getAdvisorName(), 
-                            methodDescription.toGenericString(),
-                            name, paramType.getVisibility(), paramType
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under Joinpoint ClassLoader. \n"
+                                + "  AdvisorSpec: {} \n"
+                                + "  AdviceMethod: {} \n"
+                                + "    parameter '{}': {} {} \n",
+                                getSpecType(), getAdvisorName(), 
+                                methodDescription.toGenericString(),
+                                name, paramType.getVisibility(), paramType
+                        );
 
                     return false;
                 }

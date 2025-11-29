@@ -148,7 +148,7 @@ public class AopContext implements Closeable {
 
 
         long time = System.nanoTime() - startedAt;
-        if (diagnosticLevel.isDebugEnabled()) 
+        if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to create AopContext with settings, \n" 
                     + "  isDefaultProfile: {} \n"
                     + "  activeProfile: {} \n"
@@ -161,7 +161,7 @@ public class AopContext implements Closeable {
                     launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation(), diagnosticLevel,
                     aopClassLoader
             );
-        else if (diagnosticLevel.isSimpleEnabled()) 
+        else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to create AopContext. ", time / 1e9);
 
         aopMetrics.getBootstraperMetrics().setAopContextCreationTime(time);

@@ -60,12 +60,11 @@ class CompoundAdvisorFactory implements AdvisorFactory {
         this.advisorFactoryMap = createAdvisorFactoryMap(aopContext, factoriesContext, factoryContextMap);
 
 
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled())
-            LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory, \n"
-                    + "  {} \n", 
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
+            LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory, {}", 
                     (System.nanoTime() - startedAt) / 1e9,
                     StringUtils.join(getAdvisorSpecNum().entrySet(), 
-                            entry -> entry.getKey() + ": " + entry.getValue() + " AdvisorSpecs", "\n  ") 
+                            entry -> entry.getKey() + ": " + entry.getValue() + " AdvisorSpecs", "\n  ", "\n  ", "\n") 
             );
     }
 
@@ -110,16 +109,15 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
             // diagnostic log
             String typeName = typeDescription.getTypeName();
-            if (factoryContext.getAopContext().isDiagnosticClass(typeName)) {
+            if (factoryContext.getAopContext().isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
                 LOGGER.info("Getting Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.", 
                         typeName, joinpointClassLoader, factoryContext.getFactoryName());
-            }
 
             // get advisors per AdvisorFactory
             Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = advisorFactory
                     .getAdvisors(typeDescription, joinpointClassLoader, javaModule);
 
-            if (factoryContext.getAopContext().isDiagnosticClass(typeName)) {
+            if (factoryContext.getAopContext().isDiagnosticClass(typeName) && LOGGER.isInfoEnabled()) {
                 if (advisorMap.size() == 0)
                     LOGGER.info("Did not get Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.",
                             typeName, joinpointClassLoader, factoryContext.getFactoryName()
@@ -137,7 +135,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
                                     methodAdvisorEntry -> 
                                         new StringBuilder("Method: ")
                                             .append( MethodUtils.getMethodSignature( methodAdvisorEntry.getKey() ) )
-                                            .append("\n   Advices: ")
+                                            .append("\n  Advices: ")
                                             .append( StringUtils.join(methodAdvisorEntry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
                                     "\n  "
                             )

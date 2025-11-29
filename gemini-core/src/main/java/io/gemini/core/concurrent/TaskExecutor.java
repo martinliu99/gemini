@@ -117,10 +117,10 @@ public interface TaskExecutor {
                 executorService = Executors.newCachedThreadPool( 
                         new DaemonThreadFactory(executorName) );
 
-                if (this.diagnosticLevel.isSimpleEnabled())
+                if (this.diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
                     LOGGER.info("Initialized TaskExecutor '{}' in parallel mode.", executorName);
             } else {
-                if (this.diagnosticLevel.isSimpleEnabled())
+                if (this.diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
                     LOGGER.info("Initialized TaskExecutor '{}' in sequential mode.", executorName);
             }
         }
@@ -226,7 +226,9 @@ public interface TaskExecutor {
                     Thread.currentThread().interrupt();
                     future.cancel(true);
                 } catch (ExecutionException e) {
-                    LOGGER.warn("Could not execute task {} with TaskExecutor '{}'.", taskExecutor, executorName, e.getCause());
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Could not execute task {} with TaskExecutor '{}'.", 
+                                taskExecutor, executorName, e.getCause());
                 }
             }
             return resultList;
@@ -254,11 +256,14 @@ public interface TaskExecutor {
             try {
                 executor.awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                LOGGER.warn("Interrupted while waiting for taskExecutor '{}' to terminate.", executorName);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Interrupted while waiting for taskExecutor '{}' to terminate.", 
+                            executorName);
 
                 Thread.currentThread().interrupt();
 
-                LOGGER.info("Shut down TaskExecutor '{}'.", executorName);
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("Shut down TaskExecutor '{}'.", executorName);
             }
         }
     }

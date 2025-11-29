@@ -120,24 +120,24 @@ public class Log4j2LoggingSystem implements LoggingSystem {
             this.customizeConfiguration(configuration);
 
         } catch (Throwable t) {
-            LOGGER.warn("$Could not initialize LogbackLoggingSystem with settings, \n"
-                    + "  defaultStatusLevel: {} \n"
-                    + "  statusLevel: {} \n"
-                    + "  allLogLevel: {} \n"
-                    + "  configLocation: {} \n"
-                    + "  {} \n",
-                    defaultStatusLevel, statusLevel,
-                    allLogLevel, configLocation,
-                    StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  "),
-                    t
-            );
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("$Could not initialize LogbackLoggingSystem with settings, \n"
+                        + "  defaultStatusLevel: {} \n"
+                        + "  statusLevel: {} \n"
+                        + "  allLogLevel: {} \n"
+                        + "  configLocation: {} {}",
+                        defaultStatusLevel, statusLevel,
+                        allLogLevel, configLocation,
+                        StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  ", "\n  ", "\n"),
+                        t
+                );
 
             Throwables.throwIfRequired(t);
         } finally {
             fallbackListener.setLevel(defaultStatusLevel);
 
             Logger logger = LoggerFactory.getLogger(LoggingSystem.class);
-            if (diagnosticLevel.isDebugEnabled()) 
+            if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
                 logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
                         + "  defaultStatusLevel: {} \n"
                         + "  statusLevel: {} \n"
@@ -149,7 +149,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
                         allLogLevel, configLocation,
                         StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  ")
                 );
-            else if (diagnosticLevel.isSimpleEnabled()) 
+            else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
                 logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings. ",
                         (System.nanoTime() - startedAt) / 1e9
                 );
@@ -230,7 +230,8 @@ public class Log4j2LoggingSystem implements LoggingSystem {
 
             return configFile;
         } else {
-            LOGGER.warn("Did not find config file '{}'.\n", configLocation);
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Did not find config file '{}'.\n", configLocation);
 
             return null;
         }

@@ -40,6 +40,7 @@ import io.gemini.aop.AopMetrics;
 import io.gemini.aop.factory.FactoryContext;
 import io.gemini.aop.factory.support.AdvisorSpecParser.IgnoredSpecException;
 import io.gemini.api.annotation.NoScanning;
+import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
@@ -95,11 +96,12 @@ public interface AdvisorSpecScanner {
             try {
                 scannedSpecs = advisorSpecScanner.scan(factoryContext);
             } catch (Exception e) {
-                LOGGER.warn("Could not scan AdvisorSpec instances via '{}'. \n"
-                        + "  Error reason: {} \n", 
-                        advisorSpecScanner, 
-                        e.getMessage(), e
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not scan AdvisorSpec instances via '{}'. \n"
+                            + "  Error reason: {} \n", 
+                            advisorSpecScanner, 
+                            e.getMessage(), e
+                    );
 
                 continue;
             }
@@ -109,10 +111,11 @@ public interface AdvisorSpecScanner {
                     continue;
 
                 if (StringUtils.hasText(advisorSpec.getAdvisorName()) == false) {
-                    LOGGER.warn("Ignored empty AdvisorName AdvisorSpec. \n"
-                            + "    AdviceClassName: {} \n",
-                            advisorSpec.getAdviceClassName()
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored empty AdvisorName AdvisorSpec. \n"
+                                + "    AdviceClassName: {} \n",
+                                advisorSpec.getAdviceClassName()
+                        );
 
                     continue;
                 }
@@ -120,14 +123,16 @@ public interface AdvisorSpecScanner {
                 String advisorName = advisorSpec.getAdvisorName();
                 if (advisorSpecMap.containsKey(advisorName)) {
                     AdvisorSpec existingAdvisorSpec = advisorSpecMap.get(advisorName);
-                    LOGGER.warn("Overwrote existing same AdvisorName AdvisorSpec. \n"
-                            + "  AdvisorName : {} \n"
-                            + "    ExistingSpec AdviceClassName: {} \n"
-                            + "    NewSpec AdviceClassName: {} \n",
-                            advisorName, 
-                            existingAdvisorSpec.getAdviceClassName(), 
-                            advisorSpec.getAdviceClassName() 
-                    );
+
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Overwrote existing same AdvisorName AdvisorSpec. \n"
+                                + "  AdvisorName : {} \n"
+                                + "    ExistingSpec AdviceClassName: {} \n"
+                                + "    NewSpec AdviceClassName: {} \n",
+                                advisorName, 
+                                existingAdvisorSpec.getAdviceClassName(), 
+                                advisorSpec.getAdviceClassName() 
+                        );
                 }
 
                 advisorSpecMap.put(advisorName, advisorSpec);
@@ -149,13 +154,14 @@ public interface AdvisorSpecScanner {
         } );
 
 
-        if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0) 
+        if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0
+                && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}', \n"
                     + "  {} \n",
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
                     StringUtils.join(advisorSpecs, AdvisorSpec::getAdvisorName, "\n  ")
             );
-        else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
+        else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}'. ",
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
             );
@@ -179,12 +185,13 @@ public interface AdvisorSpecScanner {
                 return true;
 
             if (classInfo.isAnonymousInnerClass() == false)
-                LOGGER.warn("Ignored AdvisorSpec class is NOT top-level or nested, concrete class. \n"
-                        + "  {}: {} \n"
-                        + "  Use @{} annotation to ignore this illegal AdvisorSpec. \n", 
-                        getSpecType(), classInfo.getName(), 
-                        NoScanning.class.getName()
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored AdvisorSpec class is NOT top-level or nested, concrete class. \n"
+                            + "  {}: {} \n"
+                            + "  Use @{} annotation to ignore this illegal AdvisorSpec. \n", 
+                            getSpecType(), classInfo.getName(), 
+                            NoScanning.class.getName()
+                    );
 
             return false;
         }
@@ -207,7 +214,7 @@ public interface AdvisorSpecScanner {
                     }
                 }
 
-                if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled()) {
+                if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled()) {
                     if (CollectionUtils.isEmpty(advisorSpecs)) {
                         LOGGER.info("Did not find AdvisorSpec.{} via '{}'.", getSpecType(), resolverName);
                     } else {
@@ -217,7 +224,8 @@ public interface AdvisorSpecScanner {
 
                 return advisorSpecs;
             } catch (Throwable t) {
-                LOGGER.warn("Could not scan {} via '{}'.", getSpecType(), resolverName, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not scan {} via '{}'.", getSpecType(), resolverName, t);
 
                 Throwables.throwIfRequired(t);
             }
@@ -294,7 +302,9 @@ public interface AdvisorSpecScanner {
             } catch (IgnoredSpecException e) {
                 return null;
             } catch (Throwable t) {
-                LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load {} '{}'. \n", 
+                            getSpecType(), className, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -308,8 +318,10 @@ public interface AdvisorSpecScanner {
 
                 PojoPointcutSpec advisorSpec = factory.getAdvisorSpec();
                 if (advisorSpec == null) {
-                    LOGGER.warn("Ignored null AdvisorSpec. \n"
-                            + "  {}: {} \n", getSpecType(), className);
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored null AdvisorSpec. \n"
+                                + "  {}: {} \n", getSpecType(), className);
+
                     return null;
                 }
 
@@ -330,7 +342,8 @@ public interface AdvisorSpecScanner {
             } catch (IgnoredSpecException e) {
                 return null;
             } catch (Throwable t) {
-                LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -362,9 +375,9 @@ public interface AdvisorSpecScanner {
                     .getNames();
 
             List<String> annotatedClassNames = factoryContext.getClassScanner()
-                    .getClassesWithAnnotation( ExprPointcutSpec.class.getName() )
+                    .getClassesWithAnnotation( io.gemini.api.aop.annotation.ExprPointcut.class.getName() )
                     .filter(this)
-                    .filter( classInfo -> classInfo.implementsInterface(AdvisorSpec.class) )
+                    .filter( classInfo -> classInfo.implementsInterface(Advice.class) )
                     .getNames();
 
             List<AdvisorSpec.ExprPointcutSpec> advisorSpecs = new ArrayList<>(
@@ -423,7 +436,8 @@ public interface AdvisorSpecScanner {
             } catch (IgnoredSpecException e) {
                 return null;
             } catch (Throwable t) {
-                LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -437,10 +451,11 @@ public interface AdvisorSpecScanner {
 
                 ExprPointcutSpec advisorSpec = factory.getAdvisorSpec();
                 if (advisorSpec == null) {
-                    LOGGER.warn("Ignored null AdvisorSpec. \n"
-                            + "  {}: {} \n", 
-                            getSpecType(), className
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored null AdvisorSpec. \n"
+                                + "  {}: {} \n", 
+                                getSpecType(), className
+                        );
 
                     return null;
                 }
@@ -463,7 +478,8 @@ public interface AdvisorSpecScanner {
             } catch (IgnoredSpecException e) {
                 return null;
             } catch (Throwable t) {
-                LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -495,7 +511,8 @@ public interface AdvisorSpecScanner {
             } catch (IgnoredSpecException e) {
                 return null;
             } catch (Throwable t) {
-                LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
@@ -578,7 +595,7 @@ public interface AdvisorSpecScanner {
                         if (aspectJAdvisorSpec == null)
                             continue;
 
-                        if (advisorSpecMap.containsKey(aspectJAdvisorSpec.getAdvisorName()))
+                        if (advisorSpecMap.containsKey(aspectJAdvisorSpec.getAdvisorName()) && LOGGER.isWarnEnabled())
                             LOGGER.warn("Ignored duplicate name AspectJ advice method. \n"
                                     + "  {}: {} \n"
                                     + "  AdviceMethod: {} \n",
@@ -592,9 +609,11 @@ public interface AdvisorSpecScanner {
                 }
 
                 if (advisorSpecMap.size() == 0) {
-                    LOGGER.warn("Ignored AdvisorSpec contains no advice methods. \n"
-                            + "  {}: {} \n", 
-                            getSpecType(), aspectJClassName );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored AdvisorSpec contains no advice methods. \n"
+                                + "  {}: {} \n", 
+                                getSpecType(), aspectJClassName );
+
                     return Collections.emptyList();
                 }
 
@@ -635,23 +654,25 @@ public interface AdvisorSpecScanner {
                 AdvisorSpec advisorSpec) {
             try {
                 if (aspectJMethod.isAbstract()) {
-                    LOGGER.warn("Ignored abstract AspectJ advice method. \n"
-                            + "  {}: {} \n"
-                            + "  AdviceMethod: {} \n",
-                            getSpecType(), aspectJType.getTypeName(), 
-                            MethodUtils.getMethodSignature(aspectJMethod) 
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored abstract AspectJ advice method. \n"
+                                + "  {}: {} \n"
+                                + "  AdviceMethod: {} \n",
+                                getSpecType(), aspectJType.getTypeName(), 
+                                MethodUtils.getMethodSignature(aspectJMethod) 
+                        );
 
                     return null;
                 }
 
                 if (aspectJMethod.isPrivate()) {
-                    LOGGER.warn("Ignored private AspectJ advice method. \n"
-                            + "  {}: {} \n"
-                            + "  AdviceMethod: {} \n",
-                            getSpecType(), aspectJType.getTypeName(), 
-                            MethodUtils.getMethodSignature(aspectJMethod) 
-                    );
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Ignored private AspectJ advice method. \n"
+                                + "  {}: {} \n"
+                                + "  AdviceMethod: {} \n",
+                                getSpecType(), aspectJType.getTypeName(), 
+                                MethodUtils.getMethodSignature(aspectJMethod) 
+                        );
 
                     return null;
                 }
@@ -672,13 +693,14 @@ public interface AdvisorSpecScanner {
             } catch (IgnoredSpecException e) {
                 return null;
             } catch (Throwable t) {
-                LOGGER.warn("Could not load AdvisorSpec. \n"
-                        + "  {}: {} \n"
-                        + "  AdviceMethod: {} \n",
-                        getSpecType(), aspectJType.getTypeName(), 
-                        MethodUtils.getMethodSignature(aspectJMethod),
-                        t
-                );
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load AdvisorSpec. \n"
+                            + "  {}: {} \n"
+                            + "  AdviceMethod: {} \n",
+                            getSpecType(), aspectJType.getTypeName(), 
+                            MethodUtils.getMethodSignature(aspectJMethod),
+                            t
+                    );
 
                 Throwables.throwIfRequired(t);
                 return null;

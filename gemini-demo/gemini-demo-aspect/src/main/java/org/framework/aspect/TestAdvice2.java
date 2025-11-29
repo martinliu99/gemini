@@ -22,11 +22,13 @@ public class TestAdvice2 extends Advice.AbstractBeforeAfter<Object, RuntimeExcep
 
     @Override
     public void before(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("before '{}', with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("before '{}', with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
     }
 
     @Override
     public void after(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("after '{}': ", this.getClass().getSimpleName());
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("after '{}': ", this.getClass().getSimpleName());
     }
 }

@@ -18,10 +18,12 @@ package org.framework.aspect;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.annotation.Advisor;
+import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 import io.gemini.api.aop.annotation.ExprPointcut;
 
 @Advisor(advisorName = "ThreadPoolAdvisor", inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
-@ExprPointcut(pointcutExpression = "public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable)")
+@ExprPointcut(pointcutExpression = "execution(public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable))")
+@ConditionalOnClassLoader(isBootstrapClassLoader = true)
 public class ThreadPoolAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
     @Override

@@ -44,7 +44,8 @@ public class DemoServiceAspect_process {
     @Before("process()")
 //    @Before("execution(* org.framework.demo.service.*Impl.process(org.framework.demo.api.Request))")
     public void before(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
 
         Request request = (Request) joinpoint.getArguments()[0];
         List<String> input = new ArrayList<>(request.getInput());
@@ -55,7 +56,9 @@ public class DemoServiceAspect_process {
     @AfterReturning(pointcut = "process()", returning="returning")
 //    @After("@annotation(org.framework.demo.service.AspectJ)")
     public Object after(MutableJoinpoint<Response<String>, RuntimeException> joinpoint, Response<String> returning) throws Throwable {
-        LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+
         return true;
     }
 }

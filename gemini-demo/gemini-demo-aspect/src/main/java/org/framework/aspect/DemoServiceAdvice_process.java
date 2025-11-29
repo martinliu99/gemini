@@ -34,7 +34,8 @@ public class DemoServiceAdvice_process extends Advice.AbstractBeforeAfter<Respon
 
     @Override
     public void before(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
 
         // update argument
         Request request = (Request) joinpoint.getArguments()[0];
@@ -44,7 +45,8 @@ public class DemoServiceAdvice_process extends Advice.AbstractBeforeAfter<Respon
 
     @Override
     public void after(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
     }
 
     @Override

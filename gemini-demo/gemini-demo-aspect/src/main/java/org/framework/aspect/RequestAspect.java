@@ -43,7 +43,9 @@ public class RequestAspect {
             ((List) rtn).add("after");
         }
 
-        LOGGER.info("  after rquest::input with {}", rtn);
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("  after rquest::input with {}", rtn);
+
         return rtn;
     }
 }

@@ -32,7 +32,8 @@ public class DemoServiceRunner {
 
     public static void main(String[] args) {
         long startedAt = System.nanoTime();
-        LOGGER.info("started to init class loader");
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("started to init class loader");
 
         for (int i = 0; i < 2; i++) {
             DemoServiceRunner demoServiceRunner = new DemoServiceRunner();
@@ -40,7 +41,8 @@ public class DemoServiceRunner {
             RunnerClassLoader classLoader = new RunnerClassLoader(loadResource(), DemoServiceRunner.class.getClassLoader());
             demoServiceRunner.doInvoke(classLoader);
 
-            LOGGER.info("started application by classloader '{}' in {} seconds.", classLoader, (System.nanoTime() - startedAt) / 1e9);
+            if (LOGGER.isInfoEnabled())
+                LOGGER.info("started application by classloader '{}' in {} seconds.", classLoader, (System.nanoTime() - startedAt) / 1e9);
         }
 
         {
@@ -51,7 +53,8 @@ public class DemoServiceRunner {
             RunnerClassLoader classLoader = new RunnerClassLoader2(loadResource(), DemoServiceRunner.class.getClassLoader());
             demoServiceRunner.doInvoke(classLoader);
 
-            LOGGER.info("started application by classloader '{}' in {} seconds.", classLoader, (System.nanoTime() - startedAt) / 1e9);
+            if (LOGGER.isInfoEnabled())
+                LOGGER.info("started application by classloader '{}' in {} seconds.", classLoader, (System.nanoTime() - startedAt) / 1e9);
         }
     }
 
@@ -59,7 +62,8 @@ public class DemoServiceRunner {
         Thread.currentThread().setContextClassLoader(classLoader);
         try {
             Class<?> requestType = classLoader.loadClass("org.framework.demo.api.Request");
-            LOGGER.info("get class {}", requestType);
+            if (LOGGER.isInfoEnabled())
+                LOGGER.info("get class {}", requestType);
 
             List<String> input = new ArrayList<>(2);
             input.add("Hello");
@@ -67,26 +71,37 @@ public class DemoServiceRunner {
             Object request = requestType.getDeclaredConstructor(List.class).newInstance(input);
 
             Class<?> type = classLoader.loadClass("org.framework.demo.service.DemoServiceImpl");
-            LOGGER.info("get class {}", requestType);
+            if (LOGGER.isInfoEnabled())
+                LOGGER.info("get class {}", requestType);
+
             {
                 Method method = type.getDeclaredMethod("process", requestType);
-                LOGGER.info("get method {}", method);
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("get method {}", method);
 
                 Object service = type.getDeclaredConstructor().newInstance();
-                LOGGER.info("newInstance {}", service);
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("newInstance {}", service);
+                    LOGGER.info("started to call process()");
+                }
 
-                LOGGER.info("started to call process()");
                 Object result = method.invoke(service, request);
-                LOGGER.info("call process(): {}", result );
+
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("call process(): {}", result );
             }
         
             {
                 Method method = type.getDeclaredMethod("process2", String.class);
                 Object service = type.getDeclaredConstructor().newInstance();
 
-                LOGGER.info("started to call process2()");
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("started to call process2()");
+
                 Object result = method.invoke(service, "runner");
-                LOGGER.info("call process2(): {}", result );
+
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("call process2(): {}", result );
             }
         } catch (Exception e) {
             e.printStackTrace();

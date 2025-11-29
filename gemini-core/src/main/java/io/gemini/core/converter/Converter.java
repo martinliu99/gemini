@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import io.gemini.api.FrameworkException;
+import io.gemini.api.BaseException;
 import io.gemini.api.annotation.NoScanning;
 import io.gemini.core.util.StringUtils;
 
@@ -33,7 +33,7 @@ public interface Converter<S, T> {
     T convert(S source) throws ConversionException;
 
 
-    class ConversionException extends FrameworkException {
+    class ConversionException extends BaseException {
 
         private static final long serialVersionUID = 4609381072789618230L;
 
@@ -58,7 +58,7 @@ public interface Converter<S, T> {
 
         @Override
         public Boolean convert(String source) throws ConversionException {
-            return Boolean.valueOf( source.toString().trim() );
+            return Boolean.valueOf( source.trim() );
         }
     }
 
@@ -132,7 +132,7 @@ public interface Converter<S, T> {
 
         @Override
         public Byte convert(String source) throws ConversionException {
-            return Byte.valueOf( source.toString().trim() );
+            return Byte.valueOf( source.trim() );
         }
     }
 
@@ -143,7 +143,7 @@ public interface Converter<S, T> {
 
         @Override
         public Integer convert(String source) throws ConversionException {
-            return Integer.valueOf( source.toString().trim() );
+            return Integer.valueOf( source.trim() );
         }
     }
 
@@ -154,7 +154,7 @@ public interface Converter<S, T> {
 
         @Override
         public Long convert(String source) throws ConversionException {
-            return Long.valueOf( source.toString().trim() );
+            return Long.valueOf( source.trim() );
         }
     }
 
@@ -165,7 +165,7 @@ public interface Converter<S, T> {
 
         @Override
         public Float convert(String source) throws ConversionException {
-            return Float.valueOf( source.toString().trim() );
+            return Float.valueOf( source.trim() );
         }
     }
 
@@ -176,7 +176,7 @@ public interface Converter<S, T> {
 
         @Override
         public Double convert(String source) throws ConversionException {
-            return Double.valueOf( source.toString().trim() );
+            return Double.valueOf( source.trim() );
         }
     }
 

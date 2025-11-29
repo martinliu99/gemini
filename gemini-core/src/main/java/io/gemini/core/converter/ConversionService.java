@@ -83,19 +83,27 @@ public interface ConversionService {
         }
 
         private void registerBuiltinConverter() {
-            this.addConverter(StringToBoolean.INSTANCE);
+            this.addConverter(String.class, boolean.class, StringToBoolean.INSTANCE);
+            this.addConverter(String.class, Boolean.class, StringToBoolean.INSTANCE);
 
             this.addConverter(StringToStringList.INSTANCE);
             this.addConverter(StringToStringSet.INSTANCE);
             this.addConverter(StringToStringArray.INSTANCE);
 
-            this.addConverter(StringToByte.INSTANCE);
+            this.addConverter(String.class, byte.class, StringToByte.INSTANCE);
+            this.addConverter(String.class, Byte.class, StringToByte.INSTANCE);
 
-            this.addConverter(StringToInteger.INSTANCE);
-            this.addConverter(StringToLong.INSTANCE);
+            this.addConverter(String.class, int.class, StringToInteger.INSTANCE);
+            this.addConverter(String.class, Integer.class, StringToInteger.INSTANCE);
 
-            this.addConverter(StringToFloat.INSTANCE);
-            this.addConverter(StringToDouble.INSTANCE);
+            this.addConverter(String.class, long.class, StringToLong.INSTANCE);
+            this.addConverter(String.class, Long.class, StringToLong.INSTANCE);
+
+            this.addConverter(String.class, float.class, StringToFloat.INSTANCE);
+            this.addConverter(String.class, Float.class, StringToFloat.INSTANCE);
+
+            this.addConverter(String.class, double.class, StringToDouble.INSTANCE);
+            this.addConverter(String.class, double.class, StringToDouble.INSTANCE);
         }
 
         /**

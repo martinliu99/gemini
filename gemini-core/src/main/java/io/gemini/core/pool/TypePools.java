@@ -18,12 +18,14 @@
  */
 package io.gemini.core.pool;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
+import net.bytebuddy.build.CachedReturnPlugin;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
+import net.bytebuddy.pool.TypePool.Resolution;
 
 /**
  *
@@ -33,15 +35,16 @@ import net.bytebuddy.pool.TypePool;
  */
 public interface TypePools {
 
+
+    /**
+     * This class exposes CacheProvider to use Type between AgentBuilder transformer and Pointcut matcher.
+     *
+     */
     class EagerResolutionTypePool extends TypePool.Default {
 
         private final String poolName;
 
-        /**
-         * @param cacheProvider
-         * @param classFileLocator
-         * @param readerMode
-         */
+
         public EagerResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
             super(cacheProvider, classFileLocator, readerMode);
 
@@ -54,9 +57,23 @@ public interface TypePools {
             this.poolName = poolName;
         }
 
+
+        protected String getPoolName() {
+            return poolName;
+        }
+
         // expose cache provider to reuse
         public CacheProvider getCacheProvider() {
             return this.cacheProvider;
+        }
+
+        @Override
+        public Resolution describe(String name) {
+            Resolution resolution = cacheProvider.find(name);
+            if (resolution != null && resolution.isResolved())
+                return resolution;
+
+            return super.describe(name);
         }
 
         @Override
@@ -67,15 +84,10 @@ public interface TypePools {
 
 
     /**
-     * This type pool supports both eagerly and lazily type resolution.
+     * A variant of {@link EagerResolutionTypePool} that resolves type descriptions lazily. 
      *
-     * @author   martin.liu
-     * @since	 1.0
      */
-    class LazyResolutionTypePool extends TypePool.Default.WithLazyResolution {
-
-        private final String poolName;
-
+    class LazyResolutionTypePool extends EagerResolutionTypePool {
 
         /**
          * @param cacheProvider
@@ -83,85 +95,165 @@ public interface TypePools {
          * @param readerMode
          */
         public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
-            super(cacheProvider, classFileLocator, readerMode);
-
-            this.poolName = poolName;
+            super(poolName, cacheProvider, classFileLocator, readerMode);
         }
 
         public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
-            super(cacheProvider, classFileLocator, readerMode, parentPool);
-
-            this.poolName = poolName;
+            super(poolName, cacheProvider, classFileLocator, readerMode, parentPool);
         }
 
-        // expose cache provider to reuse
-        public CacheProvider getCacheProvider() {
-            return this.cacheProvider;
-        }
 
         @Override
-        public String toString() {
-            return poolName;
+        protected Resolution doDescribe(String name) {
+            return new TypePools.LazyResolution(
+                    name, 
+                    new Supplier<Resolution>() {
+
+                        // cache resolved type
+                        private Resolution resolution;
+
+                        @Override
+                        public Resolution get() {
+                            if (resolution == null)
+                                resolution = LazyResolutionTypePool.super.doDescribe(name);
+
+                            return resolution;
+                        }
+                    }
+            );
         }
     }
 
 
     /**
-     * This type pool resolves type with explicitly type definitions.
-     *
-     * @author   martin.liu
-     * @since	 1.0
+     * The lazy resolution for a lazy facade for a type pool.
      */
-    class ExplicitTypePool implements TypePool {
+    static class LazyResolution implements Resolution {
 
-        private final TypePool delegate;
-        private final ConcurrentMap<String /* Type Name */, Resolution> typeResolutions = new ConcurrentHashMap<>();
+        /**
+         * The type pool to delegate to.
+         */
+        private final Supplier<Resolution> resolution;
 
+        LazyTypeDescription lazyTypeDescription;
 
-        public ExplicitTypePool(TypePool typePool) {
-            this.delegate = typePool == null ? TypePool.Empty.INSTANCE : typePool;
+        /**
+         * Creates a lazy resolution for a lazy facade for a type pool.
+         *
+         * @param typePool The type pool to delegate to.
+         * @param name     The name of the type that is represented by this resolution.
+         */
+        protected LazyResolution(String name, Supplier<Resolution> resolution) {
+            this.resolution = resolution;
+            this.lazyTypeDescription = new LazyTypeDescription(name, resolution);
         }
 
-        public TypePool getDelegate() {
-            return delegate;
+        /**
+         * {@inheritDoc}
+         */
+        public boolean isResolved() {
+            return resolution.get().isResolved();
         }
 
-        public CacheProvider getCacheProvider() {
-            return delegate instanceof EagerResolutionTypePool
-                ? ((EagerResolutionTypePool) delegate).getCacheProvider()
-                : delegate instanceof LazyResolutionTypePool
-                    ? ((LazyResolutionTypePool) delegate).getCacheProvider()
-                    : null;
+        /**
+         * {@inheritDoc}
+         */
+        public TypeDescription resolve() {
+            return lazyTypeDescription;
+        }
+    }
+
+
+    /**
+     * A description of a type that delegates to another type pool once a property that is not the name is resolved.
+     */
+    static class LazyTypeDescription extends TypeDescription.AbstractBase.OfSimpleType.WithDelegation
+            implements TypeResolutionInspector {
+
+        private ResolutionLevel resolutionLevel = ResolutionLevel.NO_RESOLUTION;
+
+        /**
+         * The type pool to delegate to.
+         */
+        private final Supplier<Resolution> resolution;
+
+        /**
+         * The name of the type that is represented by this resolution.
+         */
+        private final String name;
+
+        /**
+         * Creates a new lazy type resolution.
+         *
+         * @param name The type pool to delegate to.
+         * @param resolution     The name of the type.
+         */
+        protected LazyTypeDescription(String name, Supplier<Resolution> resolution) {
+            this.name = name;
+            this.resolution = resolution;
         }
 
-        public void addTypeDescription(TypeDescription typeDescription) {
-            if(typeDescription == null) return;
-
-            this.typeResolutions.put(typeDescription.getTypeName(), new Resolution.Simple(typeDescription));
-        }
-
-        public void removeTypeDescription(String typeName) {
-            this.typeResolutions.remove(typeName);
+        /**
+         * {@inheritDoc}
+         */
+        public String getName() {
+            return name;
         }
 
         @Override
-        public Resolution describe(String name) {
-            Resolution resolution = typeResolutions.get(name);
-            if(resolution != null) 
-                return resolution;
+        @CachedReturnPlugin.Enhance("delegate")
+        protected TypeDescription delegate() {
+            this.setResolutionLevel(ResolutionLevel.TYPE_RESOLUTION);
 
-            return delegate.describe(name);
+            return resolution.get().resolve();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        public Generic getSuperClass() {
+            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
+            return delegate().getSuperClass();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        public TypeList.Generic getInterfaces() {
+            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
+            return delegate().getInterfaces();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public void clear() {
-            this.typeResolutions.clear();
+        public ResolutionLevel getResolutionLevel() {
+            return resolutionLevel;
         }
 
+        /** 
+         * {@inheritDoc} 
+         */
+        @Override
+        public void setResolutionLevel(ResolutionLevel resolutionLevel) {
+            if (this.resolutionLevel.ordinal() < resolutionLevel.ordinal())
+                this.resolutionLevel = resolutionLevel;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void resetInspection() {
+            this.resolutionLevel = ResolutionLevel.NO_RESOLUTION;
+        }
 
         @Override
         public String toString() {
-            return ExplicitTypePool.class.getSimpleName() + "-" + delegate.toString();
+            return name;
         }
     }
 }

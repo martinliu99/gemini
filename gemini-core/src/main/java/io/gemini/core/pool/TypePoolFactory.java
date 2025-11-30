@@ -17,34 +17,39 @@ package io.gemini.core.pool;
 
 import java.util.concurrent.ConcurrentMap;
 
-import io.gemini.api.classloader.AopClassLoader;
+import io.gemini.api.classloader.BaseClassLoader;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.pool.TypePools.EagerResolutionTypePool;
-import io.gemini.core.pool.TypePools.ExplicitTypePool;
 import io.gemini.core.pool.TypePools.LazyResolutionTypePool;
 import io.gemini.core.util.ClassLoaderUtils;
+import net.bytebuddy.agent.builder.AgentBuilder.CircularityLock;
+import net.bytebuddy.agent.builder.AgentBuilder.DescriptionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.PoolStrategy;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.pool.TypePool.CacheProvider;
 import net.bytebuddy.pool.TypePool.Default.ReaderMode;
+import net.bytebuddy.pool.TypePool.Resolution;
 import net.bytebuddy.utility.JavaModule;
 
 public interface TypePoolFactory {
+
+    DescriptionStrategy getDescriptionStrategy();
 
     PoolStrategy getPoolStrategy();
 
     LocationStrategy getLocationStrategy();
 
-    ExplicitTypePool createTypePool(ClassLoader classLoader, JavaModule javaModule);
+    TypePool createTypePool(ClassLoader classLoader, JavaModule javaModule);
 
 
-    class Default implements TypePoolFactory, PoolStrategy {
+    class Default implements TypePoolFactory, PoolStrategy, DescriptionStrategy {
 
         private LocationStrategy locationStrategy;
 
-        private final ConcurrentMap<ClassLoader, ExplicitTypePool> typePoolCache = new ConcurrentReferenceHashMap<>();
+        private final ConcurrentMap<ClassLoader, TypePool> typePoolCache = new ConcurrentReferenceHashMap<>();
 
 
         public Default() {
@@ -55,6 +60,14 @@ public interface TypePoolFactory {
             this.locationStrategy = locationStrategy == null ? LocationStrategy.ForClassLoader.WEAK : locationStrategy;
         }
 
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public DescriptionStrategy getDescriptionStrategy() {
+            return this;
+        }
 
         /** 
          * {@inheritDoc}
@@ -72,31 +85,33 @@ public interface TypePoolFactory {
             return this.locationStrategy;
         }
 
+
         /**
          * {@inheritDoc}
          */
         @Override
-        public ExplicitTypePool createTypePool(ClassLoader classLoader, JavaModule javaModule) {
+        public TypePool createTypePool(ClassLoader classLoader, JavaModule javaModule) {
             ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
 
             this.typePoolCache.computeIfAbsent(
                     cacheKey, 
-                    key -> new ExplicitTypePool( 
-                            doCreateTypePool(classLoader, javaModule) )
+                    key -> doCreateTypePool(classLoader, javaModule, null, null) 
             );
 
             return this.typePoolCache.get(cacheKey);
         }
 
-        protected TypePool doCreateTypePool(ClassLoader classLoader, JavaModule javaModule) {
-            if(classLoader instanceof AopClassLoader)
+        protected TypePool doCreateTypePool(ClassLoader classLoader, JavaModule javaModule,
+                CacheProvider cacheProvider, ClassFileLocator classFileLocator) {
+            if (classLoader instanceof BaseClassLoader)
                 // reuse loaded Aop framework classes for better performance
                 return TypePool.ClassLoading.of(classLoader);
             else
+                // eagerly look up TypeDescription of joinpoint type.
                 return new EagerResolutionTypePool(
                         ClassLoaderUtils.getClassLoaderName(classLoader),
-                        new CacheProvider.Simple.UsingSoftReference(), 
-                        this.locationStrategy.classFileLocator(classLoader, javaModule), 
+                        cacheProvider != null ? cacheProvider : new CacheProvider.Simple.UsingSoftReference(), 
+                        classFileLocator != null ? classFileLocator : this.locationStrategy.classFileLocator(classLoader, javaModule), 
                         ReaderMode.FAST);
         }
 
@@ -114,20 +129,49 @@ public interface TypePoolFactory {
         @Override
         public TypePool typePool(ClassFileLocator classFileLocator, ClassLoader classLoader, String name) {
             // create TypePool for Pointcut matcher in advance
-            ExplicitTypePool typePool = this.createTypePool(classLoader, null);
+            TypePool typePool = this.createTypePool(classLoader, null);
+
+//            TypePool pool = typePool.getDelegate();
+            if (typePool instanceof EagerResolutionTypePool == false) 
+                return new TypePool.LazyFacade(typePool);
 
             // share cached type between AgentBuilder transformer and Pointcut matcher if possible
-            CacheProvider cacheProvider = typePool.getCacheProvider();
-            if(cacheProvider == null)
-                cacheProvider = CacheProvider.Simple.withObjectType();
+            CacheProvider cacheProvider = ((EagerResolutionTypePool) typePool).getCacheProvider();
+            if (cacheProvider == null)
+                cacheProvider = new CacheProvider.Simple.UsingSoftReference();
 
-            return new TypePool.LazyFacade(
-                    new LazyResolutionTypePool(        // new TypePool with changed classFileLocator
-                            ClassLoaderUtils.getClassLoaderName(classLoader),
-                            cacheProvider,
-                            classFileLocator,
-                            ReaderMode.FAST) )
-            ;
+            // lazily lookup TypePool if property other than the type's name is looked up.
+            return new LazyResolutionTypePool(
+                    ClassLoaderUtils.getClassLoaderName(classLoader),
+                    cacheProvider, 
+                    classFileLocator, 
+                    ReaderMode.FAST);
         }
+
+        /* {@inheritDoc}
+         */
+        @Override
+        public boolean isLoadedFirst() {
+            return true;
+        }
+
+        /* {@inheritDoc}
+         */
+        @Override
+        public TypeDescription apply(String name, Class<?> type, TypePool typePool, CircularityLock circularityLock,
+                ClassLoader classLoader, JavaModule module) {
+            TypeDescription typeDescription = type == null
+                    ? typePool.describe(name).resolve()
+                    : TypeDescription.ForLoadedType.of(type);
+
+            if (type != null && typePool instanceof LazyResolutionTypePool) {
+                // cache TypeDescription of loaded Type
+                ((LazyResolutionTypePool) typePool).getCacheProvider().register(
+                        name, new Resolution.Simple(typeDescription));
+            }
+
+            return typeDescription;
+        }
+
     }
 }

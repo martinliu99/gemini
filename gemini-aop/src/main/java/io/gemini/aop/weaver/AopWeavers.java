@@ -36,7 +36,6 @@ import io.gemini.core.util.Assert;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.agent.builder.AgentBuilder.ClassFileBufferStrategy;
-import net.bytebuddy.agent.builder.AgentBuilder.DescriptionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.FallbackStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.InitializationStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.InjectionStrategy;
@@ -138,7 +137,7 @@ public class AopWeavers {
             .with( InjectionStrategy.UsingUnsafe.INSTANCE )
             // support lambda, for debug only
 //              .with( AgentBuilder.LambdaInstrumentationStrategy.ENABLED )
-            .with( DescriptionStrategy.Default.HYBRID )
+            .with( aopContext.getTypePoolFactory().getDescriptionStrategy() )
             .with( ClassFileBufferStrategy.Default.RETAINING )
             .with( aopContext.getTypePoolFactory().getPoolStrategy() )
             .with( aopContext.getTypePoolFactory().getLocationStrategy() )

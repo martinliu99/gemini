@@ -39,7 +39,6 @@ import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
 import net.bytebuddy.description.type.TypeDefinition;
-import net.bytebuddy.description.type.TypeDescription;
 
 
 public class PointcutParser {
@@ -119,11 +118,11 @@ public class PointcutParser {
      * @throws IllegalArgumentException if the expression is not a well-formed pointcut expression
      */
     public Pointcut parsePointcut(String pointcutExpression, 
-            TypeDescription pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
+            ResolvedType pointcutDeclarationScopeType, Map<String, ? extends TypeDefinition> pointcutParameters) {
         try {
-             Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
+             Pointcut pointcut = resolvePointcutExpression(pointcutExpression, pointcutDeclarationScopeType, pointcutParameters);
 
-             pointcut = concretizePointcutExpression(pointcut, pointcutDeclarationScope, pointcutParameters);
+             pointcut = concretizePointcutExpression(pointcut, pointcutDeclarationScopeType, pointcutParameters);
 
              validateAgainstSupportedPrimitives(pointcut, pointcutExpression); // again, because we have now followed any ref'd pcuts
 
@@ -135,7 +134,7 @@ public class PointcutParser {
     }
 
     protected Pointcut resolvePointcutExpression(String pointcutExpression, 
-            TypeDescription pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
+            ResolvedType pointcutDeclarationScopeType, Map<String, ? extends TypeDefinition> pointcutParameters) {
         try {
             pointcutExpression = ExprParser.replaceBooleanOperators(pointcutExpression);
             PatternParser parser = new PatternParserV2(pointcutExpression);
@@ -144,7 +143,7 @@ public class PointcutParser {
             validateAgainstSupportedPrimitives(pointcut, pointcutExpression);
 
             pointcut = pointcut.resolve(
-                    ExprParser.buildResolutionScope(typeWorld, pointcutDeclarationScope, pointcutParameters) );
+                    ExprParser.buildResolutionScope(typeWorld, pointcutDeclarationScopeType, pointcutParameters) );
 
             return pointcut;
         } catch (Exception e) {
@@ -154,18 +153,17 @@ public class PointcutParser {
     }
 
     protected Pointcut concretizePointcutExpression(Pointcut pointcut, 
-            TypeDefinition pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
-        ResolvedType declaringTypeForResolution = null;
-        if (pointcutDeclarationScope != null) {
-            declaringTypeForResolution = typeWorld.resolve(pointcutDeclarationScope.getTypeName());
-        } else {
-            declaringTypeForResolution = typeWorld.getWorld().resolve(ResolvedType.OBJECT);
+            ResolvedType pointcutDeclarationScopeType, Map<String, ? extends TypeDefinition> pointcutParameters) {
+        if (pointcutDeclarationScopeType == null) {
+            pointcutDeclarationScopeType = typeWorld.resolve(ResolvedType.OBJECT.getName());
         }
+
         IntMap arity = new IntMap(pointcutParameters.size());
         for (int i = 0; i < pointcutParameters.size(); i++) {
             arity.put(i, i);
         }
-        return pointcut.concretize(declaringTypeForResolution, declaringTypeForResolution, arity);
+
+        return pointcut.concretize(pointcutDeclarationScopeType, pointcutDeclarationScopeType, arity);
     }
 
     private void validateAgainstSupportedPrimitives(Pointcut pointcut, String pointcutExpression) {

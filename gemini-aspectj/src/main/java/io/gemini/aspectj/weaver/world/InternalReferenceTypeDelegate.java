@@ -44,6 +44,8 @@ import org.aspectj.weaver.WeaverStateInfo;
 import org.aspectj.weaver.patterns.PerClause;
 import org.aspectj.weaver.patterns.Pointcut;
 
+import io.gemini.core.pool.TypeResolutionInspector;
+import io.gemini.core.pool.TypeResolutionInspector.ResolutionLevel;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
@@ -122,7 +124,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     @Override
     public String getRetentionPolicy() {
-        RetentionPolicy retentionPolicy = _getRetentionPolicy();
+        RetentionPolicy retentionPolicy = getRetentionPolicyInternal();
         return retentionPolicy == null ? null : retentionPolicy.name();
     }
 
@@ -132,10 +134,10 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             return false;
         }
 
-        return _getRetentionPolicy() == RetentionPolicy.RUNTIME;
+        return getRetentionPolicyInternal() == RetentionPolicy.RUNTIME;
     }
 
-    private RetentionPolicy _getRetentionPolicy() {
+    private RetentionPolicy getRetentionPolicyInternal() {
         if (this.typeDescription.getDeclaredAnnotations().isAnnotationPresent(Retention.class) == false) 
             return null;
 
@@ -223,8 +225,13 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     @Override
     public ResolvedType[] getDeclaredInterfaces() {
-        if (interfaces != null) 
+        if (interfaces != null) {
+            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
             return interfaces;
+        }
+
+        this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
 
         TypeList.Generic genericInterfaces = this.typeDescription.getInterfaces();
         return this.interfaces = typeWorld.convertType(genericInterfaces);
@@ -236,13 +243,25 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         if (this.typeDescription.represents(Object.class))
             return null;
 
-        if (superclass != null) 
+        if (superclass != null) {
+            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
             return superclass;
+        }
+
+        this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
 
         TypeDescription.Generic superClass = this.typeDescription.getSuperClass();
         return this.superclass = superClass != null 
                 ? typeWorld.convertType(superClass)
                 : this.typeWorld.getObjectType();
+    }
+
+    private void setResolutionLevel(ResolutionLevel resolutionLevel) {
+        if (this.typeDescription instanceof TypeResolutionInspector == false)
+            return;
+
+        ((TypeResolutionInspector) typeDescription).setResolutionLevel(resolutionLevel);;
     }
 
 
@@ -365,8 +384,8 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
                 formalParameters.put(parameterNames[j], parameterTypes[j]);
             }
 
-            Pointcut pointcut = pointcutParser.resolvePointcutExpression(pointcutMethod.getPointcutExpression(), 
-                    this.typeDescription, formalParameters);
+            Pointcut pointcut = pointcutParser.resolvePointcutExpression(
+                    pointcutMethod.getPointcutExpression(), this.resolvedTypeX, formalParameters);
             ResolvedPointcutDefinition resolvedMember = pointcuts[i];
             resolvedMember.setParameterNames(parameterNames);
             resolvedMember.setPointcut(pointcut);
@@ -374,7 +393,8 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
         // phase 3, now concretize them all
         for (int i = 0; i < pointcuts.length; i++) {
-            pointcuts[i].setPointcut(pointcutParser.concretizePointcutExpression(pointcuts[i].getPointcut(), this.typeDescription, formalParameterList.get(i)));
+            pointcuts[i].setPointcut(pointcutParser.concretizePointcutExpression(
+                    pointcuts[i].getPointcut(), this.resolvedTypeX, formalParameterList.get(i)));
         }
 
         return this.pointcuts = pointcuts;

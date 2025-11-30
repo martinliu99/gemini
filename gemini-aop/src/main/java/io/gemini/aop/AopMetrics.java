@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.config.ConfigView;
+import io.gemini.core.pool.TypeResolutionInspector.ResolutionLevel;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.ClassUtils;
@@ -67,9 +68,9 @@ public class AopMetrics {
     private final AtomicInteger index = new AtomicInteger(0);
     private volatile ConcurrentMap<ClassLoader, WeaverMetrics> weaverMetricsMap;
 
-    private WeaverSummary bytebuddyWarmupSummary;
-    private WeaverSummary launcherStartupSummary;
-    private WeaverSummary appStartupSummary;
+    private WeaverMetricsSummary bytebuddyWarmupSummary;
+    private WeaverMetricsSummary launcherStartupSummary;
+    private WeaverMetricsSummary appStartupSummary;
 
 
     public AopMetrics(ConfigView configView, DiagnosticLevel diagnosticLevel) {
@@ -134,18 +135,18 @@ public class AopMetrics {
     }
 
     public void warmupByteBuddy() {
-        this.bytebuddyWarmupSummary = this.newWeaverSummary();
+        this.bytebuddyWarmupSummary = this.newWeaverMetricsSummary();
     }
 
-    public void startupLauncher() {
-        this.launcherStartupSummary = this.newWeaverSummary();
+    public void startupAopLauncher() {
+        this.launcherStartupSummary = this.newWeaverMetricsSummary();
 
-        if (diagnosticLevel.isSimpleEnabled() == false) 
+        if (diagnosticLevel.isSimpleEnabled() == false && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
                     renderLauncherStartupSummaryTemplate(bootstraperMetrics) );
-        else
+        else if (LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}{}\n", 
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
@@ -156,14 +157,14 @@ public class AopMetrics {
     }
 
     public void startupApplication() {
-        this.appStartupSummary = this.newWeaverSummary();
+        this.appStartupSummary = this.newWeaverMetricsSummary();
 
-        if (diagnosticLevel.isSimpleEnabled() == false) 
+        if (diagnosticLevel.isSimpleEnabled() == false && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n",
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics) 
             );
-        else
+        else if (LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}\n",
                     (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
                     renderAppStartupSummaryTemplate(bootstraperMetrics),
@@ -172,10 +173,11 @@ public class AopMetrics {
     }
 
 
-    private WeaverSummary newWeaverSummary() {
+    private WeaverMetricsSummary newWeaverMetricsSummary() {
         Map<ClassLoader, WeaverMetrics> existingMetricsMap = this.weaverMetricsMap;
         this.weaverMetricsMap = new ConcurrentHashMap<>();
-        return new WeaverSummary(existingMetricsMap);
+
+        return new WeaverMetricsSummary(existingMetricsMap);
     }
 
     private String renderLauncherStartupSummaryTemplate(BootstraperMetrics bootstraperMetrics) {
@@ -242,7 +244,7 @@ public class AopMetrics {
         return placeholderHelper.replace(appStartupSummrayTemplate);
     }
 
-    private String renderWeaverMetricsTemplate(String phaseName, WeaverSummary weaverStats, boolean withHead) {
+    private String renderWeaverMetricsTemplate(String phaseName, WeaverMetricsSummary weaverStats, boolean withHead) {
         StringBuilder renderResult = new StringBuilder();
 
         if (withHead)
@@ -332,6 +334,7 @@ public class AopMetrics {
                 }
             }
         }
+
         int length = renderResult.length();
         if (length > 0) {
             for (int i=0; i<2; i++) {
@@ -514,7 +517,7 @@ public class AopMetrics {
         public void setLauncherStartupTime(long launcherStartupTime) {
             this.launcherStartupTime = launcherStartupTime;
 
-            AopMetrics.this.startupLauncher();
+            AopMetrics.this.startupAopLauncher();
         }
 
         protected long getUncategorizedTime() {
@@ -554,6 +557,8 @@ public class AopMetrics {
         private final AtomicInteger typeTransformationCount;
         private final AtomicLong typeTransformationTime;
 
+        private final ConcurrentMap<ResolutionLevel, ConcurrentMap<String, AtomicLong>> typeResolutuonLevelAdvisorMap;
+
         private final ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap;
         private final ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap;
 
@@ -568,6 +573,7 @@ public class AopMetrics {
                     0, 0, 
                     0, 0, 
                     new ConcurrentHashMap<>(),
+                    new ConcurrentHashMap<>(),
                     new ConcurrentHashMap<>()
                     );
         }
@@ -579,6 +585,7 @@ public class AopMetrics {
                 int typeFastMatchingCount, long typeFastMatchingTime,
                 int typeMatchingCount, long typeMatchingTime,
                 int typeTransformationCount, long typeTransformationTime,
+                ConcurrentMap<ResolutionLevel, ConcurrentMap<String, AtomicLong>> typeResolutuonLevelAdvisorMap,
                 ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap,
                 ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap) {
             this.metricsIndex = metrcisIndex;
@@ -601,6 +608,8 @@ public class AopMetrics {
 
             this.typeTransformationCount = new AtomicInteger(typeTransformationCount);
             this.typeTransformationTime = new AtomicLong(typeTransformationTime);
+
+            this.typeResolutuonLevelAdvisorMap = typeResolutuonLevelAdvisorMap;
 
             this.advisorTypeFastMatchingTimeMap = advisorTypeFastMatchingTimeMap;
             this.advisorTypeMatchingTimeMap= advisorTypeMatchingTimeMap;
@@ -678,15 +687,37 @@ public class AopMetrics {
             typeFastMatchingTime.addAndGet(time);
         }
 
+        protected ConcurrentMap<ResolutionLevel, ConcurrentMap<String, AtomicLong>> getTypeResolutuonLevelAdvisorMap() {
+            return typeResolutuonLevelAdvisorMap;
+        }
+
+        public void incrTypeResolutuonLevelAdvisorCount(Map<String, ResolutionLevel> advisorTypeResolutionLevels) {
+            for (Entry<String, ResolutionLevel> entry : advisorTypeResolutionLevels.entrySet()) {
+                String advisorName = entry.getKey();
+                ResolutionLevel resolutionLevel = entry.getValue();
+
+                this.typeResolutuonLevelAdvisorMap.computeIfAbsent(
+                        resolutionLevel,
+                        key -> new ConcurrentHashMap<>()
+                )
+                .computeIfAbsent(
+                        advisorName, 
+                        key -> new AtomicLong(0)
+                )
+                .incrementAndGet();
+            }
+        }
+
         protected Map<Advisor, AtomicLong> getAdvisorTypeFastMatchingTimeMap() {
             return this.advisorTypeFastMatchingTimeMap;
         }
 
         public void incrAdvisorTypeFastMatchingTime(Advisor advisor, long time) {
-            AtomicLong totalTime = this.advisorTypeFastMatchingTimeMap.get(advisor);
-            if (totalTime == null)
-                return;
-            totalTime.addAndGet(time);
+            this.advisorTypeFastMatchingTimeMap.computeIfAbsent(
+                    advisor,
+                    key -> new AtomicLong(0)
+            )
+            .getAndAdd(time);
         }
 
         protected int getTypeMatchingCount() {
@@ -739,7 +770,7 @@ public class AopMetrics {
     }
 
 
-    protected static class WeaverSummary {
+    protected static class WeaverMetricsSummary {
 
         private final List<WeaverMetrics> weaverMetricsList;
 
@@ -766,7 +797,8 @@ public class AopMetrics {
         private final ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap;
         private final ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap;
 
-        public WeaverSummary(Map<ClassLoader, WeaverMetrics> weaverMetricsMap) {
+
+        public WeaverMetricsSummary(Map<ClassLoader, WeaverMetrics> weaverMetricsMap) {
             weaverMetricsList = weaverMetricsMap.values().stream()
                     .sorted( (e1, e2) -> 
                         e1.getMetricsIndex() - e2.getMetricsIndex() )

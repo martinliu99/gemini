@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,6 +40,8 @@ import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Pointcut;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
+import io.gemini.core.pool.TypeResolutionInspector;
+import io.gemini.core.pool.TypeResolutionInspector.ResolutionLevel;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.MethodUtils;
@@ -93,7 +96,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         this.classLoaderAdvisorMap = new ConcurrentReferenceHashMap<>();
 
 
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled())
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to create AdvisorFactory '{}'", 
                     (System.nanoTime() - startedAt) / 1e9, factoryName);
     }
@@ -132,20 +135,26 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
 
+        Map<String, ResolutionLevel> advisorTypeResolutionLevels = new HashMap<>();
         try {
             // 2.fast match advisors for given type
             List<Advisor.PointcutAdvisor> pointcutAdvisors = null;
             try {
                 startedAt = System.nanoTime();
 
-                pointcutAdvisors = fastMatchAdvisors(typeDescription, 
+                pointcutAdvisors = fastMatchAdvisors(
+                        typeDescription, 
                         joinpointClassLoader, javaModule, 
-                        candidateAdvisors, weaverMetrics);
+                        candidateAdvisors, 
+                        weaverMetrics, 
+                        advisorTypeResolutionLevels);
 
                 // ignore synthetic class
-                if (CollectionUtils.isEmpty(pointcutAdvisors) || typeDescription.isSynthetic()) {
+                if (CollectionUtils.isEmpty(pointcutAdvisors))
                     return Collections.emptyMap();
-                }
+
+                if (typeDescription.isSynthetic()) 
+                    return Collections.emptyMap();
             } finally {
                 weaverMetrics.incrTypeFastMatchingCount();
                 weaverMetrics.incrTypeFastMatchingTime(System.nanoTime() - startedAt);
@@ -156,19 +165,24 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             try {
                 startedAt = System.nanoTime();
 
-                return matchAdvisors(typeDescription, 
-                        joinpointClassLoader, pointcutAdvisors, weaverMetrics);
+                return matchAdvisors(
+                        typeDescription, 
+                        joinpointClassLoader, 
+                        pointcutAdvisors, 
+                        weaverMetrics,
+                        advisorTypeResolutionLevels);
             } finally {
                 weaverMetrics.incrTypeMatchingCount();
                 weaverMetrics.incrTypeMatchingTime(System.nanoTime() - startedAt);
             }
         } finally {
-            AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
-
-            TypeWorld typeWorld = advisorContext.getTypeWorld();
+            TypeWorld typeWorld = factoryContext.getTypeWorld();
             if (typeWorld != null && typeWorld instanceof TypeWorld.CacheResolutionFacade) {
                 ((TypeWorld.CacheResolutionFacade) typeWorld).releaseCache(typeDescription);
             }
+
+            if (advisorTypeResolutionLevels.size() > 0)
+                weaverMetrics.incrTypeResolutuonLevelAdvisorCount(advisorTypeResolutionLevels);
         }
     }
 
@@ -192,9 +206,15 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
 
-    private List<Advisor.PointcutAdvisor> fastMatchAdvisors(TypeDescription typeDescription, 
+    private List<Advisor.PointcutAdvisor> fastMatchAdvisors(
+            TypeDescription typeDescription, 
             ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            final List<? extends Advisor> advisors, final WeaverMetrics weaverMetrics) {
+            final List<? extends Advisor> advisors, 
+            final WeaverMetrics weaverMetrics, 
+            Map<String, ResolutionLevel> advisorTypeResolutionLevels) {
+        TypeResolutionInspector typeResolutionInspector = typeDescription instanceof TypeResolutionInspector
+                ? (TypeResolutionInspector) typeDescription : null;
+
         List<Advisor.PointcutAdvisor> matchedAdvisors = new ArrayList<>();
         for (Advisor advisor : advisors) {
             try {
@@ -206,8 +226,22 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                 if (pointcut == null || pointcut.getTypeMatcher() == null)
                     continue;
 
-                if (pointcut.getTypeMatcher().matches(typeDescription))
-                    matchedAdvisors.add(pointcutAdvisor);
+                try {
+                    if (typeResolutionInspector != null)
+                        typeResolutionInspector.resetInspection();
+
+                    if (pointcut.getTypeMatcher().matches(typeDescription))
+                        matchedAdvisors.add(pointcutAdvisor);
+                } finally {
+                    // record type resolution information
+                    if (typeDescription instanceof TypeDescription.ForLoadedType == false
+                            && typeResolutionInspector != null) {
+                        ResolutionLevel resolutionLevel = typeResolutionInspector.getResolutionLevel();
+
+                        if (ResolutionLevel.NO_RESOLUTION != resolutionLevel)
+                            advisorTypeResolutionLevels.put(advisor.getAdvisorName(), resolutionLevel);
+                    }
+                }
             } catch (Throwable t) {
                 LOGGER.error("Could not filter advisors {}", advisors, t);
 
@@ -218,10 +252,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         return matchedAdvisors;
     }
 
-    private Map<MethodDescription, List<? extends Advisor>> matchAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, List<Advisor.PointcutAdvisor> pointcutAdvisors, WeaverMetrics weaverMetrics) {
+    private Map<MethodDescription, List<? extends Advisor>> matchAdvisors(
+            TypeDescription typeDescription, 
+            ClassLoader joinpointClassLoader, 
+            List<Advisor.PointcutAdvisor> pointcutAdvisors, 
+            WeaverMetrics weaverMetrics, 
+            Map<String, ResolutionLevel> advisorTypeResolutionLevels) {
+        TypeResolutionInspector typeResolutionInspector = typeDescription instanceof TypeResolutionInspector
+                ? (TypeResolutionInspector) typeDescription : null;;
+
         Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new LinkedHashMap<>();
-        MethodGraph.Linked methodGraph = null;
         for (InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
             // ignore synthetic method?
             if (methodDescription.isNative() || methodDescription.isAbstract()
@@ -237,20 +277,27 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                 try {
 //                    long startedAt = System.nanoTime();
 
-                    if (pointcut.getMethodMatcher().matches(methodDescription))
-                        candidateAdvisors.add(pointcutAdvisor);
+                    if (pointcut.getMethodMatcher().matches(methodDescription) == false)
+                        continue;
+
+                    if (typeResolutionInspector != null) {
+                        advisorTypeResolutionLevels.remove(pointcutAdvisor.getAdvisorName());
+                    }
+
+                    candidateAdvisors.add(pointcutAdvisor);
                 } catch (Throwable t) {
-                    LOGGER.info("Could not match joinpoint with pointcut. \n"
-                            + "  Joinpoitn: {} \n"
-                            + "  Advisor: {} \n"
-                            + "  ClassLoader: {} \n"
-                            + "  Error reason: {} \n",
-                            MethodUtils.getMethodSignature(methodDescription), 
-                            pointcutAdvisor, 
-                            joinpointClassLoader, 
-                            t.getMessage(), 
-                            t
-                    );
+                    if (LOGGER.isInfoEnabled())
+                        LOGGER.info("Could not match joinpoint with pointcut. \n"
+                                + "  Joinpoitn: {} \n"
+                                + "  Advisor: {} \n"
+                                + "  ClassLoader: {} \n"
+                                + "  Error reason: {} \n",
+                                MethodUtils.getMethodSignature(methodDescription), 
+                                pointcutAdvisor, 
+                                joinpointClassLoader, 
+                                t.getMessage(), 
+                                t
+                        );
 
                     Throwables.throwIfRequired(t);
                 } finally {
@@ -263,6 +310,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
             // convert matched bridge method to overridden method
+            MethodGraph.Linked methodGraph = null;
             if (methodDescription.isBridge()) {
                 if (methodGraph == null)
                     methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) typeDescription);

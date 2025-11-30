@@ -43,7 +43,7 @@ import org.aspectj.weaver.patterns.SimpleScope;
 import org.aspectj.weaver.patterns.TypePattern;
 import org.aspectj.weaver.tools.PointcutPrimitive;
 
-import io.gemini.api.FrameworkException;
+import io.gemini.api.BaseException;
 import io.gemini.aspectj.weaver.TypeWorld.WorldLintException;
 import io.gemini.aspectj.weaver.patterns.HasPatternParser;
 import io.gemini.aspectj.weaver.patterns.PatternParserV2;
@@ -53,6 +53,7 @@ import io.gemini.aspectj.weaver.world.ElementExpr.ResourceNameExpr;
 import io.gemini.aspectj.weaver.world.ElementExpr.TypeExpr;
 import io.gemini.aspectj.weaver.world.ElementExpr.TypeNameExpr;
 import io.gemini.aspectj.weaver.world.PointcutParser;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
@@ -170,8 +171,19 @@ public enum ExprParser {
             Map<String, ? extends TypeDefinition> pointcutParameters) 
             throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
+        pointcutDeclarationScope = pointcutDeclarationScope == null
+                ? TypeDescription.ForLoadedType.of(Object.class) : pointcutDeclarationScope;
 
-        return new PointcutParser(typeWorld).parsePointcut(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
+        String existingAspectType = ThreadContext.getContextAspectType();
+        try {
+            ThreadContext.setContextAspectType(pointcutDeclarationScope.getTypeName());
+            ResolvedType pointcutDeclarationScopeType = typeWorld.resolve(pointcutDeclarationScope);
+
+            return new PointcutParser(typeWorld).parsePointcut(
+                    pointcutExpression, pointcutDeclarationScopeType, pointcutParameters);
+        } finally {
+            ThreadContext.setContextAspectType(existingAspectType);
+        }
     }
 
     public Pointcut parsePointcutExpr(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds, 
@@ -179,8 +191,19 @@ public enum ExprParser {
             Map<String, ? extends TypeDefinition> pointcutParameters) 
             throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
+        pointcutDeclarationScope = pointcutDeclarationScope == null
+                ? TypeDescription.ForLoadedType.of(Object.class) : pointcutDeclarationScope;
 
-        return new PointcutParser(typeWorld, supportedPointcutKinds).parsePointcut(pointcutExpression, pointcutDeclarationScope, pointcutParameters);
+        String existingAspectType = ThreadContext.getContextAspectType();
+        try {
+            ThreadContext.setContextAspectType(pointcutDeclarationScope.getTypeName());
+            ResolvedType pointcutDeclarationScopeType = typeWorld.resolve(pointcutDeclarationScope);
+
+            return new PointcutParser(typeWorld, supportedPointcutKinds).parsePointcut(
+                    pointcutExpression, pointcutDeclarationScopeType, pointcutParameters);
+        } finally {
+            ThreadContext.setContextAspectType(existingAspectType);
+        }
     }
 
 
@@ -192,7 +215,7 @@ public enum ExprParser {
             typeExpression = replaceBooleanOperators(typeExpression);
             TypePattern typePattern = new HasPatternParser(typeExpression).parseTypePattern();
 
-            IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
+            IScope resolutionScope = buildResolutionScope(typeWorld, null, Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
             typePattern = typePattern.resolveBindings(resolutionScope, bindingTable, false, false);
 
@@ -211,7 +234,7 @@ public enum ExprParser {
             fieldExpression = replaceBooleanOperators(fieldExpression);
             ISignaturePattern signaturePattern = new HasPatternParser(fieldExpression).parseCompoundFieldSignaturePattern();
 
-            IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
+            IScope resolutionScope = buildResolutionScope(typeWorld, null, Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
             signaturePattern = signaturePattern.resolveBindings(resolutionScope, bindingTable);
 
@@ -238,7 +261,7 @@ public enum ExprParser {
             expression = replaceBooleanOperators(expression);
             ISignaturePattern signaturePattern = new HasPatternParser(expression).parseCompoundMethodOrConstructorSignaturePattern(isMethod);
 
-            IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
+            IScope resolutionScope = buildResolutionScope(typeWorld, null, Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
             signaturePattern = signaturePattern.resolveBindings(resolutionScope, bindingTable);
 
@@ -256,7 +279,7 @@ public enum ExprParser {
             methodExpression = replaceBooleanOperators(methodExpression);
             ISignaturePattern signaturePattern = new PatternParserV2(methodExpression).parseMethodOrConstructorSignaturePattern();
 
-            IScope resolutionScope = buildResolutionScope(typeWorld, TypeDescription.ForLoadedType.of(Object.class), Collections.emptyMap());
+            IScope resolutionScope = buildResolutionScope(typeWorld, null, Collections.emptyMap());
             Bindings bindingTable = new Bindings(resolutionScope.getFormalCount());
             signaturePattern = signaturePattern.resolveBindings(resolutionScope, bindingTable);
 
@@ -293,7 +316,7 @@ public enum ExprParser {
     }
 
     public static IScope buildResolutionScope(TypeWorld typeWorld, 
-            TypeDescription pointcutDeclarationScope, Map<String, ? extends TypeDefinition> pointcutParameters) {
+            ResolvedType pointcutDeclarationScopeType, Map<String, ? extends TypeDefinition> pointcutParameters) {
         if (pointcutParameters == null) {
             pointcutParameters = Collections.emptyMap();
         }
@@ -304,28 +327,26 @@ public enum ExprParser {
             formalBindings[i] = new FormalBinding.ImplicitFormalBinding(toUnresolvedType(entry.getValue()), entry.getKey(), i++);
         }
 
-        if (pointcutDeclarationScope == null) {
+        if (pointcutDeclarationScopeType == null)
             return new SimpleScope(typeWorld.getWorld(), formalBindings);
-        } else {
-            ResolvedType inType = typeWorld.resolve(pointcutDeclarationScope);
-            ISourceContext sourceContext = new ISourceContext() {
-                public ISourceLocation makeSourceLocation(IHasPosition position) {
-                    return new SourceLocation(new File(""), 0);
-                }
 
-                public ISourceLocation makeSourceLocation(int line, int offset) {
-                    return new SourceLocation(new File(""), line);
-                }
+        ISourceContext sourceContext = new ISourceContext() {
+            public ISourceLocation makeSourceLocation(IHasPosition position) {
+                return new SourceLocation(new File(""), 0);
+            }
 
-                public int getOffset() {
-                    return 0;
-                }
+            public ISourceLocation makeSourceLocation(int line, int offset) {
+                return new SourceLocation(new File(""), line);
+            }
 
-                public void tidy() {
-                }
-            };
-            return new BindingScope(inType, sourceContext, formalBindings);
-        }
+            public int getOffset() {
+                return 0;
+            }
+
+            public void tidy() {
+            }
+        };
+        return new BindingScope(pointcutDeclarationScopeType, sourceContext, formalBindings);
     }
 
 
@@ -351,7 +372,7 @@ public enum ExprParser {
     }
 
 
-    public static class ExprParseException extends FrameworkException {
+    public static class ExprParseException extends BaseException {
 
         private static final long serialVersionUID = -7800478366126303384L;
 
@@ -396,7 +417,7 @@ public enum ExprParser {
     }
 
 
-    public static class ExprLintException extends FrameworkException {
+    public static class ExprLintException extends BaseException {
 
         private static final long serialVersionUID = -7800478366126303384L;
 
@@ -415,7 +436,7 @@ public enum ExprParser {
     }
 
 
-    public static class ExprUnknownException extends FrameworkException {
+    public static class ExprUnknownException extends BaseException {
 
         private static final long serialVersionUID = 816600136638029684L;
 

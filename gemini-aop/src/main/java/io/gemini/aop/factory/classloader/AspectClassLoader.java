@@ -18,14 +18,14 @@ package io.gemini.aop.factory.classloader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
 import io.gemini.api.annotation.NoMatching;
 import io.gemini.api.classloader.AopClassLoader;
-import io.gemini.api.classloader.ThreadContext;
+import io.gemini.api.classloader.BaseClassLoader;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CompoundEnumeration;
@@ -63,12 +63,12 @@ import net.bytebuddy.matcher.ElementMatchers;
  * @since	 1.0
  */
 @NoMatching(classLoader = true)
-public class AspectClassLoader extends URLClassLoader {
+public class AspectClassLoader extends BaseClassLoader {
 
     private final String loaderName;
 
-    private ElementMatcher<String> joinpointTypeMatcher = ElementMatchers.none();
-    private ElementMatcher<String> joinpointResourceMatcher = ElementMatchers.none();
+    private ElementMatcher<String> joinpointFirstTypeMatcher = ElementMatchers.none();
+    private ElementMatcher<String> joinpointFirstResourceMatcher = ElementMatchers.none();
 
 
     static {
@@ -98,12 +98,12 @@ public class AspectClassLoader extends URLClassLoader {
     }
 
 
-    public void setJoinpointTypeMatcher(ElementMatcher<String> joinpointTypeMatcher) {
-        this.joinpointTypeMatcher = joinpointTypeMatcher;
+    public void setJoinpointFirstTypeMatcher(ElementMatcher<String> joinpointFirstTypeMatcher) {
+        this.joinpointFirstTypeMatcher = joinpointFirstTypeMatcher;
     }
 
-    public void setJoinpointResourceMatcher(ElementMatcher<String> joinpointResourceMatcher) {
-        this.joinpointResourceMatcher = joinpointResourceMatcher;
+    public void setJoinpointFirstResourceMatcher(ElementMatcher<String> joinpointFirstResourceMatcher) {
+        this.joinpointFirstResourceMatcher = joinpointFirstResourceMatcher;
     }
 
 
@@ -133,27 +133,30 @@ public class AspectClassLoader extends URLClassLoader {
 
 
             ClassLoader joinpointCL = getJoinpointClassLoader();
+            if (this.joinpointFirstTypeMatcher.matches(name) == true) {
+                // 3.delegate to joinpoint CL to load joinpoint first classes
+                type = joinpointCL == null ? null : this.loadClassFromJoinpointCL(joinpointCL, name, resolve, false);
+                if (type != null) {
+                    return type;
+                }
 
-            // 3.delegate to joinpoint CL to load joinpoint only classes
-            if (joinpointCL != null && this.joinpointTypeMatcher.matches(name) == true) {
-                // load classes by subclass-defined JoinpointClassLoader
-                return this.loadClassFromJoinpointCL(joinpointCL, name, resolve);
+                // 4.delegate to current CL to load Aspect relevant classes
+                return this.loadClassFromCurrentCL(name, resolve, true);
+            } else {
+                // 3.delegate to current CL to load Aspect relevant classes
+                type = this.loadClassFromCurrentCL(name, resolve, joinpointCL == null);
+                if (type != null) {
+                    return type;
+                }
+
+                // 4.delegate to joinpoint CL to load joinpoint relevant classes
+                return joinpointCL == null ? null : this.loadClassFromJoinpointCL(joinpointCL, name, resolve, true);
             }
-
-
-            // 4.delegate to current CL and joinpoint CL
-            // load Aspect relevant classes by current ClassLoader
-            type = this.loadClassFromCurrentCL(name, resolve, joinpointCL == null);
-            if (type != null) {
-                return type;
-            }
-
-            // load classes by subclass-defined JoinpointClassLoader
-            return joinpointCL != null ? this.loadClassFromJoinpointCL(joinpointCL, name, resolve) : null;
         }
     }
 
-    private Class<?> loadClassFromCurrentCL(String name, boolean resolve, boolean throwException) throws ClassNotFoundException {
+    private Class<?> loadClassFromCurrentCL(String name, boolean resolve, 
+            boolean throwException) throws ClassNotFoundException {
         try {
             Class<?> type = this.findClass(name);
             if (resolve) {
@@ -168,13 +171,20 @@ public class AspectClassLoader extends URLClassLoader {
         return null;
     }
 
-    private Class<?> loadClassFromJoinpointCL(ClassLoader joinpointCL, String name, boolean resolve) throws ClassNotFoundException {
-        Class<?> type = joinpointCL.loadClass(name);
+    private Class<?> loadClassFromJoinpointCL(ClassLoader joinpointCL, String name, boolean resolve, 
+            boolean throwException) throws ClassNotFoundException {
+        try {
+            Class<?> type = joinpointCL.loadClass(name);
+            if (resolve) {
+                resolveClass(type);
+            }
 
-        if (resolve) {
-            resolveClass(type);
+            return type;
+        } catch (ClassNotFoundException e) {
+            if (throwException) throw e;
         }
-        return type;
+
+        return null;
     }
 
 
@@ -201,8 +211,8 @@ public class AspectClassLoader extends URLClassLoader {
         ClassLoader joinpointCL = getJoinpointClassLoader();
 
         // 2.delegate to joinpoint CL to load joinpoint only resources
-        if (joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
-            // load resource by subclass-defined JoinpointClassLoader
+        if (joinpointCL != null && this.joinpointFirstResourceMatcher.matches(name) == true) {
+            // load resource by JoinpointClassLoader
             return this.findResourceWithJoinpointCL(joinpointCL, name);
         }
 
@@ -214,7 +224,7 @@ public class AspectClassLoader extends URLClassLoader {
             return url;
         }
 
-        // load resource by subclass-defined JoinpointClassLoader
+        // load resource by JoinpointClassLoader
         return joinpointCL != null ? this.findResourceWithJoinpointCL(joinpointCL, name) : null;
     }
 
@@ -252,8 +262,8 @@ public class AspectClassLoader extends URLClassLoader {
         ClassLoader joinpointCL = getJoinpointClassLoader();
 
         // 2.delegate to joinpoint CL to load joinpoint only resources
-        if (joinpointCL != null && this.joinpointResourceMatcher.matches(name) == true) {
-            // load resources by subclass-defined JoinpointClassLoader
+        if (joinpointCL != null && this.joinpointFirstResourceMatcher.matches(name) == true) {
+            // load resources by JoinpointClassLoader
             urls = this.findResourcesWithJoinpointCL(joinpointCL, name);
             if (urls != null) {
                 urlsList.add(urls);
@@ -270,7 +280,7 @@ public class AspectClassLoader extends URLClassLoader {
             urlsList.add(urls);
         }
 
-        // load resources by subclass-defined JoinpointClassLoader
+        // load resources by JoinpointClassLoader
         urls = joinpointCL != null ? this.findResourcesWithJoinpointCL(joinpointCL, name) : null;
         if (urls != null) {
             urlsList.add(urls);

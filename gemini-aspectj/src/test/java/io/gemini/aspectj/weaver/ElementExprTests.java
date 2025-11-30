@@ -22,14 +22,22 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.aspectj.weaver.patterns.FastMatchInfo;
+import org.aspectj.weaver.patterns.Pointcut;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.api.classloader.ClassLoaders;
+import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import io.gemini.core.pool.TypePoolFactory;
+import io.gemini.core.pool.TypePools;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.pool.TypePool;
+import net.bytebuddy.pool.TypePool.CacheProvider;
+import net.bytebuddy.pool.TypePool.Default.ReaderMode;
 
 
 public class ElementExprTests {
@@ -353,6 +361,45 @@ public class ElementExprTests {
     }
 
 
+    @Test 
+    public void test_performance() {
+        TypePool typePool = new TypePools.EagerResolutionTypePool(
+                "test", 
+//                new CacheProvider.Simple.UsingSoftReference(), 
+                CacheProvider.NoOp.INSTANCE,
+                ClassFileLocator.ForClassLoader.ofSystemLoader(), 
+                ReaderMode.FAST);
+        TypeWorld typeWorld = new BytebuddyWorld(typePool, null);
+
+        Pointcut matcher = ExprParser.INSTANCE.parsePointcutExpr(
+                typeWorld, "execution(public java.lang.Object java.util.ArrayList+.get(..))");
+
+        long startedAt = System.nanoTime();
+        long resolvingTime = 0;
+        long matchingTime = 0 ;
+        for (int i = 0; i < 3000; i++) {
+            startedAt = System.nanoTime();
+//            TypeDescription typeDescription = typePool.describe(Sub.class.getName()).resolve();
+            TypeDescription typeDescription = typePool.describe(getClass().getName()).resolve();
+
+//            try {
+//            TypeDescription typeDescription2 = typePool.describe(getClass().getName() + "i").resolve();
+//            } catch (Exception e) {}
+
+            FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(typeDescription), null, typeWorld.getWorld());
+            resolvingTime += System.nanoTime() - startedAt;
+
+
+            startedAt = System.nanoTime();
+            for (int j = 0; j< 100; j++)
+                matcher.fastMatch(info);
+            matchingTime += System.nanoTime() -startedAt;
+        }
+        LOGGER.info("Took {} seconds to resolve type, \n took {} second to match type", 
+                resolvingTime / 1e9, matchingTime / 1e9);
+    }
+
+
     public class InnerClass {}
 
     public static class NestClass {}
@@ -381,6 +428,26 @@ public class ElementExprTests {
          * @param t
          */
         public Parameterized(String t) {
+            super(t);
+        }
+    }
+
+    public class Super extends Parameterized {
+
+        /**
+         * @param t
+         */
+        public Super(String t) {
+            super(t);
+        }
+    }
+
+    public class Sub extends Super {
+
+        /**
+         * @param t
+         */
+        public Sub(String t) {
             super(t);
         }
     }

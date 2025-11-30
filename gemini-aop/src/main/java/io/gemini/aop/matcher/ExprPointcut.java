@@ -175,11 +175,12 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
                 FuzzyBoolean fastMatch = pointcut.fastMatch(info);
                 return fastMatch.maybeTrue();
             } catch (Exception e) {
-                LOGGER.warn("Could not match AspectJ ExprPointcut. \n"
-                        + "  TargetType: {} \n"
-                        + "  PointcutExpression: {} \n"
-                        + "  Error reason: {} \n", 
-                        typeDescription.getTypeName(), pointcutExpression, e.getMessage(), e);
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not match AspectJ ExprPointcut. \n"
+                            + "  TargetType: {} \n"
+                            + "  PointcutExpression: {} \n"
+                            + "  Error reason: {} \n", 
+                            typeDescription.getTypeName(), pointcutExpression, e.getMessage(), e);
 
                 return false;
             }

@@ -24,16 +24,22 @@ import org.aspectj.weaver.UnresolvedType;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
 import io.gemini.aspectj.weaver.world.BytebuddyWorld;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.description.type.TypeDescription;
 
+
 /**
- * 
+ * TypeWorld resolves types imported by aspect class, firstly in current joinpoint 
+ * ClassLoader, then in AspectClassLoader.
+ *
+ * @author   martin.liu
+ * @since	 1.0
  */
 public class AspectTypeWorld extends BytebuddyWorld {
 
     private final AspectClassLoader aspectClassLoader;
-    private final TypeWorldFactory typeWordlFactory;
+    private final TypeWorldFactory typeWorldFactory;
 
 
     public AspectTypeWorld(AspectTypePool typePool, PlaceholderHelper placeholderHelper, 
@@ -41,7 +47,7 @@ public class AspectTypeWorld extends BytebuddyWorld {
         super(typePool, placeholderHelper);
 
         this.aspectClassLoader = aspectClassLoader;
-        this.typeWordlFactory = typeWordlFactory;
+        this.typeWorldFactory = typeWordlFactory;
     }
 
 
@@ -50,19 +56,25 @@ public class AspectTypeWorld extends BytebuddyWorld {
      */
     @Override
     public ResolvedType resolve(UnresolvedType unresolvedType, boolean allowMissing) {
-        try {
-            ResolvedType resolvedType = super.resolve(unresolvedType, allowMissing);
-            if (resolvedType != null && resolvedType.isMissing() == false)
-                return resolvedType;
-        } catch (Exception e) {}
+        String aspectType = ThreadContext.getContextAspectType();
+        boolean isAspectType = (aspectType != null && aspectType.equals(unresolvedType.getName()))
+                || unresolvedType.isPrimitiveType();
 
-        TypeWorld joinpointTypeWorld = getJoinpointTypeWorld();
-        return joinpointTypeWorld == null ? null : joinpointTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
-    }
+        // 1.resolve joinpoint type firstly
+        if (!isAspectType) {
+            ClassLoader joinpointCL = aspectClassLoader != null 
+                    ? aspectClassLoader.getJoinpointClassLoader() : null;
 
-    private TypeWorld getJoinpointTypeWorld() {
-        ClassLoader joinpointCL = aspectClassLoader.getJoinpointClassLoader();
-        return typeWordlFactory.createTypeWorld(joinpointCL, null);
+            try {
+                TypeWorld joinpointTypeWorld = typeWorldFactory.createTypeWorld(joinpointCL, null);
+                ResolvedType resolvedType = joinpointTypeWorld == null ? null : joinpointTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
+                if (resolvedType != null && resolvedType.isMissing() == false)
+                    return resolvedType;
+            } catch (Exception e) {}
+        }
+
+        // 2.resolve aspect type
+        return super.resolve(unresolvedType, allowMissing);
     }
 
     /**
@@ -70,7 +82,8 @@ public class AspectTypeWorld extends BytebuddyWorld {
      */
     @Override
     public TypeDescription describeType(String typeName) {
-        if ("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
+        if (OBJECT_DESCRIPTION.getTypeName().equals(typeName)) 
+            return OBJECT_DESCRIPTION;
 
         return ((AspectTypePool) typePool).describeAspectType(typeName).resolve();
     }

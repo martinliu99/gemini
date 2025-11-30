@@ -42,8 +42,7 @@ import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.weaver.Joinpoints.Descriptor;
 import io.gemini.aop.weaver.WeaverCache.TypeCache;
 import io.gemini.aop.weaver.advice.DescriptorOffset;
-import io.gemini.api.classloader.ThreadContext;
-import io.gemini.core.pool.TypePools.ExplicitTypePool;
+import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
@@ -98,7 +97,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
         this.initialize(weaverContext);
 
 
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled())
+        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to create AopWeaver.", (System.nanoTime() - startedAt) / 1e9);
     }
 
@@ -116,9 +115,8 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
 
         String typeName = typeDescription.getTypeName();
         // diagnostic log
-        if (aopContext.isDiagnosticClass(typeName)) {
+        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
             LOGGER.info("Matching type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
-        }
 
 
         // check cached result since bytebuddy will enter this method twice when class redefinition, or retransmission
@@ -153,50 +151,41 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
 
 
             // 2.get or create/cache advisors
-            ExplicitTypePool typePool = aopContext.getTypePoolFactory().createTypePool(joinpointClassLoader, javaModule);
-            try {
-                // cache resolved typeDescription
-                typePool.addTypeDescription(typeDescription);
+            Map<? extends MethodDescription, List<? extends Advisor>> methodDescriptionAdvisors = 
+                    this.advisorFactory.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
 
-                Map<? extends MethodDescription, List<? extends Advisor>> methodDescriptionAdvisors = 
-                        this.advisorFactory.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
+            if (CollectionUtils.isEmpty(methodDescriptionAdvisors) == true) {
+                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                    LOGGER.info("Did not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
 
-                if (CollectionUtils.isEmpty(methodDescriptionAdvisors) == true) {
-                    if (aopContext.isDiagnosticClass(typeName)) {
-                        LOGGER.info("Did not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
-                    }
-
-                    return false;
-                }
-
-                TypeCache typeCache = weaverCache.createTypeCache(typeName);
-                weaverCache.putTypeCache(joinpointClassLoader, typeCache);
-                typeCache.setMethodDescriptionAdvisors(methodDescriptionAdvisors);
-
-                if (aopContext.isDiagnosticClass(typeName)) {
-                    LOGGER.info("Matched type '{}' in AopWeaver, \n"
-                            + "  ClassLoader: {} \n"
-                            + "  {} ", 
-                            typeName, joinpointClassLoader,
-                            StringUtils.join(
-                                    methodDescriptionAdvisors.entrySet(), 
-                                    entry -> 
-                                        new StringBuilder("Method: ")
-                                        .append( MethodUtils.getMethodSignature( entry.getKey() ) )
-                                        .append("\n   Advices: ")
-                                        .append( StringUtils.join(entry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
-                                    "\n  "
-                            )
-                    );
-                }
-
-                return true;
-            } finally {
-                // release cached typeDescription
-                typePool.removeTypeDescription(typeName);
+                return false;
             }
+
+            TypeCache typeCache = weaverCache.createTypeCache(typeName);
+            weaverCache.putTypeCache(joinpointClassLoader, typeCache);
+            typeCache.setMethodDescriptionAdvisors(methodDescriptionAdvisors);
+
+            if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                LOGGER.info("Matched type '{}' in AopWeaver, \n"
+                        + "  ClassLoader: {} \n"
+                        + "  {} ", 
+                        typeName, joinpointClassLoader,
+                        StringUtils.join(
+                                methodDescriptionAdvisors.entrySet(), 
+                                entry -> 
+                                    new StringBuilder("Method: ")
+                                    .append( MethodUtils.getMethodSignature( entry.getKey() ) )
+                                    .append("\n   Advices: ")
+                                    .append( StringUtils.join(entry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
+                                "\n  "
+                        )
+                );
+
+            return true;
         } catch (Throwable t) {
-            LOGGER.warn("Could not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader, t);
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Could not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", 
+                        typeName, joinpointClassLoader, t);
 
             Throwables.throwIfRequired(t);
             return false;
@@ -224,9 +213,8 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
 
             // diagnostic log
-            if (aopContext.isDiagnosticClass(typeName)) {
+            if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
                 LOGGER.info("Transforming type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
-            }
 
             TypeCache typeCache = weaverCache.getTypeCache(joinpointClassLoader, typeName);
 

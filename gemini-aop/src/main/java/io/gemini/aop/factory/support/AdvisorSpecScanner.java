@@ -488,7 +488,7 @@ public interface AdvisorSpecScanner {
 
         private AdvisorSpec.ExprPointcutSpec parseExprPointcutSpec(FactoryContext factoryContext, String className) {
             try {
-                TypeDescription adviceType = factoryContext.getTypePool().describe(className).resolve();
+                TypeDescription adviceType = factoryContext.getTypePool().describeAspectType(className).resolve();
                 if (adviceType == null) 
                     return null;
 
@@ -556,7 +556,7 @@ public interface AdvisorSpecScanner {
         }
 
         private Collection<AspectJPointcutAdvisorSpec> parseAspectJClass(FactoryContext factoryContext, String aspectJClassName) {
-            TypeDescription aspectJType = factoryContext.getTypePool().describe(aspectJClassName).resolve();
+            TypeDescription aspectJType = factoryContext.getTypePool().describeAspectType(aspectJClassName).resolve();
             if (aspectJType == null) 
                 return Collections.emptyList();
 

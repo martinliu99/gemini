@@ -23,6 +23,14 @@ import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.StreamDrainer;
 
+
+/**
+ * TypePool looks up types imported by aspect class, firstly in current joinpoint 
+ * ClassLoader, then in AspectClassLoader.
+ *
+ * @author   martin.liu
+ * @since	 1.0
+ */
 public class AspectTypePool extends TypePool.Default {
 
     private final AspectClassLoader aspectClassLoader;
@@ -41,19 +49,26 @@ public class AspectTypePool extends TypePool.Default {
      */
     @Override
     public Resolution describe(String name) {
-        // check AspectClassLoader
+        // 1.look up cache
+        Resolution resolution = this.cacheProvider.find(name);
+        if (resolution != null && resolution.isResolved())
+            return resolution;
+
+
+        // 2.look up JoinpointClassLoader
+        ClassLoader joinpointCL = aspectClassLoader.getJoinpointClassLoader();
         try {
-            Resolution resolution = super.describe(name);
+            resolution = doResolveViaJoinpointTypePool(name, joinpointCL);
             if (resolution != null && resolution.isResolved())
                 return resolution;
         } catch (Exception e) { }
 
-        // check JoinpointClassLoader
-        return doResolveViaJoinpointTypePool(name);
+
+        // 3.look up AspectClassLoader
+        return super.describe(name);
     }
 
-    private Resolution doResolveViaJoinpointTypePool(String name) {
-        ClassLoader joinpointCL = aspectClassLoader.getJoinpointClassLoader();
+    private Resolution doResolveViaJoinpointTypePool(String name, ClassLoader joinpointCL) {
         if (joinpointCL == null)
             return new Resolution.Illegal(name);
 
@@ -61,6 +76,12 @@ public class AspectTypePool extends TypePool.Default {
         return typePool.describe(name);
     }
 
+
+    /**
+     * only resolve aspect relevant types to avoid joinpoint ClassLoader resource lookup.
+     * @param name
+     * @return
+     */
     public Resolution describeAspectType(String name) {
         return super.describe(name);
     }

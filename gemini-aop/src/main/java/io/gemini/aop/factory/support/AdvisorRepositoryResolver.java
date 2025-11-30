@@ -207,7 +207,7 @@ public interface AdvisorRepositoryResolver {
         @Override
         protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec.PojoPointcutSpec advisorSpec) {
             TypeDescription adviceType = factoryContext.getTypePool()
-                    .describe(advisorSpec.getAdviceClassName())
+                    .describeAspectType(advisorSpec.getAdviceClassName())
                     .resolve();
 
             return new AdvisorRepository.ForPojoPointcut(
@@ -259,7 +259,7 @@ public interface AdvisorRepositoryResolver {
         @Override
         protected AdvisorRepository doResolve(FactoryContext factoryContext, AdvisorSpec.ExprPointcutSpec advisorSpec) {
             TypeDescription adviceType = factoryContext.getTypePool()
-                    .describe(advisorSpec.getAdviceClassName())
+                    .describeAspectType(advisorSpec.getAdviceClassName())
                     .resolve();
 
             return new AdvisorRepository.ForExprPointcut(

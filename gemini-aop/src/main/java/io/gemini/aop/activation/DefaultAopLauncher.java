@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
@@ -41,6 +42,7 @@ import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
 import io.gemini.core.logging.DeferredLoggerFactory;
 import io.gemini.core.logging.LoggingSystem;
+import io.gemini.core.util.StringUtils;
 
 public class DefaultAopLauncher implements AopLauncher {
 
@@ -63,9 +65,12 @@ public class DefaultAopLauncher implements AopLauncher {
     public void start(Instrumentation instrumentation, 
             LauncherConfig launcherConfig,
             AopClassLoader aopClassLoader) {
+        DeferredLoggerFactory.enableDeferMode();
+
         ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
 
         AopWeaver aopWeaver = null;
+        ConfigView configView = null;
         BootstraperMetrics bootstraperMetrics = null;
         try {
             // set AopClassLoader as T.C. ClassLoader
@@ -78,7 +83,7 @@ public class DefaultAopLauncher implements AopLauncher {
             Map<String, Object> builtinSettings = new LinkedHashMap<>();
             builtinSettings.put("aop.launcher.launchPath", launcherConfig.getLaunchPath().toString());
 
-            ConfigView configView = ConfigViews.createConfigView(
+            configView = ConfigViews.createConfigView(
                     launcherConfig.getLaunchArgs(), builtinSettings,
                     aopClassLoader,
                     launcherConfig.getInternalConfigLocation(), 
@@ -90,9 +95,13 @@ public class DefaultAopLauncher implements AopLauncher {
 
             // 2.initialize LoggingSystem
             long startedAt = System.nanoTime();
+
             new LoggingSystem.Builder().configView(configView).diagnosticLevel(diagnosticLevel)
                     .build()
                     .initialize(aopClassLoader);
+
+            replayDeferredMessages(configView);
+
             long loggerCreationTime = System.nanoTime() - startedAt;
             long launcherSetupTime = System.nanoTime() - launcherConfig.getLaunchedAt();
 
@@ -136,7 +145,23 @@ public class DefaultAopLauncher implements AopLauncher {
             }
 
             ThreadContext.setContextClassLoader(existingClassLoader);
+
+            replayDeferredMessages(configView);
         }
+    }
+
+    private void replayDeferredMessages(ConfigView configView) {
+        Level loggingLevel = Level.INFO;
+        if (configView != null) {
+            String allLoggingLevel = configView.getAsString(LoggingSystem.LOGGER_ALL_LOG_LEVEL_KEY, null);
+
+            if (StringUtils.hasLength(allLoggingLevel))
+                try {
+                    loggingLevel = Level.valueOf(allLoggingLevel.toUpperCase());
+                } catch (Exception e) {}
+        }
+
+        DeferredLoggerFactory.replayDeferredMessages(loggingLevel);
     }
 
     private void configureClassLoader(Instrumentation instrumentation, 

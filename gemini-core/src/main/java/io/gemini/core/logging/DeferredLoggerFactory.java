@@ -15,11 +15,13 @@
  */
 package io.gemini.core.logging;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -60,9 +62,10 @@ public class DeferredLoggerFactory {
     private static final DeferredLoggerFactory INSTANCE = new DeferredLoggerFactory();
 
 
-    private final Map<String, DeferredLogger> loggers = new HashMap<String, DeferredLogger>();
+    private final Map<String, WeakReference<DeferredLogger>> loggers = new HashMap<String, WeakReference<DeferredLogger>>();
     private final LinkedBlockingQueue<DeferredMessage> eventQueue = new LinkedBlockingQueue<DeferredMessage>();
-    private volatile boolean postInitialization = false;
+
+    private volatile boolean deferModeEnabled = false;
 
 
     static {
@@ -82,6 +85,16 @@ public class DeferredLoggerFactory {
         LEVEL_MAP.put(LocationAwareLogger.INFO_INT, Level.INFO.toString());
         LEVEL_MAP.put(LocationAwareLogger.WARN_INT, Level.WARN.toString());
         LEVEL_MAP.put(LocationAwareLogger.ERROR_INT, Level.ERROR.toString());
+
+
+        // adjust Logback LoggerContext;
+        ILoggerFactory iLoggerFactory = LoggerFactory.getILoggerFactory();
+        if (LOGGER_CONTEXT_CLASS.isAssignableFrom(iLoggerFactory.getClass())) {
+            try {
+                @SuppressWarnings({ "unchecked", "unused" })
+                List<String> frameworkPackages = (List<String>) GET_FRAMEWORK_PACKAGES_METHOD.invoke(iLoggerFactory);
+            } catch (Exception ignored) {}
+        }
     }
 
 
@@ -93,55 +106,83 @@ public class DeferredLoggerFactory {
         return INSTANCE.getOrCreateLogger(clazz.getName());
     }
 
-    public static void setLoggerInitialized(Level loggerLevel) {
-        INSTANCE.setPostInitialization(loggerLevel);
+    /**
+     * enable defer mode, and cache log messages
+     * 
+     */
+    public static void enableDeferMode() {
+        INSTANCE.enableDeferModeInternal();
+    }
+
+    /**
+     * exit defer mode, and replay cache log messages with given log level.
+     * 
+     * @param loggingLevel
+     */
+    public static void replayDeferredMessages(Level loggingLevel) {
+        INSTANCE.replayDeferredMessagesInternal(loggingLevel);
     }
 
 
-    synchronized protected DeferredLogger getOrCreateLogger(String name) {
-        DeferredLogger logger = loggers.get(name);
-        if (logger == null) {
-            logger = new DeferredLogger(name, eventQueue, postInitialization);
-            loggers.put(name, logger);
+    private synchronized DeferredLogger getOrCreateLogger(String name) {
+        WeakReference<DeferredLogger> loggerRef = loggers.get(name);
+        if (loggerRef == null || loggerRef.get() == null) {
+            loggerRef = new WeakReference<DeferredLogger>(
+                    new DeferredLogger(name, eventQueue, deferModeEnabled) );
+            loggers.put(name, loggerRef);
         }
-        return logger;
+
+        return loggerRef.get();
     }
 
-    protected void setPostInitialization(Level loggerLevel) {
-        if (postInitialization == true)
+    private void enableDeferModeInternal() {
+        if (deferModeEnabled == true)
             return;
 
-        // mark logging system initialized
-        postInitialization = true;
+        // enable defer mode, and cache log messages
+        deferModeEnabled = true;
 
-        // lazily initialize delegate logger
-        fixDeferredLoggers();
+        adjustDelayLoggers(deferModeEnabled);
+    }
+
+    private void replayDeferredMessagesInternal(Level loggingLevel) {
+        if(deferModeEnabled == false)
+            return;
+
+        // disable defer mode, and log message in-time
+        deferModeEnabled = false;
+
+        adjustDelayLoggers(deferModeEnabled);
 
         // replay log messages
-        replayMessages(loggerLevel);
+        replayMessages(loggingLevel);
 
-        // clear cached logger and messages
+        // clear cached messages
         clear();
     }
 
-    private void fixDeferredLoggers() {
+    private void adjustDelayLoggers(boolean deferMode) {
         synchronized (this) {
-            for (DeferredLogger deferredLogger : loggers.values()) {
-                deferredLogger.setPostInitialization();
-            }
+            try {
+                for (Iterator<WeakReference<DeferredLogger>> it = loggers.values().iterator(); it.hasNext(); ) {
+                    WeakReference<DeferredLogger> loggerRef = it.next();
 
-            // adjust Logback LoggerContext;
-            ILoggerFactory iLoggerFactory = LoggerFactory.getILoggerFactory();
-            if (LOGGER_CONTEXT_CLASS.isAssignableFrom(iLoggerFactory.getClass())) {
-                try {
-                    @SuppressWarnings({ "unchecked", "unused" })
-                    List<String> frameworkPackages = (List<String>) GET_FRAMEWORK_PACKAGES_METHOD.invoke(iLoggerFactory);
-                } catch (Exception ignored) {}
-            }
+                    DeferredLogger DeferredLogger = loggerRef.get();
+                    if (DeferredLogger == null) {
+                        it.remove();
+                        continue;
+                    }
+
+                    if (deferMode == true)
+                        DeferredLogger.enableDeferMode();
+                    else
+                        DeferredLogger.disableDeferMode();
+                }
+            } catch (Exception e) {}
         }
     }
 
-    private void replayMessages(Level loggerLevel) {
+    private void replayMessages(Level loggingLevel) {
         final LinkedBlockingQueue<DeferredMessage> queue = eventQueue;
         int queueSize = queue.size();
         if (queueSize == 0) return;
@@ -149,7 +190,7 @@ public class DeferredLoggerFactory {
         StringBuilder sBuilder = new StringBuilder()
                 .append(") of logging calls during the initialization phase have been intercepted and are now being replayed. "
                         + "These are subject to the filtering rules of the underlying logging system.\n\n");
-        loggerLevel = loggerLevel == null ? Level.INFO : loggerLevel;
+        loggingLevel = loggingLevel == null ? Level.INFO : loggingLevel;
 
         final int maxDrain = 128;
         List<DeferredMessage> messages = new ArrayList<DeferredMessage>(maxDrain);
@@ -162,7 +203,7 @@ public class DeferredLoggerFactory {
                 break;
 
             for (DeferredMessage message : messages) {
-                if (message.getLevel() < loggerLevel.toInt()) continue;
+                if (message.getLevel() < loggingLevel.toInt()) continue;
 
                 msgCount++;
                 formatMessage(sBuilder, dateFormatter, message);
@@ -193,7 +234,7 @@ public class DeferredLoggerFactory {
 
     private void clear() {
         loggers.clear();
-        eventQueue.clear();
+//        eventQueue.clear();
     }
 
 
@@ -209,27 +250,26 @@ public class DeferredLoggerFactory {
 
         private final Queue<DeferredMessage> eventQueue;
 
-        private volatile boolean postInitialization = false;
 
-
-        public DeferredLogger(String name, Queue<DeferredMessage> eventQueue, boolean postInitialization) {
+        public DeferredLogger(String name, Queue<DeferredMessage> eventQueue, boolean deferModeEnabled) {
             this.name = name;
             this.eventQueue = eventQueue;
 
-            if (postInitialization)
-                this.setPostInitialization();
+            if (deferModeEnabled == true)
+                this.enableDeferMode();
+            else
+                this.disableDeferMode();
         }
 
         public String getName() {
             return name;
         }
 
-        public void setPostInitialization() {
-            if (postInitialization == true)
-                return;
+        void enableDeferMode() {
+            this.delegate = null;
+        }
 
-            postInitialization = true;
-
+        void disableDeferMode() {
             Logger logger = LoggerFactory.getLogger(name);
             this.delegate = logger == null ? NOPLogger.NOP_LOGGER : logger;
         }

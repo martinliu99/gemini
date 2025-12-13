@@ -57,7 +57,6 @@ public class LogbackLoggingSystem implements LoggingSystem {
     private final DiagnosticLevel diagnosticLevel;
 
     private final Level allLogLevel;
-    private final org.slf4j.event.Level allSlf4jLogLevel;
     private final boolean debugLogback;
 
 
@@ -76,10 +75,8 @@ public class LogbackLoggingSystem implements LoggingSystem {
         if (this.loggerSettings.containsKey(LOGGER_ALL_LOG_LEVEL_KEY)) {
             String logLevel = this.loggerSettings.get(LOGGER_ALL_LOG_LEVEL_KEY).toUpperCase();
             this.allLogLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
-            this.allSlf4jLogLevel = StringUtils.hasText(logLevel) ? org.slf4j.event.Level.valueOf(logLevel) : null;
         } else {
             this.allLogLevel = null;
-            this.allSlf4jLogLevel = org.slf4j.event.Level.INFO;
         }
 
         // set aop.logger.debugLogback flag
@@ -132,9 +129,6 @@ public class LogbackLoggingSystem implements LoggingSystem {
 
             // 4.log initialization
             reportConfigurationErrorsIfNecessary(loggerContext);
-
-            // 5.stop deferred logger
-            DeferredLoggerFactory.setLoggerInitialized(allSlf4jLogLevel);
         } catch (Throwable t) {
             if (LOGGER.isWarnEnabled())
                 LOGGER.warn("$Could not initialize LogbackLoggingSystem with settings, {}", 

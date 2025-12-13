@@ -124,7 +124,7 @@ public interface ClassScanner {
             try {
                 ClassGraph classGraph = new ClassGraph()
                         .verbose(enableVerbose)
-                        .enableMemoryMapping()
+//                        .enableMemoryMapping()
                         .enableClassInfo()
                         .enableAnnotationInfo()
                         .enableExternalClasses()

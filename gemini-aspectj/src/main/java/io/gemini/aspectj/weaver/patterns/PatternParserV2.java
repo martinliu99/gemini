@@ -39,6 +39,7 @@ import org.aspectj.weaver.patterns.TypePattern;
 import org.aspectj.weaver.patterns.WildTypePattern;
 
 import io.gemini.aspectj.weaver.ReferenceTypes;
+import net.bytebuddy.pool.TypePool.Resolution.NoSuchTypeException;
 
 public class PatternParserV2 extends PatternParser {
 
@@ -167,26 +168,31 @@ public class PatternParserV2 extends PatternParser {
             if (infoKind != null && infoKind != kind)
                 return FuzzyBoolean.NO;
 
-            if (this.getSignature().isExactDeclaringTypePattern()) {
-                ExactTypePattern typePattern = (ExactTypePattern) this.getSignature().getDeclaringType();
+            try {
+                if (this.getSignature().isExactDeclaringTypePattern()) {
+                    ExactTypePattern typePattern = (ExactTypePattern) this.getSignature().getDeclaringType();
 
-                // TODO: traverse type hierarchy is expensive to load supper class and interfaces
-                boolean traverseTypeHierarchy = false;
-                if (typePattern.isIncludeSubtypes() == true) {
-                    traverseTypeHierarchy = false;
+                    // TODO: traverse type hierarchy is expensive to load supper class and interfaces
+                    boolean traverseTypeHierarchy = false;
+                    if (typePattern.isIncludeSubtypes() == true) {
+                        traverseTypeHierarchy = false;
+                    }
+
+                    if ( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
+                            || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
+                        return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
+                    }
+                } else  if (this.getSignature().getDeclaringType() instanceof WildTypePattern) {
+                    final WildTypePattern pattern = (WildTypePattern) this.getSignature().getDeclaringType();
+                    final ResolvedType type = info.getType();
+                    return pattern.matches(type, TypePattern.STATIC);
                 }
 
-                if ( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
-                        || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
-                    return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
-                }
-            } else  if (this.getSignature().getDeclaringType() instanceof WildTypePattern) {
-                final WildTypePattern pattern = (WildTypePattern) this.getSignature().getDeclaringType();
-                final ResolvedType type = info.getType();
-                return pattern.matches(type, TypePattern.STATIC);
+                return super.fastMatch(info);
+            } catch (NoSuchTypeException e) {
+                // ignore NoSuchTypeException when looks up Type Arguments, Super Class, or Interfaces
+                return FuzzyBoolean.NO;
             }
-
-            return super.fastMatch(info);
         }
 
         @Override

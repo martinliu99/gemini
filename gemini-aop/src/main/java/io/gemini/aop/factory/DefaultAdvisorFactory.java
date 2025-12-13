@@ -68,7 +68,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     private final AopContext aopContext;
     private final FactoryContext factoryContext;
 
-    private final Collection<? extends AdvisorSpec> advisorSpecs;
+    private final Map<String, ? extends AdvisorSpec> advisorSpecMap;
     private final Collection<? extends AdvisorRepository> advisorRepositories;
 
     // cache advisors per ClassLoader
@@ -86,10 +86,10 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             LOGGER.debug("^Creating DefaultAdvisorFactory '{}'", factoryName);
 
         // 1.resolve AdvisorRepository
-        this.advisorSpecs = AdvisorSpecScanner.scanSpecs(factoryContext);
+        this.advisorSpecMap = AdvisorSpecScanner.scanSpecs(factoryContext);
 
         AdvisorContext validationContext = factoryContext.createAdvisorContext(factoryContext.getClassLoader(), null, true);
-        this.advisorRepositories = AdvisorRepositoryResolver.resolveRepositories(factoryContext, validationContext, advisorSpecs);
+        this.advisorRepositories = AdvisorRepositoryResolver.resolveRepositories(factoryContext, validationContext, advisorSpecMap.values());
 
 
         // 2.initialize properties
@@ -215,6 +215,11 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         TypeResolutionInspector typeResolutionInspector = typeDescription instanceof TypeResolutionInspector
                 ? (TypeResolutionInspector) typeDescription : null;
 
+        boolean matchAdvisor = false;
+        try {
+            matchAdvisor = factoryContext.getFactoryTypeMatcher().matches(typeDescription);
+        } catch (Exception e) {}
+
         List<Advisor.PointcutAdvisor> matchedAdvisors = new ArrayList<>();
         for (Advisor advisor : advisors) {
             try {
@@ -226,6 +231,15 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                 if (pointcut == null || pointcut.getTypeMatcher() == null)
                     continue;
 
+
+                // check factory TypeMatcher matching result
+                String advisorName = advisor.getAdvisorName();
+                AdvisorSpec advisorSpec = advisorSpecMap.get(advisorName);
+                if (advisorSpec.isInheritTypeMatcher() && matchAdvisor == false)
+                    continue;
+
+
+                // match pointcut of advisor and record type resolution info
                 try {
                     if (typeResolutionInspector != null)
                         typeResolutionInspector.resetInspection();
@@ -239,7 +253,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                         ResolutionLevel resolutionLevel = typeResolutionInspector.getResolutionLevel();
 
                         if (ResolutionLevel.NO_RESOLUTION != resolutionLevel)
-                            advisorTypeResolutionLevels.put(advisor.getAdvisorName(), resolutionLevel);
+                            advisorTypeResolutionLevels.put(advisorName, resolutionLevel);
                     }
                 }
             } catch (Throwable t) {
@@ -259,7 +273,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             WeaverMetrics weaverMetrics, 
             Map<String, ResolutionLevel> advisorTypeResolutionLevels) {
         TypeResolutionInspector typeResolutionInspector = typeDescription instanceof TypeResolutionInspector
-                ? (TypeResolutionInspector) typeDescription : null;;
+                ? (TypeResolutionInspector) typeDescription : null;
 
         Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new LinkedHashMap<>();
         for (InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
@@ -280,6 +294,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     if (pointcut.getMethodMatcher().matches(methodDescription) == false)
                         continue;
 
+                    // exclude Advisor
                     if (typeResolutionInspector != null) {
                         advisorTypeResolutionLevels.remove(pointcutAdvisor.getAdvisorName());
                     }

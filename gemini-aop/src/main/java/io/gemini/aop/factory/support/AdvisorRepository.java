@@ -379,19 +379,6 @@ public interface AdvisorRepository {
 
         protected abstract Pointcut doDecoratePointcut(AdvisorContext advisorContext, P pointcut);
 
-        protected ElementMatcher<TypeDescription> decorateTypeMatcher(
-                FactoryContext factoryContext, AdvisorSpec.PointcutAdvisorSpec pointcutAdvisorSpec, Pointcut pointcut) {
-            ElementMatcher<TypeDescription> typeMatcher = pointcut.getTypeMatcher();
-            if (pointcutAdvisorSpec.isInheritTypeMatcher() == false)
-                return typeMatcher;
-
-            if (typeMatcher != null)
-                return new ElementMatcher.Junction.Conjunction<>(
-                        factoryContext.getFactoryTypeMatcher(), typeMatcher);
-            else
-                return factoryContext.getFactoryTypeMatcher();
-        }
-
 
         private boolean validatePointcut(AdvisorContext advisorContext, Pointcut pointcut) {
             try {
@@ -560,10 +547,8 @@ public interface AdvisorRepository {
                 methodMatcher = new ElementMatcher.Junction.Conjunction<MethodDescription>(
                         methodMatcher, adviceMethodMatcher);
 
-            return new Pointcut.Default(
-                    decorateTypeMatcher(advisorContext.getFactoryContext(), advisorSpec, pointcut),
-                    methodMatcher
-            );
+            return new Pointcut.Default( 
+                    pointcut.getTypeMatcher(), methodMatcher);
         }
     }
 
@@ -595,9 +580,7 @@ public interface AdvisorRepository {
                         methodMatcher, adviceMethodMatcher);
 
             return new Pointcut.Default(
-                    decorateTypeMatcher(advisorContext.getFactoryContext(), advisorSpec, pointcut),
-                    methodMatcher
-            );
+                    pointcut.getTypeMatcher(), methodMatcher);
         }
     }
 
@@ -644,9 +627,7 @@ public interface AdvisorRepository {
 
 
             return new Pointcut.Default(
-                    decorateTypeMatcher(advisorContext.getFactoryContext(), advisorSpec, pointcut),
-                    methodMatcher
-            );
+                    pointcut.getTypeMatcher(), methodMatcher);
         }
 
         @Override

@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -77,7 +76,7 @@ public interface AdvisorSpecScanner {
     Collection<? extends AdvisorSpec> scan(FactoryContext factoryContext);
 
 
-    static Collection<? extends AdvisorSpec> scanSpecs(FactoryContext factoryContext) {
+    static Map<String, ? extends AdvisorSpec> scanSpecs(FactoryContext factoryContext) {
         long startedAt = System.nanoTime();
         String factoryName = factoryContext.getFactoryName();
         List<AdvisorSpecScanner> advisorSpecScanners = factoryContext.getAdvisorSpecScanners();
@@ -143,30 +142,19 @@ public interface AdvisorSpecScanner {
         AdvisorSpecPostProcessor.postProcessSpecs(factoryContext, advisorSpecMap);
 
 
-        // 3.sort loaded AdvisorSpec instances
-        List<AdvisorSpec> advisorSpecs = new ArrayList<>( advisorSpecMap.values() );
-        Collections.sort(advisorSpecs, 
-                new Comparator<AdvisorSpec>() {
-                    @Override
-                    public int compare(AdvisorSpec o1, AdvisorSpec o2) {
-                        return o1.getAdvisorName().compareTo(o2.getAdvisorName());
-                    }
-        } );
-
-
         if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0
                 && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}', \n"
                     + "  {} \n",
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
-                    StringUtils.join(advisorSpecs, AdvisorSpec::getAdvisorName, "\n  ")
+                    StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ")
             );
         else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}'. ",
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
             );
 
-        return advisorSpecs;
+        return advisorSpecMap;
     }
 
 

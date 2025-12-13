@@ -55,7 +55,7 @@
 
     <properties>
         <!-- project settings -->
-        <revision>0.16.0</revision>
+        <revision>0.17.0-SNAPSHOT</revision>
 
         <license.root.dir>${maven.multiModuleProjectDirectory}/docs/license</license.root.dir>
 
@@ -668,6 +668,20 @@
                     </lifecycleMappingMetadata>
                 </configuration>
             </plugin>
+
+<plugin>
+  <groupId>org.owasp</groupId>
+  <artifactId>dependency-check-maven</artifactId>
+  <version>9.0.4</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>check</goal>
+      </goals>
+    </execution>
+  </executions>
+</plugin>
+
         </plugins>
     </build>
 

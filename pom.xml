@@ -71,15 +71,15 @@
 
 
         <!-- dependencies settings -->
-        <slf4j-api.version>2.0.16</slf4j-api.version>
+        <slf4j-api.version>2.0.17</slf4j-api.version>
         <log4j.version>2.24.3</log4j.version>
         <disruptor.version>3.4.4</disruptor.version>
-        <logback.version>1.3.15</logback.version>
+        <logback.version>1.3.16</logback.version>
 
         <jspecify.version>1.0.0</jspecify.version>
-        <bytebuddy.version>1.17.5</bytebuddy.version>
-        <classgraph.version>4.8.179</classgraph.version>
-        <aspectj.version>1.9.24</aspectj.version>
+        <bytebuddy.version>1.18.2</bytebuddy.version>
+        <classgraph.version>4.8.184</classgraph.version>
+        <aspectj.version>1.9.25</aspectj.version>
 
         <javax.inject.version>1</javax.inject.version>
         <jakarta.inject-api.version>2.0.1</jakarta.inject-api.version>
@@ -87,12 +87,12 @@
         <jakarta.annotation-api.version>3.0.0</jakarta.annotation-api.version>
         <spring.version>4.3.30.RELEASE</spring.version>
 
-        <junit-jupiter-api.version>5.11.4</junit-jupiter-api.version>
-        <assertj-core.version>3.27.2</assertj-core.version>
+        <junit-jupiter-api.version>5.14.1</junit-jupiter-api.version>
+        <assertj-core.version>3.27.6</assertj-core.version>
 
 
         <!-- plugin settings -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -102,22 +102,22 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
 
-        <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
-        <spotbugs-maven-plugin.version>4.8.3.1</spotbugs-maven-plugin.version>
-        <spotbugs.version>4.8.4</spotbugs.version>
+        <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
+        <spotbugs-maven-plugin.version>4.9.8.2</spotbugs-maven-plugin.version>
+        <spotbugs.version>4.9.8</spotbugs.version>
 
-        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
-        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+        <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 
-        <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
-        <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
-        <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
-        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
-        <maven-flatten-plugin.version>1.5.0</maven-flatten-plugin.version>      <!-- maven 3.6.3 -->
+        <maven-antrun-plugin.version>3.2.0</maven-antrun-plugin.version>
+        <maven-dependency-plugin.version>3.9.0</maven-dependency-plugin.version>
+        <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
+        <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+        <maven-flatten-plugin.version>1.7.3</maven-flatten-plugin.version>      <!-- maven 3.6.3 -->
 
-        <license-check-plugin.version>2.4.0</license-check-plugin.version>
-        <license-maven-plugin.version>4.3</license-maven-plugin.version>
-        <versions-maven-plugin.version>2.8.1</versions-maven-plugin.version>
+<!--        <license-check-plugin.version>2.4.0</license-check-plugin.version>-->
+        <license-maven-plugin.version>4.6</license-maven-plugin.version>
+        <versions-maven-plugin.version>2.20.1</versions-maven-plugin.version>
 
 
         <!-- switches -->

@@ -18,8 +18,8 @@ package io.gemini.aop.test;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.AccessibleObject;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -48,13 +48,17 @@ public class ExecutionMemento<T> {
 
 
     static {
-        Map<String, TargetMethod> targetMethodMementoes = new HashMap<>();
-        TARGET_METHOD_MEMENTOES = new ThreadLocal<>();
-        TARGET_METHOD_MEMENTOES.set(targetMethodMementoes);
+        TARGET_METHOD_MEMENTOES = new ThreadLocal<Map<String, TargetMethod>>() {
+            protected Map<String, TargetMethod> initialValue() {
+                return new ConcurrentHashMap<>();
+            }
+        };
 
-        Map<String, AdviceMethod> adviceMethodMementoes = new HashMap<>();
-        ADVICE_METHOD_MEMENTOES = new ThreadLocal<>();
-        ADVICE_METHOD_MEMENTOES.set(adviceMethodMementoes);
+        ADVICE_METHOD_MEMENTOES = new ThreadLocal<Map<String, AdviceMethod>>() {
+            protected Map<String, AdviceMethod> initialValue() {
+                return new ConcurrentHashMap<>();
+            }
+        };
     }
 
     public static void clearMemento() {

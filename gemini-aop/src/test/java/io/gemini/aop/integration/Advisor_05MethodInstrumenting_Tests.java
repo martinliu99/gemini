@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
@@ -38,7 +37,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * @author   martin.liu
  * @since	 1.0
  */
-public class Advisor_05MethodInstrumenting_Tests extends AbstractIntegrationTests {
+public class Advisor_05MethodInstrumenting_Tests {
 
     @Test
     public void testTypeInitializer() {
@@ -277,7 +276,7 @@ public class Advisor_05MethodInstrumenting_Tests extends AbstractIntegrationTest
     public static class InterfaceImplementor_Aspect {
 
         private static final String INTERFACE_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$Interface_Object.interfaceMethod())";
+                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$Interface_Object+.interfaceMethod())";
 
         private static final String INTERFACE_METHOD_AFTER_ADVICE = "interfaceMethod_after";
 
@@ -307,7 +306,7 @@ public class Advisor_05MethodInstrumenting_Tests extends AbstractIntegrationTest
 
 
         private static final String DEFAULT_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$Interface_Object.defaultMethod())";
+                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$Interface_Object+.defaultMethod())";
 
         private static final String DEFAULT_METHOD_AFTER_ADVICE = "defaultMethod_after";
 

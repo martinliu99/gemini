@@ -27,7 +27,6 @@ import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
@@ -43,7 +42,7 @@ import net.bytebuddy.matcher.ElementMatcher;
 /**
  * 
  */
-public class Pointcut_02ConditionMatching_Tests extends AbstractIntegrationTests {
+public class Pointcut_02ConditionMatching_Tests {
 
     @Test
     public void testVoidMatching() {

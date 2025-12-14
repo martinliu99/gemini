@@ -26,7 +26,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.Test;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
@@ -37,7 +36,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * @author   martin.liu
  * @since	 1.0
  */
-public class MutableJoinpoint_21ParametrizedReturningType_Tests extends AbstractIntegrationTests {
+public class MutableJoinpoint_21ParametrizedReturningType_Tests {
 
     @Test
     public void testVoidReturning() {

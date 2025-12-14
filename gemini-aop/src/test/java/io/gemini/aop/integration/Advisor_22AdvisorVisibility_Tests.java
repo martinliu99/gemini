@@ -26,18 +26,17 @@ import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.Pointcut;
 import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
 import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Pointcut;
 
 
-public class Advisor_22AdvisorVisibility_Tests extends AbstractIntegrationTests {
+public class Advisor_22AdvisorVisibility_Tests {
 
     @Test
     public void testAdvisorVisibility() {

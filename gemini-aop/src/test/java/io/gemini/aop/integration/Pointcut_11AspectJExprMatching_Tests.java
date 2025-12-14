@@ -22,13 +22,12 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.junit.jupiter.api.Test;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 
-public class Pointcut_11AspectJExprMatching_Tests extends AbstractIntegrationTests {
+public class Pointcut_11AspectJExprMatching_Tests {
 
     @Test
     public void testLogicalOperator() {

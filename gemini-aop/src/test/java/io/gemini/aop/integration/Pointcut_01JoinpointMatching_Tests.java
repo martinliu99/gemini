@@ -30,7 +30,6 @@ import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
@@ -39,7 +38,7 @@ import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 
-public class Pointcut_01JoinpointMatching_Tests extends AbstractIntegrationTests {
+public class Pointcut_01JoinpointMatching_Tests {
 
     @Test
     public void testVoidMatching() {

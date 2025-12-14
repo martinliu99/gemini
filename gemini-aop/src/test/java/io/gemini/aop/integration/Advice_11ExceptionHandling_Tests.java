@@ -15,14 +15,12 @@
  */
 package io.gemini.aop.integration;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
-
 /**
  *
  *
  * @author   martin.liu
  * @since	 1.0
  */
-public class Advice_11ExceptionHandling_Tests extends AbstractIntegrationTests {
+public class Advice_11ExceptionHandling_Tests {
 
 }

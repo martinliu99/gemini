@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import io.gemini.aop.test.AbstractIntegrationTests;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
@@ -32,7 +31,7 @@ import io.gemini.api.aop.annotation.Conditional;
 import net.bytebuddy.matcher.ElementMatcher;
 
 
-public class Advisor_02SpecPostProcessing_Tests extends AbstractIntegrationTests {
+public class Advisor_02SpecPostProcessing_Tests {
 
     @Test
     public void testSpecScanning() {

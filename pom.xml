@@ -45,6 +45,7 @@
         <module>gemini-aop</module>
 
         <module>gemini-activator</module>
+        <module>gemini-test</module>
 
         <module>gemini-toolkit</module>
         <module>gemini-aspect</module>
@@ -103,10 +104,10 @@
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
 
         <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
-        <spotbugs-maven-plugin.version>4.9.8.2</spotbugs-maven-plugin.version>
-        <spotbugs.version>4.9.8</spotbugs.version>
+        <spotbugs-maven-plugin.version>4.8.6.7</spotbugs-maven-plugin.version>
+        <spotbugs.version>4.8.6</spotbugs.version>
 
-        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 
         <maven-antrun-plugin.version>3.2.0</maven-antrun-plugin.version>
@@ -154,6 +155,13 @@
                 <groupId>io.gemini</groupId>
                 <artifactId>gemini-activator</artifactId>
                 <version>${revision}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.gemini</groupId>
+                <artifactId>gemini-test</artifactId>
+                <version>${revision}</version>
+                <scope>test</scope>
             </dependency>
 
             <dependency>
@@ -221,7 +229,6 @@
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy-agent</artifactId>
                 <version>${bytebuddy.version}</version>
-                <scope>test</scope>
                 <optional>true</optional>
             </dependency>
 
@@ -286,14 +293,12 @@
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-api</artifactId>
                 <version>${junit-jupiter-api.version}</version>
-                <scope>test</scope>
             </dependency>
 
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
                 <version>${assertj-core.version}</version>
-                <scope>test</scope>
             </dependency>
 
         </dependencies>
@@ -668,20 +673,6 @@
                     </lifecycleMappingMetadata>
                 </configuration>
             </plugin>
-
-<plugin>
-  <groupId>org.owasp</groupId>
-  <artifactId>dependency-check-maven</artifactId>
-  <version>9.0.4</version>
-  <executions>
-    <execution>
-      <goals>
-        <goal>check</goal>
-      </goals>
-    </execution>
-  </executions>
-</plugin>
-
         </plugins>
     </build>
 

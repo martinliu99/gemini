@@ -30,8 +30,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.LauncherDiscoveryListener;
 import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.TestExecutionListener;
+import org.junit.platform.launcher.TestIdentifier;
+import org.junit.platform.launcher.TestPlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,9 +56,11 @@ import net.bytebuddy.agent.ByteBuddyAgent;
  * @author   martin.liu
  * @since	 1.0
  */
-public class AopTestActivator implements LauncherDiscoveryListener {
+public class AopTestActivator implements LauncherDiscoveryListener, TestExecutionListener {
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(AopTestActivator.class);
+
+    private static final String GEMINI_TEST_DEPENDENCY = "gemini-test";
 
 
     private static boolean LAUNCHED = false;
@@ -74,7 +80,7 @@ public class AopTestActivator implements LauncherDiscoveryListener {
         }
     }
 
-    protected static void launch() throws Exception {
+    protected void launch() throws Exception {
         // 1.prepare arguments
         Instrumentation instrumentation = ByteBuddyAgent.install();
 
@@ -92,7 +98,7 @@ public class AopTestActivator implements LauncherDiscoveryListener {
         }
 
 
-        // 2.activate AOP
+        // 2.activate AopLauncher
         try {
             LauncherConfig launcherConfig = new UnpackedArchiveConfig(launchPath, null, "",
                     () -> classPathURLs.toArray( new URL[0]),
@@ -121,11 +127,11 @@ public class AopTestActivator implements LauncherDiscoveryListener {
 
             AopActivator.activateAop(launchLocation, instrumentation, launcherConfig, aopClassLoader);
         } catch (Throwable t) {
-            throw new IllegalStateException("Could not activate DefaultAopBootstraper.", t);
+            throw new IllegalStateException("Could not activate AopLauncher.", t);
         }
     }
 
-    private static void collectURLs(String classPath, List<URL> classPathURLs, Map<String, URL> resourceFileURLs) {
+    private void collectURLs(String classPath, List<URL> classPathURLs, Map<String, URL> resourceFileURLs) {
         Path rootPath = Paths.get(classPath).normalize();
         if (Files.exists(rootPath) == false)
             return;
@@ -137,13 +143,29 @@ public class AopTestActivator implements LauncherDiscoveryListener {
             return;
         }
 
-        // collect class path URL
-        if (Files.isRegularFile(rootPath) || rootPath.endsWith("test-classes") == false) {
+
+        // 1.collect class path file, and exclude gemini-test.jar
+        if (Files.isRegularFile(rootPath)) {
+            Path fileName = rootPath.getFileName();
+            if (fileName.startsWith(GEMINI_TEST_DEPENDENCY) && fileName.endsWith("jar"))
+                return;
+
             classPathURLs.add(rootUrl);
             return;
         }
 
-        // iterate test-classes folder to load resource files
+
+        // 2.collect class path folder, and exclude gemini-test folder
+        if (rootPath.endsWith("target/classes")) { 
+            if (rootPath.getParent().getParent().getFileName().toString().equals(GEMINI_TEST_DEPENDENCY)) 
+                return;
+
+            classPathURLs.add(rootUrl);
+            return;
+        }
+
+
+        // 3.iterate test-classes folder to load resource files
         try {
             Files.walk(rootPath)
             .filter( Files::isRegularFile )
@@ -159,5 +181,15 @@ public class AopTestActivator implements LauncherDiscoveryListener {
         } catch (IOException e) {
             LOGGER.warn("Could not iterate path: {}", rootPath, e);
         }
+    }
+
+
+    @Override
+    public void testPlanExecutionFinished(TestPlan testPlan) {
+    }
+
+    @Override
+    public void executionFinished(TestIdentifier testIdentifier, TestExecutionResult testExecutionResult) {
+        ExecutionMemento.clearMemento();
     }
 }

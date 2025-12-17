@@ -36,12 +36,12 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
     private long startedAt = DEFAULT;
 
     private final DiagnosticLevel diagnosticLevel;
-    private final AopMetrics.BootstraperMetrics bootstraperMetrics;
+    private final AopMetrics.LauncherMetrics launcherMetrics;
 
 
     public DefaultRedefinitionListener(DiagnosticLevel diagnosticLevel, AopMetrics aopMetrics) {
         this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
-        bootstraperMetrics = aopMetrics.getBootstraperMetrics();
+        launcherMetrics = aopMetrics.getLauncherMetrics();
     }
 
     @Override
@@ -83,6 +83,6 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
             LOGGER.info("$Took '{}' seconds to redefine {} loaded types in {} batchs.", 
                     time / AopMetrics.NANO_TIME, types.size(), amount);
 
-        this.bootstraperMetrics.incrTypeRedefiningCount(types.size());
+        this.launcherMetrics.incrTypeRedefiningCount(types.size());
     }
 }

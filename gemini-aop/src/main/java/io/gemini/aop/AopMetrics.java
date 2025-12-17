@@ -63,7 +63,7 @@ public class AopMetrics {
     private String aopWeavingDetailPerAdvisor;
 
     private boolean summarizeMetricsDetail = false;
-    private final BootstraperMetrics bootstraperMetrics;
+    private final LauncherMetrics launcherMetrics;
 
     private final AtomicInteger index = new AtomicInteger(0);
     private volatile ConcurrentMap<ClassLoader, WeaverMetrics> weaverMetricsMap;
@@ -82,7 +82,7 @@ public class AopMetrics {
         this.diagnosticLevel = diagnosticLevel;
 
         // 2.initialize properties
-        bootstraperMetrics = new BootstraperMetrics();
+        launcherMetrics = new LauncherMetrics();
         weaverMetricsMap = new ConcurrentReferenceHashMap<>();
 
         // 3.load settings
@@ -110,8 +110,8 @@ public class AopMetrics {
     }
 
 
-    public BootstraperMetrics getBootstraperMetrics() {
-        return bootstraperMetrics;
+    public LauncherMetrics getLauncherMetrics() {
+        return launcherMetrics;
     }
 
     protected Map<ClassLoader, WeaverMetrics> getWeaverMetricsMap() {
@@ -143,14 +143,14 @@ public class AopMetrics {
 
         if (diagnosticLevel.isSimpleEnabled() == false && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n", 
-                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
+                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
-                    renderLauncherStartupSummaryTemplate(bootstraperMetrics) );
+                    renderLauncherStartupSummaryTemplate(launcherMetrics) );
         else if (LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}{}\n", 
-                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
+                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
                     bannerTemplate,
-                    renderLauncherStartupSummaryTemplate(bootstraperMetrics),
+                    renderLauncherStartupSummaryTemplate(launcherMetrics),
                     bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary, true) : "",
                     launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary, false) : "" 
             );
@@ -161,13 +161,13 @@ public class AopMetrics {
 
         if (diagnosticLevel.isSimpleEnabled() == false && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n",
-                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
-                    renderAppStartupSummaryTemplate(bootstraperMetrics) 
+                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
+                    renderAppStartupSummaryTemplate(launcherMetrics) 
             );
         else if (LOGGER.isInfoEnabled())
             LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}\n",
-                    (System.nanoTime() - bootstraperMetrics.getLauncherStartedAt()) / 1e9,
-                    renderAppStartupSummaryTemplate(bootstraperMetrics),
+                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
+                    renderAppStartupSummaryTemplate(launcherMetrics),
                     renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary, true) 
             );
     }
@@ -180,38 +180,38 @@ public class AopMetrics {
         return new WeaverMetricsSummary(existingMetricsMap);
     }
 
-    private String renderLauncherStartupSummaryTemplate(BootstraperMetrics bootstraperMetrics) {
+    private String renderLauncherStartupSummaryTemplate(LauncherMetrics launcherMetrics) {
         Map<String, Object> valueMap = new HashMap<>();
 
-        valueMap.put("launcherStartupTime", bootstraperMetrics.getLauncherStartupTime() / NANO_TIME);
+        valueMap.put("launcherStartupTime", launcherMetrics.getLauncherStartupTime() / NANO_TIME);
 
-        valueMap.put("launcherSetupTime", bootstraperMetrics.getLauncherSetupTime() / NANO_TIME);
+        valueMap.put("launcherSetupTime", launcherMetrics.getLauncherSetupTime() / NANO_TIME);
 
-        valueMap.put("loggerCreationTime", bootstraperMetrics.getLoggerCreationTime() / NANO_TIME);
+        valueMap.put("loggerCreationTime", launcherMetrics.getLoggerCreationTime() / NANO_TIME);
 
-        valueMap.put("aopContextCreationTime", bootstraperMetrics.getAopContextCreationTime() / NANO_TIME);
-        valueMap.put("classScannerCreationTime", bootstraperMetrics.getClassScannerCreationTime() / NANO_TIME);
+        valueMap.put("aopContextCreationTime", launcherMetrics.getAopContextCreationTime() / NANO_TIME);
+        valueMap.put("classScannerCreationTime", launcherMetrics.getClassScannerCreationTime() / NANO_TIME);
 
-        valueMap.put("classLoaderConfigTime", (bootstraperMetrics.getBootstrapCLConfigTime() + bootstraperMetrics.getAopCLConfigTime()) / NANO_TIME);
-        valueMap.put("bootstrapCL", bootstraperMetrics.getBootstrapCLConfigTime() / NANO_TIME);
-        valueMap.put("aopCL", bootstraperMetrics.getAopCLConfigTime() / NANO_TIME);
+        valueMap.put("classLoaderConfigTime", (launcherMetrics.getBootstrapCLConfigTime() + launcherMetrics.getAopCLConfigTime()) / NANO_TIME);
+        valueMap.put("bootstrapCL", launcherMetrics.getBootstrapCLConfigTime() / NANO_TIME);
+        valueMap.put("aopCL", launcherMetrics.getAopCLConfigTime() / NANO_TIME);
 
-        valueMap.put("advisorFactoryCreationTime", bootstraperMetrics.getAdvisorFactoryCreationTime() / NANO_TIME);
-        valueMap.put("aopWeaverCreationTime", bootstraperMetrics.getAopWeaverCreationTime() / NANO_TIME);
+        valueMap.put("advisorFactoryCreationTime", launcherMetrics.getAdvisorFactoryCreationTime() / NANO_TIME);
+        valueMap.put("aopWeaverCreationTime", launcherMetrics.getAopWeaverCreationTime() / NANO_TIME);
 
-        valueMap.put("bytebuddyInstallationTime", bootstraperMetrics.getBytebuddyInstallationTime() / NANO_TIME);
+        valueMap.put("bytebuddyInstallationTime", launcherMetrics.getBytebuddyInstallationTime() / NANO_TIME);
 
         valueMap.put("bytebuddtWarnupTime", bytebuddyWarmupSummary != null ? bytebuddyWarmupSummary.getTypeLoadingTime() : 0);
-        valueMap.put("typeRedefiningTime", bootstraperMetrics.getTypeRedefiningTime() / NANO_TIME);
+        valueMap.put("typeRedefiningTime", launcherMetrics.getTypeRedefiningTime() / NANO_TIME);
         valueMap.put("typeWeavingTime", launcherStartupSummary != null ? launcherStartupSummary.getTypeLoadingTime() : 0);
 
-        valueMap.put("uncategorizedTime", bootstraperMetrics.getUncategorizedTime() /NANO_TIME );
+        valueMap.put("uncategorizedTime", launcherMetrics.getUncategorizedTime() /NANO_TIME );
 
         valueMap = format(valueMap);
 
         StringBuilder advisorSepcs = new StringBuilder();
-        if (CollectionUtils.isEmpty(bootstraperMetrics.getAdvisorSpecs()) == false) {
-            for (Entry<String, Integer> entry : bootstraperMetrics.getAdvisorSpecs().entrySet()) {
+        if (CollectionUtils.isEmpty(launcherMetrics.getAdvisorSpecs()) == false) {
+            for (Entry<String, Integer> entry : launcherMetrics.getAdvisorSpecs().entrySet()) {
                 advisorSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
             }
             advisorSepcs.delete(advisorSepcs.length()-2, advisorSepcs.length());
@@ -219,22 +219,22 @@ public class AopMetrics {
             advisorSepcs.append(0);
         valueMap.put("advisorSpecs", advisorSepcs.toString());
 
-        valueMap.put("typeRedefiningCount", bootstraperMetrics.getTypeRedefiningCount());
+        valueMap.put("typeRedefiningCount", launcherMetrics.getTypeRedefiningCount());
 
         PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
         return placeholderHelper.replace(launcherStartupSummrayTemplate);
     }
 
-    private String renderAppStartupSummaryTemplate(BootstraperMetrics bootstraperMetrics) {
+    private String renderAppStartupSummaryTemplate(LauncherMetrics launcherMetrics) {
         Map<String, Object> valueMap = new HashMap<>();
 
-        double appStartupTime = (System.nanoTime() - this.bootstraperMetrics.getLauncherStartedAt()) / NANO_TIME;
+        double appStartupTime = (System.nanoTime() - this.launcherMetrics.getLauncherStartedAt()) / NANO_TIME;
         valueMap.put("appStartupTime", appStartupTime );
 
-        valueMap.put("launcherStartupTime", bootstraperMetrics.getLauncherStartupTime() / NANO_TIME);
+        valueMap.put("launcherStartupTime", launcherMetrics.getLauncherStartupTime() / NANO_TIME);
         valueMap.put("tyepWeavingTime", appStartupSummary.getTypeLoadingTime() );
 
-        valueMap.put("uncategorizedTime", appStartupTime - bootstraperMetrics.getLauncherStartupTime() / NANO_TIME - appStartupSummary.getTypeLoadingTime() );
+        valueMap.put("uncategorizedTime", appStartupTime - launcherMetrics.getLauncherStartupTime() / NANO_TIME - appStartupSummary.getTypeLoadingTime() );
 
         valueMap = format(valueMap);
 
@@ -379,7 +379,7 @@ public class AopMetrics {
     }
 
 
-    public class BootstraperMetrics {
+    public class LauncherMetrics {
 
         private long launcherStartedAt;
         private long launcherStartupTime;

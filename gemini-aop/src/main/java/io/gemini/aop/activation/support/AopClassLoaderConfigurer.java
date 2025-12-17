@@ -106,7 +106,7 @@ public class AopClassLoaderConfigurer {
         else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / 1e9);
 
-        aopContext.getAopMetrics().getBootstraperMetrics().setAopCLConfigTime(time);
+        aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(time);
     }
 
     private void configureParentFirstFilter(AopClassLoader aopClassLoader, 

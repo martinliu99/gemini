@@ -27,7 +27,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.gemini.aop.AopMetrics.BootstraperMetrics;
+import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
@@ -127,7 +127,7 @@ public class AopContext implements Closeable {
         this.placeholderHelper = PlaceholderHelper.create(this.getConfigView());
 
         this.aopMetrics = new AopMetrics(configView, diagnosticLevel);
-        BootstraperMetrics bootstraperMetrics = aopMetrics.getBootstraperMetrics();
+        LauncherMetrics launcherMetrics = aopMetrics.getLauncherMetrics();
 
 
         // 3.load aop settings
@@ -135,7 +135,7 @@ public class AopContext implements Closeable {
 
 
         // 4.initialize properties
-        this.classScanner = createClassScanner(bootstraperMetrics);
+        this.classScanner = createClassScanner(launcherMetrics);
         this.objectFactory = createObjectFactory();
 
 
@@ -164,7 +164,7 @@ public class AopContext implements Closeable {
         else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to create AopContext. ", time / 1e9);
 
-        aopMetrics.getBootstraperMetrics().setAopContextCreationTime(time);
+        aopMetrics.getLauncherMetrics().setAopContextCreationTime(time);
     }
 
     private void loadSettings(ConfigView configView) {
@@ -183,7 +183,7 @@ public class AopContext implements Closeable {
         }
     }
 
-    private ClassScanner createClassScanner(BootstraperMetrics bootstraperMetrics) {
+    private ClassScanner createClassScanner(LauncherMetrics launcherMetrics) {
         long startedAt = System.nanoTime();
 
         ClassScanner.Builder builder = new ClassScanner.Builder()
@@ -205,7 +205,7 @@ public class AopContext implements Closeable {
                 .filteredClasspathElementUrls( aopClassLoader.getURLs() )
                 .build();
 
-        bootstraperMetrics.setClassScannerCreationTime(System.nanoTime() - startedAt);
+        launcherMetrics.setClassScannerCreationTime(System.nanoTime() - startedAt);
         return classScanner;
     }
 

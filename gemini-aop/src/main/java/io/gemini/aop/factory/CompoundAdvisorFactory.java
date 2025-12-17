@@ -109,7 +109,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
             // diagnostic log
             String typeName = typeDescription.getTypeName();
-            if (factoryContext.getAopContext().isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+            if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().isDiagnosticClass(typeName))
                 LOGGER.info("Getting Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.", 
                         typeName, joinpointClassLoader, factoryContext.getFactoryName());
 
@@ -117,7 +117,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = advisorFactory
                     .getAdvisors(typeDescription, joinpointClassLoader, javaModule);
 
-            if (factoryContext.getAopContext().isDiagnosticClass(typeName) && LOGGER.isInfoEnabled()) {
+            if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().isDiagnosticClass(typeName)) {
                 if (advisorMap.size() == 0)
                     LOGGER.info("Did not get Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.",
                             typeName, joinpointClassLoader, factoryContext.getFactoryName()

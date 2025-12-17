@@ -115,7 +115,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
 
         String typeName = typeDescription.getTypeName();
         // diagnostic log
-        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
             LOGGER.info("Matching type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
 
 
@@ -155,7 +155,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
                     this.advisorFactory.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
 
             if (CollectionUtils.isEmpty(methodDescriptionAdvisors) == true) {
-                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                     LOGGER.info("Did not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
 
                 return false;
@@ -165,7 +165,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             weaverCache.putTypeCache(joinpointClassLoader, typeCache);
             typeCache.setMethodDescriptionAdvisors(methodDescriptionAdvisors);
 
-            if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+            if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                 LOGGER.info("Matched type '{}' in AopWeaver, \n"
                         + "  ClassLoader: {} \n"
                         + "  {} ", 
@@ -213,7 +213,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapAdvice.Factory {
             ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
 
             // diagnostic log
-            if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+            if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                 LOGGER.info("Transforming type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
 
             TypeCache typeCache = weaverCache.getTypeCache(joinpointClassLoader, typeName);

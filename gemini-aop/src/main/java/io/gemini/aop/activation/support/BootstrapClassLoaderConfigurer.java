@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
-import io.gemini.aop.AopMetrics.BootstraperMetrics;
+import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.aop.java.lang.BootstrapClassProvider;
 import io.gemini.api.aop.AopException;
 import io.gemini.core.object.ClassRenamer;
@@ -80,7 +80,7 @@ public class BootstrapClassLoaderConfigurer {
         Assert.notNull(sourceClassLoader, "'sourceClassLoader' must not be null.");
 
         Map<String, String> nameMapping = Collections.emptyMap();
-        BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
+        LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
         try {
             nameMapping = scanClassNameMapping();
 
@@ -89,7 +89,7 @@ public class BootstrapClassLoaderConfigurer {
             injectByteCode(classByteCodeMap);
 
             long time = System.nanoTime() - startedAt;
-            bootstraperMetrics.setBootstrapCLConfigTime(time);
+            launcherMetrics.setBootstrapCLConfigTime(time);
             if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled())
                 LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
                         + "  {} \n", 

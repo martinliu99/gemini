@@ -26,7 +26,7 @@ import org.slf4j.event.Level;
 
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
-import io.gemini.aop.AopMetrics.BootstraperMetrics;
+import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.activation.support.AopClassLoaderConfigurer;
 import io.gemini.aop.activation.support.BootstrapClassLoaderConfigurer;
@@ -71,7 +71,7 @@ public class DefaultAopLauncher implements AopLauncher {
 
         AopWeaver aopWeaver = null;
         ConfigView configView = null;
-        BootstraperMetrics bootstraperMetrics = null;
+        LauncherMetrics launcherMetrics = null;
         try {
             // set AopClassLoader as T.C. ClassLoader
             // existing T.C. ClassLoader, generally is AppClassLoader, might contain libraries, such as log4j2, 
@@ -110,10 +110,10 @@ public class DefaultAopLauncher implements AopLauncher {
             this.aopContext = new AopContext(launcherConfig, aopClassLoader, 
                     builtinSettings, configView, diagnosticLevel);
 
-            bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
-            bootstraperMetrics.setLauncherStartedAt(launcherConfig.getLaunchedAt());
-            bootstraperMetrics.setLauncherSetupTime(launcherSetupTime);
-            bootstraperMetrics.setLoggerCreationTime(loggerCreationTime);
+            launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
+            launcherMetrics.setLauncherStartedAt(launcherConfig.getLaunchedAt());
+            launcherMetrics.setLauncherSetupTime(launcherSetupTime);
+            launcherMetrics.setLoggerCreationTime(loggerCreationTime);
 
 
             // 4.configure ClassLoaders
@@ -140,8 +140,8 @@ public class DefaultAopLauncher implements AopLauncher {
                     } );
             Runtime.getRuntime().addShutdownHook(shutdownHook);
         } finally {
-            if (bootstraperMetrics != null) {
-                bootstraperMetrics.setLauncherStartupTime(System.nanoTime() - launcherConfig.getLaunchedAt());
+            if (launcherMetrics != null) {
+                launcherMetrics.setLauncherStartupTime(System.nanoTime() - launcherConfig.getLaunchedAt());
             }
 
             ThreadContext.setContextClassLoader(existingClassLoader);

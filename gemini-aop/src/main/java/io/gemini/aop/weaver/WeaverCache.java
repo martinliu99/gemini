@@ -195,9 +195,9 @@ class WeaverCache implements Closeable {
                                 lookup, methodSignature, thisClass, 
                                 this.methodSignatureMap.get(methodSignature), advisorChain);
 
-                if ((weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
-                        || weaverContext.getAopContext().isDiagnosticClass(typeName)) 
-                        && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() 
+                        && (weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
+                                || weaverContext.getAopContext().isDiagnosticClass(typeName)) )
                     LOGGER.info("Created joinpoint descriptor for type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"

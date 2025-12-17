@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
-import io.gemini.aop.AopMetrics.BootstraperMetrics;
+import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
@@ -64,23 +64,23 @@ public class AopWeavers {
         Assert.notNull(aopContext, "'aopContext' must not be null.");
         Assert.notNull(advisorFactory, "'advisorFactory' must not be null.");
 
-        AopMetrics.BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
+        AopMetrics.LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
 
         // 1.create AopWeaver
         WeaverContext weaverContext = new WeaverContext(aopContext);
 
-        final AopWeaver aopWeaver = createAopWeaver(aopContext, advisorFactory, bootstraperMetrics, weaverContext);
+        final AopWeaver aopWeaver = createAopWeaver(aopContext, advisorFactory, launcherMetrics, weaverContext);
 
 
         // 2.install bytebuddy
-        installByteBuddy(instrumentation, aopContext, bootstraperMetrics, weaverContext, aopWeaver);
+        installByteBuddy(instrumentation, aopContext, launcherMetrics, weaverContext, aopWeaver);
 
         return aopWeaver;
     }
 
     protected static AopWeaver createAopWeaver(AopContext aopContext, 
             AdvisorFactory advisorFactory, 
-            BootstraperMetrics bootstraperMetrics,
+            LauncherMetrics launcherMetrics,
             WeaverContext weaverContext) {
         long startedAt = System.nanoTime();
 
@@ -93,14 +93,14 @@ public class AopWeavers {
             LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
                     aopWeaver, AopWeavers.class.getClassLoader());
 
-        bootstraperMetrics.setAopWeaverCreationTime(System.nanoTime() - startedAt);
+        launcherMetrics.setAopWeaverCreationTime(System.nanoTime() - startedAt);
 
         return aopWeaver;
     }
 
     protected static void installByteBuddy(Instrumentation instrumentation, 
             AopContext aopContext, 
-            BootstraperMetrics bootstraperMetrics,
+            LauncherMetrics launcherMetrics,
             WeaverContext weaverContext,
             AopWeaver aopWeaver) {
         long startedAt = System.nanoTime();
@@ -114,7 +114,7 @@ public class AopWeavers {
             @Override
             public void onStart() {
                 long time = System.nanoTime() - startedAt;
-                bootstraperMetrics.setBytebuddyInstallationTime(time);
+                launcherMetrics.setBytebuddyInstallationTime(time);
                 if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
                     LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / 1e9);
 
@@ -164,7 +164,7 @@ public class AopWeavers {
             ;
 
         long time = System.nanoTime() - typeRetransformationStartedAt.get();
-        bootstraperMetrics.setTypeRedefiningTime(time);
+        launcherMetrics.setTypeRedefiningTime(time);
         if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
             LOGGER.info("$Took '{}' seconds to match and redefine loaded types.", time / 1e9);
     }

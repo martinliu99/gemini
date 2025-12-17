@@ -37,7 +37,7 @@ public class DefaultTransformationListener implements Listener {
 
     @Override
     public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
             LOGGER.info("Discovering {} type '{}' loaded by ClassLoader '{}'.", 
                     loaded ? "loaded" : "", typeName, classLoader
             );
@@ -55,7 +55,7 @@ public class DefaultTransformationListener implements Listener {
     @Override
     public void onIgnored(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
         String typeName = typeDescription.getTypeName();
-        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
             LOGGER.info("Ignored {} type '{}' loaded by ClassLoader '{}'.", 
                     loaded ? "loaded" : "", typeName, classLoader
             );
@@ -74,7 +74,7 @@ public class DefaultTransformationListener implements Listener {
 
     @Override
     public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-        if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
             LOGGER.info("Finished to {} type '{}' loaded by ClassLoader '{}'.", 
                     loaded ? "redefine loaded" : "transform", typeName, classLoader);
     }

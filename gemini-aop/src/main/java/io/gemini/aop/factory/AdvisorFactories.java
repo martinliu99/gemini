@@ -37,10 +37,10 @@ public class AdvisorFactories {
         CompoundAdvisorFactory advisorFactory = new CompoundAdvisorFactory(aopContext);
 
         // record metrics
-        AopMetrics.BootstraperMetrics bootstraperMetrics = aopContext.getAopMetrics().getBootstraperMetrics();
+        AopMetrics.LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
 
-        bootstraperMetrics.setAdvisorSpecs(advisorFactory.getAdvisorSpecNum());
-        bootstraperMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
+        launcherMetrics.setAdvisorSpecs(advisorFactory.getAdvisorSpecNum());
+        launcherMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
 
         return advisorFactory;
     }

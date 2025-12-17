@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +48,6 @@ import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
-import net.bytebuddy.description.method.MethodDescription;
 
 interface Joinpoints {
 
@@ -257,6 +257,8 @@ interface Joinpoints {
 
     class DefaultMutableJoinpoint<T, E extends Throwable> extends AbstractBase<T, E> implements MutableJoinpoint<T, E> {
 
+        private final Supplier<? extends Advice> currentAdviceSupplier;
+
         @SuppressWarnings("unchecked")
         private T returning = (T) UNDEFINED_RETURNING;
         @SuppressWarnings("unchecked")
@@ -268,8 +270,10 @@ interface Joinpoints {
         private E adviceThrowing = (E) UNDEFINED_THROWING;
 
 
-        public DefaultMutableJoinpoint(Descriptor descriptor, Object thisObject, Object[] arguments) {
+        public DefaultMutableJoinpoint(Descriptor descriptor, Object thisObject, Object[] arguments, Supplier<? extends Advice> currentAdviceSupplier) {
             super(descriptor, thisObject, arguments);
+
+            this.currentAdviceSupplier = currentAdviceSupplier;
         }
 
         @Override
@@ -314,16 +318,24 @@ interface Joinpoints {
         }
 
         public void setAdviceReturning(T returning) {
-            if (getDescriptor().isVoidReturning) {
+            Descriptor descriptor = getDescriptor();
+            if (descriptor.isVoidReturning) {
                 this.adviceReturning = null;
                 return;
             }
 
-            Class<?> returnType = getDescriptor().getMethod().getReturnType();
+            Class<?> returnType = descriptor.getMethod().getReturnType();
             if (returning == null || ClassUtils.isAssignableFrom(returnType, returning.getClass()) == false) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored advice returning '{}' which must be instance of {}.\n", 
-                            returning, returnType);
+                    LOGGER.warn("Ignored advice returning object '{}' which must be instance of Method's returning type. \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n"
+                            + "  CurrentAdvice: {} \n",
+                            returning, 
+                            descriptor.getThisClass().getClassLoader(),
+                            descriptor.getAccessibleName(),
+                            currentAdviceSupplier.get()
+                    );
 
                 return;
             }
@@ -367,14 +379,16 @@ interface Joinpoints {
             }
 
             if (assignable == false && RuntimeException.class.isAssignableFrom(throwingType) == false) {
-                String targetMethod = descriptor.isTypeInitializer 
-                        ? MethodDescription.TYPE_INITIALIZER_INTERNAL_NAME
-                        : descriptor.isConstructor() 
-                            ? descriptor.getConstructor().toString() : descriptor.getMethod().toString();
-
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored advice throwing '{}' which must be instance of RuntimeException or exception types declared in signature '{}'.\n",
-                            throwing, targetMethod);
+                    LOGGER.warn("Ignored advice throwing object '{}' which must be instance of RuntimeException or declared exception types. \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n"
+                            + "  CurrentAdvice: {} \n",
+                            throwing, 
+                            descriptor.getThisClass().getClassLoader(),
+                            descriptor.getAccessibleName(),
+                            currentAdviceSupplier.get()
+                    );
 
                 return;
             }
@@ -386,7 +400,7 @@ interface Joinpoints {
 
 
     @BootstrapClassConsumer
-    class MutableJoinpointDispatcher<T, E extends Throwable> implements BootstrapAdvice.Dispatcher<T, E> {
+    class MutableJoinpointDispatcher<T, E extends Throwable> implements BootstrapAdvice.Dispatcher<T, E>, Supplier<Advice> {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(MutableJoinpointDispatcher.class);
 
@@ -397,6 +411,8 @@ interface Joinpoints {
         private boolean dispatchBeforeAdvice = true;
         private List<? extends Advice.Before<T, E>> beforeAdvices = Collections.emptyList();
         private List<? extends Advice.After<T, E>> afterAdvices = Collections.emptyList();
+
+        private Advice currentAdvice;
 
 
         public MutableJoinpointDispatcher(Descriptor descriptor, Object thisObject, Object[] arguments, AopContext aopContext) {
@@ -411,7 +427,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                     LOGGER.info("^Creating joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
@@ -420,7 +436,7 @@ interface Joinpoints {
                             descriptor.getAccessibleName()
                     );
 
-                joinpoint = new DefaultMutableJoinpoint<T, E>(descriptor, thisObject, arguments);
+                joinpoint = new DefaultMutableJoinpoint<T, E>(descriptor, thisObject, arguments, this);
 
                 initialize(descriptor);
             } catch (Throwable t) {
@@ -496,7 +512,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                     LOGGER.info("^Invoking {} for joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
@@ -552,6 +568,8 @@ interface Joinpoints {
         private void invokeBeforeAdvices(ClassLoader joinpointClassLoader) throws Throwable {
             for (int index = 0; index < this.beforeAdvices.size(); index++) {
                 Before<T, E> advice = this.beforeAdvices.get(index);
+
+                this.currentAdvice = advice;
                 try {
                     advice.before(joinpoint);
                 } catch (Throwable t) {
@@ -569,12 +587,16 @@ interface Joinpoints {
                 if (hasAdviceReturning() || hasAdviceThrowing())
                     break;
             }
+
+            this.currentAdvice = null;
             this.dispatchBeforeAdvice = false;
         }
 
         private void invokeAfterAdvices(ClassLoader joinpointClassLoader) throws Throwable {
             for (int index = this.afterAdvices.size() - 1; index >= 0; index--) {
                 After<T, E> advice = this.afterAdvices.get(index);
+
+                this.currentAdvice = advice;
                 try {
                     advice.after(joinpoint);
                 } catch (Throwable t) {
@@ -592,7 +614,18 @@ interface Joinpoints {
                 if (hasAdviceReturning() || hasAdviceThrowing())
                     break;
             }
+
+            this.currentAdvice = null;
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Advice get() {
+            return this.currentAdvice;
+        }
+
 
         @Override
         public Object[] getArguments() {
@@ -715,7 +748,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                     LOGGER.info("^Creating joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
@@ -752,7 +785,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (aopContext.isDiagnosticClass(typeName) && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
                     LOGGER.info("^Proceeding joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"

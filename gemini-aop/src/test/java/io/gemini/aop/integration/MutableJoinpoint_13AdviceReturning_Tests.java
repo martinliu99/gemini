@@ -378,12 +378,29 @@ public class MutableJoinpoint_13AdviceReturning_Tests {
             assertThat(targetMethodInvoker.isInvoked()).isTrue();
             assertThat(targetMethodInvoker.getReturning()).isNotEqualTo(expected);
         }
+
+        {
+            int expected = thisObject.adviceReturning_wrongType();
+
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.ADVICE_RETURNING_WRONG_TYPE_BEFORE_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getReturning()).isNotEqualTo(expected);
+
+            TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Object.ADVICE_RETURNING_WRONG_TYPE);
+            assertThat(targetMethodInvoker).isNotNull();
+            assertThat(targetMethodInvoker.isInvoked()).isTrue();
+            assertThat(targetMethodInvoker.getReturning()).isEqualTo(expected);
+        }
     }
 
     public static class InstanceMethod_Object {
 
         private static final String BEFORE_ADVICE_RETURNING = "beforeAdviceReturning";
         private static final String AFTER_ADVICE_RETURNING = "afterAdviceReturning";
+
+        private static final String ADVICE_RETURNING_WRONG_TYPE = "adviceReturning_wrongType";
+
 
         public int beforeAdviceReturning() {
             int returning = 100;
@@ -397,6 +414,16 @@ public class MutableJoinpoint_13AdviceReturning_Tests {
         public int afterAdviceReturning() {
             int returning = 100;
             ExecutionMemento.putTargetMethodInvoker(AFTER_ADVICE_RETURNING, 
+                    new TargetMethod()
+                        .withInvoked(true)
+                        .withReturning(returning) );
+            return returning;
+        }
+
+
+        public int adviceReturning_wrongType() {
+            int returning = 100;
+            ExecutionMemento.putTargetMethodInvoker(ADVICE_RETURNING_WRONG_TYPE, 
                     new TargetMethod()
                         .withInvoked(true)
                         .withReturning(returning) );
@@ -450,6 +477,23 @@ public class MutableJoinpoint_13AdviceReturning_Tests {
                     new AdviceMethod()
                         .withInvoked(true)
                         .withReturning(adviceReturning) );
+        }
+
+
+        private static final String ADVICE_RETURNING_WRONG_TYPE_POINTCUT = 
+                "execution(public * io.gemini.aop.integration.MutableJoinpoint_13AdviceReturning_Tests$InstanceMethod_Object.afterAdviceReturning())";
+
+        private static final String ADVICE_RETURNING_WRONG_TYPE_BEFORE_ADVICE = "afterAdviceReturning_before";
+
+        @SuppressWarnings({ "rawtypes", "unchecked" })
+        @Before(ADVICE_RETURNING_WRONG_TYPE_POINTCUT)
+        public void afterAdviceReturning_wrongType_before(MutableJoinpoint joinpoint) {
+            Object returning = new Object();
+            joinpoint.setAdviceReturning(returning);
+            ExecutionMemento.putAdviceMethodInvoker(ADVICE_RETURNING_WRONG_TYPE_BEFORE_ADVICE, 
+                    new AdviceMethod()
+                    .withInvoked(true)
+                    .withReturning(returning) );
         }
     }
 }

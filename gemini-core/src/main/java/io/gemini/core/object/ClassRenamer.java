@@ -126,7 +126,7 @@ public interface ClassRenamer {
             ClassReader reader = new ClassReader(originByteCode);
 
             ClassWriter writer = new ClassWriter(null, 0);
-            ClassVisitor visitor = new ClassRemapper(writer, new SimpleRemapper(nameMapping));
+            ClassVisitor visitor = new ClassRemapper(writer, new SimpleRemapper(Opcodes.ASM9, nameMapping));
             if (CollectionUtils.isEmpty(removedAnnotationDescriptors) == false) {
                 visitor = new AnnotationRemover(visitor, removedAnnotationDescriptors);
             }

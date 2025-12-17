@@ -146,7 +146,7 @@ public class DeferredLoggerFactory {
     }
 
     private void replayDeferredMessagesInternal(Level loggingLevel) {
-        if(deferModeEnabled == false)
+        if (deferModeEnabled == false)
             return;
 
         // disable defer mode, and log message in-time
@@ -212,7 +212,7 @@ public class DeferredLoggerFactory {
             messages.clear();
         }
 
-        sBuilder.append("Replayed deferred messages. \n");
+        sBuilder.append("\nReplayed deferred messages. \n");
 
         if (msgCount == 0) return;
 

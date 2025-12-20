@@ -107,7 +107,7 @@ public class FactoryContext implements Closeable {
 
     private ElementMatcher<String> enabledAdvisorMatcher;
 
-    private boolean shareAspectClassLoader;
+    private boolean aspectClassLoaderShared;
     private List<Set<String>> conflictJoinpointClassLoaders;
 
     private final TypePoolFactory typePoolFactory;
@@ -307,8 +307,8 @@ public class FactoryContext implements Closeable {
 
         {
             // load and merge global factory settings
-            boolean shareAspectClassLoader = configView.getAsBoolean("aop.factory.shareAspectClassLoader", false);
-            this.shareAspectClassLoader = shareAspectClassLoader && factoriesContext.isShareAspectClassLoader();
+            boolean aspectClassLoaderShared = configView.getAsBoolean("aop.factory.aspectClassLoaderShared", false);
+            this.aspectClassLoaderShared = aspectClassLoaderShared && factoriesContext.isAspectClassLoaderShared();
 
             List<Set<String>> conflictJoinpointClassLoaders = new ArrayList<>();
             conflictJoinpointClassLoaders.addAll(
@@ -456,8 +456,8 @@ public class FactoryContext implements Closeable {
             return true;
 
 
-        // 3.check shareAspectClassLoader flag
-        if (shareAspectClassLoader == false) 
+        // 3.check aspectClassLoaderShared flag
+        if (aspectClassLoaderShared == false) 
             return false;
 
 

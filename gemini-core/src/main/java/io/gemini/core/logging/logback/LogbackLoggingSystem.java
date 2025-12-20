@@ -100,7 +100,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
         // reset debug setting
         if (diagnosticLevel.isDebugEnabled()) {
             loggerSettings.put(LOGGER_ALL_LOG_LEVEL_KEY, Level.DEBUG.toString());
-            loggerSettings.put(LOGGER_INCLUDE_LOCATION_KEY, "true");
+            loggerSettings.put(LOGGER_LOCATION_INCLUDED_KEY, "true");
         }
 
         return loggerSettings;

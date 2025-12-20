@@ -24,7 +24,7 @@ import io.gemini.core.logging.LoggingSystem;
 
 public class CallerSoucreConverter extends ClassicConverter {
 
-    private boolean includeLocation = true;
+    private boolean locationIncluded = true;
     private final Abbreviator nameAbbreviator = new TargetLengthBasedClassNameAbbreviator(10);
 
 
@@ -32,8 +32,8 @@ public class CallerSoucreConverter extends ClassicConverter {
     public void start() {
         Context context = getContext();
         if (context != null) {
-            String includeLocationStr = context.getProperty(LoggingSystem.LOGGER_INCLUDE_LOCATION_KEY);
-            includeLocation = Boolean.parseBoolean(includeLocationStr);
+            String locationIncludedStr = context.getProperty(LoggingSystem.LOGGER_LOCATION_INCLUDED_KEY);
+            locationIncluded = Boolean.parseBoolean(locationIncludedStr);
         }
 
         super.start();
@@ -41,7 +41,7 @@ public class CallerSoucreConverter extends ClassicConverter {
 
     @Override
     public String convert(ILoggingEvent event) {
-        if (this.includeLocation) {
+        if (this.locationIncluded) {
             StackTraceElement[] cda = event.getCallerData();
             if (cda != null && cda.length > 0) {
                 return cda[0].getFileName() + ":" + Integer.toString(cda[0].getLineNumber());

@@ -60,7 +60,7 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
 
         DEBUG_SETTINGS.put(STATUS_LOG_LEVEL_KEY, Level.DEBUG.name());
         DEBUG_SETTINGS.put(LoggingSystem.LOGGER_ALL_LOG_LEVEL_KEY, Level.DEBUG.name());
-        DEBUG_SETTINGS.put(LoggingSystem.LOGGER_INCLUDE_LOCATION_KEY, "true");
+        DEBUG_SETTINGS.put(LoggingSystem.LOGGER_LOCATION_INCLUDED_KEY, "true");
     }
 
     public ConfigViewAdapter(ConfigView configView, boolean debug) {

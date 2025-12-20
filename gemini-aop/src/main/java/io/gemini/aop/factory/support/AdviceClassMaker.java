@@ -217,7 +217,7 @@ interface AdviceClassMaker {
                         @Override
                         public int mergeWriter(int flags) {
                             // auto-calculate stack frame map flag if needed
-                            return advisorContext.isASMAutoCompute() ? flags | ClassWriter.COMPUTE_FRAMES : flags;
+                            return advisorContext.isASMAutoComputed() ? flags | ClassWriter.COMPUTE_FRAMES : flags;
                         }
 
                         @Override

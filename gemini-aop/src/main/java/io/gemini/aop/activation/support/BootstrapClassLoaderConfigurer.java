@@ -145,7 +145,7 @@ public class BootstrapClassLoaderConfigurer {
             throws IOException, IllegalClassFormatException {
         ClassRenamer classRenamer = new ClassRenamer.Default(
                 nameMapping, 
-                aopContext.isDumpByteCode(),
+                aopContext.isByteCodeDumped(),
                 aopContext.getByteCodeDumpPath()
         );
 

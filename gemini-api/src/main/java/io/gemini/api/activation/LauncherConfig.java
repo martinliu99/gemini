@@ -46,7 +46,7 @@ public interface LauncherConfig {
 
     URL[] getLaunchClassPathURLs();
 
-    boolean isScanClassesFolder();
+    boolean isClassesFolderScanned();
 
     Map<String /* AspectAppName */, URL[]> getAspectAppClassPathURLs();
 }

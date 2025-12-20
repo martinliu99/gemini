@@ -49,7 +49,7 @@ class WeaverContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverContext.class);
 
-    private static final String WEAVER_MATCH_JOINPOINT_KEY = "aop.weaver.matchJoinpoint";
+    private static final String WEAVER_JOINPOINT_MATCHED_KEY = "aop.weaver.joinpointMatched";
 
     private static final String WEAVER_CLASS_LOADER_EXPRESSIONS_KEY = "aop.weaver.classLoaderExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
@@ -61,7 +61,7 @@ class WeaverContext {
     private final AopContext aopContext;
 
     // weaver settings
-    private boolean matchJoinpoint;
+    private boolean joinpointMatched;
 
     private ElementMatcher<ClassLoader> classLoaderMatcher;
     private ElementMatcher<String> typeMatcher;
@@ -101,9 +101,9 @@ class WeaverContext {
 
         // load joinpoint matcher settings
         {
-            this.matchJoinpoint = configView.getAsBoolean(WEAVER_MATCH_JOINPOINT_KEY, true);
-            if (matchJoinpoint == false && LOGGER.isWarnEnabled())
-                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_MATCH_JOINPOINT_KEY);
+            this.joinpointMatched = configView.getAsBoolean(WEAVER_JOINPOINT_MATCHED_KEY, true);
+            if (joinpointMatched == false && LOGGER.isWarnEnabled())
+                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_JOINPOINT_MATCHED_KEY);
 
             {
                 Set<String> classLoaderExpressions = configView.getAsStringSet(WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
@@ -220,8 +220,8 @@ class WeaverContext {
     }
 
 
-    public boolean isMatchJoinpoint() {
-        return matchJoinpoint;
+    public boolean isJoinpointMatched() {
+        return joinpointMatched;
     }
 
 

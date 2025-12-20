@@ -59,7 +59,7 @@ public class AdvisorContext implements Closeable {
 
     private final MatchingContext matchingContext;
 
-    private final boolean asmAutoCompute;
+    private final boolean asmAutoComputed;
 
 
     protected AdvisorContext(FactoryContext factoryContext, 
@@ -88,7 +88,7 @@ public class AdvisorContext implements Closeable {
 
         this.matchingContext = new DefultMatchingContext();
 
-        this.asmAutoCompute = factoryContext.getFactoriesContext().isAsmAutoCompute();
+        this.asmAutoComputed = factoryContext.getFactoriesContext().isAsmAutoComputed();
     }
 
 
@@ -136,8 +136,8 @@ public class AdvisorContext implements Closeable {
     }
 
 
-    public boolean isASMAutoCompute() {
-        return asmAutoCompute;
+    public boolean isASMAutoComputed() {
+        return asmAutoComputed;
     }
 
 

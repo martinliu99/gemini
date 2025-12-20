@@ -58,10 +58,10 @@ class FactoriesContext implements Closeable {
     // global advisor factory settings
     private ElementMatcher<String> enabledFactoryMatcher;
 
-    private boolean shareAspectClassLoader;
+    private boolean aspectClassLoaderShared;
     private List<Set<String>> conflictJoinpointClassLoaders;
 
-    private boolean asmAutoCompute = false;
+    private boolean asmAutoComputed = false;
 
 
     private Map<String /* FactoryName */, FactoryContext> factoryContextMap;
@@ -116,11 +116,11 @@ class FactoriesContext implements Closeable {
         }
 
         {
-            this.shareAspectClassLoader = configView.getAsBoolean("aop.factories.shareAspectClassLoader", false);
+            this.aspectClassLoaderShared = configView.getAsBoolean("aop.factories.aspectClassLoaderShared", false);
             this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
                     configView.getAsString("aop.factories.conflictJoinpointClassLoaders", "") );
 
-            this.asmAutoCompute = configView.getAsBoolean("aop.factories.asmAutoCompute", false);
+            this.asmAutoComputed = configView.getAsBoolean("aop.factories.asmAutoComputed", false);
         }
     }
 
@@ -166,16 +166,16 @@ class FactoriesContext implements Closeable {
     }
 
 
-    public boolean isShareAspectClassLoader() {
-        return shareAspectClassLoader;
+    public boolean isAspectClassLoaderShared() {
+        return aspectClassLoaderShared;
     }
 
     public List<Set<String>> getConflictJoinpointClassLoaders() {
         return Collections.unmodifiableList( conflictJoinpointClassLoaders );
     }
 
-    public boolean isAsmAutoCompute() {
-        return asmAutoCompute;
+    public boolean isAsmAutoComputed() {
+        return asmAutoComputed;
     }
 
 

@@ -117,7 +117,7 @@ public class AopClassLoaderConfigurer {
         parentFirstTypeExpressions.addAll(
                 aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstTypeExpressions", Collections.emptySet()) );
 
-        if (aopContext.isScanClassesFolder())
+        if (aopContext.isClassesFolderScanned())
             parentFirstTypeExpressions.addAll( CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES );
 
         ElementMatcher<String> parentFirstClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
@@ -188,7 +188,7 @@ public class AopClassLoaderConfigurer {
 
         ClassRenamer classRenamer = new ClassRenamer.Default(
                 nameMapping, 
-                aopContext.isDumpByteCode(),
+                aopContext.isByteCodeDumped(),
                 aopContext.getByteCodeDumpPath()
         );
 

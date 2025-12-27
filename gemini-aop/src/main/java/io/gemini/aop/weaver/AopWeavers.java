@@ -85,11 +85,13 @@ public class AopWeavers {
         long startedAt = System.nanoTime();
 
         // 1.create AopWeaver
-        DefaultAopWeaver aopWeaver = new DefaultAopWeaver(aopContext, advisorFactory, weaverContext);
+        DefaultAopWeaver aopWeaver = aopContext.getDiagnosticLevel().isSimpleEnabled() == false
+                ? new DefaultAopWeaver(aopContext, advisorFactory, weaverContext)
+                : new DefaultAopWeaver.Diagnostic(aopContext, advisorFactory, weaverContext);
 
         // 2.initialize BootstrapAdvice.Bridger
         BootstrapAdvice.Bridger.setFactory(aopWeaver);
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
+        if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
                     aopWeaver, AopWeavers.class.getClassLoader());
 
@@ -115,7 +117,7 @@ public class AopWeavers {
             public void onStart() {
                 long time = System.nanoTime() - startedAt;
                 launcherMetrics.setBytebuddyInstallationTime(time);
-                if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
+                if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                     LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / 1e9);
 
                 typeRetransformationStartedAt.set( System.nanoTime() );
@@ -131,16 +133,16 @@ public class AopWeavers {
             .with( new ByteBuddy()
                     .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )
             )
-            .ignore( BooleanMatcher.of(weaverContext.isMatchJoinpoint() == false) )
+            .ignore( BooleanMatcher.of(weaverContext.isJoinpointMatched() == false) )
             // better performance than REDEFINE or REDEFINE_FROZEN
             .with( TypeStrategy.Default.DECORATE )
             .with( InjectionStrategy.UsingUnsafe.INSTANCE )
             // support lambda, for debug only
 //              .with( AgentBuilder.LambdaInstrumentationStrategy.ENABLED )
-            .with( aopContext.getTypePoolFactory().getDescriptionStrategy() )
-            .with( ClassFileBufferStrategy.Default.RETAINING )
             .with( aopContext.getTypePoolFactory().getPoolStrategy() )
+            .with( aopContext.getTypePoolFactory().getDescriptionStrategy() )
             .with( aopContext.getTypePoolFactory().getLocationStrategy() )
+            .with( ClassFileBufferStrategy.Default.RETAINING )
             .with( InitializationStrategy.NoOp.INSTANCE )
             // re-transform loaded classes, and only work with Advice and disableClassFormatChanges
             .with( RedefinitionStrategy.DISABLED != weaverContext.getRedefinitionStrategy()
@@ -165,7 +167,7 @@ public class AopWeavers {
 
         long time = System.nanoTime() - typeRetransformationStartedAt.get();
         launcherMetrics.setTypeRedefiningTime(time);
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
+        if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to match and redefine loaded types.", time / 1e9);
     }
 }

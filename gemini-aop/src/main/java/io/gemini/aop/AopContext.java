@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopMetrics.LauncherMetrics;
+import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
@@ -43,6 +44,8 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
+import net.bytebuddy.matcher.ElementMatcher;
+import net.bytebuddy.matcher.ElementMatchers;
 
 
 /**
@@ -58,8 +61,10 @@ public class AopContext implements Closeable {
 
     public static final String BOOTSTRAP_CLASS_NAME_MAPPING_KEY = "bootstrapClassNameMapping";
 
-    private static final String AOP_LAUNCHER_DUMP_BYTE_CODE_KEY = "aop.launcher.dumpByteCode";
-    private final static String CLASS_SCANNER_ENABLE_VERBOSE_KEY = "aop.classScanner.enableVerbose";
+    private static final String DIAGNOSTIC_TYPE_EXPRESSIONS_KEY = "aop.launcher.diagnosticTypeExpressions";
+
+    private static final String AOP_LAUNCHER_BYTECODE_DUMPED_KEY = "aop.launcher.byteCodeDumped";
+    private final static String CLASS_SCANNER_VERBOSE_ENABLED_KEY = "aop.classScanner.verboseEnabled";
 
 
     private final LauncherConfig launcherConfig;
@@ -68,7 +73,9 @@ public class AopContext implements Closeable {
 
 
     private final DiagnosticLevel diagnosticLevel;
-    private Set<String> diagnosticClasses;
+    private ElementMatcher<String> diagnosticTypeMatcher;
+
+    private boolean typeResolutionDetected;
 
 
     private final ConfigView configView;
@@ -86,7 +93,7 @@ public class AopContext implements Closeable {
     private final TaskExecutor globalTaskExecutor;
 
 
-    private boolean dumpByteCode;
+    private boolean byteCodeDumped;
     private String byteCodeDumpPath;
 
 
@@ -148,21 +155,23 @@ public class AopContext implements Closeable {
 
 
         long time = System.nanoTime() - startedAt;
-        if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create AopContext with settings, \n" 
-                    + "  isDefaultProfile: {} \n"
-                    + "  activeProfile: {} \n"
-                    + "  internalConfigLocation: {} \n"
-                    + "  userDefinedConfigLocation: {} \n"
-                    + "  diagnosticStrategy: {} \n"
-                    + "  classLoader: {} \n",
-                    time / 1e9,
-                    launcherConfig.isDefaultProfile(), launcherConfig.getActiveProfile(),
-                    launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation(), diagnosticLevel,
-                    aopClassLoader
-            );
-        else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create AopContext. ", time / 1e9);
+        if (LOGGER.isInfoEnabled()) {
+            if (diagnosticLevel.isDebugEnabled()) 
+                LOGGER.info("$Took '{}' seconds to create AopContext with settings, \n" 
+                        + "  isDefaultProfile: {} \n"
+                        + "  activeProfile: {} \n"
+                        + "  internalConfigLocation: {} \n"
+                        + "  userDefinedConfigLocation: {} \n"
+                        + "  diagnosticStrategy: {} \n"
+                        + "  classLoader: {} \n",
+                        time / 1e9,
+                        launcherConfig.isDefaultProfile(), launcherConfig.getActiveProfile(),
+                        launcherConfig.getInternalConfigLocation(), launcherConfig.getUserDefinedConfigLocation(), diagnosticLevel,
+                        aopClassLoader
+                );
+            else if (diagnosticLevel.isSimpleEnabled()) 
+                LOGGER.info("$Took '{}' seconds to create AopContext. ", time / 1e9);
+        }
 
         aopMetrics.getLauncherMetrics().setAopContextCreationTime(time);
     }
@@ -170,15 +179,19 @@ public class AopContext implements Closeable {
     private void loadSettings(ConfigView configView) {
         // load diagnostic settings
         {
-            this.diagnosticClasses = configView.getAsStringSet("aop.launcher.diagnosticClasses", Collections.emptySet());
+            Set<String> diagnosticTypeExpressions = configView.getAsStringSet(DIAGNOSTIC_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
+            this.diagnosticTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                    DIAGNOSTIC_TYPE_EXPRESSIONS_KEY, diagnosticTypeExpressions, ElementMatchers.none());
+
+            this.typeResolutionDetected = configView.getAsBoolean("aop.launcher.typeResolutionDetected", false);
         }
 
         {
             if (diagnosticLevel.isDebugEnabled()) {
-                builtinSettings.put(AOP_LAUNCHER_DUMP_BYTE_CODE_KEY, true);
+                builtinSettings.put(AOP_LAUNCHER_BYTECODE_DUMPED_KEY, true);
             }
 
-            this.dumpByteCode = configView.getAsBoolean(AOP_LAUNCHER_DUMP_BYTE_CODE_KEY, false);
+            this.byteCodeDumped = configView.getAsBoolean(AOP_LAUNCHER_BYTECODE_DUMPED_KEY, false);
             this.byteCodeDumpPath = configView.getAsString("aop.launcher.byteCodeDumpPath");
         }
     }
@@ -187,7 +200,7 @@ public class AopContext implements Closeable {
         long startedAt = System.nanoTime();
 
         ClassScanner.Builder builder = new ClassScanner.Builder()
-                .enableVerbose( configView.getAsBoolean(CLASS_SCANNER_ENABLE_VERBOSE_KEY, false) )
+                .enableVerbose( configView.getAsBoolean(CLASS_SCANNER_VERBOSE_ENABLED_KEY, false) )
                 .diagnosticLevel( this.diagnosticLevel )
                 ;
 
@@ -218,11 +231,17 @@ public class AopContext implements Closeable {
     }
 
     private TypePoolFactory createTypePoolFactory() {
-        return new TypePoolFactory.Default(LocationStrategy.ForClassLoader.WEAK);
+        return isTypeResolutionDetected() == false
+                ? new TypePoolFactory.Default(LocationStrategy.ForClassLoader.WEAK)
+                : new TypePoolFactory.Default.TyepResolutionDetector(LocationStrategy.ForClassLoader.WEAK)
+        ;
     }
 
     private TypeWorldFactory createTypeWorldFactory(TypePoolFactory typePoolFactory) {
-        return new TypeWorldFactory.Default(typePoolFactory);
+        return isTypeResolutionDetected() == false
+                ? new TypeWorldFactory.Default(typePoolFactory)
+                : new TypeWorldFactory.Default.TyepResolutionDetector(typePoolFactory)
+        ;
     }
 
 
@@ -238,25 +257,29 @@ public class AopContext implements Closeable {
         return diagnosticLevel;
     }
 
-    public boolean isDiagnosticClass(String typeName) {
-        return DiagnosticLevel.DISABLED != diagnosticLevel && diagnosticClasses.contains(typeName);
+    public boolean isDiagnosticType(String typeName) {
+        return DiagnosticLevel.DISABLED != diagnosticLevel && diagnosticTypeMatcher.matches(typeName);
     }
 
-    public boolean isDiagnosticClass(Class<?>... types) {
-        return isDiagnosticClass( Arrays.asList(types) );
+    public boolean isDiagnosticType(Class<?>... types) {
+        return isDiagnosticType( Arrays.asList(types) );
     }
 
-    public boolean isDiagnosticClass(List<Class<?>> types) {
+    public boolean isDiagnosticType(List<Class<?>> types) {
         if (CollectionUtils.isEmpty(types) == true)
             return false;
         if (DiagnosticLevel.DISABLED == diagnosticLevel)
             return false;
 
         for (Class<?> clazz : types) {
-            if (diagnosticClasses.contains(clazz.getName()))
+            if (diagnosticTypeMatcher.matches(clazz.getName()))
                 return true;
         }
         return false;
+    }
+
+    public boolean isTypeResolutionDetected() {
+        return typeResolutionDetected || DiagnosticLevel.DISABLED == diagnosticLevel;
     }
 
 
@@ -301,12 +324,12 @@ public class AopContext implements Closeable {
         return globalTaskExecutor;
     }
 
-    public boolean isScanClassesFolder() {
-        return launcherConfig.isScanClassesFolder();
+    public boolean isClassesFolderScanned() {
+        return launcherConfig.isClassesFolderScanned();
     }
 
-    public boolean isDumpByteCode() {
-        return dumpByteCode;
+    public boolean isByteCodeDumped() {
+        return byteCodeDumped;
     }
 
     public String getByteCodeDumpPath() {

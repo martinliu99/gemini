@@ -62,7 +62,14 @@ public class AopMetrics {
 
     private String aopWeavingDetailPerAdvisor;
 
-    private boolean summarizeMetricsDetail = false;
+    private String typeResolutionHeaderTemplate;
+    private String typeResolutionCLTemplate;
+    private String typeResolutionLevelTemplate;
+    private String typeResolutionDetailTemplate;
+
+    private String reportLineSeparatorTemplate;
+
+    private boolean metricsDetailSummarized = false;
     private final LauncherMetrics launcherMetrics;
 
     private final AtomicInteger index = new AtomicInteger(0);
@@ -91,7 +98,7 @@ public class AopMetrics {
 
 
     private void loadSettings(ConfigView configView) {
-        this.summarizeMetricsDetail = configView.getAsBoolean("aop.metrics.summarizeMetricsDetail", false);
+        this.metricsDetailSummarized = configView.getAsBoolean("aop.metrics.metricsDetailSummarized", false);
 
         this.bannerTemplate = configView.<String>getValue(
                 "aop.metrics.bannerTemplate", "", false, String.class);
@@ -107,6 +114,18 @@ public class AopMetrics {
                 "aop.metrics.weaverSummrayDetailTemplate", "", false, String.class);
         this.weaverSummrayPerCLTemplate  = configView.<String>getValue(
                 "aop.metrics.weaverSummrayPerCLTemplate", "", false, String.class);
+
+        this.typeResolutionHeaderTemplate  = configView.<String>getValue(
+                "aop.metrics.typeResolutionHeaderTemplate", "", false, String.class);
+        this.typeResolutionCLTemplate  = configView.<String>getValue(
+                "aop.metrics.typeResolutionCLTemplate", "", false, String.class);
+        this.typeResolutionLevelTemplate  = configView.<String>getValue(
+                "aop.metrics.typeResolutionLevelTemplate", "", false, String.class);
+        this.typeResolutionDetailTemplate  = configView.<String>getValue(
+                "aop.metrics.typeResolutionDetailTemplate", "", false, String.class);
+
+        this.reportLineSeparatorTemplate  = configView.<String>getValue(
+                "aop.metrics.reportLineSeparatorTemplate", "", false, String.class);
     }
 
 
@@ -141,35 +160,49 @@ public class AopMetrics {
     public void startupAopLauncher() {
         this.launcherStartupSummary = this.newWeaverMetricsSummary();
 
-        if (diagnosticLevel.isSimpleEnabled() == false && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n", 
-                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
-                    bannerTemplate,
-                    renderLauncherStartupSummaryTemplate(launcherMetrics) );
-        else if (LOGGER.isInfoEnabled())
-            LOGGER.info("$Took '{}' seconds to activate Gemini. \n{}\n{}\n{}{}\n", 
-                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
-                    bannerTemplate,
-                    renderLauncherStartupSummaryTemplate(launcherMetrics),
-                    bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary, true) : "",
-                    launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary, false) : "" 
-            );
+        if (LOGGER.isInfoEnabled()) {
+            if (diagnosticLevel.isSimpleEnabled() == false) 
+                LOGGER.info("$Took '{}' seconds to activate Gemini. \n"
+                        + "{} \n"
+                        + "{} \n", 
+                        (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
+                        bannerTemplate,
+                        renderLauncherStartupSummaryTemplate(launcherMetrics) );
+            else 
+                LOGGER.info("$Took '{}' seconds to activate Gemini. \n"
+                        + "{} \n"
+                        + "{} \n"
+                        + "{}{}{} \n", 
+                        (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
+                        bannerTemplate,
+                        renderLauncherStartupSummaryTemplate(launcherMetrics),
+                        bytebuddyWarmupSummary != null ? renderWeaverMetricsTemplate("Warmup ByteBuddy", bytebuddyWarmupSummary, true) : "",
+                        launcherStartupSummary != null ? renderWeaverMetricsTemplate("Redefined Loaded Types", launcherStartupSummary, false) : "",
+                        renderTypeResolutionTemplate(launcherStartupSummary)
+                );
+        }
     }
 
     public void startupApplication() {
         this.appStartupSummary = this.newWeaverMetricsSummary();
 
-        if (diagnosticLevel.isSimpleEnabled() == false && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to start application. \n{}\n",
-                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
-                    renderAppStartupSummaryTemplate(launcherMetrics) 
-            );
-        else if (LOGGER.isInfoEnabled())
-            LOGGER.info("$Took '{}' seconds to start application. \n{}\n{}\n",
-                    (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
-                    renderAppStartupSummaryTemplate(launcherMetrics),
-                    renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary, true) 
-            );
+        if (LOGGER.isInfoEnabled()) {
+            if (diagnosticLevel.isSimpleEnabled() == false) 
+                LOGGER.info("$Took '{}' seconds to start application. \n"
+                        + "{} \n",
+                        (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
+                        renderAppStartupSummaryTemplate(launcherMetrics) 
+                );
+            else 
+                LOGGER.info("$Took '{}' seconds to start application. \n"
+                        + "{} \n"
+                        + "{}{} \n",
+                        (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / 1e9,
+                        renderAppStartupSummaryTemplate(launcherMetrics),
+                        renderWeaverMetricsTemplate("Weaved New Types", appStartupSummary, true),
+                        renderTypeResolutionTemplate(appStartupSummary)
+                );
+        }
     }
 
 
@@ -244,45 +277,49 @@ public class AopMetrics {
         return placeholderHelper.replace(appStartupSummrayTemplate);
     }
 
-    private String renderWeaverMetricsTemplate(String phaseName, WeaverMetricsSummary weaverStats, boolean withHead) {
+    private String renderWeaverMetricsTemplate(String phaseName, WeaverMetricsSummary weaverMetricsSummary, boolean withHead) {
         StringBuilder renderResult = new StringBuilder();
 
         if (withHead)
-            renderResult.append(this.weaverSummrayHeaderTemplate);
+            renderResult
+            .append(reportLineSeparatorTemplate)
+            .append(this.weaverSummrayHeaderTemplate)
+            .append(reportLineSeparatorTemplate);
 
         // 1.render summary metrics
         {
             Map<String, Object> valueMap = new HashMap<>();
 
-            valueMap.put("typeLoadingCount", weaverStats.getTypeLoadingCount());
-            valueMap.put("typeLoadingTime", weaverStats.getTypeLoadingTime());
+            valueMap.put("typeLoadingCount", weaverMetricsSummary.getTypeLoadingCount());
+            valueMap.put("typeLoadingTime", weaverMetricsSummary.getTypeLoadingTime());
 
-            valueMap.put("typeAcceptingCount", weaverStats.getTypeAcceptingCount());
-            valueMap.put("typeAcceptingTime", weaverStats.getTypeAcceptingTime());
+            valueMap.put("typeAcceptingCount", weaverMetricsSummary.getTypeAcceptingCount());
+            valueMap.put("typeAcceptingTime", weaverMetricsSummary.getTypeAcceptingTime());
 
-            valueMap.put("advisorCreationCount", weaverStats.getAdvisorCreationCount());
-            valueMap.put("advisorCreationTime", weaverStats.getAdvisorCreationTime());
+            valueMap.put("advisorCreationCount", weaverMetricsSummary.getAdvisorCreationCount());
+            valueMap.put("advisorCreationTime", weaverMetricsSummary.getAdvisorCreationTime());
 
-            valueMap.put("typeFastMatchingCount", weaverStats.getTypeFastMatchingCount());
-            valueMap.put("typeFastMatchingTime", weaverStats.getTypeFastMatchingTime());
+            valueMap.put("typeFastMatchingCount", weaverMetricsSummary.getTypeFastMatchingCount());
+            valueMap.put("typeFastMatchingTime", weaverMetricsSummary.getTypeFastMatchingTime());
 
-            valueMap.put("typeMatchingCount", weaverStats.getTypeMatchingCount());
-            valueMap.put("typeMatchingTime", weaverStats.getTypeMatchingTime());
+            valueMap.put("typeMatchingCount", weaverMetricsSummary.getTypeMatchingCount());
+            valueMap.put("typeMatchingTime", weaverMetricsSummary.getTypeMatchingTime());
 
-            valueMap.put("typeTransformationCount", weaverStats.getTypeTransformationCount());
-            valueMap.put("typeTransformationTime", weaverStats.getTypeTransformationTime());
+            valueMap.put("typeTransformationCount", weaverMetricsSummary.getTypeTransformationCount());
+            valueMap.put("typeTransformationTime", weaverMetricsSummary.getTypeTransformationTime());
 
-            valueMap.put("uncategorizedTime", weaverStats.getUncategorizedTime());
+            valueMap.put("uncategorizedTime", weaverMetricsSummary.getUncategorizedTime());
 
             valueMap = format(valueMap);
 
-            valueMap.put("itemName", formatStr(phaseName + " \u2935") );
+            valueMap.put("itemName", formatStr(phaseName + " \u2935", ITEM_NAME_LENGTH, true) );
 
-            renderResult.append( PlaceholderHelper.create(valueMap).replace(weaverSummrayDetailTemplate) );
+            renderResult.append( PlaceholderHelper.create(valueMap).replace(weaverSummrayDetailTemplate) )
+            .append(reportLineSeparatorTemplate);
         }
 
         // 2.render detail metrics per ClassLoader and Advisor
-        for (WeaverMetrics weaverMetrics : weaverStats.getWeaverMetricsList()) {
+        for (WeaverMetrics weaverMetrics : weaverMetricsSummary.getWeaverMetricsList()) {
             if (weaverMetrics.getTypeLoadingCount() <= 1 && weaverMetrics.getAdvisorCreationCount() == 0)
                 continue;
 
@@ -315,9 +352,10 @@ public class AopMetrics {
             renderResult.append(
                     PlaceholderHelper.create( 
                             new ConfigView.Builder().parent(configView).configSource("valueMap", valueMap).build() )
-                    .replace(weaverSummrayPerCLTemplate) );
+                    .replace(weaverSummrayPerCLTemplate) )
+            .append(reportLineSeparatorTemplate);
 
-            if (this.summarizeMetricsDetail) {
+            if (this.metricsDetailSummarized) {
                 Map<Advisor, AtomicLong> advisorMethodMatchingType = weaverMetrics.getAdvisorTypeMatchingTimeMap();
                 for (Entry<Advisor, AtomicLong> advisorEntry : weaverMetrics.getAdvisorTypeFastMatchingTimeMap().entrySet()) {
                     // TODO: just top 10
@@ -349,17 +387,92 @@ public class AopMetrics {
         return renderResult.toString();
     }
 
-    private Object formatStr(String item) {
+    private String renderTypeResolutionTemplate(WeaverMetricsSummary weaverMetricsSummary) {
+        if (weaverMetricsSummary.hasTypeResolution == false)
+            return "";
+
+        StringBuilder renderResult = new StringBuilder();
+
+        // 1.render type resolution metrics
+        renderResult.append("\n")
+        .append(reportLineSeparatorTemplate)
+        .append(this.typeResolutionHeaderTemplate)
+        .append(reportLineSeparatorTemplate);
+
+        for (WeaverMetrics weaverMetrics : weaverMetricsSummary.getWeaverMetricsList()) {
+            if (weaverMetrics.getTypeLoadingCount() <= 1 && weaverMetrics.getAdvisorCreationCount() == 0)
+                continue;
+
+            ConcurrentMap<ResolutionLevel, ConcurrentMap<String, AtomicLong>> typeResolutuonLevelAdvisorMap = weaverMetrics.getTypeResolutuonLevelAdvisorMap();
+            if (typeResolutuonLevelAdvisorMap.size() == 0)
+                continue;
+
+            Map<String, Object> valueMap = new HashMap<>();
+            valueMap.put("classLoader", formatStr(
+                    ClassUtils.abbreviate( ClassLoaderUtils.getClassLoaderId(weaverMetrics.getClassLoader()), ITEM_NAME_LENGTH), ITEM_NAME_LENGTH, true ) );
+
+            renderResult.append(
+                    PlaceholderHelper.create( 
+                            new ConfigView.Builder().parent(configView).configSource("valueMap", valueMap).build() )
+                    .replace(typeResolutionCLTemplate) );
+
+
+            valueMap = new HashMap<>();
+            for (Entry<ResolutionLevel, ConcurrentMap<String, AtomicLong>> entry : typeResolutuonLevelAdvisorMap.entrySet()) {
+                valueMap = new HashMap<>();
+                valueMap.put("typeResolutionLevel", formatStr(
+                        entry.getKey().toString() + " Advisor", 30, true ) );
+
+                renderResult.append(
+                        PlaceholderHelper.create( 
+                                new ConfigView.Builder().parent(configView).configSource("valueMap", valueMap).build() )
+                        .replace(typeResolutionLevelTemplate) );
+
+
+                for (Entry<String, AtomicLong> advisorEntry : entry.getValue().entrySet()) {
+                    String typeResolution = ClassUtils.abbreviate( advisorEntry.getKey(), 120 ) 
+                            + ": " + advisorEntry.getValue().get() 
+                            + "/" + weaverMetrics.getTypeFastMatchingCount() 
+                            + " =" + format(advisorEntry.getValue().get() * 1.0 / weaverMetrics.getTypeFastMatchingCount());
+                    valueMap.put("typeResolutionDetails", formatStr(typeResolution, 152, true) );
+
+                    renderResult.append(
+                            PlaceholderHelper.create( 
+                                    new ConfigView.Builder().parent(configView).configSource("valueMap", valueMap).build() )
+                            .replace(typeResolutionDetailTemplate) );
+                }
+            }
+
+            renderResult.append(reportLineSeparatorTemplate);
+        }
+
+        int length = renderResult.length();
+        if (length > 0) {
+            for (int i=0; i<2; i++) {
+                length = renderResult.length();
+                char lastChar = renderResult.charAt(length-1);
+
+                if ('\r' == lastChar || '\n' == lastChar)
+                    renderResult.deleteCharAt(length-1);
+            }
+        }
+
+        return renderResult.toString();
+    }
+
+    private String formatStr(String item, int itemLength, boolean leftAlign) {
         String str = (String) item;
-        str = str.length() < ITEM_NAME_LENGTH ? str : str.substring(0, ITEM_NAME_LENGTH);
-        return String.format("%-" + ITEM_NAME_LENGTH + "s", str);
+
+        if (itemLength == 0)
+            itemLength = str.length();
+
+        str = str.length() <= itemLength ? str : str.substring(0, itemLength);
+        return String.format("%" + (leftAlign ? "-" : "") + itemLength + "s", str);
     }
 
     private Object format(Object item) {
         if (item instanceof String) {
-            String str = (String) item;
-            str = str.length() < ITEM_NAME_LENGTH ? str : str.substring(0, ITEM_NAME_LENGTH);
-            return String.format("%" + ITEM_NAME_LENGTH + "s", str);
+            return formatStr( (String) item, ITEM_NAME_LENGTH, false);
         }
 
         if (item instanceof Float || item instanceof Double)
@@ -660,7 +773,7 @@ public class AopMetrics {
         }
 
         public void incrAdvisorCreationCount(int count) {
-            advisorCreationCount.addAndGet(count);
+            advisorCreationCount.compareAndSet(0, count);
         }
 
         protected long getAdvisorCreationTime() {
@@ -797,6 +910,8 @@ public class AopMetrics {
         private final ConcurrentMap<Advisor, AtomicLong> advisorTypeFastMatchingTimeMap;
         private final ConcurrentMap<Advisor, AtomicLong> advisorTypeMatchingTimeMap;
 
+        private final boolean hasTypeResolution;
+
 
         public WeaverMetricsSummary(Map<ClassLoader, WeaverMetrics> weaverMetricsMap) {
             weaverMetricsList = weaverMetricsMap.values().stream()
@@ -852,6 +967,10 @@ public class AopMetrics {
 
             this.advisorTypeFastMatchingTimeMap = new ConcurrentHashMap<>();
             this.advisorTypeMatchingTimeMap = new ConcurrentHashMap<>();
+
+            this.hasTypeResolution = weaverMetricsMap.values().stream()
+            .map( metrcis -> metrcis.getTypeResolutuonLevelAdvisorMap().size() )
+            .collect( Collectors.summingInt(Integer::intValue) ) > 0;
         }
 
         public List<WeaverMetrics> getWeaverMetricsList() {
@@ -916,6 +1035,10 @@ public class AopMetrics {
 
         public ConcurrentMap<Advisor, AtomicLong> getAdvisorTypeMatchingTimeMap() {
             return advisorTypeMatchingTimeMap;
+        }
+
+        public boolean hasTypeResolution() {
+            return hasTypeResolution;
         }
     }
 

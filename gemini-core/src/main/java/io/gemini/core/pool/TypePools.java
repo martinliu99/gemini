@@ -18,9 +18,11 @@
  */
 package io.gemini.core.pool;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
-import net.bytebuddy.build.CachedReturnPlugin;
+import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.dynamic.ClassFileLocator;
@@ -33,25 +35,31 @@ import net.bytebuddy.pool.TypePool.Resolution;
  * @author   martin.liu
  * @since	 1.0
  */
-public interface TypePools {
-
+interface TypePools {
 
     /**
-     * This class exposes CacheProvider to use Type between AgentBuilder transformer and Pointcut matcher.
+     * This TypePool extends {@code TypePool.Default} and expose cache provider.
      *
      */
-    class EagerResolutionTypePool extends TypePool.Default {
+    class Default extends TypePool.Default {
 
         private final String poolName;
 
 
-        public EagerResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
+        public Default(String poolName, 
+                CacheProvider cacheProvider, 
+                ClassFileLocator classFileLocator, 
+                ReaderMode readerMode) {
             super(cacheProvider, classFileLocator, readerMode);
 
             this.poolName = poolName;
         }
 
-        public EagerResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
+        public Default(String poolName, 
+                CacheProvider cacheProvider, 
+                ClassFileLocator classFileLocator, 
+                ReaderMode readerMode,
+                TypePool parentPool) {
             super(cacheProvider, classFileLocator, readerMode, parentPool);
 
             this.poolName = poolName;
@@ -62,19 +70,16 @@ public interface TypePools {
             return poolName;
         }
 
-        // expose cache provider to reuse
+
+        /**
+         * expose cache provider to reuse type between AgentBuilder transformer and Pointcut matcher
+         * 
+         * @return
+         */
         public CacheProvider getCacheProvider() {
             return this.cacheProvider;
         }
 
-        @Override
-        public Resolution describe(String name) {
-            Resolution resolution = cacheProvider.find(name);
-            if (resolution != null && resolution.isResolved())
-                return resolution;
-
-            return super.describe(name);
-        }
 
         @Override
         public String toString() {
@@ -83,114 +88,156 @@ public interface TypePools {
     }
 
 
-    /**
-     * A variant of {@link EagerResolutionTypePool} that resolves type descriptions lazily. 
-     *
-     */
-    class LazyResolutionTypePool extends EagerResolutionTypePool {
+    class Explicit implements TypePool {
 
-        /**
-         * @param cacheProvider
-         * @param classFileLocator
-         * @param readerMode
-         */
-        public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode) {
-            super(poolName, cacheProvider, classFileLocator, readerMode);
+        private final ConcurrentMap<String, Resolution> resolutions;
+
+
+        public Explicit() {
+            this.resolutions = new ConcurrentHashMap<>();
         }
 
-        public LazyResolutionTypePool(String poolName, CacheProvider cacheProvider, ClassFileLocator classFileLocator, ReaderMode readerMode, TypePool parentPool) {
+        public void addTypeResolution(String typeName, Resolution resolution) {
+            if (StringUtils.hasText(typeName) == false || resolution == null) return;
+
+            this.resolutions.put(typeName, resolution);
+        }
+
+        public Resolution removeTypeResolution(String typeName) {
+            if (StringUtils.hasText(typeName) == false) return null;
+
+            return resolutions.remove(typeName);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Resolution describe(String typeName) {
+            Resolution resolution;
+            return (resolution = resolutions.get(typeName)) != null
+                    ? resolution
+                    : new Resolution.Illegal(typeName);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void clear() {
+        }
+    }
+
+
+    class TyepResolutionDetector extends TypePools.Default {
+
+        private final boolean lazyResolution;
+
+
+        public TyepResolutionDetector(String poolName, 
+                CacheProvider cacheProvider,
+                ClassFileLocator classFileLocator, 
+                ReaderMode readerMode, 
+                boolean lazyResolution) {
+            this(poolName, cacheProvider, classFileLocator, readerMode, lazyResolution, TypePool.Empty.INSTANCE);
+        }
+
+        public TyepResolutionDetector(String poolName, 
+                CacheProvider cacheProvider,
+                ClassFileLocator classFileLocator, 
+                ReaderMode readerMode, 
+                boolean lazyResolution,
+                TypePool parentPool) {
             super(poolName, cacheProvider, classFileLocator, readerMode, parentPool);
+
+            this.lazyResolution = lazyResolution;
         }
 
 
         @Override
         protected Resolution doDescribe(String name) {
-            return new TypePools.LazyResolution(
-                    name, 
-                    new Supplier<Resolution>() {
+            if (lazyResolution == false) {
+                // resolve type eagerly
+                Resolution resolution = super.doDescribe(name);
+                Supplier<Resolution> resolutionSupplier = () -> resolution;
 
-                        // cache resolved type
-                        private Resolution resolution;
+                return new DelegatedResolution(
+                        name,
+                        resolutionSupplier,
+                        new DelegatedTypeDescription.TyepResolutionDetector(name, resolutionSupplier)
+                );
+            } else {
+                Supplier<Resolution> resolutionSupplier = new Supplier<Resolution>() {
 
-                        @Override
-                        public Resolution get() {
-                            if (resolution == null)
-                                resolution = LazyResolutionTypePool.super.doDescribe(name);
+                    // cache resolved type
+                    private Resolution resolution;
 
-                            return resolution;
-                        }
+                    @Override
+                    public Resolution get() {
+                        if (resolution == null)
+                            resolution = TyepResolutionDetector.super.doDescribe(name);
+
+                        return resolution;
                     }
-            );
+                };
+
+                // resolve type lazily
+                return new DelegatedResolution(
+                        name, 
+                        resolutionSupplier,
+                        new DelegatedTypeDescription.TyepResolutionDetector(name, resolutionSupplier)
+                );
+            }
         }
     }
 
 
     /**
-     * The lazy resolution for a lazy facade for a type pool.
+     * A delegated resolution holds resolution supplier and {@code DelegatedTypeDescription}.
      */
-    static class LazyResolution implements Resolution {
+    class DelegatedResolution implements Resolution {
 
-        /**
-         * The type pool to delegate to.
-         */
-        private final Supplier<Resolution> resolution;
+        private final Supplier<Resolution> delegateSupplier;
+        private final DelegatedTypeDescription delegatedTypeDescription;
 
-        LazyTypeDescription lazyTypeDescription;
 
-        /**
-         * Creates a lazy resolution for a lazy facade for a type pool.
-         *
-         * @param typePool The type pool to delegate to.
-         * @param name     The name of the type that is represented by this resolution.
-         */
-        protected LazyResolution(String name, Supplier<Resolution> resolution) {
-            this.resolution = resolution;
-            this.lazyTypeDescription = new LazyTypeDescription(name, resolution);
+        protected DelegatedResolution(String name, Supplier<Resolution> delegateSupplier) {
+            this(name, delegateSupplier, new DelegatedTypeDescription(name, delegateSupplier));
+        }
+
+        protected DelegatedResolution(String name, Supplier<Resolution> delegateSupplier, DelegatedTypeDescription delegatedTypeDescription) {
+            this.delegateSupplier = delegateSupplier;
+            this.delegatedTypeDescription = delegatedTypeDescription;
         }
 
         /**
          * {@inheritDoc}
          */
         public boolean isResolved() {
-            return resolution.get().isResolved();
+            return delegateSupplier.get().isResolved();
         }
 
         /**
          * {@inheritDoc}
          */
         public TypeDescription resolve() {
-            return lazyTypeDescription;
+            return delegatedTypeDescription;
         }
     }
 
 
     /**
-     * A description of a type that delegates to another type pool once a property that is not the name is resolved.
+     * A description of a type that delegates to another type resolution supplier once a property that is not the name is resolved.
      */
-    static class LazyTypeDescription extends TypeDescription.AbstractBase.OfSimpleType.WithDelegation
-            implements TypeResolutionInspector {
+    class DelegatedTypeDescription extends TypeDescription.AbstractBase.OfSimpleType.WithDelegation {
 
-        private ResolutionLevel resolutionLevel = ResolutionLevel.NO_RESOLUTION;
-
-        /**
-         * The type pool to delegate to.
-         */
-        private final Supplier<Resolution> resolution;
-
-        /**
-         * The name of the type that is represented by this resolution.
-         */
         private final String name;
+        private final Supplier<Resolution> delegateSupplier;
 
-        /**
-         * Creates a new lazy type resolution.
-         *
-         * @param name The type pool to delegate to.
-         * @param resolution     The name of the type.
-         */
-        protected LazyTypeDescription(String name, Supplier<Resolution> resolution) {
+
+        protected DelegatedTypeDescription(String name, Supplier<Resolution> delegateSupplier) {
             this.name = name;
-            this.resolution = resolution;
+            this.delegateSupplier = delegateSupplier;
         }
 
         /**
@@ -200,60 +247,93 @@ public interface TypePools {
             return name;
         }
 
-        @Override
-        @CachedReturnPlugin.Enhance("delegate")
-        protected TypeDescription delegate() {
-            this.setResolutionLevel(ResolutionLevel.TYPE_RESOLUTION);
 
-            return resolution.get().resolve();
+        @Override
+        protected TypeDescription delegate() {
+            return delegateSupplier.get().resolve();
         }
 
         /**
          * {@inheritDoc}
          */
         public Generic getSuperClass() {
-            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
-
-            return delegate().getSuperClass();
+            return delegateSupplier.get().resolve().getSuperClass();
         }
 
         /**
          * {@inheritDoc}
          */
         public TypeList.Generic getInterfaces() {
-            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
-
-            return delegate().getInterfaces();
+            return delegateSupplier.get().resolve().getInterfaces();
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ResolutionLevel getResolutionLevel() {
-            return resolutionLevel;
-        }
-
-        /** 
-         * {@inheritDoc} 
-         */
-        @Override
-        public void setResolutionLevel(ResolutionLevel resolutionLevel) {
-            if (this.resolutionLevel.ordinal() < resolutionLevel.ordinal())
-                this.resolutionLevel = resolutionLevel;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void resetInspection() {
-            this.resolutionLevel = ResolutionLevel.NO_RESOLUTION;
-        }
 
         @Override
         public String toString() {
             return name;
+        }
+
+
+        static class TyepResolutionDetector extends DelegatedTypeDescription implements TypeResolutionInspector {
+
+            private ResolutionLevel resolutionLevel = ResolutionLevel.NO_RESOLUTION;
+
+
+            protected TyepResolutionDetector(String name, Supplier<Resolution> delegateSupplier) {
+                super(name, delegateSupplier);
+            }
+
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public void resetInspection() {
+                this.resolutionLevel = ResolutionLevel.NO_RESOLUTION;
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public ResolutionLevel getResolutionLevel() {
+                return resolutionLevel;
+            }
+
+            /** 
+             * {@inheritDoc} 
+             */
+            @Override
+            public void setResolutionLevel(ResolutionLevel resolutionLevel) {
+                if (this.resolutionLevel.ordinal() < resolutionLevel.ordinal())
+                    this.resolutionLevel = resolutionLevel;
+            }
+
+
+            @Override
+            protected TypeDescription delegate() {
+                this.setResolutionLevel(ResolutionLevel.TYPE_RESOLUTION);
+
+                return super.delegate();
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            public Generic getSuperClass() {
+                this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
+                return super.delegate().getSuperClass();
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            public TypeList.Generic getInterfaces() {
+                this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
+                return super.delegate().getInterfaces();
+            }
         }
     }
 }

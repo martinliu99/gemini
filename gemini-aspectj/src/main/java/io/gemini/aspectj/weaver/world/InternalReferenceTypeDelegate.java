@@ -92,6 +92,11 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         this.resolvedTypeX = resolvedTypeX;
     }
 
+
+    protected TypeDescription getTypeDescription() {
+        return typeDescription;
+    }
+
     @Override
     public ReferenceType getResolvedTypeX() {
         return this.resolvedTypeX;
@@ -225,13 +230,8 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     @Override
     public ResolvedType[] getDeclaredInterfaces() {
-        if (interfaces != null) {
-            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
-
+        if (interfaces != null)
             return interfaces;
-        }
-
-        this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
 
         TypeList.Generic genericInterfaces = this.typeDescription.getInterfaces();
         return this.interfaces = typeWorld.convertType(genericInterfaces);
@@ -243,25 +243,13 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         if (this.typeDescription.represents(Object.class))
             return null;
 
-        if (superclass != null) {
-            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
-
+        if (superclass != null)
             return superclass;
-        }
-
-        this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
 
         TypeDescription.Generic superClass = this.typeDescription.getSuperClass();
         return this.superclass = superClass != null 
                 ? typeWorld.convertType(superClass)
                 : this.typeWorld.getObjectType();
-    }
-
-    private void setResolutionLevel(ResolutionLevel resolutionLevel) {
-        if (this.typeDescription instanceof TypeResolutionInspector == false)
-            return;
-
-        ((TypeResolutionInspector) typeDescription).setResolutionLevel(resolutionLevel);;
     }
 
 
@@ -620,6 +608,39 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             sb.append(") : ");
             sb.append(pointcutExpression);
             return sb.toString();
+        }
+    }
+
+
+    static class TyepResolutionDetector extends InternalReferenceTypeDelegate {
+
+        public TyepResolutionDetector(BytebuddyWorld typeWorld, TypeDescription typeDescription, ReferenceType resolvedTypeX) {
+            super(typeWorld, typeDescription, resolvedTypeX);
+        }
+
+        @Override
+        public ResolvedType[] getDeclaredInterfaces() {
+            this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
+            return super.getDeclaredInterfaces();
+        }
+
+        @Override
+        public ResolvedType getSuperclass() {
+            ResolvedType superClass = super.getSuperclass();
+
+            if (superClass != null)
+                this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
+
+            return superClass;
+        }
+
+        private void setResolutionLevel(ResolutionLevel resolutionLevel) {
+            TypeDescription typeDescription = getTypeDescription();
+            if (typeDescription instanceof TypeResolutionInspector == false)
+                return;
+
+            ((TypeResolutionInspector) typeDescription).setResolutionLevel(resolutionLevel);;
         }
     }
 }

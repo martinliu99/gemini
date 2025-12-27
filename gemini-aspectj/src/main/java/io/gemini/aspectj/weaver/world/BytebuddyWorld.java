@@ -127,7 +127,8 @@ public class BytebuddyWorld extends World implements TypeWorld {
             return new InternalReferenceTypeDelegate(
                     this, 
                     describeType(referenceType.getName()), 
-                    referenceType);
+                    referenceType)
+            ;
         } catch (Exception e) {
             return null;
         }
@@ -270,6 +271,29 @@ public class BytebuddyWorld extends World implements TypeWorld {
     @Override
     public String toString() {
         return typePool.toString();
+    }
+
+
+    public static class TyepResolutionDetector extends BytebuddyWorld {
+
+
+        public TyepResolutionDetector(TypePool typePool, PlaceholderHelper placeholderHelper) {
+            super(typePool, placeholderHelper);
+        }
+
+
+        @Override
+        protected ReferenceTypeDelegate resolveDelegate(ReferenceType referenceType) {
+            try {
+                return new InternalReferenceTypeDelegate.TyepResolutionDetector(
+                        this, 
+                        describeType(referenceType.getName()), 
+                        referenceType)
+                ;
+            } catch (Exception e) {
+                return null;
+            }
+        }
     }
 
 

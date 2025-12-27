@@ -59,15 +59,26 @@ public interface TypeWorldFactory {
          */
         @Override
         public TypeWorld createTypeWorld(ClassLoader classLoader, JavaModule javaModule) {
-            ClassLoader cacheKey = ClassLoaderUtils.maskNull(classLoader);
-
-            TypePool typePool = typePoolFactory.createTypePool(classLoader, javaModule);
-            this.typeWorldCache.computeIfAbsent(
-                    cacheKey, 
-                    key -> doCreateTypeWorld(typePool, null)
+            return this.typeWorldCache.computeIfAbsent(
+                    ClassLoaderUtils.maskNull(classLoader), 
+                    key -> doCreateTypeWorld(
+                            typePoolFactory.createTypePool(classLoader, javaModule), 
+                            null
+                    )
             );
+        }
 
-            return typeWorldCache.get(cacheKey);
+
+        public static class TyepResolutionDetector extends Default  {
+
+            public TyepResolutionDetector(TypePoolFactory typePoolFactory) {
+                super(typePoolFactory);
+            }
+
+
+            protected TypeWorld doCreateTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
+                return new BytebuddyWorld.TyepResolutionDetector(typePool, placeholderHelper);
+            }
         }
     }
 }

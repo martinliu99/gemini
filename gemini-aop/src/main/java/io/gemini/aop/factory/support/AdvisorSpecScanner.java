@@ -142,17 +142,18 @@ public interface AdvisorSpecScanner {
         AdvisorSpecPostProcessor.postProcessSpecs(factoryContext, advisorSpecMap);
 
 
-        if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0
-                && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}', \n"
-                    + "  {} \n",
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
-                    StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ")
-            );
-        else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
-            LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}'. ",
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
-            );
+        if (LOGGER.isInfoEnabled()) {
+            if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0) 
+                LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}', \n"
+                        + "  {} \n",
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
+                        StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ")
+                );
+            else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
+                LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}'. ",
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
+                );
+        }
 
         return advisorSpecMap;
     }
@@ -202,7 +203,7 @@ public interface AdvisorSpecScanner {
                     }
                 }
 
-                if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled()) {
+                if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled()) {
                     if (CollectionUtils.isEmpty(advisorSpecs)) {
                         LOGGER.info("Did not find AdvisorSpec.{} via '{}'.", getSpecType(), resolverName);
                     } else {
@@ -583,7 +584,7 @@ public interface AdvisorSpecScanner {
                         if (aspectJAdvisorSpec == null)
                             continue;
 
-                        if (advisorSpecMap.containsKey(aspectJAdvisorSpec.getAdvisorName()) && LOGGER.isWarnEnabled())
+                        if (LOGGER.isWarnEnabled() && advisorSpecMap.containsKey(aspectJAdvisorSpec.getAdvisorName()))
                             LOGGER.warn("Ignored duplicate name AspectJ advice method. \n"
                                     + "  {}: {} \n"
                                     + "  AdviceMethod: {} \n",

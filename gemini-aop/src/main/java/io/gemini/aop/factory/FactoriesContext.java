@@ -84,13 +84,15 @@ class FactoriesContext implements Closeable {
         this.factoryContextMap = createFactoryContextMap(aopContext);
 
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create FactoriesContext with FactoryContexts, {}", 
-                    (System.nanoTime() - startedAt) / 1e9,
-                    StringUtils.join(factoryContextMap.keySet(), "\n  ", "\n  ", "\n")
-            );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create FactoriesContext.", (System.nanoTime() - startedAt) / 1e9);
+        if (LOGGER.isInfoEnabled()) {
+            if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
+                LOGGER.info("$Took '{}' seconds to create FactoriesContext with FactoryContexts, {}", 
+                        (System.nanoTime() - startedAt) / 1e9,
+                        StringUtils.join(factoryContextMap.keySet(), "\n  ", "\n  ", "\n")
+                );
+            else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+                LOGGER.info("$Took '{}' seconds to create FactoriesContext.", (System.nanoTime() - startedAt) / 1e9);
+        }
     }
 
     private void loadSettings(AopContext aopContext) {

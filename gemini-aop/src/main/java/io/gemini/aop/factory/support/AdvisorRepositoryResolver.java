@@ -73,17 +73,18 @@ public interface AdvisorRepositoryResolver {
         .collect( Collectors.toList() );
 
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisorRepositories.size() > 0 
-                && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}' \n"
-                    + "  {} \n",
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName,
-                    StringUtils.join(advisorRepositories, AdvisorRepository::getAdvisorName, "\n  ")
-            );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-                LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}'. ",
-                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName
+        if (LOGGER.isInfoEnabled()) {
+            if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisorRepositories.size() > 0) 
+                LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}' \n"
+                        + "  {} \n",
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName,
+                        StringUtils.join(advisorRepositories, AdvisorRepository::getAdvisorName, "\n  ")
                 );
+            else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+                    LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}'. ",
+                            (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName
+                    );
+        }
 
         return advisorRepositories;
     }

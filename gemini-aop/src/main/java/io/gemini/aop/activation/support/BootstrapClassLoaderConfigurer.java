@@ -90,14 +90,16 @@ public class BootstrapClassLoaderConfigurer {
 
             long time = System.nanoTime() - startedAt;
             launcherMetrics.setBootstrapCLConfigTime(time);
-            if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled())
-                LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
-                        + "  {} \n", 
-                        time / AopMetrics.NANO_TIME, 
-                        StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  ") 
-                );
-            else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
-                LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader.", time / AopMetrics.NANO_TIME);
+            if (LOGGER.isInfoEnabled()) {
+                if (aopContext.getDiagnosticLevel().isDebugEnabled())
+                    LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
+                            + "  {} \n", 
+                            time / AopMetrics.NANO_TIME, 
+                            StringUtils.join(nameMapping.entrySet(), entry -> entry.getKey() + " => " + entry.getValue(), "\n  ") 
+                    );
+                else if (aopContext.getDiagnosticLevel().isSimpleEnabled())
+                    LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader.", time / AopMetrics.NANO_TIME);
+            }
 
             return nameMapping;
         } catch (Exception e) {

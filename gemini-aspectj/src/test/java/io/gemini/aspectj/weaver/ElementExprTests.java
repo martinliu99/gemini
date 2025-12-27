@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.world.BytebuddyWorld;
 import io.gemini.core.pool.TypePoolFactory;
-import io.gemini.core.pool.TypePools;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -56,16 +55,16 @@ public class ElementExprTests {
 
     @Test
     public void testName() {
-        System.out.println("runnable name: " + anonymousClass.getClass().getName());
-        System.out.println("runnable canonicalName: " + anonymousClass.getClass().getCanonicalName());
-        System.out.println("runnable simpleName: " + anonymousClass.getClass().getSimpleName());
-        System.out.println("runnable typeName: " + anonymousClass.getClass().getTypeName());
-        System.out.println("");
+        LOGGER.info("runnable name: {}", anonymousClass.getClass().getName());
+        LOGGER.info("runnable canonicalName: {}", anonymousClass.getClass().getCanonicalName());
+        LOGGER.info("runnable simpleName: {}", anonymousClass.getClass().getSimpleName());
+        LOGGER.info("runnable typeName: {}", anonymousClass.getClass().getTypeName());
+        LOGGER.info("");
 
-        System.out.println("runnable2 name: " + lambdaClass.getClass().getName());
-        System.out.println("runnable2 canonicalName: " + lambdaClass.getClass().getCanonicalName());
-        System.out.println("runnable2 simpleName: " + lambdaClass.getClass().getSimpleName());
-        System.out.println("runnable2 typeName: " + lambdaClass.getClass().getTypeName());
+        LOGGER.info("runnable2 name: {}", lambdaClass.getClass().getName());
+        LOGGER.info("runnable2 canonicalName: {}", lambdaClass.getClass().getCanonicalName());
+        LOGGER.info("runnable2 simpleName: {}", lambdaClass.getClass().getSimpleName());
+        LOGGER.info("runnable2 typeName: {}", lambdaClass.getClass().getTypeName());
     }
 
     @Test
@@ -156,6 +155,16 @@ public class ElementExprTests {
             assertThat( elementExpr.matches( getClass().getName() ) ).isTrue();
             assertThat( elementExpr.matches( jdk.proxy2.$Proxy27.class.getName() ) ).isFalse();
         }
+
+
+        {
+            ElementMatcher<String> elementExpr = ExprParser.INSTANCE
+                    .parseTypeNameExpr(
+                            " *..*$$*By*CGLIB$$*");
+
+            assertThat( elementExpr.matches( "org.springframework.cglib.proxy.Enhancer$EnhancerKey$$KeyFactoryByCGLIB$$4ce19e8f" ) ).isTrue();
+            assertThat( elementExpr.matches( "org.framework.api.Application$$EnhancerBySpringCGLIB$$76580dc0" ) ).isTrue();
+        }
     }
 
 
@@ -211,7 +220,7 @@ public class ElementExprTests {
                 "org.apache.skywalking.apm.agent.core.plugin.loader.AgentClassLoader, org.apache.skywalking.apm.dependencies.net.bytebuddy.utility.dispatcher.JavaDispatcher$DynamicClassLoader"
         };
 
-        int count = 2000;
+        int count = 2000 *10;
 
         {
             List<ElementMatcher<String>> elementMatchers = new ArrayList<>(typeNameExpressions.length);
@@ -363,12 +372,12 @@ public class ElementExprTests {
 
     @Test 
     public void test_performance() {
-        TypePool typePool = new TypePools.EagerResolutionTypePool(
-                "test", 
+        TypePool typePool = new TypePool.Default(
 //                new CacheProvider.Simple.UsingSoftReference(), 
                 CacheProvider.NoOp.INSTANCE,
                 ClassFileLocator.ForClassLoader.ofSystemLoader(), 
-                ReaderMode.FAST);
+                ReaderMode.FAST
+        );
         TypeWorld typeWorld = new BytebuddyWorld(typePool, null);
 
         Pointcut matcher = ExprParser.INSTANCE.parsePointcutExpr(

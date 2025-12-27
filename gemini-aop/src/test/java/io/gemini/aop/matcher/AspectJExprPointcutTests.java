@@ -58,7 +58,7 @@ public class AspectJExprPointcutTests {
                 LOGGER.info("Matched '{}' for method '{}' with expression '{}' ", result, method, expression);
             }
         } catch (Throwable t) {
-            t.printStackTrace(System.out);            
+            LOGGER.error("Could not match expression", t);
         }
         
     }

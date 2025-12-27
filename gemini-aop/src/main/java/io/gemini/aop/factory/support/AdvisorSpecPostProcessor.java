@@ -79,7 +79,7 @@ public interface AdvisorSpecPostProcessor {
         }
 
 
-        if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
             LOGGER.info("$Took '{}' seconds to post-process {} AdvisorSpec instances under '{}'. ", 
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
             );

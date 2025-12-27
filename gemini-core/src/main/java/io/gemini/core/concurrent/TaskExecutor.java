@@ -117,10 +117,10 @@ public interface TaskExecutor {
                 executorService = Executors.newCachedThreadPool( 
                         new DaemonThreadFactory(executorName) );
 
-                if (this.diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && this.diagnosticLevel.isSimpleEnabled())
                     LOGGER.info("Initialized TaskExecutor '{}' in parallel mode.", executorName);
             } else {
-                if (this.diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && this.diagnosticLevel.isSimpleEnabled())
                     LOGGER.info("Initialized TaskExecutor '{}' in sequential mode.", executorName);
             }
         }

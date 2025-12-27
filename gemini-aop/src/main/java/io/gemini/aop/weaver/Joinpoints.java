@@ -427,7 +427,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
                     LOGGER.info("^Creating joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
@@ -512,7 +512,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
                     LOGGER.info("^Invoking {} for joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
@@ -748,7 +748,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
                     LOGGER.info("^Creating joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
@@ -785,7 +785,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticClass(typeName))
+                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
                     LOGGER.info("^Proceeding joinpoint instance of type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"

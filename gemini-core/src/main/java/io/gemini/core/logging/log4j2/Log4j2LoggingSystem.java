@@ -137,22 +137,24 @@ public class Log4j2LoggingSystem implements LoggingSystem {
             fallbackListener.setLevel(defaultStatusLevel);
 
             Logger logger = LoggerFactory.getLogger(LoggingSystem.class);
-            if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
-                logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
-                        + "  defaultStatusLevel: {} \n"
-                        + "  statusLevel: {} \n"
-                        + "  allLogLevel: {} \n"
-                        + "  configLocation: {} \n"
-                        + "  {} \n",
-                        (System.nanoTime() - startedAt) / 1e9,
-                        defaultStatusLevel, statusLevel,
-                        allLogLevel, configLocation,
-                        StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  ")
-                );
-            else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-                logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings. ",
-                        (System.nanoTime() - startedAt) / 1e9
-                );
+            if (LOGGER.isInfoEnabled()) {
+                if (diagnosticLevel.isDebugEnabled()) 
+                    logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
+                            + "  defaultStatusLevel: {} \n"
+                            + "  statusLevel: {} \n"
+                            + "  allLogLevel: {} \n"
+                            + "  configLocation: {} \n"
+                            + "  {} \n",
+                            (System.nanoTime() - startedAt) / 1e9,
+                            defaultStatusLevel, statusLevel,
+                            allLogLevel, configLocation,
+                            StringUtils.join(configSource.getLoggerPropertyNames(), name -> name + ": " + configSource.getProperty(name), "\n  ")
+                    );
+                else if (diagnosticLevel.isSimpleEnabled()) 
+                    logger.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings. ",
+                            (System.nanoTime() - startedAt) / 1e9
+                    );
+            }
         }
     }
 

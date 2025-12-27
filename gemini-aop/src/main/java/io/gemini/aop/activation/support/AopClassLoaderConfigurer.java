@@ -95,16 +95,18 @@ public class AopClassLoaderConfigurer {
 
 
         long time =  System.nanoTime() - startedAt;
-        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
-                    + "  parentFirstTypeExpressions: {}"
-                    + "  parentFirstResourceExpressions: {}",
-                    time / 1e9,
-                    StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
-                    StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
-            );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / 1e9);
+        if (LOGGER.isInfoEnabled()) {
+            if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
+                LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
+                        + "  parentFirstTypeExpressions: {}"
+                        + "  parentFirstResourceExpressions: {}",
+                        time / 1e9,
+                        StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
+                        StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
+                );
+            else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+                LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / 1e9);
+        }
 
         aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(time);
     }

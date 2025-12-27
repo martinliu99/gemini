@@ -90,15 +90,17 @@ public class ConfigViews {
 
 
         DiagnosticLevel diagnosticLevel = getDiagnosticLevel(configView);
-        if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("Created ConfigView with settings, \n"
-                    + "  LaunchArgs: {} \n"
-                    + "  InternalConfigLocation: {} \n"
-                    + "  UserDefinedConfigLocation: {} \n",
-                    launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() 
-            );
-        else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("Created ConfigView. ");
+        if (LOGGER.isInfoEnabled()) {
+            if (diagnosticLevel.isDebugEnabled()) 
+                LOGGER.info("Created ConfigView with settings, \n"
+                        + "  LaunchArgs: {} \n"
+                        + "  InternalConfigLocation: {} \n"
+                        + "  UserDefinedConfigLocation: {} \n",
+                        launchArgs, internalConfigLocation, userDefinedConfigLocations.keySet() 
+                );
+            else if (diagnosticLevel.isSimpleEnabled()) 
+                LOGGER.info("Created ConfigView. ");
+        }
 
         return configView;
     }
@@ -168,8 +170,7 @@ public class ConfigViews {
                 }
             }
         } catch (IOException e) {
-            LOGGER.error("Could not load properties file '{} for '{}'. \n", propertiesFileLocation, configName);
-            e.printStackTrace(System.out);
+            LOGGER.error("Could not load properties file '{} for '{}'. \n", propertiesFileLocation, configName, e);
         } finally {
             IOUtils.closeQuietly(inStream);
         }

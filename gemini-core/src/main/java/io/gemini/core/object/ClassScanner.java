@@ -166,26 +166,28 @@ public interface ClassScanner {
                     }
                 }
 
-                if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled())
-                    LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
-                            + "  verboseEnabled: {} \n"
-                            + "  diagnosticLevel: {} \n"
-                            + "  scannedClassLoaders: {} \n"
-                            + "  overrideClasspaths: {}\n"
-                            + "  acceptPackages: {} \n"
-                            + "  acceptJarPatterns: {} \n"
-                            + "  workThreads: {} \n"
-                            + "  filteredClasspathElementUrls: {} \n",
-                            (System.nanoTime() - startedAt) / 1e9, 
-                            verboseEnabled, diagnosticLevel, 
-                            scannedClassLoaders, overrideClasspaths,
-                            acceptPackages, acceptJarPatterns, 
-                            workThreads, filteredClasspathElementUrls
-                    );
-                else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
-                    LOGGER.info("$Took '{}' seconds to create ClassScanner with settings.",
-                            (System.nanoTime() - startedAt) / 1e9
-                    );
+                if (LOGGER.isInfoEnabled()) {
+                    if (diagnosticLevel.isDebugEnabled())
+                        LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
+                                + "  verboseEnabled: {} \n"
+                                + "  diagnosticLevel: {} \n"
+                                + "  scannedClassLoaders: {} \n"
+                                + "  overrideClasspaths: {}\n"
+                                + "  acceptPackages: {} \n"
+                                + "  acceptJarPatterns: {} \n"
+                                + "  workThreads: {} \n"
+                                + "  filteredClasspathElementUrls: {} \n",
+                                (System.nanoTime() - startedAt) / 1e9, 
+                                verboseEnabled, diagnosticLevel, 
+                                scannedClassLoaders, overrideClasspaths,
+                                acceptPackages, acceptJarPatterns, 
+                                workThreads, filteredClasspathElementUrls
+                        );
+                    else if (diagnosticLevel.isSimpleEnabled())
+                        LOGGER.info("$Took '{}' seconds to create ClassScanner with settings.",
+                                (System.nanoTime() - startedAt) / 1e9
+                        );
+                }
             }
         }
 

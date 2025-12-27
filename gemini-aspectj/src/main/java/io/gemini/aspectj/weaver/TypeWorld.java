@@ -25,8 +25,6 @@ import org.aspectj.weaver.World;
 
 import io.gemini.api.BaseException;
 import io.gemini.aspectj.weaver.world.BytebuddyWorld;
-import io.gemini.core.pool.TypeResolutionInspector;
-import io.gemini.core.pool.TypeResolutionInspector.ResolutionLevel;
 import net.bytebuddy.description.ByteCodeElement.Member;
 import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
@@ -207,30 +205,6 @@ public interface TypeWorld {
             );
         }
 
-        public void resetTypeInspection(TypeDefinition typeDefinition) {
-            TypeResolutionInspector typeResolutionInspector = getTypeResolutionInspector(typeDefinition);
-            if ( typeResolutionInspector == null)
-                return;
-
-            typeResolutionInspector.resetInspection();
-        }
-
-        public ResolutionLevel getTypeResolutionLevel(TypeDefinition typeDefinition) {
-            TypeResolutionInspector typeResolutionInspector = getTypeResolutionInspector(typeDefinition);
-
-            return typeResolutionInspector.getResolutionLevel();
-        }
-
-        private TypeResolutionInspector getTypeResolutionInspector(TypeDefinition typeDefinition) {
-            Resolution resolution = resolutionCache.get(typeDefinition);
-            if (resolution == null)
-                return null;
-
-            if (resolution.resolvedType == null || resolution.resolvedType instanceof TypeResolutionInspector == false)
-                return null;
-
-            return (TypeResolutionInspector) resolution.resolvedType;
-        }
 
         public void releaseCache(TypeDefinition typeDefinition) {
             if (typeDefinition == null) return;

@@ -89,7 +89,7 @@ class WeaverContext {
         this.loadSettings(aopContext);
 
 
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
+        if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to create WeaverContext. ", 
                     (System.nanoTime() - startedAt) / 1e9);
     }
@@ -102,12 +102,12 @@ class WeaverContext {
         // load joinpoint matcher settings
         {
             this.joinpointMatched = configView.getAsBoolean(WEAVER_JOINPOINT_MATCHED_KEY, true);
-            if (joinpointMatched == false && LOGGER.isWarnEnabled())
+            if (LOGGER.isWarnEnabled() && joinpointMatched == false)
                 LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_JOINPOINT_MATCHED_KEY);
 
             {
                 Set<String> classLoaderExpressions = configView.getAsStringSet(WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, new LinkedHashSet<>());
-                if (classLoaderExpressions.size() > 0 && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && classLoaderExpressions.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n"
                             + "  {} \n", 
                             classLoaderExpressions.size(), WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, 
@@ -141,7 +141,7 @@ class WeaverContext {
 
             {
                 Set<String> typeExpressions = configView.getAsStringSet(WEAVER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-                if (typeExpressions.size() > 0 && LOGGER.isInfoEnabled())
+                if (LOGGER.isInfoEnabled() && typeExpressions.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n"
                             + "  {} \n", 
                             typeExpressions.size(), WEAVER_TYPE_EXPRESSIONS_KEY,

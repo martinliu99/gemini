@@ -197,7 +197,7 @@ class WeaverCache implements Closeable {
 
                 if (LOGGER.isInfoEnabled() 
                         && (weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
-                                || weaverContext.getAopContext().isDiagnosticClass(typeName)) )
+                                || weaverContext.getAopContext().isDiagnosticType(typeName)) )
                     LOGGER.info("Created joinpoint descriptor for type '{}', \n"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n"
@@ -247,7 +247,7 @@ class WeaverCache implements Closeable {
                 advisors.add(advisor);
             }
 
-            if (ignoredAdvisors.size() > 0 && LOGGER.isWarnEnabled())
+            if (LOGGER.isWarnEnabled() && ignoredAdvisors.size() > 0)
                 LOGGER.warn("Removed duplicate Advice for type '{}', \n"
                         + "  ClassLoader: {} \n"
                         + "  Method: {} \n"

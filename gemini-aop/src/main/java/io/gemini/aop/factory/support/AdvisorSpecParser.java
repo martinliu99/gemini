@@ -477,7 +477,7 @@ public interface AdvisorSpecParser {
             String returningParameter = configView.getAsString(returningKey, "");
             if (adviceCategory.isAfterReturning()) 
                 this.returningParameter = returningParameter;
-            else if (StringUtils.hasText(returningParameter) && LOGGER.isInfoEnabled())
+            else if (LOGGER.isInfoEnabled() && StringUtils.hasText(returningParameter))
                 LOGGER.info("Ignored meaningless 'returning' property of non AspectJ @AfterReturning advice method. \n"
                         + "  {}: {} \n"
                         + "  AdviceMethod: {} \n"
@@ -491,7 +491,7 @@ public interface AdvisorSpecParser {
             String throwingParameter = configView.getAsString(throwingKey, "");
             if (adviceCategory.isAfterThrowing()) 
                 this.throwingParameter = throwingParameter;
-            else if (StringUtils.hasText(throwingParameter) && LOGGER.isInfoEnabled())
+            else if (LOGGER.isInfoEnabled() && StringUtils.hasText(throwingParameter))
                 LOGGER.info("Ignored meaningless 'throwing' property of non AspectJ @AfterThrowing advice method. \n"
                         + "  {}: {} \n"
                         + "  AdviceMethod: {} \n"

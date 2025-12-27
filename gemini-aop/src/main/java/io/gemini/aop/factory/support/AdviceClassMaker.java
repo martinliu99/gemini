@@ -103,10 +103,9 @@ interface AdviceClassMaker {
          */
         @SuppressWarnings("unchecked")
         public Class<? extends Advice> make(AdvisorContext advisorContext) {
+            // 1.inject generated advice class into given ClassLoader, and load it
             ClassLoader cacheKey = advisorContext.getClassLoader();
-
-            // 1.try to get advice class from local cache.
-            adviceClassRefMap.computeIfAbsent(
+            WeakReference<Class<? extends Advice>> adviceClassRef = adviceClassRefMap.computeIfAbsent(
                     cacheKey, 
                     key -> {
                         // try to generate advice class
@@ -117,7 +116,7 @@ interface AdviceClassMaker {
                                 .load(cacheKey, new ClassLoadingStrategy.ForUnsafeInjection())
                                 .getLoaded();
 
-                        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled())
+                        if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isDebugEnabled())
                             LOGGER.info("Took '{}' seconds to inject advisorClass '{}' into classloader '{}'.", 
                                     (System.nanoTime() - startedAt) / 1e9, aspectJAdvisorSpec.getAdviceClassName(), cacheKey
                             );
@@ -126,11 +125,12 @@ interface AdviceClassMaker {
                     }
             );
 
-            WeakReference<Class<? extends Advice>> adviceClassRef = adviceClassRefMap.get(cacheKey);
             Class<? extends Advice> adviceClass = adviceClassRef.get();
             if (adviceClass != null)
                 return adviceClass;
 
+
+            // 2.try to reload advice class from given ClassLoader
             try {
                 adviceClass = (Class<? extends Advice>) cacheKey.loadClass(aspectJAdvisorSpec.getAdviceClassName());
                 adviceClassRefMap.putIfAbsent(cacheKey, new WeakReference<Class<? extends Advice>>(adviceClass));

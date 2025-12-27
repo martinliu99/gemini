@@ -51,7 +51,7 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
         }
 
         /* do nothing */
-        if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && diagnosticLevel.isSimpleEnabled())
             LOGGER.info("^Redefining {}/{} loaded types in batch {}.", 
                     batch.size(), types.size(), index);
     }
@@ -79,7 +79,7 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
         long time = System.nanoTime() - startedAt;
 
         /* do nothing */
-        if (types.size() > 0 && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && types.size() > 0)
             LOGGER.info("$Took '{}' seconds to redefine {} loaded types in {} batchs.", 
                     time / AopMetrics.NANO_TIME, types.size(), amount);
 

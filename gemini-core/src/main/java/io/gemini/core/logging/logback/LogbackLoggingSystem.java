@@ -138,16 +138,18 @@ public class LogbackLoggingSystem implements LoggingSystem {
 
             Throwables.throwIfRequired(t);
         } finally {
-            if (diagnosticLevel.isDebugEnabled() && LOGGER.isInfoEnabled()) 
-                LOGGER.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
-                        + "  {} \n", 
-                        (System.nanoTime() - startedAt) / 1e9,
-                        StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  ")
-                );
-            else if (diagnosticLevel.isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-                LOGGER.info("$Took '{}' seconds to initialize LogbackLoggingSystem. ",
-                        (System.nanoTime() - startedAt) / 1e9
-                );
+            if (LOGGER.isInfoEnabled()) {
+                if (diagnosticLevel.isDebugEnabled()) 
+                    LOGGER.info("$Took '{}' seconds to initialize LogbackLoggingSystem with settings, \n"
+                            + "  {} \n", 
+                            (System.nanoTime() - startedAt) / 1e9,
+                            StringUtils.join(loggerSettings.keySet(), key -> key + ": " + loggerSettings.get(key), "\n  ")
+                    );
+                else if (diagnosticLevel.isSimpleEnabled()) 
+                    LOGGER.info("$Took '{}' seconds to initialize LogbackLoggingSystem. ",
+                            (System.nanoTime() - startedAt) / 1e9
+                    );
+            }
         }
     }
 

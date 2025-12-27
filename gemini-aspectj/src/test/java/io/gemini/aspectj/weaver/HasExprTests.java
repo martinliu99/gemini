@@ -108,7 +108,7 @@ public class HasExprTests extends AbstractTests {
             result = typePattern.matchesStatically(resolvedType);
             LOGGER.info("fast match result: " + result);
         } catch (Exception e) {
-            e.printStackTrace(System.out);
+            LOGGER.error("Could not match member.", e);
         }
         assertThat(result).isTrue();
         LOGGER.info("@Condition(result:  {}): {}.", result, data);

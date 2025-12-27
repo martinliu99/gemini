@@ -186,7 +186,7 @@ public class FactoryContext implements Closeable {
         this.advisorContextMap = new ConcurrentReferenceHashMap<>();
 
 
-        if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
+        if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to create FactoryContext '{}'.", 
                     (System.nanoTime() - startedAt) / 1e9, factoryName);
     }
@@ -217,7 +217,7 @@ public class FactoryContext implements Closeable {
                 internalConfig, 
                 userDefinedConfigs);
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled() && LOGGER.isInfoEnabled())
+        if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isDebugEnabled())
             LOGGER.info("Created ConfigView for Factory '{}' with settings, \n"
                     + "  InternalConfigLoc: {} \n"
                     + "  UserDefinedConfigLoc: {} \n",
@@ -253,7 +253,7 @@ public class FactoryContext implements Closeable {
 
         {
             Set<String> classLoaderExpressions = configView.getAsStringSet(FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
-            if (classLoaderExpressions.size() > 0 && LOGGER.isWarnEnabled())
+            if (LOGGER.isWarnEnabled() && classLoaderExpressions.size() > 0)
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
                         + "  {} \n", 
                         classLoaderExpressions.size(), FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, factoryName,
@@ -261,7 +261,7 @@ public class FactoryContext implements Closeable {
                 );
 
             Set<String> typeExpressions = configView.getAsStringSet(FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-            if (typeExpressions.size() > 0 && LOGGER.isWarnEnabled()) 
+            if (LOGGER.isWarnEnabled() && typeExpressions.size() > 0) 
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
                         + "  {} \n", 
                         typeExpressions.size(), FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, factoryName,
@@ -426,23 +426,13 @@ public class FactoryContext implements Closeable {
         return createAdvisorContext(joinpointClassLoader, javaModule, false);
     }
 
-    @SuppressWarnings("resource")
     public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, boolean validateContext) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
-
-        boolean sharedMode = useSharedAspectClassLoader(cacheKey);
-        if (sharedMode == true) {
-            this.advisorContextMap.computeIfAbsent(
-                    cacheKey, 
-                    key -> doCreateAdvisorContext(joinpointClassLoader, javaModule, sharedMode, validateContext)
-            );
-        } else {
-            AdvisorContext advisorContext = doCreateAdvisorContext(joinpointClassLoader, javaModule, sharedMode, validateContext);
-            // memory leak?
-            this.advisorContextMap.put(cacheKey, advisorContext);  // overwrite existing AdvisorContext
-        }
-
-        return this.advisorContextMap.get(cacheKey);
+        return this.advisorContextMap.computeIfAbsent( 
+                cacheKey, 
+                key -> doCreateAdvisorContext(
+                        joinpointClassLoader, javaModule, useSharedAspectClassLoader(cacheKey), validateContext)
+        );
     }
 
     private boolean useSharedAspectClassLoader(ClassLoader joinpointClassLoader) {

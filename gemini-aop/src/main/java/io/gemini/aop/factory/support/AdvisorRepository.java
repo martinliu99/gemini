@@ -110,18 +110,19 @@ public interface AdvisorRepository {
         .collect( Collectors.toList() );
 
 
-        if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisors.size() > 0
-                && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create {} Advisor instances under '{}' for '{}', \n"
-                    + "  {} \n", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisors.size(), factoryName, joinpointClassLoader,
-                    StringUtils.join(advisors, Advisor::getAdvisorName, "\n  ")
-            );
-        else if (aopContext.getDiagnosticLevel().isSimpleEnabled() && LOGGER.isInfoEnabled()) 
-            LOGGER.info("$Took '{}' seconds to create {} Advisor instances under '{}' for '{}'. ", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
-                    advisors.size(), factoryName, joinpointClassLoader
-            );
+        if (LOGGER.isInfoEnabled()) {
+            if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisors.size() > 0) 
+                LOGGER.info("$Took '{}' seconds to create {} Advisor instances under '{}' for '{}', \n"
+                        + "  {} \n", 
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisors.size(), factoryName, joinpointClassLoader,
+                        StringUtils.join(advisors, Advisor::getAdvisorName, "\n  ")
+                );
+            else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
+                LOGGER.info("$Took '{}' seconds to create {} Advisor instances under '{}' for '{}'. ", 
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
+                        advisors.size(), factoryName, joinpointClassLoader
+                );
+        }
 
         return advisors;
     }
@@ -459,8 +460,7 @@ public interface AdvisorRepository {
                             return null;
                         }
 
-                        this.adviceClass = clazz;
-                        return this.adviceClass;
+                        return (this.adviceClass = clazz);
                     } catch (Throwable t) {
                         if (LOGGER.isWarnEnabled())
                             LOGGER.warn("Could not load AdviceClass. \n"
@@ -489,33 +489,47 @@ public interface AdvisorRepository {
          */
         protected Supplier<? extends Advice> doCreateAdviceSupplier(
                 AdvisorContext advisorContext, Supplier<Class<? extends Advice>> adviceClassSupplier) {
-            return () -> {
-                Class<? extends Advice> adviceClass = adviceClassSupplier.get();
-                if (adviceClass == null)
-                    return null;
+            return new Supplier<Advice>() {
 
-                // try to instantiate advice object
-                Advice advice = null;
-                try {
-                    ObjectFactory objectFactory = advisorContext.getObjectFactory();
+                private Advice advice;
 
-                    advice = (Advice) objectFactory.createObject(adviceClass);
-                } catch (Throwable t) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored AdvisorSpec with uninstantiable AdviceClass. \n"
-                                + "  AdvisorSpec: {} \n"
-                                + "  AdviceClass: {} \n"
-                                + "  ClassLoader: {} \n",
-                                advisorSpec.getAdvisorName(), 
-                                adviceClass, 
-                                advisorContext.getJoinpointClassLoaderName(), 
-                                t
-                        );
 
-                    Throwables.throwIfRequired(t);
+                @Override
+                public Advice get() {
+                    if (advisorSpec.isPerInstance() == false && advice != null)
+                        return advice;
+
+
+                    Class<? extends Advice> adviceClass = adviceClassSupplier.get();
+                    if (adviceClass == null)
+                        return null;
+
+                    // try to instantiate advice object
+                    Advice advice = null;
+                    try {
+                        ObjectFactory objectFactory = advisorContext.getObjectFactory();
+
+                        advice = (Advice) objectFactory.createObject(adviceClass);
+
+                        if (advisorSpec.isPerInstance() == false)
+                            this.advice = advice;
+                    } catch (Throwable t) {
+                        if (LOGGER.isWarnEnabled())
+                            LOGGER.warn("Ignored AdvisorSpec with uninstantiable AdviceClass. \n"
+                                    + "  AdvisorSpec: {} \n"
+                                    + "  AdviceClass: {} \n"
+                                    + "  ClassLoader: {} \n",
+                                    advisorSpec.getAdvisorName(), 
+                                    adviceClass, 
+                                    advisorContext.getJoinpointClassLoaderName(), 
+                                    t
+                            );
+
+                        Throwables.throwIfRequired(t);
+                    }
+
+                    return advice;
                 }
-
-                return advice;
             };
         }
 

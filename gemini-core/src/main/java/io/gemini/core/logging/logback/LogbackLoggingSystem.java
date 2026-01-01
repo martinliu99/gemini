@@ -231,15 +231,18 @@ public class LogbackLoggingSystem implements LoggingSystem {
     }
 
     private void customizeLoggerContext(LoggerContext loggerContext) {
-        // adjust log level
+        // adjust existing logger level
         for (Logger logger : loggerContext.getLoggerList()) {
-            Level currentLevel = logger.getEffectiveLevel();
-            if (currentLevel.isGreaterOrEqual(allLogLevel) == false)
+            if (logger.getLevel() != null || logger.getEffectiveLevel().isGreaterOrEqual(allLogLevel))
                 continue;
 
             logger.setLevel(allLogLevel);
         }
 
+        // adjust root logger level
+        Logger rootlogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME);
+        if (rootlogger.getEffectiveLevel().isGreaterOrEqual(allLogLevel) == false)
+            rootlogger.setLevel(allLogLevel);
     }
 
     private void reportConfigurationErrorsIfNecessary(LoggerContext loggerContext) {

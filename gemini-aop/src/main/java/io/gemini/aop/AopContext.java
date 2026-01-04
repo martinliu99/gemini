@@ -18,11 +18,11 @@ package io.gemini.aop;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +41,9 @@ import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
 import io.gemini.core.pool.TypePoolFactory;
 import io.gemini.core.util.Assert;
-import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.agent.builder.AgentBuilder.LocationStrategy;
+import net.bytebuddy.matcher.CachingMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
@@ -73,6 +73,7 @@ public class AopContext implements Closeable {
 
 
     private final DiagnosticLevel diagnosticLevel;
+    private final ConcurrentMap<String, Boolean> diagnosticTypeCache = new ConcurrentHashMap<>();
     private ElementMatcher<String> diagnosticTypeMatcher;
 
     private boolean typeResolutionDetected;
@@ -180,8 +181,9 @@ public class AopContext implements Closeable {
         // load diagnostic settings
         {
             Set<String> diagnosticTypeExpressions = configView.getAsStringSet(DIAGNOSTIC_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-            this.diagnosticTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+            ElementMatcher<String> diagnosticTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
                     DIAGNOSTIC_TYPE_EXPRESSIONS_KEY, diagnosticTypeExpressions, ElementMatchers.none());
+            this.diagnosticTypeMatcher = new CachingMatcher<>(diagnosticTypeMatcher, diagnosticTypeCache);
 
             this.typeResolutionDetected = configView.getAsBoolean("aop.launcher.typeResolutionDetected", false);
         }
@@ -261,21 +263,8 @@ public class AopContext implements Closeable {
         return DiagnosticLevel.DISABLED != diagnosticLevel && diagnosticTypeMatcher.matches(typeName);
     }
 
-    public boolean isDiagnosticType(Class<?>... types) {
-        return isDiagnosticType( Arrays.asList(types) );
-    }
-
-    public boolean isDiagnosticType(List<Class<?>> types) {
-        if (CollectionUtils.isEmpty(types) == true)
-            return false;
-        if (DiagnosticLevel.DISABLED == diagnosticLevel)
-            return false;
-
-        for (Class<?> clazz : types) {
-            if (diagnosticTypeMatcher.matches(clazz.getName()))
-                return true;
-        }
-        return false;
+    public Boolean removeCachedDiagnosticType(String typeName) {
+        return diagnosticTypeCache.remove(typeName);
     }
 
     public boolean isTypeResolutionDetected() {

@@ -67,24 +67,24 @@ public class AopWeavers {
         AopMetrics.LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
 
         // 1.create AopWeaver
-        WeaverContext weaverContext = new WeaverContext(aopContext);
-
-        final AopWeaver aopWeaver = createAopWeaver(aopContext, advisorFactory, launcherMetrics, weaverContext);
+        final DefaultAopWeaver aopWeaver = createAopWeaver(aopContext, advisorFactory, launcherMetrics);
 
 
         // 2.install bytebuddy
-        installByteBuddy(instrumentation, aopContext, launcherMetrics, weaverContext, aopWeaver);
+        installByteBuddy(instrumentation, aopContext, launcherMetrics, aopWeaver);
 
         return aopWeaver;
     }
 
-    protected static AopWeaver createAopWeaver(AopContext aopContext, 
+    protected static DefaultAopWeaver createAopWeaver(AopContext aopContext, 
             AdvisorFactory advisorFactory, 
-            LauncherMetrics launcherMetrics,
-            WeaverContext weaverContext) {
+            LauncherMetrics launcherMetrics) {
         long startedAt = System.nanoTime();
 
-        // 1.create AopWeaver
+        // 1.create WeaverContext
+        WeaverContext weaverContext = new WeaverContext(aopContext);
+
+        // 2.create AopWeaver
         DefaultAopWeaver aopWeaver = aopContext.getDiagnosticLevel().isSimpleEnabled() == false
                 ? new DefaultAopWeaver(aopContext, advisorFactory, weaverContext)
                 : new DefaultAopWeaver.Diagnostic(aopContext, advisorFactory, weaverContext);
@@ -103,8 +103,7 @@ public class AopWeavers {
     protected static void installByteBuddy(Instrumentation instrumentation, 
             AopContext aopContext, 
             LauncherMetrics launcherMetrics,
-            WeaverContext weaverContext,
-            AopWeaver aopWeaver) {
+            DefaultAopWeaver aopWeaver) {
         long startedAt = System.nanoTime();
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("^Installing ByteBuddy, ");
@@ -116,7 +115,7 @@ public class AopWeavers {
             @Override
             public void onStart() {
                 long time = System.nanoTime() - startedAt;
-                launcherMetrics.setBytebuddyInstallationTime(time);
+                launcherMetrics.warmupByteBuddy(time);
                 if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                     LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / 1e9);
 
@@ -129,6 +128,7 @@ public class AopWeavers {
         };
 
 
+        WeaverContext weaverContext = aopWeaver.getWeaverContext();
         new AgentBuilder.Default()
             .with( new ByteBuddy()
                     .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )
@@ -158,7 +158,9 @@ public class AopWeavers {
             // warn up bootstrap ClassLoader
             .warmUp( System.class )
             .with( new DefaultTransformerInstallationListener() )
-            .with( new DefaultTransformationListener(aopContext) )
+            .with( aopContext.getDiagnosticLevel().isSimpleEnabled() == false
+                    ? new DefaultTransformationListener(aopContext)
+                    : new DefaultTransformationListener.Diagnostic(aopContext) )
             .disableClassFormatChanges()
             .type( aopWeaver )
             .transform( aopWeaver )

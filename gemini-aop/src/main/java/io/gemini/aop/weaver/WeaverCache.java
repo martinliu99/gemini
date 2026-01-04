@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.Advisor;
-import io.gemini.aop.weaver.Joinpoints.Descriptor;
+import io.gemini.aop.AopContext;
 import io.gemini.core.OrderComparator;
 import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
@@ -61,7 +61,9 @@ class WeaverCache implements Closeable {
     }
 
     public TypeCache createTypeCache(String typeName) {
-        return new TypeCache(typeName);
+        return weaverContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() == false
+                ? new TypeCache(typeName, weaverContext.getAopContext())
+                : new TypeCache.Diagnostic(typeName, weaverContext.getAopContext());
     }
 
     public TypeCache putTypeCache(ClassLoader classLoader, TypeCache typeCache) {
@@ -108,9 +110,10 @@ class WeaverCache implements Closeable {
     }
 
 
-    class TypeCache {
+    static class TypeCache {
 
         private final String typeName;
+        private final AopContext aopContext;
 
         // cache matching result per ClassLoader and Type in local storage for future transformation
         private Map<String /* methodSignature */, MethodDescription> methodSignatureMap;
@@ -123,8 +126,9 @@ class WeaverCache implements Closeable {
         private Map<String /* methodSignature */, Joinpoints.Descriptor> joinpointDescriptors;
 
 
-        TypeCache(String typeName) {
+        TypeCache(String typeName, AopContext aopContext) {
             this.typeName = typeName;
+            this.aopContext = aopContext;
 
             this.methodSignatureMap = Collections.emptyMap();
             this.methodSignatureAdvisorsMap = Collections.emptyMap();
@@ -155,6 +159,11 @@ class WeaverCache implements Closeable {
             return typeName;
         }
 
+        protected AopContext getAopContext() {
+            return aopContext;
+        }
+
+
         public Map<String, MethodDescription> getMethodSignatureMap() {
             return Collections.unmodifiableMap( methodSignatureMap );
         }
@@ -175,11 +184,11 @@ class WeaverCache implements Closeable {
         protected Joinpoints.Descriptor getJoinpointDescriptor(Lookup lookup, String methodSignature, Class<?> thisClass) {
             return joinpointDescriptors.computeIfAbsent(
                     methodSignature, 
-                    signature -> createJoinpointDescriptor(lookup, signature, thisClass)
+                    signature -> doCreateJoinpointDescriptor(lookup, signature, thisClass)
             );
         }
 
-        private Joinpoints.Descriptor createJoinpointDescriptor(Lookup lookup, String methodSignature, Class<?> thisClass) {
+        protected Joinpoints.Descriptor doCreateJoinpointDescriptor(Lookup lookup, String methodSignature, Class<?> thisClass) {
             ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
             ClassLoader joinpointClassLoader = thisClass.getClassLoader();
             try {
@@ -189,27 +198,11 @@ class WeaverCache implements Closeable {
                         joinpointClassLoader, methodSignature,
                         this.methodSignatureAdvisorsMap.get(methodSignature) );
 
-                Descriptor joinpointDescriptor = CollectionUtils.isEmpty(advisorChain)
+                return CollectionUtils.isEmpty(advisorChain)
                         ? null
                         : this.createJoinpointDescriptor(
                                 lookup, methodSignature, thisClass, 
                                 this.methodSignatureMap.get(methodSignature), advisorChain);
-
-                if (LOGGER.isInfoEnabled() 
-                        && (weaverContext.getAopContext().getDiagnosticLevel().isDebugEnabled() 
-                                || weaverContext.getAopContext().isDiagnosticType(typeName)) )
-                    LOGGER.info("Created joinpoint descriptor for type '{}', \n"
-                            + "  ClassLoader: {} \n"
-                            + "  Method: {} \n"
-                            + "  Advices: \n"
-                            + "    {} \n", 
-                            typeName, 
-                            joinpointClassLoader,
-                            methodSignature,
-                            StringUtils.join(advisorChain, Advisor::getAdvisorName, "\n    ")
-                    );
-
-                return joinpointDescriptor;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n"
@@ -287,6 +280,37 @@ class WeaverCache implements Closeable {
         @Override
         public String toString() {
             return typeName;
+        }
+
+
+        static class Diagnostic extends TypeCache {
+
+            private static final Logger LOGGER = LoggerFactory.getLogger(Diagnostic.class);
+
+
+            Diagnostic(String typeName, AopContext aopContext) {
+                super(typeName, aopContext);
+            }
+
+
+            @Override
+            protected Joinpoints.Descriptor doCreateJoinpointDescriptor(Lookup lookup, String methodSignature, Class<?> thisClass) {
+                Joinpoints.Descriptor descriptor = super.doCreateJoinpointDescriptor(lookup, methodSignature, thisClass);
+
+                if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(getTypeName()) )
+                    LOGGER.info("Created joinpoint descriptor for type '{}', \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n"
+                            + "  Advices: \n"
+                            + "    {} \n", 
+                            getTypeName(), 
+                            thisClass.getClassLoader(),
+                            methodSignature,
+                            StringUtils.join(descriptor.getAdvisorChain(), Advisor::getAdvisorName, "\n    ")
+                    );
+
+                return descriptor;
+            }
         }
     }
 }

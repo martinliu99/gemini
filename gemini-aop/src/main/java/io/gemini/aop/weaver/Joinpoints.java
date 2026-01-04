@@ -270,7 +270,8 @@ interface Joinpoints {
         private E adviceThrowing = (E) UNDEFINED_THROWING;
 
 
-        public DefaultMutableJoinpoint(Descriptor descriptor, Object thisObject, Object[] arguments, Supplier<? extends Advice> currentAdviceSupplier) {
+        public DefaultMutableJoinpoint(Descriptor descriptor, 
+                Object thisObject, Object[] arguments, Supplier<? extends Advice> currentAdviceSupplier) {
             super(descriptor, thisObject, arguments);
 
             this.currentAdviceSupplier = currentAdviceSupplier;
@@ -398,7 +399,6 @@ interface Joinpoints {
     }
 
 
-
     @BootstrapClassConsumer
     class MutableJoinpointDispatcher<T, E extends Throwable> implements BootstrapAdvice.Dispatcher<T, E>, Supplier<Advice> {
 
@@ -415,36 +415,25 @@ interface Joinpoints {
         private Advice currentAdvice;
 
 
-        public MutableJoinpointDispatcher(Descriptor descriptor, Object thisObject, Object[] arguments, AopContext aopContext) {
+        public MutableJoinpointDispatcher(Descriptor descriptor, 
+                Object thisObject, Object[] arguments, AopContext aopContext) {
             Assert.notNull(aopContext, "'aopContext' must not be null.");
             this.aopContext = aopContext;
 
             ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
 
             Class<?> thisClass = descriptor.getThisClass();
-            String typeName = thisClass.getName();
             ClassLoader joinpointClassLoader = thisClass.getClassLoader();
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
-                    LOGGER.info("^Creating joinpoint instance of type '{}', \n"
-                            + "  ClassLoader: {} \n"
-                            + "  Method: {} \n", 
-                            typeName, 
-                            joinpointClassLoader, 
-                            descriptor.getAccessibleName()
-                    );
-
-                joinpoint = new DefaultMutableJoinpoint<T, E>(descriptor, thisObject, arguments, this);
-
-                initialize(descriptor);
+                doInitialize(descriptor, thisObject, arguments);
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not create joinpoint instance of type '{}',"
                             + "  ClassLoader: {} \n"
                             + "  Method: {} \n", 
-                            typeName, 
+                            thisClass.getName(), 
                             joinpointClassLoader, 
                             descriptor.getAccessibleName(), t);
 
@@ -456,7 +445,10 @@ interface Joinpoints {
 
 
         @SuppressWarnings("unchecked")
-        protected void initialize(Descriptor descriptor) {
+        protected void doInitialize(Descriptor descriptor, Object thisObject, Object[] arguments) {
+            // create Joinpoint instance
+            joinpoint = new DefaultMutableJoinpoint<T, E>(descriptor, thisObject, arguments, this);
+
             // initialize advisorChain
             List<? extends Advisor> advisorChain = descriptor.getAdvisorChain();
             advisorChain = CollectionUtils.isEmpty(advisorChain) ? Collections.emptyList() : advisorChain;
@@ -494,6 +486,27 @@ interface Joinpoints {
         }
 
 
+        protected AopContext getAopContext() {
+            return aopContext;
+        }
+
+        protected List<? extends Advice.Before<T, E>> getBeforeAdvices() {
+            return beforeAdvices;
+        }
+
+        protected List<? extends Advice.After<T, E>> getAfterAdvices() {
+            return afterAdvices;
+        }
+
+        protected Class<?> getThisClass() {
+            return joinpoint.getDescriptor().getThisClass();
+        }
+
+        protected Object getAccessibleName() {
+            return joinpoint.getDescriptor().getAccessibleName();
+        }
+
+
         @Override
         public T dispatch() throws E {
             if (dispatchBeforeAdvice == true && this.beforeAdvices.size() == 0) {
@@ -508,27 +521,13 @@ interface Joinpoints {
 
             String typeName = getThisClass().getName();
             ClassLoader joinpointClassLoader = getThisClass().getClassLoader();
-            String adviceMessage = dispatchBeforeAdvice ? "BeforeAdvices" : "AfterAdvices";
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
-                    LOGGER.info("^Invoking {} for joinpoint instance of type '{}', \n"
-                            + "  ClassLoader: {} \n"
-                            + "  Method: {} \n"
-                            + "  Advices: \n"
-                            + "    {} \n", 
-                            adviceMessage,
-                            typeName,
-                            joinpointClassLoader, 
-                            getAccessibleName(), 
-                            StringUtils.join(dispatchBeforeAdvice ? this.beforeAdvices : this.afterAdvices, e -> e.getClass().getName(), "\n    ") 
-                    );
-
                 if (dispatchBeforeAdvice) {
-                    this.invokeBeforeAdvices(joinpointClassLoader);
+                    this.doInvokeBeforeAdvices(joinpointClassLoader);
                 } else {
-                    this.invokeAfterAdvices(joinpointClassLoader);
+                    this.doInvokeAfterAdvices(joinpointClassLoader);
                 }
 
                 return null;
@@ -539,7 +538,7 @@ interface Joinpoints {
                             + "  Method: {} \n"
                             + "  Advices: \n"
                             + "    {} \n",
-                            adviceMessage, 
+                            dispatchBeforeAdvice ? "BeforeAdvices" : "AfterAdvices", 
                             typeName,
                             joinpointClassLoader, 
                             getAccessibleName(), 
@@ -554,18 +553,7 @@ interface Joinpoints {
             }
         }
 
-        private Class<?> getThisClass() {
-            return joinpoint.getDescriptor().getThisClass();
-        }
-
-        /**
-         * @return
-         */
-        private Object getAccessibleName() {
-            return joinpoint.getDescriptor().getAccessibleName();
-        }
-
-        private void invokeBeforeAdvices(ClassLoader joinpointClassLoader) throws Throwable {
+        protected void doInvokeBeforeAdvices(ClassLoader joinpointClassLoader) throws Throwable {
             for (int index = 0; index < this.beforeAdvices.size(); index++) {
                 Before<T, E> advice = this.beforeAdvices.get(index);
 
@@ -592,7 +580,7 @@ interface Joinpoints {
             this.dispatchBeforeAdvice = false;
         }
 
-        private void invokeAfterAdvices(ClassLoader joinpointClassLoader) throws Throwable {
+        protected void doInvokeAfterAdvices(ClassLoader joinpointClassLoader) throws Throwable {
             for (int index = this.afterAdvices.size() - 1; index >= 0; index--) {
                 After<T, E> advice = this.afterAdvices.get(index);
 
@@ -662,6 +650,74 @@ interface Joinpoints {
         public E getAdviceThrowing() {
             return joinpoint.getAdviceThrowing();
         }
+
+
+        static class Diagnostic<T, E extends Throwable> extends MutableJoinpointDispatcher<T, E> {
+
+            private static final Logger LOGGER = LoggerFactory.getLogger(Diagnostic.class);
+
+
+            public Diagnostic(Descriptor descriptor, 
+                    Object thisObject, Object[] arguments, AopContext aopContext) {
+                super(descriptor, thisObject, arguments, aopContext);
+            }
+
+            @Override
+            protected void doInitialize(Descriptor descriptor, Object thisObject, Object[] arguments) {
+                Class<?> thisClass = descriptor.getThisClass();
+                String typeName = thisClass.getName();
+                if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName)) {
+                    LOGGER.info("^Creating joinpoint instance of type '{}', \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n", 
+                            typeName, 
+                            thisClass.getClassLoader(), 
+                            descriptor.getAccessibleName()
+                    );
+                }
+
+                super.doInitialize(descriptor, thisObject, arguments);
+            }
+
+
+            @Override
+            protected void doInvokeBeforeAdvices(ClassLoader joinpointClassLoader) throws Throwable {
+                Class<?> thisClass = getThisClass();
+                String typeName = thisClass.getName();
+                if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+                    LOGGER.info("^Invoking BeforeAdvices for joinpoint instance of type '{}', \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n"
+                            + "  Advices: \n"
+                            + "    {} \n", 
+                            typeName,
+                            joinpointClassLoader, 
+                            getAccessibleName(), 
+                            StringUtils.join(getBeforeAdvices(), e -> e.getClass().getName(), "\n    ") 
+                    );
+
+                super.doInvokeBeforeAdvices(joinpointClassLoader);
+            }
+
+            @Override
+            protected void doInvokeAfterAdvices(ClassLoader joinpointClassLoader) throws Throwable {
+                Class<?> thisClass = getThisClass();
+                String typeName = thisClass.getName();
+                if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+                    LOGGER.info("^Invoking AfterAdvices for joinpoint instance of type '{}', \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n"
+                            + "  Advices: \n"
+                            + "    {} \n", 
+                            typeName,
+                            joinpointClassLoader, 
+                            getAccessibleName(), 
+                            StringUtils.join(getAfterAdvices(), e -> e.getClass().getName(), "\n    ") 
+                    );
+
+                super.doInvokeAfterAdvices(joinpointClassLoader);
+            }
+        }
     }
 
 
@@ -672,7 +728,8 @@ interface Joinpoints {
 
 
         @SuppressWarnings("unchecked")
-        public DefaultProceedingJoinpoint(Descriptor descriptor, Object thisObject, Object[] arguments) {
+        public DefaultProceedingJoinpoint(Descriptor descriptor, 
+                Object thisObject, Object[] arguments) {
             super(descriptor, thisObject, arguments);
 
             // initialize advisorChain
@@ -736,7 +793,8 @@ interface Joinpoints {
         private DefaultProceedingJoinpoint<T> joinpoint = null;
 
 
-        public ProceedingJoinpointDispatcher(Descriptor descriptor, Object thisObject, Object[] arguments, AopContext aopContext) {
+        public ProceedingJoinpointDispatcher(Descriptor descriptor, 
+                Object thisObject, Object[] arguments, AopContext aopContext) {
             Assert.notNull(aopContext, "'aopContext' must not be null.");
             this.aopContext = aopContext;
 
@@ -748,16 +806,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
-                    LOGGER.info("^Creating joinpoint instance of type '{}', \n"
-                            + "  ClassLoader: {} \n"
-                            + "  Method: {} \n", 
-                            typeName, 
-                            joinpointClassLoader, 
-                            descriptor.getAccessibleName()
-                    );
-
-                joinpoint = new DefaultProceedingJoinpoint<T>(descriptor, thisObject, arguments);
+                doInitialize(descriptor, thisObject, arguments);
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not create joinpoint instance of type '{}', \n"
@@ -775,6 +824,27 @@ interface Joinpoints {
             }
         }
 
+        protected void doInitialize(Descriptor descriptor, Object thisObject, Object[] arguments) {
+            joinpoint = new DefaultProceedingJoinpoint<T>(descriptor, thisObject, arguments);
+        }
+
+
+        protected AopContext getAopContext() {
+            return aopContext;
+        }
+
+        protected Class<?> getThisClass() {
+            return joinpoint.getDescriptor().getThisClass();
+        }
+
+        protected Object getAccessibleName() {
+            return joinpoint.getDescriptor().getAccessibleName();
+        }
+
+        protected List<? extends Around<T, Throwable>> getAroundAdvice() {
+            return joinpoint.aroundAdvices;
+        }
+
 
         @Override
         public T dispatch() throws Throwable {
@@ -785,19 +855,7 @@ interface Joinpoints {
             try {
                 ThreadContext.setContextClassLoader(joinpointClassLoader);  // set joinpointClassLoader
 
-                if (LOGGER.isInfoEnabled() && aopContext.isDiagnosticType(typeName))
-                    LOGGER.info("^Proceeding joinpoint instance of type '{}', \n"
-                            + "  ClassLoader: {} \n"
-                            + "  Method: {} \n"
-                            + "  Around advices: \n"
-                            + "    {} \n", 
-                            typeName,
-                            joinpointClassLoader,
-                            getAccessibleName(), 
-                            StringUtils.join(getAroundAdvice(), e -> e.getClass().getName(), "\n    ")
-                    );
-
-                return joinpoint.proceed();
+                return doDospatch();
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("$Could not proceed joinpoint instance of type '{}', \n"
@@ -825,19 +883,8 @@ interface Joinpoints {
             }
         }
 
-        private Class<?> getThisClass() {
-            return joinpoint.getDescriptor().getThisClass();
-        }
-
-        /**
-         * @return
-         */
-        private Object getAccessibleName() {
-            return joinpoint.getDescriptor().getAccessibleName();
-        }
-
-        private List<? extends Around<T, Throwable>> getAroundAdvice() {
-            return joinpoint.aroundAdvices;
+        protected T doDospatch() throws Throwable {
+            return joinpoint.proceed();
         }
 
 
@@ -874,6 +921,54 @@ interface Joinpoints {
         @Override
         public Throwable getAdviceThrowing() {
             throw new UnsupportedOperationException();
+        }
+
+
+        static class Diagnostic<T> extends ProceedingJoinpointDispatcher<T> {
+
+            private static final Logger LOGGER = LoggerFactory.getLogger(Diagnostic.class);
+
+
+            public Diagnostic(Descriptor descriptor, 
+                    Object thisObject, Object[] arguments, AopContext aopContext) {
+                super(descriptor, thisObject, arguments, aopContext);
+            }
+
+
+            @Override
+            protected void doInitialize(Descriptor descriptor, Object thisObject, Object[] arguments) {
+                Class<?> thisClass = descriptor.getThisClass();
+                String typeName = thisClass.getName();
+                if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+                    LOGGER.info("^Creating joinpoint instance of type '{}', \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n", 
+                            typeName, 
+                            thisClass.getClassLoader(), 
+                            descriptor.getAccessibleName()
+                    );
+
+                super.doInitialize(descriptor, thisObject, arguments);
+            }
+
+
+            @Override
+            protected T doDospatch() throws Throwable {
+                String typeName = getThisClass().getName();
+                if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+                    LOGGER.info("^Proceeding joinpoint instance of type '{}', \n"
+                            + "  ClassLoader: {} \n"
+                            + "  Method: {} \n"
+                            + "  Around advices: \n"
+                            + "    {} \n", 
+                            typeName,
+                            getThisClass().getClassLoader(),
+                            getAccessibleName(), 
+                            StringUtils.join(getAroundAdvice(), e -> e.getClass().getName(), "\n    ")
+                    );
+
+                return doDospatch();
+            }
         }
     }
 }

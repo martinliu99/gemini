@@ -89,7 +89,6 @@ public class BootstrapClassLoaderConfigurer {
             injectByteCode(classByteCodeMap);
 
             long time = System.nanoTime() - startedAt;
-            launcherMetrics.setBootstrapCLConfigTime(time);
             if (LOGGER.isInfoEnabled()) {
                 if (aopContext.getDiagnosticLevel().isDebugEnabled())
                     LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
@@ -110,6 +109,9 @@ public class BootstrapClassLoaderConfigurer {
                         e);
 
             throw new AopException(e);
+        } finally {
+            launcherMetrics.setBootstrapCLConfigTime(
+                    System.nanoTime() - startedAt);
         }
     }
 

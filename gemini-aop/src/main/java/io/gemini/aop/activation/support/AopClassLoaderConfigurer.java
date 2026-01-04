@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.aop.AopException;
@@ -100,15 +101,16 @@ public class AopClassLoaderConfigurer {
                 LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
                         + "  parentFirstTypeExpressions: {}"
                         + "  parentFirstResourceExpressions: {}",
-                        time / 1e9,
+                        time / AopMetrics.NANO_TIME,
                         StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
                         StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
                 );
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-                LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / 1e9);
+                LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / AopMetrics.NANO_TIME);
         }
 
-        aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(time);
+        aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(
+                System.nanoTime() - startedAt );
     }
 
     private void configureParentFirstFilter(AopClassLoader aopClassLoader, 
@@ -165,7 +167,7 @@ public class AopClassLoaderConfigurer {
             @Override
             public String filterTypeName(String name) {
                 if (bootstrapClassMatcher.matches(name)) {
-                    throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via " 
+                    throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via @" 
                             + BootstrapClassConsumer.class.getName() );
                 }
 
@@ -175,7 +177,7 @@ public class AopClassLoaderConfigurer {
             @Override
             public String filterResourceName(String name) {
                 if (bootstrapResourceMatcher.matches(name)) {
-                    throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via "
+                    throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via @"
                             + BootstrapClassConsumer.class.getName() );
                 }
 

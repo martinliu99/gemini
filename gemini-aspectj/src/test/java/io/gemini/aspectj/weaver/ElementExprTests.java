@@ -209,7 +209,7 @@ public class ElementExprTests {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Test
-    public void testTypeNam_performancee() {
+    public void testTypeName_performance() {
         String[] typeNameExpressions = new String[] {
                 "*..$JaxbAccessor* || *..$Proxy*",
                 " *..$$*ByCGLIB$$* || *..$$*SpringCGLIB$$* || javassist* || org.groovy*",

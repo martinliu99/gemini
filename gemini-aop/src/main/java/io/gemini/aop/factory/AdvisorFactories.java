@@ -33,16 +33,17 @@ public class AdvisorFactories {
         Assert.notNull(aopContext, "'aopContext' must not be null.");
 
         long startedAt = System.nanoTime();
-
-        CompoundAdvisorFactory advisorFactory = new CompoundAdvisorFactory(aopContext);
-
-        // record metrics
         AopMetrics.LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
+        CompoundAdvisorFactory advisorFactory = null;
+        try {
+            advisorFactory = new CompoundAdvisorFactory(aopContext);
+            return advisorFactory;
+        } finally {
+            if (advisorFactory != null)
+                launcherMetrics.setAdvisorSpecs(advisorFactory.getAdvisorSpecNum());
 
-        launcherMetrics.setAdvisorSpecs(advisorFactory.getAdvisorSpecNum());
-        launcherMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
-
-        return advisorFactory;
+            launcherMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
+        }
     }
 
 }

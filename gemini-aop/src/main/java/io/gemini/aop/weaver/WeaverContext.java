@@ -18,6 +18,7 @@ package io.gemini.aop.weaver;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
+import net.bytebuddy.matcher.CachingMatcher;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
@@ -129,17 +131,17 @@ class WeaverContext {
                     );
 
 
-                this.classLoaderMatcher = ElementMatchers.not(
+                ElementMatcher<ClassLoader> classLoaderMatcher = ElementMatchers.not(
                         ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
                                 WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS, defaultExcludedClassLoaderExpressions, ElementMatchers.none() ) );
                 if (classLoaderExpressions.size() > 0)
-                    this.classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                    classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
                             WEAVER_CLASS_LOADER_EXPRESSIONS_KEY, classLoaderExpressions, ElementMatchers.any() )
                         .and( this.classLoaderMatcher );
-            }
+
+                this.classLoaderMatcher = new CachingMatcher<>(classLoaderMatcher, new ConcurrentHashMap<ClassLoader, Boolean>());
 
 
-            {
                 Set<String> typeExpressions = configView.getAsStringSet(WEAVER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
                 if (LOGGER.isInfoEnabled() && typeExpressions.size() > 0)
                     LOGGER.info("Loaded {} rules from '{}' setting. \n"

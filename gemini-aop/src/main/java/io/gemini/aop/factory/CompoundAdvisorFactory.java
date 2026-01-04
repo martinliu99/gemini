@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
-import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -109,44 +108,9 @@ class CompoundAdvisorFactory implements AdvisorFactory {
         Map<MethodDescription, List<Advisor>> methodAdvisorMap = new LinkedHashMap<>();
         // collect advisors per method
         for (Entry<FactoryContext, DefaultAdvisorFactory> entry: advisorFactoryMap.entrySet()) {
-            FactoryContext factoryContext = entry.getKey();
-            AdvisorFactory advisorFactory = entry.getValue();
-
-            // diagnostic log
-            String typeName = typeDescription.getTypeName();
-            if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().isDiagnosticType(typeName))
-                LOGGER.info("Getting Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.", 
-                        typeName, joinpointClassLoader, factoryContext.getFactoryName());
-
             // get advisors per AdvisorFactory
-            Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = advisorFactory
+            Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = entry.getValue()
                     .getAdvisors(typeDescription, joinpointClassLoader, javaModule);
-
-            if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().isDiagnosticType(typeName)) {
-                if (advisorMap.size() == 0)
-                    LOGGER.info("Did not get Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.",
-                            typeName, joinpointClassLoader, factoryContext.getFactoryName()
-                    );
-                else
-                    LOGGER.info("Got Advisors for type '{}' in AdvisorFactory, \n"
-                            + "  AdvisorFactory: {} \n"
-                            + "  ClassLoader: {} \n"
-                            + "  {} ",
-                            typeName, 
-                            factoryContext.getFactoryName(),
-                            joinpointClassLoader, 
-                            StringUtils.join(
-                                    advisorMap.entrySet(), 
-                                    methodAdvisorEntry -> 
-                                        new StringBuilder("Method: ")
-                                            .append( MethodUtils.getMethodSignature( methodAdvisorEntry.getKey() ) )
-                                            .append("\n  Advices: ")
-                                            .append( StringUtils.join(methodAdvisorEntry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
-                                    "\n  "
-                            )
-                    );
-            }
-
 
             // merge advisors
             for (Entry<? extends MethodDescription, List<? extends Advisor>> methodAdvisorEntry : advisorMap.entrySet()) {

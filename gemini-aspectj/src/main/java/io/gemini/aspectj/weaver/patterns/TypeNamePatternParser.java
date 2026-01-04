@@ -15,6 +15,8 @@
  */
 package io.gemini.aspectj.weaver.patterns;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
@@ -26,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.core.util.ReflectionUtils;
+import io.gemini.core.util.Throwables;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -52,37 +55,28 @@ public class TypeNamePatternParser extends PatternParser {
     }
 
 
-    public static class WildTypeNamePattern extends WildTypePattern {
+    static class WildTypeNamePattern extends WildTypePattern {
 
-        private static final Method MATCHES_EXACTLY_BY_NAME;
+        private static final MethodHandle MATCHES_EXACTLY_BY_NAME_METHOD_HANDLE;
 
         private final ElementMatcher<String> nameMatcher;
 
         static {
-            Method method = null;
             Class<WildTypePattern> clazz = WildTypePattern.class;
             String methodName = "matchesExactlyByName";
+            MethodHandle methodHanlde = null;
             try {
-                method = clazz.getDeclaredMethod(methodName, String.class, boolean.class, boolean.class);
+                Method method = clazz.getDeclaredMethod(methodName, String.class, boolean.class, boolean.class);
                 ReflectionUtils.makeAccessible(clazz, method);
+
+                methodHanlde = MethodHandles.lookup().unreflect(method);
             } catch (Exception e) {
-                LOGGER.error("Could not fetch method {} of class {}", methodName, clazz, e);
+                LOGGER.error("Could not fetch method handle {} of class {}", methodName, clazz, e);
             }
-            MATCHES_EXACTLY_BY_NAME = method;
+            MATCHES_EXACTLY_BY_NAME_METHOD_HANDLE = methodHanlde;
         }
 
 
-        /**
-         * @param names
-         * @param includeSubtypes
-         * @param dim
-         * @param endPos
-         * @param isVarArg
-         * @param typeParams
-         * @param upperBound
-         * @param additionalInterfaceBounds
-         * @param lowerBound
-         */
         public WildTypeNamePattern(WildTypePattern typePattern) {
             super(Arrays.asList(typePattern.getNamePatterns()), 
                     typePattern.isIncludeSubtypes(), 
@@ -105,8 +99,14 @@ public class TypeNamePatternParser extends PatternParser {
                 return nameMatcher.matches(typeName);
 
             try {
-                return (Boolean) MATCHES_EXACTLY_BY_NAME.invoke(this, typeName, false, false);
-            } catch (Exception e) {
+                return (boolean) MATCHES_EXACTLY_BY_NAME_METHOD_HANDLE.invoke(
+                        this, 
+                        typeName, 
+                        false, 
+                        false
+                    );
+            } catch (Throwable t) {
+                Throwables.throwIfRequired(t);
                 return false;
             }
         }

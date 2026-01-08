@@ -23,7 +23,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -84,8 +83,8 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
         // 1.prepare arguments
         Instrumentation instrumentation = ByteBuddyAgent.install();
 
-        CodeSource codeSource = AopTestActivator.class.getProtectionDomain().getCodeSource();
-        String launchLocation = new File(codeSource.getLocation().toURI()).getParentFile().getPath() + File.separator + "int-test" + File.separator;
+        URL rootResource = AopTestActivator.class.getClassLoader().getResource(".");
+        String launchLocation = new File(rootResource.toURI()).getParentFile().getPath() + File.separator + "aop-int-test" + File.separator;
         Path launchPath = Paths.get(launchLocation);
         if (Files.exists(launchPath) == false)
             Files.createDirectory( launchPath);

@@ -76,12 +76,10 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
         if (startedAt == DEFAULT)
             return;
 
-        long time = System.nanoTime() - startedAt;
-
         /* do nothing */
         if (LOGGER.isInfoEnabled() && types.size() > 0)
             LOGGER.info("$Took '{}' seconds to redefine {} loaded types in {} batchs.", 
-                    time / AopMetrics.NANO_TIME, types.size(), amount);
+                    System.nanoTime() - startedAt / AopMetrics.NANO_TIME, types.size(), amount);
 
         this.launcherMetrics.incrTypeRedefiningCount(types.size());
     }

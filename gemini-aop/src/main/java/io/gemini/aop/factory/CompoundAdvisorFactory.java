@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -62,7 +63,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled())
             LOGGER.info("$Took '{}' seconds to create CompoundAdvisorFactory, {}", 
-                    (System.nanoTime() - startedAt) / 1e9,
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME,
                     StringUtils.join(getAdvisorSpecNum().entrySet(), 
                             entry -> entry.getKey() + ": " + entry.getValue() + " AdvisorSpecs", "\n  ", "\n  ", "\n") 
             );

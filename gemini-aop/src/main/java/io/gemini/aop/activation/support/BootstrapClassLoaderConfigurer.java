@@ -81,6 +81,7 @@ public class BootstrapClassLoaderConfigurer {
 
         Map<String, String> nameMapping = Collections.emptyMap();
         LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
+        long time = 0;
         try {
             nameMapping = scanClassNameMapping();
 
@@ -88,7 +89,7 @@ public class BootstrapClassLoaderConfigurer {
 
             injectByteCode(classByteCodeMap);
 
-            long time = System.nanoTime() - startedAt;
+            time = System.nanoTime() - startedAt;
             if (LOGGER.isInfoEnabled()) {
                 if (aopContext.getDiagnosticLevel().isDebugEnabled())
                     LOGGER.info("$Took '{}' seconds to configure BoostrapClassLoader with renamed BootstrapClass, \n"
@@ -110,8 +111,8 @@ public class BootstrapClassLoaderConfigurer {
 
             throw new AopException(e);
         } finally {
-            launcherMetrics.setBootstrapCLConfigTime(
-                    System.nanoTime() - startedAt);
+            if (time > 0)
+                launcherMetrics.setBootstrapCLConfigTime(time);
         }
     }
 

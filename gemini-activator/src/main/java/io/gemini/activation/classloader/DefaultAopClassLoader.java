@@ -21,7 +21,6 @@ import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import io.gemini.api.annotation.NoMatching;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.api.classloader.ClassLoaders;
 
@@ -35,7 +34,6 @@ import io.gemini.api.classloader.ClassLoaders;
  * @since  1.0.0
  *
  */
-@NoMatching(classLoader = true)
 public class DefaultAopClassLoader extends AopClassLoader {
 
     private static final Set<String> BUILTIN_PARENT_FIRST_CLASS_PREFIXES = new LinkedHashSet<>();

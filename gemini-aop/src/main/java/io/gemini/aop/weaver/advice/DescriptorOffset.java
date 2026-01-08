@@ -19,11 +19,9 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import io.gemini.aop.java.lang.BootstrapAdvice;
 import io.gemini.aop.java.lang.BootstrapClassConsumer;
@@ -38,6 +36,7 @@ import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.implementation.bytecode.StackManipulation;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.implementation.bytecode.collection.ArrayFactory;
+import net.bytebuddy.implementation.bytecode.member.Invokedynamic;
 import net.bytebuddy.implementation.bytecode.member.MethodInvocation;
 import net.bytebuddy.utility.JavaConstant;
 
@@ -71,15 +70,14 @@ public interface DescriptorOffset {
             return Descriptor.class;
         }
 
-
-        /**
-         * @param methodSignature 
-         * @param methodDescription
-         * @return
-         */
-        protected List<JavaConstant> doGetMethodArguments(String methodSignature) {
+        protected List<JavaConstant> doGetMethodArgumentJavaConstants() {
             return Arrays.asList( 
                     JavaConstant.Simple.wrap(methodSignature) );
+        }
+
+        protected List<StackManipulation> doGetMethodArgumentStackManipulations() {
+            return Arrays.asList( 
+                    JavaConstant.Simple.wrap(methodSignature).toStackManipulation() );
         }
     }
 
@@ -107,21 +105,14 @@ public interface DescriptorOffset {
         @Override
         public OffsetMapping make(InDefinedShape target, Loadable<Descriptor> annotation,
                 AdviceType adviceType) {
-            List<JavaConstant> methodArguments = doGetMethodArguments(methodSignature);
-
-            List<StackManipulation> createDescriptorMethod = new ArrayList<StackManipulation>(1 + 1 + 1);
-            createDescriptorMethod.add( MethodInvocation.lookup() );
-            createDescriptorMethod.add( 
-                    ArrayFactory.forType(STRING).withValues(
-                            methodArguments.stream()
-                            .map( arg -> arg.toStackManipulation() )
-                            .collect(Collectors.toList())
-                    )
-            );
-            createDescriptorMethod.add( MethodInvocation.invoke(CREATE_DESCRIPTOR_METHOD) );
-
             return new ForStackManipulation(
-                    new StackManipulation.Compound(createDescriptorMethod),
+                    new StackManipulation.Compound(
+//                            NullConstant.INSTANCE,
+                            MethodInvocation.lookup(),
+                            ArrayFactory.forType(STRING).withValues(
+                                    doGetMethodArgumentStackManipulations()),
+                            MethodInvocation.invoke(CREATE_DESCRIPTOR_METHOD)
+                    ),
                     target.getType(), 
                     target.getType(), 
                     Assigner.Typing.STATIC
@@ -147,16 +138,15 @@ public interface DescriptorOffset {
         @Override
         public OffsetMapping make(InDefinedShape target, Loadable<Descriptor> annotation,
                 AdviceType adviceType) {
-            List<JavaConstant> descriptorIndyBSMArgs = doGetMethodArguments(methodSignature);
-
-            StackManipulation createDescriptorBSM = MethodInvocation.invoke(CREATE_DESCRIPTOR_INDY_BSM).dynamic(
-                    CREATE_DESCRIPTOR_INDY_BSM.getName(),
-                    target.getType().asErasure(),
-                    Collections.<TypeDescription>emptyList(),
-                    descriptorIndyBSMArgs);
-
             return new ForStackManipulation(
-                    createDescriptorBSM, 
+                    new Invokedynamic(
+                            CREATE_DESCRIPTOR_INDY_BSM.getName(),
+                            JavaConstant.MethodType.of(
+                                    target.getType().asErasure(), 
+                                    Collections.<TypeDescription>emptyList()),
+                            JavaConstant.MethodHandle.of(CREATE_DESCRIPTOR_INDY_BSM),
+                            doGetMethodArgumentJavaConstants()
+                    ), 
                     target.getType(), 
                     target.getType(), 
                     Assigner.Typing.STATIC

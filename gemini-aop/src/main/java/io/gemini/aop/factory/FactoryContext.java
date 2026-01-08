@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -35,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics;
 import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.aop.factory.classloader.AspectTypePool;
 import io.gemini.aop.factory.classloader.AspectTypeWorld;
@@ -43,7 +45,6 @@ import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
 import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
 import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.aop.matcher.ElementMatcherFactory;
-import io.gemini.api.aop.MatchingContext;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
@@ -60,7 +61,6 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import io.gemini.core.util.StringUtils;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
@@ -74,8 +74,7 @@ public class FactoryContext implements Closeable {
     private static final String FACTORY_JOINPOINT_FIRST_TYPE_EXPRESSIONS = "aop.factory.joinpointFirstTypeExpressions";
     private static final String FACTORY_JOINPOINT_FIRST_RESOURCE_EXPRESSIONS = "aop.factory.joinpointFirstResourceExpressions";
 
-    private static final String FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY = "aop.factory.factoryClassLoaderExpressions";
-    private static final String FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY = "aop.factory.factoryTypeExpressions";
+    private static final String FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY = "aop.factory.factoryClassLoaderTypeExpressions";
 
     private static final String FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY = "aop.factory.enabledAdvisorExpressions";
 
@@ -102,8 +101,7 @@ public class FactoryContext implements Closeable {
     private ElementMatcher<String> joinpointFirstTypeMatcher;
     private ElementMatcher<String> joinpointFirstResourcesMatcher;
 
-    private ElementMatcher<MatchingContext> factoryClassLoaderMatcher;
-    private ElementMatcher<TypeDescription> factoryTypeMatcher;
+    private Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> factoryClassLoaderTypeMatchers;
 
     private ElementMatcher<String> enabledAdvisorMatcher;
 
@@ -188,7 +186,7 @@ public class FactoryContext implements Closeable {
 
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to create FactoryContext '{}'.", 
-                    (System.nanoTime() - startedAt) / 1e9, factoryName);
+                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, factoryName);
     }
 
     @SuppressWarnings("rawtypes")
@@ -252,40 +250,44 @@ public class FactoryContext implements Closeable {
         }
 
         {
-            Set<String> classLoaderExpressions = configView.getAsStringSet(FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, Collections.emptySet());
-            if (LOGGER.isWarnEnabled() && classLoaderExpressions.size() > 0)
+            // parse classLoader/type expression pair
+            Set<String> classLoaderTypeExpressions = 
+                    configView.getAsStringSet(FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
+            Map<String, String> classLoaderTypeExpressionPairs = new LinkedHashMap<>();
+            for (String classLoaderTypeExpression : classLoaderTypeExpressions) {
+                int pos = classLoaderTypeExpression.indexOf(":");
+                String classLoaderExpression = pos != -1 ? classLoaderTypeExpression.substring(0, pos) : classLoaderTypeExpression;
+                String typeExpression = pos != -1 ? classLoaderTypeExpression.substring(pos+1) : "*";
+
+                classLoaderTypeExpressionPairs.put(classLoaderExpression.trim(), typeExpression.trim());
+            }
+            if (LOGGER.isWarnEnabled() && classLoaderTypeExpressionPairs.size() > 0)
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
                         + "  {} \n", 
-                        classLoaderExpressions.size(), FACTORY_FACTORY_CLASS_LOADER_EXPRESSIONS_KEY, factoryName,
-                        StringUtils.join(classLoaderExpressions, "\n  ")
+                        classLoaderTypeExpressionPairs.size(), FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(classLoaderTypeExpressionPairs.entrySet(), entry -> entry.getKey() + ": " + entry.getValue(), "\n  ")
                 );
 
-            Set<String> typeExpressions = configView.getAsStringSet(FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-            if (LOGGER.isWarnEnabled() && typeExpressions.size() > 0) 
-                LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
-                        + "  {} \n", 
-                        typeExpressions.size(), FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, factoryName,
-                        StringUtils.join(typeExpressions, "\n  ")
+            // parse classLoader/type matcher
+            Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> classLoaderTypeMatchers = 
+                    new LinkedHashMap<>(classLoaderTypeExpressions.size() + 1);
+            for (Entry<String, String> entry : classLoaderTypeExpressionPairs.entrySet()) {
+                ElementMatcher<ClassLoader> classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                        FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
+                        entry.getKey(), 
+                        ElementMatchers.none()
                 );
 
-            this.factoryClassLoaderMatcher = new ElementMatcher<MatchingContext>() {
-                @Override
-                public boolean matches(MatchingContext matchingContext) {
-                    if (classLoaderExpressions.size() == 0)
-                        return true;
+                ElementMatcher<String> typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                        FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
+                        entry.getValue(),
+                        ElementMatchers.none()
+                );
 
-                    for (String classLoaderExpression : classLoaderExpressions) {
-                        if (matchingContext.isClassLoader(classLoaderExpression) == true) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            };
+                classLoaderTypeMatchers.put(classLoaderMatcher, typeMatcher);
+            }
 
-            ElementMatcher<String> typeNameMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_FACTORY_TYPE_EXPRESSIONS_KEY, typeExpressions, ElementMatchers.any() );
-            this.factoryTypeMatcher = typeDescription -> typeDescription != null && typeNameMatcher.matches(typeDescription.getTypeName());
+            this.factoryClassLoaderTypeMatchers = classLoaderTypeMatchers;
         }
 
         {
@@ -375,12 +377,8 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public ElementMatcher<MatchingContext> getFactoryClassLoaderMatcher() {
-        return factoryClassLoaderMatcher;
-    }
-
-    public ElementMatcher<TypeDescription> getFactoryTypeMatcher() {
-        return factoryTypeMatcher;
+    public Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> getFactoryClassLoaderTypeMatchers() {
+        return factoryClassLoaderTypeMatchers;
     }
 
     public boolean isEnabledAdvisor(String advisorName) {
@@ -422,16 +420,21 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule) {
-        return createAdvisorContext(joinpointClassLoader, javaModule, false);
+    public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
+            boolean joinpointClassLoaderAccepted) {
+        return createAdvisorContext(joinpointClassLoader, javaModule, joinpointClassLoaderAccepted, false);
     }
 
-    public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, boolean validateContext) {
+    public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
+            boolean joinpointClassLoaderAccepted, boolean validateContext) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
         return this.advisorContextMap.computeIfAbsent( 
                 cacheKey, 
                 key -> doCreateAdvisorContext(
-                        joinpointClassLoader, javaModule, useSharedAspectClassLoader(cacheKey), validateContext)
+                        joinpointClassLoader, javaModule, 
+                        joinpointClassLoaderAccepted, validateContext,
+                        useSharedAspectClassLoader(cacheKey)
+                )
         );
     }
 
@@ -479,7 +482,7 @@ public class FactoryContext implements Closeable {
     }
 
     protected AdvisorContext doCreateAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            boolean sharedMode, boolean validateContext) {
+            boolean joinpointClassLoaderAccepted, boolean validateContext, boolean sharedMode) {
         // create AspectClassLoader & objectFactory per ClassLoader
         AspectClassLoader classLoader = this.classLoader;
         ObjectFactory objectFactory = this.objectFactory;
@@ -498,9 +501,9 @@ public class FactoryContext implements Closeable {
         return new AdvisorContext(this,
                 ClassLoaderUtils.getClassLoaderName(joinpointClassLoader), javaModule,
                 classLoader, objectFactory, 
-                typePoolFactory, typePool, 
-                typeWorldFactory, typeWorld,
-                validateContext);
+                typePool, typePoolFactory.createTypePool(joinpointClassLoader, javaModule),
+                typeWorld, typeWorldFactory.createTypeWorld(joinpointClassLoader, javaModule),
+                joinpointClassLoaderAccepted, validateContext);
     }
 
     @Override

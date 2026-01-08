@@ -109,8 +109,7 @@ public class AopClassLoaderConfigurer {
                 LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / AopMetrics.NANO_TIME);
         }
 
-        aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(
-                System.nanoTime() - startedAt );
+        aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(time);
     }
 
     private void configureParentFirstFilter(AopClassLoader aopClassLoader, 

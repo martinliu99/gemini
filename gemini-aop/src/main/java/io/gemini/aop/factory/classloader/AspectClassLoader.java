@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
-import io.gemini.api.annotation.NoMatching;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.api.classloader.BaseClassLoader;
 import io.gemini.core.classloader.ThreadContext;
@@ -62,7 +61,6 @@ import net.bytebuddy.matcher.ElementMatchers;
  * @author   martin.liu
  * @since	 1.0
  */
-@NoMatching(classLoader = true)
 public class AspectClassLoader extends BaseClassLoader {
 
     private final String loaderName;

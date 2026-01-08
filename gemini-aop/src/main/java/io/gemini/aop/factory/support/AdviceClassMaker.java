@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics;
 import io.gemini.aop.factory.AdvisorContext;
 import io.gemini.aop.factory.support.AspectJPointcutAdvisorSpec.AdviceCategory;
 import io.gemini.aop.matcher.AdviceMethodMatcher;
@@ -103,22 +104,22 @@ interface AdviceClassMaker {
          */
         @SuppressWarnings("unchecked")
         public Class<? extends Advice> make(AdvisorContext advisorContext) {
-            // 1.inject generated advice class into given ClassLoader, and load it
-            ClassLoader cacheKey = advisorContext.getClassLoader();
+            // 1.inject generated advice class into given AspectClassLoader, and load it
+            ClassLoader aspectClassLoader = advisorContext.getClassLoader();
             WeakReference<Class<? extends Advice>> adviceClassRef = adviceClassRefMap.computeIfAbsent(
-                    cacheKey, 
+                    aspectClassLoader, 
                     key -> {
                         // try to generate advice class
                         long startedAt = System.nanoTime();
                         this.adviceClassUnloaded = ByteCodeGenerator.INSTANCE.make(advisorContext, this);
 
                         Class<? extends Advice> adviceClass = adviceClassUnloaded
-                                .load(cacheKey, new ClassLoadingStrategy.ForUnsafeInjection())
+                                .load(aspectClassLoader, new ClassLoadingStrategy.ForUnsafeInjection())
                                 .getLoaded();
 
                         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isDebugEnabled())
                             LOGGER.info("Took '{}' seconds to inject advisorClass '{}' into classloader '{}'.", 
-                                    (System.nanoTime() - startedAt) / 1e9, aspectJAdvisorSpec.getAdviceClassName(), cacheKey
+                                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, aspectJAdvisorSpec.getAdviceClassName(), aspectClassLoader
                             );
 
                         return new WeakReference<Class<? extends Advice>>(adviceClass);
@@ -132,8 +133,8 @@ interface AdviceClassMaker {
 
             // 2.try to reload advice class from given ClassLoader
             try {
-                adviceClass = (Class<? extends Advice>) cacheKey.loadClass(aspectJAdvisorSpec.getAdviceClassName());
-                adviceClassRefMap.putIfAbsent(cacheKey, new WeakReference<Class<? extends Advice>>(adviceClass));
+                adviceClass = (Class<? extends Advice>) aspectClassLoader.loadClass(aspectJAdvisorSpec.getAdviceClassName());
+                adviceClassRefMap.putIfAbsent(aspectClassLoader, new WeakReference<Class<? extends Advice>>(adviceClass));
             } catch (Throwable t) { 
                 Throwables.throwIfRequired(t);
                 /* ignore other exception */ 

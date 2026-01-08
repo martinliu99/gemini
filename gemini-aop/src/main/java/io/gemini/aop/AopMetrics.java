@@ -48,7 +48,6 @@ public class AopMetrics {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopMetrics.class);
 
     private static final int POLLING_TIMEOUT = 100;
-    private static final ClassLoader REJECTED_CLASSLOADER = new ClassLoader() {};
 
     private static final int ITEM_NAME_LENGTH = 40;
     public static final double NANO_TIME = 1e9;
@@ -106,7 +105,7 @@ public class AopMetrics {
     }
 
 
-    public TypeMetrics createTypeMetric(ClassLoader classLoader, String typeName) {
+    public TypeMetrics createTypeMetrics(ClassLoader classLoader, String typeName) {
         TYPE_METRICS_HOLDER.set(
                 new TypeMetrics(classLoader) );
 
@@ -136,11 +135,12 @@ public class AopMetrics {
                 if (typeMetrics == null)
                     continue;
 
+                typeMetricsList.clear();
                 typeMetricsList.add(typeMetrics);
 
                 queue.drainTo(typeMetricsList, batchSize - 1);
+
                 this.doProcessMetrics(typeMetricsList);
-                typeMetricsList.clear();
             } catch (Throwable t) {
                 Throwables.throwIfRequired(t);
             }
@@ -149,15 +149,13 @@ public class AopMetrics {
 
     protected void doProcessMetrics(List<TypeMetrics> typeMetricsList) {
         for (TypeMetrics typeMetrics : typeMetricsList) {
-//            ClassLoader cacheKey = typeMetrics.getAdvisorCreationTime() == 0 && typeMetrics.getTypeTransformationTime() == 0
-//                    ? REJECTED_CLASSLOADER 
-//                    : ClassLoaderUtils.maskNull(typeMetrics.getClassLoader());
             ClassLoader cacheKey = ClassLoaderUtils.maskNull(typeMetrics.getClassLoader());
             ClassLoaderMetrics classLoaderMetrics = this.classLoaderMetricsMap.computeIfAbsent(
                     cacheKey, 
                     key -> new ClassLoaderMetrics(cacheKey)
             );
 
+            // compute weaving metrics
             classLoaderMetrics.incrTypeWeavingCount(1);
             classLoaderMetrics.incrTypeWeavingTime( typeMetrics.getTypeWeavingTime() );
 
@@ -178,6 +176,24 @@ public class AopMetrics {
             long typeTransformationTime = typeMetrics.getTypeTransformationTime();
             classLoaderMetrics.incrTypeTransformationCount( typeTransformationTime > 0 ? 1 : 0 );
             classLoaderMetrics.incrTypeTransformationTime( typeTransformationTime );
+
+
+            // collect type resolution info
+            for (Map<String, ResolutionLevel> advisorResolutuonLevelMap : typeMetrics.getAdvisorResolutuonLevelMaps()) {
+                for (Entry<String, ResolutionLevel> entry : advisorResolutuonLevelMap.entrySet()) {
+                    Map<String, Integer> advisorTypeCountMap = classLoaderMetrics.getTypeResolutuonLevelAdvisorMap()
+                    .computeIfAbsent(
+                            entry.getValue(), 
+                            key -> new LinkedHashMap<>()
+                    );
+
+                    String advisorName = entry.getKey();
+                    int count = advisorTypeCountMap.containsKey(advisorName)
+                            ? advisorTypeCountMap.get(advisorName)
+                            : 0;
+                    advisorTypeCountMap.put(advisorName, ++count);
+                }
+            }
         }
     }
 
@@ -410,9 +426,7 @@ public class AopMetrics {
 
                 Map<String, Object> valueMap = new HashMap<>();
 
-                String classLoaderId = classLoaderMetrics.getClassLoader() == REJECTED_CLASSLOADER
-                        ? "RejectedClassLoaders"
-                        : ClassLoaderUtils.getClassLoaderId(classLoaderMetrics.getClassLoader());
+                String classLoaderId = ClassLoaderUtils.getClassLoaderId(classLoaderMetrics.getClassLoader());
                 valueMap.put("itemName", format(
                         ClassUtils.abbreviate( classLoaderId, ITEM_NAME_LENGTH ) ) );
 
@@ -505,7 +519,8 @@ public class AopMetrics {
                         String typeResolution = ClassUtils.abbreviate( advisorEntry.getKey(), 120 ) 
                                 + ": " + advisorEntry.getValue() 
                                 + "/" + classLoaderMetrics.getTypeFastMatchingCount() 
-                                + " =" + format(advisorEntry.getValue() / classLoaderMetrics.getTypeFastMatchingCount());
+                                + " = " + format(advisorEntry.getValue() * 100.0 / classLoaderMetrics.getTypeFastMatchingCount())
+                                + "%";
                         valueMap.put("typeResolutionDetails", formatStr(typeResolution, 152, true) );
 
                         renderResult.append(
@@ -820,27 +835,28 @@ public class AopMetrics {
 
     public static class TypeMetrics extends BaseMetrics {
 
-        private Map<String /* AdvisorName */, ResolutionLevel> advisorResolutuonLevelMap;
+        private List<Map<String /* AdvisorName */, ResolutionLevel>> advisorResolutuonLevelMaps;
 
 
         public TypeMetrics(ClassLoader classLoader) {
             super(classLoader);
+
+            this.advisorResolutuonLevelMaps = new ArrayList<>();
         }
 
 
-        public Map<String, ResolutionLevel> getAdvisorResolutuonLevelMap() {
-            return advisorResolutuonLevelMap;
+        public List<Map<String, ResolutionLevel>> getAdvisorResolutuonLevelMaps() {
+            return advisorResolutuonLevelMaps;
         }
 
-        public void setAdvisorResolutuonLevelMap(Map<String, ResolutionLevel> advisorResolutuonLevelMap) {
-            this.advisorResolutuonLevelMap = advisorResolutuonLevelMap;
+        public void addAdvisorResolutuonLevelMap(Map<String, ResolutionLevel> advisorResolutuonLevelMap) {
+            if (advisorResolutuonLevelMap != null)
+                this.advisorResolutuonLevelMaps.add(advisorResolutuonLevelMap);
         }
     }
 
 
     static class ClassLoaderMetrics extends BaseMetrics {
-
-        private final Map<ResolutionLevel, Map<String, Integer>> typeResolutuonLevelAdvisorMap = new LinkedHashMap<>();
 
         private int typeWeavingCount = 0;
 
@@ -850,6 +866,8 @@ public class AopMetrics {
         private int typeMatchingCount = 0;
 
         private int typeTransformationCount = 0;
+
+        private final Map<ResolutionLevel, Map<String, Integer>> typeResolutuonLevelAdvisorMap = new LinkedHashMap<>();
 
 
         public ClassLoaderMetrics(ClassLoader classLoader) {

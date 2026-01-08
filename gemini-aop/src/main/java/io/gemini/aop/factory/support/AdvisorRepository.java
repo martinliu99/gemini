@@ -49,7 +49,6 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.matcher.ElementMatcher;
-import net.bytebuddy.utility.JavaModule;
 
 /**
  *
@@ -69,17 +68,18 @@ public interface AdvisorRepository {
     Advisor create(AdvisorContext advisorContext);
 
 
-    static List<? extends Advisor> createAdvisors(FactoryContext factoryContext,
-            ClassLoader joinpointClassLoader, JavaModule javaModule, 
+    static List<? extends Advisor> createAdvisors(ClassLoader joinpointClassLoader,
+            AdvisorContext advisorContext,
             Collection<? extends AdvisorRepository> advisorRepositories) {
         long startedAt = System.nanoTime();
+
+        FactoryContext factoryContext = advisorContext.getFactoryContext();
         String factoryName = factoryContext.getFactoryName();
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("^Creating advisors via {} AdvisorRepository instances under '{}' for '{}',", 
                     advisorRepositories.size(), factoryName, joinpointClassLoader);
 
 
-        AdvisorContext advisorContext = factoryContext.createAdvisorContext(joinpointClassLoader, javaModule);
         AopContext aopContext = factoryContext.getAopContext();
         List<Advisor> advisors = aopContext.getGlobalTaskExecutor().executeTasks(
                 advisorRepositories, 
@@ -205,10 +205,9 @@ public interface AdvisorRepository {
 
         private boolean validateCondition(AdvisorContext advisorContext) {
             try {
-                // validate factory classLoaderMatcher
-                MatchingContext matchingContext = advisorContext.getMatchingContext();
+                // validate factory joinpoint classLoader matching result
                 if (this.advisorSpec.isInheritClassLoaderMatcher() 
-                        && advisorContext.getFactoryContext().getFactoryClassLoaderMatcher().matches(matchingContext) == false)
+                        && advisorContext.isJoinpointClassLoaderAccepted() == false)
                     return false;
 
                 // validate advisorSpec condition
@@ -216,7 +215,7 @@ public interface AdvisorRepository {
                 if (condition == null)
                     return true;
 
-                return condition.matches(matchingContext);
+                return condition.matches(advisorContext.getMatchingContext());
             } catch (ExprParser.ExprParseException e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with unparsable ConditionExpression. \n"

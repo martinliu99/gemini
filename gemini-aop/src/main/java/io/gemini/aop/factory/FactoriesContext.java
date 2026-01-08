@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.util.Assert;
@@ -87,11 +88,13 @@ class FactoriesContext implements Closeable {
         if (LOGGER.isInfoEnabled()) {
             if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
                 LOGGER.info("$Took '{}' seconds to create FactoriesContext with FactoryContexts, {}", 
-                        (System.nanoTime() - startedAt) / 1e9,
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME,
                         StringUtils.join(factoryContextMap.keySet(), "\n  ", "\n  ", "\n")
                 );
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-                LOGGER.info("$Took '{}' seconds to create FactoriesContext.", (System.nanoTime() - startedAt) / 1e9);
+                LOGGER.info("$Took '{}' seconds to create FactoriesContext.", 
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME
+                );
         }
     }
 

@@ -81,9 +81,9 @@ public interface AdvisorRepositoryResolver {
                         StringUtils.join(advisorRepositories, AdvisorRepository::getAdvisorName, "\n  ")
                 );
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-                    LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}'. ",
-                            (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName
-                    );
+                LOGGER.info("$Took '{}' seconds to resolve {} AdvisorRepository instances under '{}'. ",
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorRepositories.size(), factoryName
+                );
         }
 
         return advisorRepositories;

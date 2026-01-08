@@ -117,7 +117,7 @@ public class AopWeavers {
                 long time = System.nanoTime() - startedAt;
                 launcherMetrics.warmupByteBuddy(time);
                 if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-                    LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / 1e9);
+                    LOGGER.info("$Took '{}' seconds to install ByteBuddy. \n", time / AopMetrics.NANO_TIME);
 
                 typeRetransformationStartedAt.set( System.nanoTime() );
                 if (LOGGER.isDebugEnabled()) {

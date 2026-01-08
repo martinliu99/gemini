@@ -559,9 +559,10 @@ public interface AdvisorSpecScanner {
 
                     ElementMatcher<MatchingContext> condition = AdvisorConditionParser.parseAdvisorCondition(
                             factoryContext, annotations);
+                    // merge method level and class level condition definition
                     if (condition == null)
                         condition = advisorSpec.getCondition();
-                    else
+                    else if (advisorSpec.getCondition() != null)
                         condition = new ElementMatcher.Junction.Conjunction<>(
                                 advisorSpec.getCondition(), condition);
 

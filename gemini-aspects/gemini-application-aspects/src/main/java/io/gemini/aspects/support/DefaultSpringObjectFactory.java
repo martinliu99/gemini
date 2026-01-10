@@ -13,20 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
-package org.framework.demo;
+package io.gemini.aspects.support;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import io.gemini.core.object.ClassScanner;
 
-@SpringBootApplication
-public class DemoApplication {
+public class DefaultSpringObjectFactory {
+//extends AbstractSpringObjectFactory {
 
-    public static void main(String[] args) {
-        SpringApplication.run(DemoApplication.class, args);
 
-        DemoServiceRunner.main(new String[] {});
+    public DefaultSpringObjectFactory(ClassLoader classLoader, ClassScanner classScanner) {
+//        super(classLoader, classScanner);
     }
+
+//    @Override
+    protected String[] getBasePackages() {
+        String[] packages = new String[1];
+        packages[0] = "io.gemini.aspect";
+        return packages;
+    }
+
 }

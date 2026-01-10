@@ -48,7 +48,7 @@
         <module>gemini-test</module>
 
         <module>gemini-toolkit</module>
-        <module>gemini-aspect</module>
+        <module>gemini-aspects</module>
 
         <module>gemini-demo</module>
     </modules>

@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
-package org.framework.demo;
+package org.framework.aspects;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import io.gemini.api.aop.Advice;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
-@SpringBootApplication
-public class DemoApplication {
+public class ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
-    public static void main(String[] args) {
-        SpringApplication.run(DemoApplication.class, args);
-
-        DemoServiceRunner.main(new String[] {});
+    @Override
+    public void before(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
+//        LOGGER.info("before thread's run: " + joinpoint);
     }
+
+    @Override
+    public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
+//        LOGGER.info("after thread's run: " + joinpoint);
+    }
+
+
 }

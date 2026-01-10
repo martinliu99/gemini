@@ -10,34 +10,17 @@
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>gemini-demo</artifactId>
+    <artifactId>gemini-aspects</artifactId>
     <packaging>pom</packaging>
 
     <modules>
-        <module>gemini-demo-service</module>
-        <module>gemini-demo-runner</module>
-        <module>gemini-demo-aspects</module>
+        <module>gemini-application-aspects</module>
     </modules>
 
 
     <properties>
-        <release.demoapp.dir>${release.demoapps.dir}/${project.artifactId}</release.demoapp.dir>
         <release.aspectapp.dir>${release.aspectapps.dir}/${project.artifactId}</release.aspectapp.dir>
-
-        <slf4j-api.version>1.7.32</slf4j-api.version>
-        <logback.version>1.2.12</logback.version>
     </properties>
-
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-	            <groupId>io.gemini</groupId>
-	            <artifactId>gemini-demo-service</artifactId>
-                <version>${revision}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
 
     <build>
@@ -56,31 +39,25 @@
                             <configuration>
                                 <target>
                                     <copy file="${project.build.directory}/${artifact.file.name}.jar"
-                                          tofile="${release.demoapp.dir}/lib/${artifact.file.name}.jar" overwrite="true"  failonerror="false"/>
-                                    <copy todir="${release.demoapp.dir}/lib" overwrite="true">
+                                          tofile="${release.aspectapp.dir}/aspects/${artifact.file.name}.jar" overwrite="true" failonerror="false"/>
+                                    <copy todir="${release.aspectapp.dir}/lib" overwrite="true">
                                         <fileset dir="${project.build.directory}/dependencies/" erroronmissingdir="warn"/>
+                                    </copy>
+                                    <copy todir="${release.aspectapp.dir}/conf" overwrite="true" failonerror="false">
+                                        <fileset dir="${project.basedir}/src/main/resources/${resource.userconf.folder}" />
                                     </copy>
                                 </target>
                             </configuration>
                         </execution>
                     </executions>
                 </plugin>
-            </plugins>        
+            </plugins>
         </pluginManagement>
-
 
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>enforce-dependency</id>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </execution>
-                </executions>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

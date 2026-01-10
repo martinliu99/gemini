@@ -13,20 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
-package org.framework.demo;
+package org.framework.aspects;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import static net.bytebuddy.matcher.ElementMatchers.named;
 
-@SpringBootApplication
-public class DemoApplication {
+import io.gemini.api.aop.AdvisorSpec;
+import io.gemini.api.aop.Pointcut;
 
-    public static void main(String[] args) {
-        SpringApplication.run(DemoApplication.class, args);
 
-        DemoServiceRunner.main(new String[] {});
+public class TestAspectDefinition2 extends AdvisorSpec.PojoPointcutSpec.Default {
+
+    /**
+     */
+    public TestAspectDefinition2() {
+        super(
+                new Pointcut.Default(
+                        named("org.framework.test.Test"),
+                        named("doTest") ),
+                "org.framework.aspects.TestAdvice2", 
+                false, 
+                1
+        );
     }
+
 }

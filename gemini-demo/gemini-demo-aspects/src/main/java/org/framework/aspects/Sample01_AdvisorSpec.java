@@ -13,20 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.framework.aspects;
+
 /**
  * 
  */
-package org.framework.demo;
+public interface Sample01_AdvisorSpec {
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
-public class DemoApplication {
-
-    public static void main(String[] args) {
-        SpringApplication.run(DemoApplication.class, args);
-
-        DemoServiceRunner.main(new String[] {});
-    }
 }

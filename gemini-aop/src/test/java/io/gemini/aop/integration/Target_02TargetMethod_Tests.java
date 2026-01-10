@@ -37,7 +37,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * @author   martin.liu
  * @since	 1.0
  */
-public class Advisor_05MethodInstrumenting_Tests {
+public class Target_02TargetMethod_Tests {
 
     @Test
     public void testTypeInitializer() {
@@ -73,7 +73,7 @@ public class Advisor_05MethodInstrumenting_Tests {
         private static final String ADVICE_TYPE_INITIALIZER = "typeInitializer";
 
         @SuppressWarnings("rawtypes")
-        @Before("staticinitialization(io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$TypeInitializer_Object)")
+        @Before("staticinitialization(io.gemini.aop.integration.Target_02TargetMethod_Tests$TypeInitializer_Object)")
         public void typeInitializer(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
@@ -101,7 +101,7 @@ public class Advisor_05MethodInstrumenting_Tests {
     public static class ClassMethod_Aspect {
 
         private static final String CLASS_METHOD_POINTCUT = 
-                "execution(public static void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$ClassMethod_Object.classMethod())";
+                "execution(public static void io.gemini.aop.integration.Target_02TargetMethod_Tests$ClassMethod_Object.classMethod())";
 
         private static final String CLASS_METHOD_AFTER_ADVICE = "classMethod_after";
 
@@ -134,7 +134,7 @@ public class Advisor_05MethodInstrumenting_Tests {
     public static class InstanceConstructor_Aspect {
 
         private static final String INSTANCE_CONSTRUCTOR_POINTCUT = 
-                "execution(public io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$InstanceConstructor_Object.new(byte))";
+                "execution(public io.gemini.aop.integration.Target_02TargetMethod_Tests$InstanceConstructor_Object.new(byte))";
 
         private static final String INSTANCE_CONSTRUCTOR_AFTER_ADVICE = "instanceConstructor_after";
 
@@ -171,7 +171,7 @@ public class Advisor_05MethodInstrumenting_Tests {
     public static class InstanceMethod_Aspect {
 
         private static final String INSTANCE_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$InstanceMethod_Object.instanceMethod())";
+                "execution(public void io.gemini.aop.integration.Target_02TargetMethod_Tests$InstanceMethod_Object.instanceMethod())";
 
         private static final String INSTANCE_METHOD_AFTER_ADVICE = "instanceMethod_after";
 
@@ -276,7 +276,7 @@ public class Advisor_05MethodInstrumenting_Tests {
     public static class InterfaceImplementor_Aspect {
 
         private static final String INTERFACE_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$Interface_Object+.interfaceMethod())";
+                "execution(public void io.gemini.aop.integration.Target_02TargetMethod_Tests$Interface_Object+.interfaceMethod())";
 
         private static final String INTERFACE_METHOD_AFTER_ADVICE = "interfaceMethod_after";
 
@@ -291,7 +291,7 @@ public class Advisor_05MethodInstrumenting_Tests {
 
 
         private static final String IMPLEMENTOR_INTERFACE_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$InterfaceImplementor_Object.interfaceMethod())";
+                "execution(public void io.gemini.aop.integration.Target_02TargetMethod_Tests$InterfaceImplementor_Object.interfaceMethod())";
 
         private static final String IMPLEMENTOR_INTERFACE_METHOD_AFTER_ADVICE = "implementorInterfaceMethod_after";
 
@@ -306,7 +306,7 @@ public class Advisor_05MethodInstrumenting_Tests {
 
 
         private static final String DEFAULT_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$Interface_Object+.defaultMethod())";
+                "execution(public void io.gemini.aop.integration.Target_02TargetMethod_Tests$Interface_Object+.defaultMethod())";
 
         private static final String DEFAULT_METHOD_AFTER_ADVICE = "defaultMethod_after";
 
@@ -321,7 +321,7 @@ public class Advisor_05MethodInstrumenting_Tests {
 
 
         private static final String IMPLEMENTOR_DEFAULT_METHOD_POINTCUT = 
-                "execution(public void io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$InterfaceImplementor_Object.defaultMethod())";
+                "execution(public void io.gemini.aop.integration.Target_02TargetMethod_Tests$InterfaceImplementor_Object.defaultMethod())";
 
         private static final String IMPLEMENTOR_DEFAULT_METHOD_AFTER_ADVICE = "implementorDefaultMethod_after";
 
@@ -421,7 +421,7 @@ public class Advisor_05MethodInstrumenting_Tests {
     public static class BridgeMethod_Aspect {
 
         private static final String GENERIC_BRIDGE_POINTCUT = 
-                "execution(public java.lang.Object io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$BridgeMethod_Object.genericBridge())";
+                "execution(public java.lang.Object io.gemini.aop.integration.Target_02TargetMethod_Tests$BridgeMethod_Object.genericBridge())";
 
         private static final String GENERIC_BRIDGE_AFTER_ADVICE = "genericBridge_after";
 
@@ -436,7 +436,7 @@ public class Advisor_05MethodInstrumenting_Tests {
 
 
         private static final String OVERRIDDEN_GENERIC_BRIDGE_POINTCUT = 
-                "execution(public java.lang.String io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$BridgeMethod_Object.genericBridge())";
+                "execution(public java.lang.String io.gemini.aop.integration.Target_02TargetMethod_Tests$BridgeMethod_Object.genericBridge())";
 
         private static final String OVERRIDDEN_GENERIC_BRIDGE_AFTER_ADVICE = "overriddenGenericBridge_after";
 
@@ -451,7 +451,7 @@ public class Advisor_05MethodInstrumenting_Tests {
 
 
         private static final String COVARIANT_BRIDGE_POINTCUT = 
-                "execution(public java.lang.Number io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$BridgeMethod_Object.covariantBridge())";
+                "execution(public java.lang.Number io.gemini.aop.integration.Target_02TargetMethod_Tests$BridgeMethod_Object.covariantBridge())";
 
         private static final String COVARIANT_BRIDGE_AFTER_ADVICE = "covariantBridge_after";
 
@@ -466,7 +466,7 @@ public class Advisor_05MethodInstrumenting_Tests {
 
 
         private static final String OVERRIDDEN_COVARIANT_BRIDGE_POINTCUT = 
-                "execution(public java.lang.Long io.gemini.aop.integration.Advisor_05MethodInstrumenting_Tests$BridgeMethod_Object.covariantBridge())";
+                "execution(public java.lang.Long io.gemini.aop.integration.Target_02TargetMethod_Tests$BridgeMethod_Object.covariantBridge())";
 
         private static final String OVERRIDDEN_COVARIANT_BRIDGE_AFTER_ADVICE = "overriddenCovariantBridge_after";
 

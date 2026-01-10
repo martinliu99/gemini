@@ -13,14 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aop.integration;
+package io.gemini.aop.aspects;
 
-/**
- *
- *
- * @author   martin.liu
- * @since	 1.0
- */
-public class Advice_11ExceptionHandling_Tests {
+import javax.annotation.Resource;
 
+import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.Aspect;
+
+import io.gemini.aop.AopContext;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+
+@Aspect
+public class ApplicationStartupAspect {
+
+    @Resource
+    private AopContext aopContext;
+
+    @After("execution(public void io.gemini.aop.test.AopTestActivator.testPlanExecutionFinished(..))")
+    public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
+        this.aopContext.getAopMetrics().startupApplication();
+    }
 }

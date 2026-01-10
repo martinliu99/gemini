@@ -38,6 +38,13 @@
             <artifactId>gemini-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>1.0.1</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 

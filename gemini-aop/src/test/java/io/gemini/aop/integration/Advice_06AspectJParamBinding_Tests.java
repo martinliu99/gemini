@@ -34,7 +34,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * @author   martin.liu
  * @since	 1.0
  */
-public class Advisor_11AdviceParamBinding_Tests {
+public class Advice_06AspectJParamBinding_Tests {
 
     @Test
     public void testTargetObjectBinding() {
@@ -67,7 +67,7 @@ public class Advisor_11AdviceParamBinding_Tests {
     public static class TargetObjectBinding_Aspect {
 
         private static final String BIND_TARGET_OBJECT_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetObjectBinding_Object.bindTargetObject()) && this(targetObject)";
+                "execution(!private long io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetObjectBinding_Object.bindTargetObject()) && this(targetObject)";
 
         private static final String BIND_TARGET_OBJECT_AFTER_ADVICE = TargetObjectBinding_Aspect.class.getName() + ".bindTargetObject_afterAdvice";
 
@@ -143,7 +143,7 @@ public class Advisor_11AdviceParamBinding_Tests {
     public static class TargetArgumentBinding_Aspect {
 
         public static final String BIND_TARGET_ARGUMENT_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, string)";
+                "execution(!private long io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, string)";
 
         private static final String BIND_TARGET_ARGUMENT_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindTargetArgument_afterAdvice";
 
@@ -171,7 +171,7 @@ public class Advisor_11AdviceParamBinding_Tests {
 
 
         private static final String BIND_INCONSISTENT_PARAMS_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, string)";
+                "execution(!private long io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, string)";
 
         private static final String BIND_INCONSISTENT_PARAMS_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindInconsistentParams_afterAdvice";
 
@@ -184,7 +184,7 @@ public class Advisor_11AdviceParamBinding_Tests {
 
 
         private static final String BIND_PARTIAL_PARAMS_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, ..)";
+                "execution(!private long io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetArgumentBinding_Object.bindTargetArgument(..)) && args(_long, ..)";
 
         private static final String BIND_PARTIAL_PARAMS_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindPartialParams_afterAdvice";
 
@@ -246,7 +246,7 @@ public class Advisor_11AdviceParamBinding_Tests {
     public static class TargetReturningBinding_Aspect {
 
         private static final String BIND_TARGET_RETURNING_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetReturningBinding_Object.bindTargetReturning())";
+                "execution(!private long io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetReturningBinding_Object.bindTargetReturning())";
 
         private static final String BIND_TARGET_RETURNING_AFTER_ADVICE = TargetReturningBinding_Aspect.class.getName() + ".bindTargetReturning_afterAdvice";
 
@@ -285,7 +285,7 @@ public class Advisor_11AdviceParamBinding_Tests {
 
 
         private static final String BIND_WRONG_TYPE_POINTCUT = 
-                "execution(* io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetReturningBinding_Object.bindTargetReturning())";
+                "execution(* io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetReturningBinding_Object.bindTargetReturning())";
 
         private static final String BIND_WRONG_TYPE_AFTER_ADVICE = TargetReturningBinding_Aspect.class.getName() + ".bindWrongType_afterAdvice";
 
@@ -299,7 +299,7 @@ public class Advisor_11AdviceParamBinding_Tests {
 
 
         private static final String BIND_WRONG_PARAM_NAME_POINTCUT = 
-                "execution(* io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetReturningBinding_Object.bindTargetReturning())";
+                "execution(* io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetReturningBinding_Object.bindTargetReturning())";
 
         private static final String BIND_WRONG_PARAM_NAME_AFTER_ADVICE = TargetReturningBinding_Aspect.class.getName() + ".bindWrongParamName_afterAdvice";
 
@@ -389,7 +389,7 @@ public class Advisor_11AdviceParamBinding_Tests {
     public static class TargetThrowingBinding_Aspect {
 
         private static final String BIND_TARGET_THROWING_POINTCUT = 
-                "execution(!private void io.gemini.aop.integration.Advisor_11AdviceParamBinding_Tests$TargetThrowingBinding_Object.bindTargetThrowing())";
+                "execution(!private void io.gemini.aop.integration.Advice_06AspectJParamBinding_Tests$TargetThrowingBinding_Object.bindTargetThrowing())";
 
         private static final String BIND_TARGET_THROWING_AFTER_ADVICE = TargetThrowingBinding_Aspect.class.getName() + ".bindTargetThrowing_afterAdvice";
 

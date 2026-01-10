@@ -33,7 +33,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * @author   martin.liu
  * @since	 1.0
  */
-public class Advisor_21JoinpointVisibility_Tests {
+public class Target_11TargetVisibility_Tests {
 
     @Test
     public void testTargetObjectVisibility() {
@@ -57,7 +57,7 @@ public class Advisor_21JoinpointVisibility_Tests {
     public static class TargetObjectVisibility_Aspect {
 
         private static final String ACCESS_TARGET_OBJECT_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$TargetObjectVisibility_Object.accessTargetObject()) && this(targetObject)";
+                "execution(!private long io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetObjectVisibility_Object.accessTargetObject()) && this(targetObject)";
 
         private static final String ACCESS_TARGET_OBJECT_AFTER_ADVICE = TargetObjectVisibility_Aspect.class.getName() + ".accessTargetObject_afterAdvice";
 
@@ -95,7 +95,7 @@ public class Advisor_21JoinpointVisibility_Tests {
     public static class TargetArgumentVisibility_Aspect {
 
         private static final String ACCESS_TARGET_ARGUMENT_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$TargetArgumentVisibility_Object.accessTargetArgument(..)) && args(argument)";
+                "execution(!private long io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetArgumentVisibility_Object.accessTargetArgument(..)) && args(argument)";
 
         private static final String ACCESS_TARGET_ARGUMENT_AFTER_ADVICE = TargetArgumentVisibility_Aspect.class.getName() + ".accessTargetArgument_afterAdvice";
 
@@ -133,7 +133,7 @@ public class Advisor_21JoinpointVisibility_Tests {
     public static class TargetReturningVisibility_Aspect {
 
         private static final String ACCESS_TARGET_RETURNING_POINTCUT = 
-                "execution(* io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$TargetReturningVisibility_Object.accessTargetReturning())";
+                "execution(* io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetReturningVisibility_Object.accessTargetReturning())";
 
         private static final String ACCESS_TARGET_RETURNING_AFTER_ADVICE = TargetReturningVisibility_Aspect.class.getName() + ".accessTargetReturning_afterAdvice";
 
@@ -193,7 +193,7 @@ public class Advisor_21JoinpointVisibility_Tests {
     public static class TargetThrowingVisibility_Aspect {
 
         private static final String ACCESS_TARGET_THROWING_POINTCUT = 
-                "execution(!private void io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$TargetThrowingVisibility_Object.accessTargetThrowing())";
+                "execution(!private void io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetThrowingVisibility_Object.accessTargetThrowing())";
 
         private static final String ACCESS_TARGET_THROWING_AFTER_ADVICE = TargetThrowingVisibility_Aspect.class.getName() + ".accessTargetThrowing_afterAdvice";
 
@@ -232,7 +232,7 @@ public class Advisor_21JoinpointVisibility_Tests {
     public static class ParametrizedReturningVisibility_Aspect {
 
         private static final String ACCESS_TARGET_RETURNING_POINTCUT = 
-                "execution(!private io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$ParametrizedReturningVisibility_Object$Returning io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$ParametrizedReturningVisibility_Object.accessParametrizedReturning())";
+                "execution(!private io.gemini.aop.integration.Target_11TargetVisibility_Tests$ParametrizedReturningVisibility_Object$Returning io.gemini.aop.integration.Target_11TargetVisibility_Tests$ParametrizedReturningVisibility_Object.accessParametrizedReturning())";
 
         private static final String ACCESS_TARGET_RETURNING_AFTER_ADVICE = ParametrizedReturningVisibility_Aspect.class.getName() + ".accessParametrizedReturning_afterAdvice";
 
@@ -291,7 +291,7 @@ public class Advisor_21JoinpointVisibility_Tests {
     public static class ParametrizedThrowingingVisibility_Aspect {
 
         private static final String ACCESS_TARGET_THROWING_POINTCUT = 
-                "execution(!private void io.gemini.aop.integration.Advisor_21JoinpointVisibility_Tests$ParametrizedThrowingingVisibility_Object.accessParametrizedThrowinging())";
+                "execution(!private void io.gemini.aop.integration.Target_11TargetVisibility_Tests$ParametrizedThrowingingVisibility_Object.accessParametrizedThrowinging())";
 
         private static final String ACCESS_TARGET_THROWING_AFTER_ADVICE = ParametrizedThrowingingVisibility_Aspect.class.getName() + ".accessParametrizedThrowinging_afterAdvice";
 

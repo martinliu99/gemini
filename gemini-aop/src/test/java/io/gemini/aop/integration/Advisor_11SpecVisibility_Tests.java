@@ -30,59 +30,45 @@ import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
-import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Pointcut;
 
 
-public class Advisor_22AdvisorVisibility_Tests {
+public class Advisor_11SpecVisibility_Tests {
 
     @Test
     public void testAdvisorVisibility() {
-        new AdvisorVisibility_Object().isVisible(1l);
+        new SpecVisibility_Object().isVisible(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(AdvisorVisibility_PojoPointcutSpec.ADVISOR_VISIBILITY_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecVisibility_PojoPointcutSpec.ADVISOR_VISIBILITY_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(AdvisorVisibility_PojoPointcutAdvice.ADVISOR_VISIBILITY_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecVisibility_ExprPointcutSpec.ADVISOR_VISIBILITY_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(AdvisorVisibility_ExprPointcutSpec.ADVISOR_VISIBILITY_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNotNull();
-            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(AdvisorVisibility_ExprPointcutAdvice.ADVISOR_VISIBILITY_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNotNull();
-            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(AdvisorVisibility_Aspect.ADVISOR_VISIBILITY_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecVisibility_Aspect.ADVISOR_VISIBILITY_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
     }
 
-    private static class AdvisorVisibility_Object {
+    private static class SpecVisibility_Object {
 
         public long isVisible(long input) {
             return input;
         }
     }
 
-    private static class AdvisorVisibility_PojoPointcutSpec implements AdvisorSpec.PojoPointcutSpec {
+    private static class SpecVisibility_PojoPointcutSpec implements AdvisorSpec.PojoPointcutSpec {
 
-        static final String ADVISOR_VISIBILITY_AFTER_ADVICE = AdvisorVisibility_PojoPointcutSpec.class.getName() + ".after";
+        static final String ADVISOR_VISIBILITY_AFTER_ADVICE = SpecVisibility_PojoPointcutSpec.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -114,7 +100,7 @@ public class Advisor_22AdvisorVisibility_Tests {
         @Override
         public Pointcut getPointcut() {
             return new Pointcut.Default(
-                    named("io.gemini.aop.integration.Advisor_22AdvisorVisibility_Tests$AdvisorVisibility_Object"),
+                    named("io.gemini.aop.integration.Advisor_11SpecVisibility_Tests$SpecVisibility_Object"),
                     named("isVisible")
                     .and(isPublic())
                     .and(takesArgument(0, is(long.class)))
@@ -137,44 +123,9 @@ public class Advisor_22AdvisorVisibility_Tests {
         }
     }
 
-    private static class AdvisorVisibility_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    private static class SpecVisibility_ExprPointcutSpec implements AdvisorSpec.ExprPointcutSpec {
 
-        private static final String ADVISOR_VISIBILITY_AFTER_ADVICE = AdvisorVisibility_PojoPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(ADVISOR_VISIBILITY_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Advisor_22AdvisorVisibility_Tests$AdvisorVisibility_Object") )
-                    .methodMatcher(
-                            named("isVisible")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(long.class)))
-                                .and(returns(long.class)) )
-                    .builder();
-        }
-    }
-
-    private static class AdvisorVisibility_ExprPointcutSpec implements AdvisorSpec.ExprPointcutSpec {
-
-        private static final String ADVISOR_VISIBILITY_AFTER_ADVICE = AdvisorVisibility_ExprPointcutSpec.class.getName() + ".after";
+        private static final String ADVISOR_VISIBILITY_AFTER_ADVICE = SpecVisibility_ExprPointcutSpec.class.getName() + ".after";
 
 
         /**
@@ -206,7 +157,7 @@ public class Advisor_22AdvisorVisibility_Tests {
          */
         @Override
         public String getPointcutExpression() {
-            return "execution(!private long io.gemini.aop.integration.Advisor_22AdvisorVisibility_Tests$AdvisorVisibility_Object.isVisible(long))";
+            return "execution(!private long io.gemini.aop.integration.Advisor_11SpecVisibility_Tests$SpecVisibility_Object.isVisible(long))";
         }
 
 
@@ -225,42 +176,13 @@ public class Advisor_22AdvisorVisibility_Tests {
         }
     }
 
-    private static class AdvisorVisibility_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.ExprPointcutSpec.Factory {
-
-        private static final String ADVISOR_VISIBILITY_AFTER_ADVICE = AdvisorVisibility_ExprPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(ADVISOR_VISIBILITY_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ExprPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.ExprPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .pointcutExpression("execution(!private long io.gemini.aop.integration.Advisor_22AdvisorVisibility_Tests$AdvisorVisibility_Object.isVisible(long))")
-                    .builder();
-        }
-    }
-
     @Aspect
-    private static class AdvisorVisibility_Aspect {
+    private static class SpecVisibility_Aspect {
 
         private static final String MATCH_ADVISOR_VISIBILITY_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_22AdvisorVisibility_Tests$AdvisorVisibility_Object.isVisible(long))";
+                "execution(!private long io.gemini.aop.integration.Advisor_11SpecVisibility_Tests$SpecVisibility_Object.isVisible(long))";
 
-        private static final String ADVISOR_VISIBILITY_AFTER_ADVICE = AdvisorVisibility_Aspect.class.getName() + ".after";
+        private static final String ADVISOR_VISIBILITY_AFTER_ADVICE = SpecVisibility_Aspect.class.getName() + ".after";
 
         @After(MATCH_ADVISOR_VISIBILITY_POINTCUT)
         public void aspectVisibility_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {

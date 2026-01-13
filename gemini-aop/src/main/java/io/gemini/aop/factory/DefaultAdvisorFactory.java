@@ -78,7 +78,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
     // cache advisors per ClassLoader
     private final Map<ClassLoader, ElementMatcher<String>> typeMatcherPerClassLoaderMap;
-    private final ConcurrentMap<ClassLoader, List<? extends Advisor>> classLoaderAdvisorMap;
+    private final ConcurrentMap<ClassLoader, List<? extends Advisor>> advisorPerClassLoaderMap;
 
 
     public DefaultAdvisorFactory(FactoryContext factoryContext) {
@@ -100,7 +100,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
         // 2.initialize properties
         this.typeMatcherPerClassLoaderMap = new ConcurrentReferenceHashMap<>();
-        this.classLoaderAdvisorMap = new ConcurrentReferenceHashMap<>();
+        this.advisorPerClassLoaderMap = new ConcurrentReferenceHashMap<>();
 
 
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled())
@@ -139,7 +139,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         );
 
         boolean joinpointClassLoaderAccepted = ElementMatchers.any().equals(typeMatcher);
-        List<? extends Advisor> candidateAdvisors = this.classLoaderAdvisorMap.computeIfAbsent(
+        List<? extends Advisor> candidateAdvisors = this.advisorPerClassLoaderMap.computeIfAbsent(
                 ClassLoaderUtils.maskNull(joinpointClassLoader), 
                 key ->  doCreateAdvisors( joinpointClassLoader, javaModule, joinpointClassLoaderAccepted )
         );

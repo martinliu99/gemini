@@ -158,16 +158,17 @@ class FactoriesContext implements Closeable {
 
         Map<String, FactoryContext> factoryContexts = new LinkedHashMap<>(aspectAppResourceURLs.size());
         for (Entry<String, URL[]> entry : aspectAppResourceURLs.entrySet()) {
-            factoryContexts.put(entry.getKey(), 
-                    new FactoryContext(aopContext, FactoriesContext.this, entry.getKey(), entry.getValue() ) );
+            String factoryName = entry.getKey();
+
+            // filter aspect
+            if (enabledFactoryMatcher.matches(factoryName) == false) 
+                return null;
+
+            factoryContexts.put(factoryName, 
+                    new FactoryContext(aopContext, FactoriesContext.this, factoryName, entry.getValue() ) );
         }
 
         return factoryContexts;
-    }
-
-
-    public boolean isEnabledFactory(String factoryName) {
-        return enabledFactoryMatcher.matches(factoryName);
     }
 
 
@@ -185,7 +186,7 @@ class FactoriesContext implements Closeable {
 
 
     public Map<String, FactoryContext> getFactoryContextMap() {
-        return this.factoryContextMap;
+        return Collections.unmodifiableMap( this.factoryContextMap );
     }
 
 

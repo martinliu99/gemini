@@ -72,26 +72,20 @@ class CompoundAdvisorFactory implements AdvisorFactory {
     private Map<FactoryContext, DefaultAdvisorFactory> createAdvisorFactoryMap(AopContext aopContext, 
             FactoriesContext factoriesContext,
             Map<String, FactoryContext> factoryContextMap) {
-        Map<FactoryContext, DefaultAdvisorFactory> advisorFactoryMap = new LinkedHashMap<>();
+        Map<FactoryContext, DefaultAdvisorFactory> advisorFactoryMap = new LinkedHashMap<>(factoryContextMap.size());
         for (FactoryContext factoryContext : factoryContextMap.values()) {
-            String factoryName = factoryContext.getFactoryName();
-
-            // filter aspect
-            if (factoriesContext.isEnabledFactory(factoryName) == false) 
-                return null;
-
             // create AdvisorFactory
             DefaultAdvisorFactory advisorFactory = aopContext.getDiagnosticLevel().isSimpleEnabled() == false
                     ? new DefaultAdvisorFactory(factoryContext)
                     : aopContext.isTypeResolutionDetected() == false 
                             ? new DefaultAdvisorFactory.Diagnostic(factoryContext)
                             : new DefaultAdvisorFactory.TyepResolutionDetector(factoryContext);
+
             advisorFactoryMap.put(factoryContext, advisorFactory);
         }
 
         return advisorFactoryMap;
     }
-
 
 
     @Override

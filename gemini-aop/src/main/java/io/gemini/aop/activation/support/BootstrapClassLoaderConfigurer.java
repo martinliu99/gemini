@@ -35,6 +35,7 @@ import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.aop.java.lang.BootstrapClassProvider;
 import io.gemini.api.aop.AopException;
 import io.gemini.core.object.ClassRenamer;
+import io.gemini.core.object.ClassScanner;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.IOUtils;
@@ -69,7 +70,7 @@ public class BootstrapClassLoaderConfigurer {
     }
 
 
-    public Map<String, String> configure(ClassLoader sourceClassLoader) {
+    public Map<String, String> configure(ClassLoader sourceClassLoader, ClassScanner classScanner) {
         long startedAt = System.nanoTime();
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("^Configuring BoostrapClassLoader with BootstrapClasses, ");
@@ -83,7 +84,7 @@ public class BootstrapClassLoaderConfigurer {
         LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
         long time = 0;
         try {
-            nameMapping = scanClassNameMapping();
+            nameMapping = scanClassNameMapping(classScanner);
 
             Map<String, byte[]> classByteCodeMap = loadClassByteCode(sourceClassLoader, nameMapping);
 
@@ -117,14 +118,19 @@ public class BootstrapClassLoaderConfigurer {
     }
 
 
-    private Map<String, String> scanClassNameMapping() {
+    private Map<String, String> scanClassNameMapping(ClassScanner classScanner) {
         // 1.discover bootstrap classes
         // load configured classes.
-        Set<String> bootstrapClassNames = aopContext.getConfigView().getAsStringSet("aop.bootstrapClassLoader.bootstrapClasses", new LinkedHashSet<>());
-        // discover built-in classes
+        Set<String> bootstrapClassNames = new LinkedHashSet<>();
         bootstrapClassNames.addAll(
-                aopContext.getClassScanner().getClassNamesWithAnnotation(BootstrapClassProvider.class.getName()) );
-        Assert.notEmpty(bootstrapClassNames, "'BootstrapClass' must not be empty.");
+                classScanner.getClassNamesWithAnnotation(BootstrapClassProvider.class.getName()) );
+
+        Map<String, String> existingBootstrapClassNameMapping = aopContext.getBootstrapClassNameMapping();
+        if (existingBootstrapClassNameMapping != null)
+            bootstrapClassNames.removeAll(existingBootstrapClassNameMapping.keySet());
+
+        if (bootstrapClassNames.size() == 0)
+            return Collections.emptyMap();
 
 
         // 2.validate bootstrap class package name

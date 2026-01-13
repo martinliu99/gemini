@@ -36,6 +36,7 @@ import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.aop.AopException;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.object.ClassRenamer;
+import io.gemini.core.object.ClassScanner;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.IOUtils;
@@ -55,15 +56,15 @@ public class AopClassLoaderConfigurer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AopClassLoaderConfigurer.class);
 
-    private final static Set<String /* Class prefix */ > CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES;
+    private final static Set<String /* Class prefix */ > CONDITIONAL_BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES;
 
 
     private final AopContext aopContext;
 
 
     static {
-        CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES = new LinkedHashSet<>();
-        CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("org.aspectj.lang.annotation");
+        CONDITIONAL_BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES = new LinkedHashSet<>();
+        CONDITIONAL_BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES.add("org.aspectj.lang.annotation");
     }
 
 
@@ -73,18 +74,18 @@ public class AopClassLoaderConfigurer {
     }
 
 
-    public void configure(AopClassLoader aopClassLoader, Map<String, String> nameMapping) {
+    public void configure(AopClassLoader aopClassLoader, ClassScanner classScanner, Map<String, String> nameMapping) {
         long startedAt = System.nanoTime();
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("^Configuring AopClassLoader, ");
         }
 
-        // 1.create ParentFirstFilter with parentFirstTypeExpressions and parentFirstResourceExpressions
-        Set<String> parentFirstTypeExpressions = new LinkedHashSet<>();
-        Set<String> parentFirstResourceExpressions = new LinkedHashSet<>();
+        // 1.create LauncherFirstFilter with launcherFirstTypeExpressions and launcherFirstResourceExpressions
+        Set<String> launcherFirstTypeExpressions = new LinkedHashSet<>();
+        Set<String> launcherFirstResourceExpressions = new LinkedHashSet<>();
 
-        this.configureParentFirstFilter(aopClassLoader,
-                parentFirstTypeExpressions, parentFirstResourceExpressions);
+        this.configureLauncherFirstFilter(aopClassLoader,
+                launcherFirstTypeExpressions, launcherFirstResourceExpressions);
 
 
         // 2.create BootstrapClassFilter with bootstrap classes.
@@ -92,18 +93,18 @@ public class AopClassLoaderConfigurer {
 
 
         // 3.create BootstrapClassConsumerTypeFilter
-        configureBootstrapClassConsumerClassFinder(aopClassLoader, nameMapping);
+        configureBootstrapClassConsumerClassFinder(aopClassLoader, classScanner, nameMapping);
 
 
         long time =  System.nanoTime() - startedAt;
         if (LOGGER.isInfoEnabled()) {
             if (aopContext.getDiagnosticLevel().isDebugEnabled()) 
                 LOGGER.info("$Took '{}' seconds to configure AopClassLoader with settings, \n"
-                        + "  parentFirstTypeExpressions: {}"
-                        + "  parentFirstResourceExpressions: {}",
+                        + "  launcherFirstTypeExpressions: {}"
+                        + "  launcherFirstResourceExpressions: {}",
                         time / AopMetrics.NANO_TIME,
-                        StringUtils.join(parentFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
-                        StringUtils.join(parentFirstResourceExpressions, "\n    ", "\n    ", "\n")
+                        StringUtils.join(launcherFirstTypeExpressions, "\n    ", "\n    ", "\n"), 
+                        StringUtils.join(launcherFirstResourceExpressions, "\n    ", "\n    ", "\n")
                 );
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                 LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / AopMetrics.NANO_TIME);
@@ -112,43 +113,43 @@ public class AopClassLoaderConfigurer {
         aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(time);
     }
 
-    private void configureParentFirstFilter(AopClassLoader aopClassLoader, 
-            Set<String> parentFirstTypeExpressions, Set<String> parentFirstResourceExpressions) {
-        // 1.collect parent first type expressions
-        parentFirstTypeExpressions.addAll(
-                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.builtinParentFirstTypeExpressions", Collections.emptySet()) );
-        parentFirstTypeExpressions.addAll(
-                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstTypeExpressions", Collections.emptySet()) );
+    private void configureLauncherFirstFilter(AopClassLoader aopClassLoader, 
+            Set<String> launcherFirstTypeExpressions, Set<String> launcherFirstResourceExpressions) {
+        // 1.collect launcher-first type expressions
+        launcherFirstTypeExpressions.addAll(
+                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.builtinLauncherFirstTypeExpressions", Collections.emptySet()) );
+        launcherFirstTypeExpressions.addAll(
+                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.launcherFirstTypeExpressions", Collections.emptySet()) );
 
         if (aopContext.isClassesFolderScanned())
-            parentFirstTypeExpressions.addAll( CONDITIONAL_BUILTIN_PARENT_FIRST_CLASS_PREFIXES );
+            launcherFirstTypeExpressions.addAll( CONDITIONAL_BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES );
 
-        ElementMatcher<String> parentFirstClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                "ParentFirstClassMatcher", parentFirstTypeExpressions, ElementMatchers.none());
-
-
-        // 2.collect parent first resource expressions
-        parentFirstResourceExpressions.addAll( 
-                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.parentFirstResourceExpressions", Collections.emptySet()) );
-
-        // convert parentFirstTypeExpressions and merge into parentFirstResourceExpressions
-        parentFirstResourceExpressions.addAll( parentFirstTypeExpressions );
-
-        ElementMatcher<String> parentFirstResourceMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
-                "ParentFirstResourceMatcher", parentFirstTypeExpressions, ElementMatchers.none());
+        ElementMatcher<String> launcherFirstClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                "LauncherFirstClassMatcher", launcherFirstTypeExpressions, ElementMatchers.none());
 
 
-        // 3.add ParentFirstFilter
-        aopClassLoader.addParentFirstFilter( new AopClassLoader.ParentFirstFilter() {
+        // 2.collect launcher-first resource expressions
+        launcherFirstResourceExpressions.addAll( 
+                aopContext.getConfigView().getAsStringSet("aop.aopClassLoader.launcherFirstResourceExpressions", Collections.emptySet()) );
+
+        // convert launcherFirstTypeExpressions and merge into launcherFirstResourceExpressions
+        launcherFirstResourceExpressions.addAll( launcherFirstTypeExpressions );
+
+        ElementMatcher<String> launcherFirstResourceMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
+                "LauncherFirstResourceMatcher", launcherFirstTypeExpressions, ElementMatchers.none());
+
+
+        // 3.add LauncherFirstFilter
+        aopClassLoader.addLauncherFirstFilter( new AopClassLoader.LauncherFirstFilter() {
 
             @Override
-            public boolean isParentFirstClass(String name) {
-                return parentFirstClassMatcher.matches(name);
+            public boolean isLauncherFirstClass(String name) {
+                return launcherFirstClassMatcher.matches(name);
             }
 
             @Override
-            public boolean isParentFirstResource(String name) {
-                return parentFirstResourceMatcher.matches(name);
+            public boolean isLauncherFirstResource(String name) {
+                return launcherFirstResourceMatcher.matches(name);
             }
         });
     }
@@ -163,11 +164,12 @@ public class AopClassLoaderConfigurer {
 
         aopClassLoader.addTypeFilter( new AopClassLoader.TypeFilter() {
 
+            private final String classLoaderName = ClassLoader.class.getName();
+
             @Override
             public String filterTypeName(String name) {
                 if (bootstrapClassMatcher.matches(name)) {
-                    throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via @" 
-                            + BootstrapClassConsumer.class.getName() );
+                    handleBootstrapClassRenamingException(name);
                 }
 
                 return name;
@@ -176,18 +178,40 @@ public class AopClassLoaderConfigurer {
             @Override
             public String filterResourceName(String name) {
                 if (bootstrapResourceMatcher.matches(name)) {
-                    throw new IllegalStateException(name + " should be replaced with corresponding bootstrap class via @"
-                            + BootstrapClassConsumer.class.getName() );
+                    handleBootstrapClassRenamingException(name);
                 }
 
                 return name;
             }
+
+            private void handleBootstrapClassRenamingException(String name) {
+                StackTraceElement[] stackTraceElements = new Throwable().getStackTrace();
+
+                // find first call site for DefaultAopClassLoader#loadClass
+                StackTraceElement invokingCode = null;
+                if (stackTraceElements != null && stackTraceElements.length != 0) {
+                    for (int i = stackTraceElements.length - 1; i >= 0 ; i--) {
+                        StackTraceElement stackTraceElement = stackTraceElements[i];
+                        if (classLoaderName.equals(stackTraceElement.getClassName()) == false
+                                || "loadClass".equals(stackTraceElement.getMethodName()) == false)
+                            continue;
+
+                        invokingCode = stackTraceElements[i+1];
+                        break;
+                    }
+                }
+
+                String errorMessage = "Detected code " 
+                        + (invokingCode == null ? "" : "(" + invokingCode + ") ") + "referring to " + name 
+                        + " which should be renamed at runtime via @" + BootstrapClassConsumer.class.getName();
+                throw new AopException(errorMessage );
+            }
         } );
     }
 
-    private void configureBootstrapClassConsumerClassFinder(AopClassLoader aopClassLoader, Map<String, String> nameMapping) {
+    private void configureBootstrapClassConsumerClassFinder(AopClassLoader aopClassLoader, ClassScanner classScanner, Map<String, String> nameMapping) {
         // discover consumer classes
-        List<String> consumerClassNames = aopContext.getClassScanner().getClassNamesWithAnnotation(BootstrapClassConsumer.class.getName());
+        List<String> consumerClassNames = classScanner.getClassNamesWithAnnotation(BootstrapClassConsumer.class.getName());
 
         ClassRenamer classRenamer = new ClassRenamer.Default(
                 nameMapping, 
@@ -233,5 +257,4 @@ public class AopClassLoaderConfigurer {
             }
         } );
     }
-
 }

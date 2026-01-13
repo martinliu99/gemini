@@ -167,14 +167,14 @@ public class DefaultAopLauncher implements AopLauncher {
         // 1.configure BootstrapClassLoader with bootstrap classes
         Map<String, String> nameMapping = new BootstrapClassLoaderConfigurer(
                 instrumentation, aopContext)
-                .configure(aopContext.getAopClassLoader());
+                .configure(aopContext.getAopClassLoader(), aopContext.getClassScanner());
 
         builtinSettings.put(AopContext.BOOTSTRAP_CLASS_NAME_MAPPING_KEY, nameMapping);
 
 
         // 2.configure AopClassLoader 
         new AopClassLoaderConfigurer(aopContext)
-                .configure(aopContext.getAopClassLoader(), nameMapping);
+                .configure(aopContext.getAopClassLoader(), aopContext.getClassScanner(), nameMapping);
     }
 
 

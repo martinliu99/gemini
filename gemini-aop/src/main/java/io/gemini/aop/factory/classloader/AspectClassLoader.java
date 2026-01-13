@@ -33,29 +33,34 @@ import net.bytebuddy.matcher.ElementMatchers;
 
 /**
  * <p>
- * This specialized ClassLoader contains two parent CLassLoaders. One ClassLoader includes Aspect resources 
- * and delegates to {@code AopClassLoader} to load user-defined Advice, Pointcut, AdvisorSpec classes and AOP framework 
- * classes, the other delegates to ThreadContextClassLoader (runtime application ClassLoader) or explicitly defined
+ * This specialized ClassLoader loads classes and resources via two CLassLoaders. 
+ * <li>
+ * One ClassLoader holds Aspect resources and delegates to {@code AopClassLoader} to 
+ * load user-defined Advice, Pointcut, AdvisorSpec classes and AOP framework classes.
+ * <li>
+ * The other delegates to {@code ThreadContext} (runtime application ClassLoader) or explicitly defined
  * application ClassLoader to load joinpoint relevant classes.
  * 
  * <p>
  * AspectClassLoader loads class from Aspect resources firstly. If not found, then delegates to application 
- * ClassLoader, and generally this class should be joinpoint class. If one class contains in two ClassLoaders, 
- * and there might be class conflicting, joinpointTypeMatcher could be used to load class by Joinpoint ClassLoader
- * firstly.
+ * ClassLoader, and generally this loading class should be joinpoint class. 
+ * If one class could be loaded by two ClassLoaders, and there might have class conflicting, 
+ * joinpointTypeMatcher could be used to load class by Joinpoint ClassLoader firstly.
  * 
  * <p>
  * Below figure demonstrates runtime relationship between ClassLoaders. 
  * 
- *                           Logical Parent CL          Actual Parent CL        Jointpoint CL
- * ----------------         -------------------          -------------          -----------
- * | Bootstrap CL |  <----  | Ext/Platform CL |  <----   | System CL |  <----   |  XXX CL |
- * ----------------         -------------------          -------------          -----------
- *                                   ^                         ^                     ^
- *                                   | JavaSE class            | parent-first        | 
- *                              ----P1------P2-----------------|     class     -----P2------
- *                              | Aop CL | <---------------------------------| Aspect CL |
- *                              ------------                                   P1-----------
+ *                           Logical Parent CL           Actual Parent CL          Jointpoint CL
+ * ----------------         -------------------          ---------------           -----------
+ * | Bootstrap CL |  <----  | Ext/Platform CL |  <----   | Launcher CL |   <----   |  XXX CL |
+ * ----------------         -------------------          ---------------           -----------
+ *                                   ^                         ^                        ^
+ *                                   | 1.JavaSE class          | 2.launcher-first       | 2.jointpoint-first 
+ *                                   |                         |       class            |       class
+ *                              ---------- --------------------|                   -------------
+ *                              | Aop CL | <-------------------------------------- | Aspect CL |
+ *                              ----------                        1.AOP class      -------------
+ *
  *
  *
  * @author   martin.liu

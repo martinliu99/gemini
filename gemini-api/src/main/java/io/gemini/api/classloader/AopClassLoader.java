@@ -23,52 +23,29 @@ import java.util.List;
 
 /**
  * <p>
- * This specialized ClassLoader is used by {@code AopLauncher} to load AOP framework and depended classes 
- * such as log4j2, aspectjweaver, bytebuddy, etc.
- * </p>
- *  
- * <i>Classes loaded by SystemClassLoader might conflict with classes loaded by AopClassLoader. 
- * To avoid this, AopClassLoader uses JavaSE ClassLoader, e.g., ExtClassLoader (JDK8-) or PlatformClassLoader(JDK9+) 
- * as parent ClassLoader (logical parent), and occasionally delegates to SystemClassLoader (actual parent) 
- * based on ParentFirstFilter.
+ * This base ClassLoader defines APIs and interfaces for implementation classes to 
+ * customize AOP framework and depended classes loading.
  * 
- * Below figure demonstrates runtime relationship between ClassLoaders. 
  * 
- *                           Logical Parent CL          Actual Parent CL        Jointpoint CL
- * ----------------         -------------------          -------------          -----------
- * | BootStrap CL |  <----  | Ext/Platform CL |  <----   | System CL |  <----   |  XXX CL |
- * ----------------         -------------------          -------------          -----------
- *                                   ^                         ^ 
- *                                   | JavaSE class            | parent-first 
- *                              ----P1------P2-----------------|     class
- *                              | Aop CL | 
- *                              ------------
- * 
- * <p>
- * This ClassLoader supports below hook interfaces to customized class loading process.
- * <li> {@code ParentFirstFilter} filters classes an resources will be loaded from parent CL firstly
- * <li> {@code TypeFilter} filter class and resource name
- * <li> {@code TypeFinder} finds class byte code and resource
- * 
+ * @author martin.liu
+ * @since  1.0.0
  *
- * @author   martin.liu
- * @since	 1.0
  */
 public abstract class AopClassLoader extends BaseClassLoader {
 
     /**
      * @param urls
-     * @param parent
+     * @param launcherClassLoader
      */
-    public AopClassLoader(URL[] urls, ClassLoader parent) {
-        super(urls, parent);
+    public AopClassLoader(URL[] urls, ClassLoader launcherClassLoader) {
+        super(urls, launcherClassLoader);
     }
 
 
     public abstract URL[] getUrls();
 
 
-    public abstract void addParentFirstFilter(ParentFirstFilter parentFirstFilter);
+    public abstract void addLauncherFirstFilter(LauncherFirstFilter launcherFirstFilter);
 
     public abstract void addTypeFilter(TypeFilter typeilter);
 
@@ -76,25 +53,26 @@ public abstract class AopClassLoader extends BaseClassLoader {
 
 
     /**
-     * This interface filters classes and resources should be load from parent CL firstly 
+     * This interface filters classes and resources should be loaded from 
+     * Launcher ClassLoader firstly 
      *
      */
-    public static interface ParentFirstFilter {
+    public static interface LauncherFirstFilter {
 
-        boolean isParentFirstClass(String name);
+        boolean isLauncherFirstClass(String name);
 
-        boolean isParentFirstResource(String name);
+        boolean isLauncherFirstResource(String name);
 
 
-        static class FilterChain implements ParentFirstFilter {
+        static class FilterChain implements LauncherFirstFilter {
 
-            private final List<ParentFirstFilter> chain = new ArrayList<>();
+            private final List<LauncherFirstFilter> chain = new ArrayList<>();
 
-            public FilterChain addFilter(ParentFirstFilter parentFirstFilter) {
-                if (parentFirstFilter == null)
+            public FilterChain addFilter(LauncherFirstFilter launcherFirstFilter) {
+                if (launcherFirstFilter == null)
                     return this;
 
-                this.chain.add(parentFirstFilter);
+                this.chain.add(launcherFirstFilter);
                 return this;
             }
 
@@ -102,9 +80,9 @@ public abstract class AopClassLoader extends BaseClassLoader {
              * {@inheritDoc}
              */
             @Override
-            public boolean isParentFirstClass(String name) {
-                for (ParentFirstFilter filter : chain) {
-                    if (filter.isParentFirstClass(name))
+            public boolean isLauncherFirstClass(String name) {
+                for (LauncherFirstFilter filter : chain) {
+                    if (filter.isLauncherFirstClass(name))
                         return true;
                 }
 
@@ -115,9 +93,9 @@ public abstract class AopClassLoader extends BaseClassLoader {
              * {@inheritDoc}
              */
             @Override
-            public boolean isParentFirstResource(String name) {
-                for (ParentFirstFilter filter : chain) {
-                    if (filter.isParentFirstResource(name))
+            public boolean isLauncherFirstResource(String name) {
+                for (LauncherFirstFilter filter : chain) {
+                    if (filter.isLauncherFirstResource(name))
                         return true;
                 }
 

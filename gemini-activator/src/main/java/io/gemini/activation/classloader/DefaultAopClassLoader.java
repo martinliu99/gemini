@@ -28,23 +28,47 @@ import io.gemini.api.classloader.ClassLoaders;
  * <p>
  * This specialized ClassLoader is used by {@code AopActivator} to load AOP framework and depended classes 
  * such as log4j2, aspectjweaver, bytebuddy, etc.
+ * </p>
+ *  
+ * <i>Classes loaded by LauncherClassLoader might conflict with classes loaded by AopClassLoader. 
+ * To avoid this, AopClassLoader uses JavaSE ClassLoader, e.g., ExtClassLoader (JDK8-) or PlatformClassLoader(JDK9+) 
+ * as parent ClassLoader (logical parent), and occasionally delegates to LauncherClassLoader (actual parent) 
+ * decided by LauncherFirstFilter.
  * 
+ * Below figure demonstrates runtime relationship between ClassLoaders. 
  * 
- * @author martin.liu
- * @since  1.0.0
+ *                           Logical Parent CL           Actual Parent CL          Jointpoint CL
+ * ----------------         -------------------          ---------------           -----------
+ * | BootStrap CL |  <----  | Ext/Platform CL |  <----   | Laucnher CL |   <----   |  XXX CL |
+ * ----------------         -------------------          ---------------           -----------
+ *                                   ^                         ^ 
+ *                                   | 1.JavaSE class          | 2.launcher-first 
+ *                                   |                         |     class
+ *                              ----------  -------------------|
+ *                              | Aop CL |
+ *                              ----------
+ * 
+ * <p>
+ * This ClassLoader supports below hook interfaces to customized class loading process.
+ * <li> {@code LauncherFirstFilter} filters classes an resources will be loaded from Launcher CL firstly
+ * <li> {@code TypeFilter} filter class and resource name
+ * <li> {@code TypeFinder} finds class byte code and resource
+ * 
  *
+ * @author   martin.liu
+ * @since    1.0
  */
 public class DefaultAopClassLoader extends AopClassLoader {
 
-    private static final Set<String> BUILTIN_PARENT_FIRST_CLASS_PREFIXES = new LinkedHashSet<>();
-    private static final Set<String> BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES = new LinkedHashSet<>();
+    private static final Set<String> BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES = new LinkedHashSet<>();
+    private static final Set<String> BUILTIN_LAUNCHER_FIRST_RESOURCE_PREFIXES = new LinkedHashSet<>();
 
 
     private final URL[] urls;
 
-    private final ClassLoader deletgateClassLoader;
+    private final ClassLoader launcherClassLoader;
 
-    private ParentFirstFilter.FilterChain parentFirstFilters;
+    private LauncherFirstFilter.FilterChain launcherFirstFilters;
 
     private TypeFilter.FilterChain typeFilters;
 
@@ -56,28 +80,28 @@ public class DefaultAopClassLoader extends AopClassLoader {
         registerAsParallelCapable();
 
 
-        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.activation.");
-        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.classloader.");
+        BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES.add("io.gemini.api.activation.");
+        BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES.add("io.gemini.api.classloader.");
 
         // TODO:  support jar mode
-//        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("io.gemini.api.");
-//        BUILTIN_PARENT_FIRST_CLASS_PREFIXES.add("net.bytebuddy.");
+//        BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES.add("io.gemini.api.");
+//        BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES.add("net.bytebuddy.");
 
-        for (String classPrefix : BUILTIN_PARENT_FIRST_CLASS_PREFIXES)
-            BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES.add(classPrefix.replace(".", "/"));
+        for (String classPrefix : BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES)
+            BUILTIN_LAUNCHER_FIRST_RESOURCE_PREFIXES.add(classPrefix.replace(".", "/"));
     }
 
 
-    public DefaultAopClassLoader(URL[] urls, ClassLoader parentClassLoader) {
+    public DefaultAopClassLoader(URL[] urls, ClassLoader launcherClassLoader) {
         // use ExtClassLoader/PlatformClassLoader as parent ClassLoader.
         super(urls, ClassLoaders.getExtClassLoader());
     
         this.urls = urls;
 
-        // refer to actual parent ClassLoader
-        this.deletgateClassLoader = parentClassLoader;
+        // refer to actual Launcher ClassLoader
+        this.launcherClassLoader = launcherClassLoader;
 
-        this.parentFirstFilters = new ParentFirstFilter.FilterChain()
+        this.launcherFirstFilters = new LauncherFirstFilter.FilterChain()
                 .addFilter(Default.INSTANCE);
 
         this.typeFilters = new TypeFilter.FilterChain();
@@ -89,11 +113,11 @@ public class DefaultAopClassLoader extends AopClassLoader {
         return this.urls;
     }
 
-    public void addParentFirstFilter(ParentFirstFilter parentFirstFilter) {
-        if (parentFirstFilter == null) 
+    public void addLauncherFirstFilter(LauncherFirstFilter launcherFirstFilter) {
+        if (launcherFirstFilter == null) 
             return;
 
-        this.parentFirstFilters.addFilter(parentFirstFilter);
+        this.launcherFirstFilters.addFilter(launcherFirstFilter);
     }
 
     public void addTypeFilter(TypeFilter typeilter) {
@@ -126,10 +150,10 @@ public class DefaultAopClassLoader extends AopClassLoader {
                 return type;
             }
 
-            // 2.if delegation loading is required, try to load from actual parent ClassLoader.
-            if (this.parentFirstFilters.isParentFirstClass(name) == true) {
+            // 2.if delegation loading is required, try to load from actual Launcher ClassLoader.
+            if (this.launcherFirstFilters.isLauncherFirstClass(name) == true) {
                 try {
-                    type = this.deletgateClassLoader.loadClass(name);
+                    type = this.launcherClassLoader.loadClass(name);
                     if (type != null) {
                         if (resolve == true) {
                             this.resolveClass(type);
@@ -163,9 +187,9 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
         URL url = null;
 
-        // 1.if delegation loading is required, try to load from actual parent ClassLoader.
-        if (this.parentFirstFilters.isParentFirstResource(name) == true) {
-            url = this.deletgateClassLoader.getResource(name);
+        // 1.if delegation loading is required, try to load from actual Launcher ClassLoader.
+        if (this.launcherFirstFilters.isLauncherFirstResource(name) == true) {
+            url = this.launcherClassLoader.getResource(name);
             if (url != null) {
                 return url;
             }
@@ -189,9 +213,9 @@ public class DefaultAopClassLoader extends AopClassLoader {
      * {@inheritDoc}
      */
     public Enumeration<URL> getResources(String name) throws IOException {
-        // 1.if delegation loading is required, try to load from actual parent ClassLoader.
-        if (this.parentFirstFilters.isParentFirstResource(name) == true) {
-            return this.deletgateClassLoader.getResources(name);
+        // 1.if delegation loading is required, try to load from actual Launcher ClassLoader.
+        if (this.launcherFirstFilters.isLauncherFirstResource(name) == true) {
+            return this.launcherClassLoader.getResources(name);
         }
 
 
@@ -209,14 +233,14 @@ public class DefaultAopClassLoader extends AopClassLoader {
     }
 
 
-    enum Default implements ParentFirstFilter {
+    enum Default implements LauncherFirstFilter {
 
         INSTANCE;
 
 
         @Override
-        public boolean isParentFirstClass(String name) {
-            for (String classPrefix : BUILTIN_PARENT_FIRST_CLASS_PREFIXES) {
+        public boolean isLauncherFirstClass(String name) {
+            for (String classPrefix : BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES) {
                 if (name.startsWith(classPrefix))
                     return true;
             }
@@ -225,8 +249,8 @@ public class DefaultAopClassLoader extends AopClassLoader {
         }
 
         @Override
-        public boolean isParentFirstResource(String name) {
-            for (String resourcePrefix : BUILTIN_PARENT_FIRST_RESOURCE_PREFIXES) {
+        public boolean isLauncherFirstResource(String name) {
+            for (String resourcePrefix : BUILTIN_LAUNCHER_FIRST_RESOURCE_PREFIXES) {
                 if (name.startsWith(resourcePrefix))
                     return true;
             }

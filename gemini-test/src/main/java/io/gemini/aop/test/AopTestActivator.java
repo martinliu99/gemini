@@ -50,7 +50,7 @@ import io.gemini.core.util.SingleEnumeration;
 import net.bytebuddy.agent.ByteBuddyAgent;
 
 /**
- *
+ * This class activates AOP framework before executing test cases.
  *
  * @author   martin.liu
  * @since	 1.0
@@ -105,24 +105,8 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
                     new AspectAppScanner.ClassesFolder() );
 
             AopClassLoader aopClassLoader = new DefaultAopClassLoader(classPathURLs.toArray(new URL[0]),  AopTestActivator.class.getClassLoader());
-            aopClassLoader.addTypeFinder( new AopClassLoader.TypeFinder() {
 
-                @Override
-                public byte[] findByteCode(String name) {
-                    return null;
-                }
-
-                @Override
-                public URL findResource(String name) {
-                    return resourceFileURLs.get(name);
-                }
-
-                @Override
-                public Enumeration<URL> findResources(String name) throws IOException {
-                    URL resources = resourceFileURLs.get(name);
-                    return resources != null ? new SingleEnumeration<>(resources) : null;
-                }
-            } );
+            configureClassLoader(aopClassLoader, resourceFileURLs);
 
             AopActivator.activateAop(launchLocation, instrumentation, launcherConfig, aopClassLoader);
         } catch (Throwable t) {
@@ -180,6 +164,53 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
         } catch (IOException e) {
             LOGGER.warn("Could not iterate path: {}", rootPath, e);
         }
+    }
+
+    private void configureClassLoader(AopClassLoader aopClassLoader, Map<String, URL> resourceFileURLs) {
+        // 1.load {@code ExecutionMemento} relevant classes via Launcher ClassLoader.
+        aopClassLoader.addLauncherFirstFilter( new AopClassLoader.LauncherFirstFilter() {
+
+            private final String launcherFirstClassPrefix;
+            private final String launcherFirstResourcePrefix;
+
+
+            {
+                this.launcherFirstClassPrefix = ExecutionMemento.class.getName();
+                this.launcherFirstResourcePrefix = ClassUtils.convertClassToResource(launcherFirstClassPrefix);
+            }
+
+
+            @Override
+            public boolean isLauncherFirstClass(String name) {
+                return name.startsWith(launcherFirstClassPrefix);
+            }
+
+            @Override
+            public boolean isLauncherFirstResource(String name) {
+                return name.startsWith(launcherFirstResourcePrefix);
+            }
+        } );
+
+
+        // 2.load configuration files
+        aopClassLoader.addTypeFinder( new AopClassLoader.TypeFinder() {
+
+            @Override
+            public byte[] findByteCode(String name) {
+                return null;
+            }
+
+            @Override
+            public URL findResource(String name) {
+                return resourceFileURLs.get(name);
+            }
+
+            @Override
+            public Enumeration<URL> findResources(String name) throws IOException {
+                URL resources = resourceFileURLs.get(name);
+                return resources != null ? new SingleEnumeration<>(resources) : null;
+            }
+        } );
     }
 
 

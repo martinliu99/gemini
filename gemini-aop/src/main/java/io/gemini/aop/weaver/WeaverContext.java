@@ -38,6 +38,7 @@ import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
@@ -59,6 +60,9 @@ class WeaverContext {
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS = "aop.weaver.defaultExcludedTypeExpressions";
 
+    private static final String WEAVER_BUILTIN_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY = "aop.weaver.builtinDispatcherCircularityTypeExpressions";
+    private static final String WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY = "aop.weaver.dispatcherCircularityTypeExpressions";
+
 
     private final AopContext aopContext;
 
@@ -68,10 +72,19 @@ class WeaverContext {
     private Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> classLoaderTypeMatchers;
 
 
+    private ElementMatcher<String> dispatcherCircularityTypeMatcher;
+
     private Class<?> classInitializerAdvice;
+    private Class<?> classInitializerAdviceBreakingCircularity;
+
     private Class<?> classMethodAdvice;
+    private Class<?> classMethodAdviceBreakingCircularity;
+
     private Class<?> instanceConstructorAdvice;
+    private Class<?> instanceConstructorAdviceBreakingCircularity;
+
     private Class<?> instanceMethodAdvice;
+    private Class<?> instanceMethodAdviceBreakingCircularity;
 
 
     // weaver installer settings
@@ -192,17 +205,44 @@ class WeaverContext {
 
         // load joinpoint transformer settings
         {
-            String settingkey = "aop.weaver.classInitializerAdvice";
-            this.classInitializerAdvice = configView.getAsClass(settingkey, ClassInitializerAdvice.class);
+            Set<String> dispatcherCircularityTypeExpressions = new LinkedHashSet<>();
+            dispatcherCircularityTypeExpressions.addAll(
+                    configView.getAsStringSet(
+                            WEAVER_BUILTIN_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, new LinkedHashSet<>() ) );
+            dispatcherCircularityTypeExpressions.addAll(
+                    configView.getAsStringSet(
+                            WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, new LinkedHashSet<>() ) );
 
-            settingkey = "aop.weaver.classMethodAdvice";
-            this.classMethodAdvice = configView.getAsClass(settingkey, ClassMethodAdvice.class);
+            if (LOGGER.isInfoEnabled() && dispatcherCircularityTypeExpressions.size() > 0)
+                LOGGER.info("Loaded {} rules from '{}' setting. \n"
+                        + "  {} \n", 
+                        dispatcherCircularityTypeExpressions.size(), WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, 
+                        StringUtils.join(dispatcherCircularityTypeExpressions, "\n  ")
+                );
 
-            settingkey = "aop.weaver.instanceConstructorAdvice";
-            this.instanceConstructorAdvice = configView.getAsClass(settingkey, InstanceConstructorAdvice.class);
+            this.dispatcherCircularityTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                    WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, dispatcherCircularityTypeExpressions, ElementMatchers.none() );
 
-            settingkey = "aop.weaver.instanceMethodAdvice";
-            this.instanceMethodAdvice = configView.getAsClass(settingkey, InstanceMethodAdvice.class);
+
+            this.classInitializerAdvice = configView.getAsClass(
+                    "aop.weaver.classInitializerAdvice", ClassInitializerAdvice.class);
+            this.classInitializerAdviceBreakingCircularity = configView.getAsClass(
+                    "aop.weaver.classInitializerAdvice.breakingCircularity", ClassInitializerAdvice.BreakingCircularity.class);
+
+            this.classMethodAdvice = configView.getAsClass(
+                    "aop.weaver.classMethodAdvice", ClassMethodAdvice.class);
+            this.classMethodAdvice = configView.getAsClass(
+                    "aop.weaver.classMethodAdvice.breakingCircularity", ClassMethodAdvice.BreakingCircularity.class);
+
+            this.instanceConstructorAdvice = configView.getAsClass(
+                    "aop.weaver.instanceConstructorAdvice", InstanceConstructorAdvice.class);
+            this.instanceConstructorAdvice = configView.getAsClass(
+                    "aop.weaver.instanceConstructorAdvice.breakingCircularity", InstanceConstructorAdvice.BreakingCircularity.class);
+
+            this.instanceMethodAdvice = configView.getAsClass(
+                    "aop.weaver.instanceMethodAdvice", InstanceMethodAdvice.class);
+            this.instanceMethodAdviceBreakingCircularity = configView.getAsClass(
+                    "aop.weaver.instanceMethodAdvice.breakingCircularity", InstanceMethodAdvice.BreakingCircularity.class);
         }
 
         // load weaver installer settings
@@ -245,20 +285,32 @@ class WeaverContext {
     }
 
 
-    public Class<?> getClassInitializerAdvice() {
-       return classInitializerAdvice;
+    public Class<?> getClassInitializerAdvice(TypeDescription typeDescription) {
+        return isBreakingCircularity(typeDescription)
+                ? classInitializerAdviceBreakingCircularity
+                : classInitializerAdvice;
     }
 
-    public Class<?> getClassMethodAdvice() {
-        return classMethodAdvice;
+    public Class<?> getClassMethodAdvice(TypeDescription typeDescription) {
+        return isBreakingCircularity(typeDescription)
+                ? classMethodAdviceBreakingCircularity
+                : classMethodAdvice;
     }
 
-    public Class<?> getInstanceConstructorAdvice() {
-        return instanceConstructorAdvice;
+    public Class<?> getInstanceConstructorAdvice(TypeDescription typeDescription) {
+        return isBreakingCircularity(typeDescription)
+                ? instanceConstructorAdviceBreakingCircularity
+                : instanceConstructorAdvice;
     }
 
-    public Class<?> getInstanceMethodAdvice() {
-        return instanceMethodAdvice;
+    public Class<?> getInstanceMethodAdvice(TypeDescription typeDescription) {
+        return isBreakingCircularity(typeDescription)
+                ? instanceMethodAdviceBreakingCircularity
+                : instanceMethodAdvice;
+    }
+
+    private boolean isBreakingCircularity(TypeDescription typeDescription) {
+        return dispatcherCircularityTypeMatcher.matches( typeDescription.getTypeName() );
     }
 
 

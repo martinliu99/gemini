@@ -15,16 +15,24 @@
  */
 package io.gemini.aop.weaver.advice;
 
+import static net.bytebuddy.matcher.ElementMatchers.isPublic;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Arrays;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.invoke.MethodType;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import io.gemini.aop.java.lang.BootstrapAdvice;
-import io.gemini.aop.java.lang.BootstrapClassConsumer;
+import io.gemini.aop.weaver.BootstrapDispatcher;
+import io.gemini.core.bootstrap.BootstrapClassConsumer;
+import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.asm.Advice.OffsetMapping;
 import net.bytebuddy.asm.Advice.OffsetMapping.ForStackManipulation;
 import net.bytebuddy.description.annotation.AnnotationDescription.Loadable;
@@ -40,7 +48,17 @@ import net.bytebuddy.implementation.bytecode.member.Invokedynamic;
 import net.bytebuddy.implementation.bytecode.member.MethodInvocation;
 import net.bytebuddy.utility.JavaConstant;
 
+/**
+ * byte code version lower than JDK7 does not support invoke dynamic instruction
+
+ */
 public interface DescriptorOffset {
+
+    static OffsetMapping.Factory<Descriptor> createDescriptorOffset(MethodDescription methodDescription, String... arguments) {
+        return ClassFileVersion.JAVA_V6.isLessThan(methodDescription.getDeclaringType().asErasure().getClassFileVersion())
+                ? new DescriptorOffset.ForDynamicInvocation(methodDescription, arguments)
+                : new DescriptorOffset.ForRegularInvocation(methodDescription, arguments);
+    }
 
 
     @Target( {ElementType.PARAMETER} )
@@ -50,15 +68,20 @@ public interface DescriptorOffset {
     }
 
 
+    @BootstrapClassConsumer
     abstract class AbstractBase implements OffsetMapping.Factory<Descriptor> {
 
-        protected final String methodSignature;
+        protected static final TypeDescription BOOTSTRAP_DISPATCHER_TYPE = 
+                TypeDescription.ForLoadedType.of(BootstrapDispatcher.class);
+
+
         protected final MethodDescription methodDescription;
+        protected final String[] arguments;
 
 
-        public AbstractBase(String methodSignature, MethodDescription methodDescription) {
-            this.methodSignature = methodSignature;
+        public AbstractBase(MethodDescription methodDescription, String[] arguments) {
             this.methodDescription = methodDescription;
+            this.arguments = arguments;
         }
 
 
@@ -71,13 +94,23 @@ public interface DescriptorOffset {
         }
 
         protected List<JavaConstant> doGetMethodArgumentJavaConstants() {
-            return Arrays.asList( 
-                    JavaConstant.Simple.wrap(methodSignature) );
+            List<JavaConstant> javaConstants = new ArrayList<>(arguments.length);
+            for (String argument : arguments) {
+                javaConstants.add( 
+                    JavaConstant.Simple.wrap(argument) );
+            }
+
+            return javaConstants;
         }
 
         protected List<StackManipulation> doGetMethodArgumentStackManipulations() {
-            return Arrays.asList( 
-                    JavaConstant.Simple.wrap(methodSignature).toStackManipulation() );
+            List<StackManipulation> stackManipulations = new ArrayList<>(arguments.length);
+            for (String argument : arguments) {
+                stackManipulations.add( 
+                    JavaConstant.Simple.wrap(argument).toStackManipulation() );
+            }
+
+            return stackManipulations;
         }
     }
 
@@ -87,16 +120,28 @@ public interface DescriptorOffset {
 
         private static final Generic STRING = TypeDefinition.Sort.describe(String.class);
 
-        private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_METHOD
-                = new MethodDescription.ForLoadedMethod( BootstrapAdvice.Bridger.createDescriptorMethod() );
+        private static final MethodDescription GET_CREATOR_METHOD = 
+                BOOTSTRAP_DISPATCHER_TYPE.getDeclaredMethods().filter( named("getCreator") ).getOnly();
+
+        private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_METHOD =
+                TypeDescription.ForLoadedType.of(BootstrapDispatcher.Creator.class).getDeclaredMethods()
+                .filter( 
+                        isPublic().and(
+                                named("createDescriptor").and(
+                                        takesArguments(
+                                                Lookup.class, Object[].class)
+                                        ) 
+                                )
+                        )
+                .getOnly();
 
 
         /**
          * @param methodSignature
          * @param methodDescription
          */
-        public ForRegularInvocation(String methodSignature, MethodDescription methodDescription) {
-            super(methodSignature, methodDescription);
+        public ForRegularInvocation(MethodDescription methodDescription, String... arguments) {
+            super(methodDescription, arguments);
         }
 
         /**
@@ -107,7 +152,7 @@ public interface DescriptorOffset {
                 AdviceType adviceType) {
             return new ForStackManipulation(
                     new StackManipulation.Compound(
-//                            NullConstant.INSTANCE,
+                            MethodInvocation.invoke(GET_CREATOR_METHOD),
                             MethodInvocation.lookup(),
                             ArrayFactory.forType(STRING).withValues(
                                     doGetMethodArgumentStackManipulations()),
@@ -124,13 +169,23 @@ public interface DescriptorOffset {
     @BootstrapClassConsumer
     class ForDynamicInvocation extends AbstractBase {
 
-        private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_INDY_BSM 
-                = new MethodDescription.ForLoadedMethod( BootstrapAdvice.Bridger.createDescriptorIndyBSM() );
+        private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_INDY_BSM = 
+                BOOTSTRAP_DISPATCHER_TYPE.getDeclaredMethods()
+                .filter( 
+                        isPublic().and(
+                                named("createDescriptorCallSite").and(
+                                        takesArguments(
+                                                MethodHandles.Lookup.class, String.class, MethodType.class, Object[].class)
+                                        ) 
+                                )
+                        )
+                .getOnly();
 
 
-        public ForDynamicInvocation(String methodSignature, MethodDescription methodDescription) {
-            super(methodSignature, methodDescription);
+        public ForDynamicInvocation(MethodDescription methodDescription, String... arguments) {
+            super(methodDescription, arguments);
         }
+
 
         /**
          * {@inheritDoc}
@@ -146,7 +201,7 @@ public interface DescriptorOffset {
                                     Collections.<TypeDescription>emptyList()),
                             JavaConstant.MethodHandle.of(CREATE_DESCRIPTOR_INDY_BSM),
                             doGetMethodArgumentJavaConstants()
-                    ), 
+                    ),
                     target.getType(), 
                     target.getType(), 
                     Assigner.Typing.STATIC

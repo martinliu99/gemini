@@ -504,7 +504,7 @@ public interface AdvisorSpecParser {
 
         protected String doGenerateAdviceClassName(String adviceCategory) {
             // define advice class name
-            return aspectJType.getTypeName() + "_" + aspectJMethod.getName() + "_$" + adviceCategory + "$";
+            return aspectJType.getTypeName() + "_$$" + aspectJMethod.getName() + "_" + adviceCategory + "$$";
         }
 
         protected void doInitializeSpec() {

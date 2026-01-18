@@ -33,8 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AopContext;
-import io.gemini.aop.java.lang.BootstrapAdvice;
-import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Advice.After;
 import io.gemini.api.aop.Advice.Around;
@@ -42,6 +40,7 @@ import io.gemini.api.aop.Advice.Before;
 import io.gemini.api.aop.Joinpoint;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Joinpoint.ProceedingJoinpoint;
+import io.gemini.core.bootstrap.BootstrapClassConsumer;
 import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
@@ -400,9 +399,10 @@ interface Joinpoints {
 
 
     @BootstrapClassConsumer
-    class MutableJoinpointDispatcher<T, E extends Throwable> implements BootstrapAdvice.Dispatcher<T, E>, Supplier<Advice> {
+    class MutableJoinpointDispatcher<T, E extends Throwable> implements BootstrapDispatcher.Dispatcher<T, E>, Supplier<Advice> {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(MutableJoinpointDispatcher.class);
+
 
         private final AopContext aopContext;
 
@@ -784,7 +784,7 @@ interface Joinpoints {
 
 
     @BootstrapClassConsumer
-    class ProceedingJoinpointDispatcher<T> implements BootstrapAdvice.Dispatcher<T, Throwable> {
+    class ProceedingJoinpointDispatcher<T> implements BootstrapDispatcher.Dispatcher<T, Throwable> {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(ProceedingJoinpointDispatcher.class);
 

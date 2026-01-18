@@ -26,12 +26,11 @@ import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.aop.AopWeaver;
-import io.gemini.aop.java.lang.BootstrapAdvice;
-import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.weaver.support.DefaultRedefinitionListener;
 import io.gemini.aop.weaver.support.DefaultTransformationListener;
 import io.gemini.aop.weaver.support.DefaultTransformerInstallationListener;
 import io.gemini.aop.weaver.support.DiscoveryStrategyAdapter;
+import io.gemini.core.bootstrap.BootstrapClassConsumer;
 import io.gemini.core.util.Assert;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -89,8 +88,8 @@ public class AopWeavers {
                 ? new DefaultAopWeaver(aopContext, advisorFactory, weaverContext)
                 : new DefaultAopWeaver.Diagnostic(aopContext, advisorFactory, weaverContext);
 
-        // 2.initialize BootstrapAdvice.Bridger
-        BootstrapAdvice.Bridger.setFactory(aopWeaver);
+        // 2.initialize BootstrapDispatcher
+        BootstrapDispatcher.setCreator(aopWeaver);
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
                     aopWeaver, AopWeavers.class.getClassLoader());

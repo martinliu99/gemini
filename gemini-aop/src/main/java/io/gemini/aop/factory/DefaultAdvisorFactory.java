@@ -183,7 +183,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         List<ElementMatcher<? super String>> typeMatchers = new ArrayList<>();
         ElementMatcher<String> typeMatcher = null;
         for (Entry<ElementMatcher<ClassLoader>, ElementMatcher<String>> entry : this.factoryContext.getFactoryClassLoaderTypeMatchers().entrySet()) {
-            if(entry.getKey().matches(joinpointClassLoader) == false)
+            if (entry.getKey().matches(joinpointClassLoader) == false)
                 continue;
 
             typeMatcher = entry.getValue();

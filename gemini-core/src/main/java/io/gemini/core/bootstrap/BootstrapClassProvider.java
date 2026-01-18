@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aop.java.lang;
+package io.gemini.core.bootstrap;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -25,10 +25,6 @@ import java.lang.annotation.Target;
  * {@code BootstrapClassProvider} is a mark annotation, and annotated classes 
  * will be injected into bootstrap ClassLoader by the AOP framework.
  * 
- * <p>
- * Full class name of annotated class should be "xxx.yyy.java.***", and will be 
- * scanned by framework, and replaced as "java.***" when starting up.
- * 
  * 
  * @author   martin.liu
  * @since    1.0
@@ -36,5 +32,13 @@ import java.lang.annotation.Target;
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.CLASS)
 public @interface BootstrapClassProvider {
+
+    /**
+     * define destination package to place annotated class, and type scope to fetch 
+     * private Lookup under JDK 9+
+     * 
+     * @return
+     */
+    Class<?> scopeType();
 
 }

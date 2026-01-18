@@ -27,7 +27,7 @@ import io.gemini.api.classloader.ClassLoaders;
 
 public abstract class ClassLoaderUtils {
 
-    public static final ClassLoader BOOTSTRAP_CLASSLOADER = new BootstrapClassLoader();
+    private static final ClassLoader BOOTSTRAP_CLASSLOADER = new BootstrapClassLoader();
 
 
     public static ClassLoader maskNull(ClassLoader classLoader) {

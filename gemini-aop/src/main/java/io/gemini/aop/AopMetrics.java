@@ -48,8 +48,9 @@ public class AopMetrics {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopMetrics.class);
 
     private static final int POLLING_TIMEOUT = 100;
-
     private static final int ITEM_NAME_LENGTH = 40;
+
+    public static final ClassLoader REJECTED_CLASS_LOADER = new RejectedClassLoader();
     public static final double NANO_TIME = 1e9;
 
     private static ThreadLocal<TypeMetrics> TYPE_METRICS_HOLDER = new ThreadLocal<>();
@@ -105,9 +106,9 @@ public class AopMetrics {
     }
 
 
-    public TypeMetrics createTypeMetrics(ClassLoader classLoader, String typeName) {
+    public TypeMetrics createTypeMetrics(ClassLoader classLoader, String typeName, long startedAt) {
         TYPE_METRICS_HOLDER.set(
-                new TypeMetrics(classLoader) );
+                new TypeMetrics(classLoader, typeName, startedAt) );
 
         return TYPE_METRICS_HOLDER.get();
     }
@@ -118,6 +119,7 @@ public class AopMetrics {
 
     public void collect(TypeMetrics typeMetrics) {
         this.queue.offer(typeMetrics);
+        TYPE_METRICS_HOLDER.remove();
     }
 
     public void stop() {
@@ -129,7 +131,7 @@ public class AopMetrics {
     private void processMetrics() {
         List<TypeMetrics> typeMetricsList = new ArrayList<>(batchSize);
 
-        while(running.get()) {
+        while (running.get()) {
             try {
                 TypeMetrics typeMetrics = this.queue.poll(POLLING_TIMEOUT, TimeUnit.MILLISECONDS);
                 if (typeMetrics == null)
@@ -156,11 +158,15 @@ public class AopMetrics {
             );
 
             // compute weaving metrics
-            classLoaderMetrics.incrTypeWeavingCount(1);
+            boolean isRejectedClassLoader = cacheKey == REJECTED_CLASS_LOADER;
+            boolean isTransformingType = typeMetrics.getTypeTransformationTime() > 0;
+
+            classLoaderMetrics.incrTypeWeavingCount( isTransformingType ? 0 : 1 );
             classLoaderMetrics.incrTypeWeavingTime( typeMetrics.getTypeWeavingTime() );
 
-            classLoaderMetrics.incrTypeAcceptingCount(1);
-            classLoaderMetrics.incrTypeAcceptingTime( typeMetrics.getTypeAcceptingTime() );
+            classLoaderMetrics.incrTypeAcceptingCount( isTransformingType ? 0 : 1 );
+            classLoaderMetrics.incrTypeAcceptingTime( 
+                    isRejectedClassLoader ? typeMetrics.getTypeWeavingTime() : typeMetrics.getTypeAcceptingTime() );
 
             classLoaderMetrics.incrAdvisorCreationCount( typeMetrics.getAdvisorCreationCount() );
             classLoaderMetrics.incrAdvisorCreationTime( typeMetrics.getAdvisorCreationTime() );
@@ -315,25 +321,26 @@ public class AopMetrics {
         public String renderLauncherStartupSummaryTemplate(LauncherMetrics launcherMetrics, WeaverMetrics launcherStartupMetrics) {
             Map<String, Object> valueMap = new HashMap<>();
 
+            // collect metrics to be formated
             valueMap.put("launcherStartupTime", launcherMetrics.getLauncherStartupTime() / NANO_TIME);
 
             valueMap.put("launcherSetupTime", launcherMetrics.getLauncherSetupTime() / NANO_TIME);
-
             valueMap.put("loggerCreationTime", launcherMetrics.getLoggerCreationTime() / NANO_TIME);
 
             valueMap.put("aopContextCreationTime", launcherMetrics.getAopContextCreationTime() / NANO_TIME);
             valueMap.put("classScannerCreationTime", launcherMetrics.getClassScannerCreationTime() / NANO_TIME);
 
-            valueMap.put("classLoaderConfigTime", (launcherMetrics.getBootstrapCLConfigTime() + launcherMetrics.getAopCLConfigTime()) / NANO_TIME);
-            valueMap.put("bootstrapCL", launcherMetrics.getBootstrapCLConfigTime() / NANO_TIME);
-            valueMap.put("aopCL", launcherMetrics.getAopCLConfigTime() / NANO_TIME);
+            valueMap.put("classLoaderConfigTime", (launcherMetrics.getBootstrapClassConfigTime() + launcherMetrics.getAopCLConfigTime()) / NANO_TIME);
+            valueMap.put("bootstrapClass", launcherMetrics.getBootstrapClassConfigTime() / NANO_TIME);
+            valueMap.put("aopClassLoader", launcherMetrics.getAopCLConfigTime() / NANO_TIME);
 
             valueMap.put("advisorFactoryCreationTime", launcherMetrics.getAdvisorFactoryCreationTime() / NANO_TIME);
+
             valueMap.put("aopWeaverCreationTime", launcherMetrics.getAopWeaverCreationTime() / NANO_TIME);
 
             valueMap.put("bytebuddyInstallationTime", launcherMetrics.getBytebuddyInstallationTime() / NANO_TIME);
-
             valueMap.put("bytebuddtWarnupTime", bytebuddyWarmupMetrics != null ? bytebuddyWarmupMetrics.getTypeWeavingTime() / NANO_TIME : 0);
+
             valueMap.put("typeRedefiningTime", launcherMetrics.getTypeRedefiningTime() / NANO_TIME);
             valueMap.put("typeWeavingTime", launcherStartupMetrics != null ? launcherStartupMetrics.getTypeWeavingTime() / NANO_TIME : 0);
 
@@ -341,10 +348,12 @@ public class AopMetrics {
 
             valueMap = format(valueMap);
 
+
+            // collect raw metrics
             StringBuilder advisorSepcs = new StringBuilder();
             if (CollectionUtils.isEmpty(launcherMetrics.getAdvisorSpecs()) == false) {
                 for (Entry<String, Integer> entry : launcherMetrics.getAdvisorSpecs().entrySet()) {
-                    advisorSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(", ");
+                    advisorSepcs.append(entry.getKey()).append(": ").append(entry.getValue()).append(" specs, ");
                 }
                 advisorSepcs.delete(advisorSepcs.length()-2, advisorSepcs.length());
             } else
@@ -352,6 +361,8 @@ public class AopMetrics {
             valueMap.put("advisorSpecs", advisorSepcs.toString());
 
             valueMap.put("typeRedefiningCount", launcherMetrics.getTypeRedefiningCount());
+          valueMap.put("typeWeavingCount", launcherStartupMetrics.getTypeWeavingCount());
+
 
             PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
             return placeholderHelper.replace(launcherStartupSummrayTemplate);
@@ -361,6 +372,7 @@ public class AopMetrics {
         public String renderAppStartupSummaryTemplate(LauncherMetrics launcherMetrics, WeaverMetrics appStartupMetrics) {
             Map<String, Object> valueMap = new HashMap<>();
 
+            // collect metrics to be formated
             double appStartupTime = (System.nanoTime() - launcherMetrics.getLauncherStartedAt()) / NANO_TIME;
             valueMap.put("appStartupTime", appStartupTime );
 
@@ -371,7 +383,11 @@ public class AopMetrics {
 
             valueMap = format(valueMap);
 
+
+            // collect raw metrics
             valueMap.put("tyepTransformationCount", appStartupMetrics.getTypeTransformationCount() );
+            valueMap.put("tyepWeavingCount", appStartupMetrics.getTypeWeavingCount() );
+
 
             PlaceholderHelper placeholderHelper = PlaceholderHelper.create(valueMap);
             return placeholderHelper.replace(appStartupSummrayTemplate);
@@ -426,7 +442,11 @@ public class AopMetrics {
 
                 Map<String, Object> valueMap = new HashMap<>();
 
-                String classLoaderId = ClassLoaderUtils.getClassLoaderId(classLoaderMetrics.getClassLoader());
+                ClassLoader classLoader = classLoaderMetrics.getClassLoader();
+                boolean isRejectedClassLoader = classLoader == REJECTED_CLASS_LOADER;
+                String classLoaderId = isRejectedClassLoader 
+                        ? "RejectedClassLoader" : ClassLoaderUtils.getClassLoaderId(classLoader);
+
                 valueMap.put("itemName", format(
                         ClassUtils.abbreviate( classLoaderId, ITEM_NAME_LENGTH ) ) );
 
@@ -596,8 +616,8 @@ public class AopMetrics {
         private long aopContextCreationTime;
         private long classScannerCreationTime;
 
-        private long bootstrapCLConfigTime;
-        private long aopCLConfigTime;
+        private long bootstrapClassConfigTime;
+        private long aopClassLoaderConfigTime;
 
         private long advisorFactoryCreationTime;
         private Map<String, Integer> advisorSpecs;
@@ -650,20 +670,20 @@ public class AopMetrics {
             this.classScannerCreationTime = classScannerCreationTime;
         }
 
-        protected long getBootstrapCLConfigTime() {
-            return bootstrapCLConfigTime;
+        protected long getBootstrapClassConfigTime() {
+            return bootstrapClassConfigTime;
         }
 
-        public void setBootstrapCLConfigTime(long bootstrapCLConfigTime) {
-            this.bootstrapCLConfigTime = bootstrapCLConfigTime;
+        public void setBootstrapClassConfigTime(long bootstrapClassConfigTime) {
+            this.bootstrapClassConfigTime = bootstrapClassConfigTime;
         }
 
         protected long getAopCLConfigTime() {
-            return aopCLConfigTime;
+            return aopClassLoaderConfigTime;
         }
 
-        public void setAopCLConfigTime(long aopCLConfigTime) {
-            this.aopCLConfigTime = aopCLConfigTime;
+        public void setAopClassLoaderConfigTime(long aopClassLoaderConfigTime) {
+            this.aopClassLoaderConfigTime = aopClassLoaderConfigTime;
         }
 
         protected long getAdvisorFactoryCreationTime() {
@@ -730,7 +750,7 @@ public class AopMetrics {
             return launcherStartupTime 
                     - launcherSetupTime
                     - aopContextCreationTime
-                    - bootstrapCLConfigTime - aopCLConfigTime
+                    - bootstrapClassConfigTime - aopClassLoaderConfigTime
                     - advisorFactoryCreationTime - aopWeaverCreationTime 
                     - bytebuddyInstallationTime - typeRedefiningTime;
         }
@@ -835,15 +855,21 @@ public class AopMetrics {
 
     public static class TypeMetrics extends BaseMetrics {
 
+        private long startedAt;
         private List<Map<String /* AdvisorName */, ResolutionLevel>> advisorResolutuonLevelMaps;
 
 
-        public TypeMetrics(ClassLoader classLoader) {
+        public TypeMetrics(ClassLoader classLoader, String typeName, long startedAt) {
             super(classLoader);
 
+            this.startedAt = startedAt;
             this.advisorResolutuonLevelMaps = new ArrayList<>();
         }
 
+
+        public long getStartedAt() {
+            return startedAt;
+        }
 
         public List<Map<String, ResolutionLevel>> getAdvisorResolutuonLevelMaps() {
             return advisorResolutuonLevelMaps;
@@ -965,4 +991,7 @@ public class AopMetrics {
             return classLoaderMetricsList;
         }
     }
+
+
+    static class RejectedClassLoader extends ClassLoader {}
 }

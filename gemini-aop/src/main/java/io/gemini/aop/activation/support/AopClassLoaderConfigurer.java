@@ -15,14 +15,8 @@
  */
 package io.gemini.aop.activation.support;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
 import java.util.Collections;
-import java.util.Enumeration;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,16 +25,12 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
-import io.gemini.aop.java.lang.BootstrapClassConsumer;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.aop.AopException;
 import io.gemini.api.classloader.AopClassLoader;
-import io.gemini.core.object.ClassRenamer;
+import io.gemini.core.bootstrap.BootstrapClassConsumer;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.util.Assert;
-import io.gemini.core.util.ClassUtils;
-import io.gemini.core.util.IOUtils;
-import io.gemini.core.util.SingleEnumeration;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
@@ -80,6 +70,7 @@ public class AopClassLoaderConfigurer {
             LOGGER.debug("^Configuring AopClassLoader, ");
         }
 
+
         // 1.create LauncherFirstFilter with launcherFirstTypeExpressions and launcherFirstResourceExpressions
         Set<String> launcherFirstTypeExpressions = new LinkedHashSet<>();
         Set<String> launcherFirstResourceExpressions = new LinkedHashSet<>();
@@ -90,10 +81,6 @@ public class AopClassLoaderConfigurer {
 
         // 2.create BootstrapClassFilter with bootstrap classes.
         this.configureBoostrapClassFilter(aopClassLoader, nameMapping);
-
-
-        // 3.create BootstrapClassConsumerTypeFilter
-        configureBootstrapClassConsumerClassFinder(aopClassLoader, classScanner, nameMapping);
 
 
         long time =  System.nanoTime() - startedAt;
@@ -109,8 +96,6 @@ public class AopClassLoaderConfigurer {
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                 LOGGER.info("$Took '{}' seconds to configure AopClassLoader.", time / AopMetrics.NANO_TIME);
         }
-
-        aopContext.getAopMetrics().getLauncherMetrics().setAopCLConfigTime(time);
     }
 
     private void configureLauncherFirstFilter(AopClassLoader aopClassLoader, 
@@ -187,73 +172,33 @@ public class AopClassLoaderConfigurer {
             private void handleBootstrapClassRenamingException(String name) {
                 StackTraceElement[] stackTraceElements = new Throwable().getStackTrace();
 
-                // find first call site for DefaultAopClassLoader#loadClass
-                StackTraceElement invokingCode = null;
+                // find invocation stack invoking class referring to bootstrap class
+                StackTraceElement invocationStack = null;
                 if (stackTraceElements != null && stackTraceElements.length != 0) {
-                    for (int i = stackTraceElements.length - 1; i >= 0 ; i--) {
+                    int invocationIndex = stackTraceElements.length - 1;
+                    for (int i = invocationIndex; i >= 0 ; i--) {
                         StackTraceElement stackTraceElement = stackTraceElements[i];
-                        if (classLoaderName.equals(stackTraceElement.getClassName()) == false
-                                || "loadClass".equals(stackTraceElement.getMethodName()) == false)
-                            continue;
+                        if (classLoaderName.equals(stackTraceElement.getClassName())
+                                && "loadClass".equals(stackTraceElement.getMethodName())) {
+                            invocationIndex = i;
+                            break;
+                        }
+                    }
 
-                        invokingCode = stackTraceElements[i+1];
-                        break;
+                    for (int i = invocationIndex; i < stackTraceElements.length - 1; i++) {
+                        StackTraceElement stackTraceElement = stackTraceElements[i];
+                        if (stackTraceElement.getClassName().startsWith("java") == false 
+                                && stackTraceElement.getClassName().startsWith("net.bytebuddy") == false) {
+                            invocationStack = stackTraceElements[i];
+                            break;
+                        }
                     }
                 }
 
-                String errorMessage = "Detected code " 
-                        + (invokingCode == null ? "" : "(" + invokingCode + ") ") + "referring to " + name 
+                String errorMessage = "Stack element " 
+                        + (invocationStack == null ? "" : invocationStack) + " invoked class referring to " + name 
                         + " which should be renamed at runtime via @" + BootstrapClassConsumer.class.getName();
                 throw new AopException(errorMessage );
-            }
-        } );
-    }
-
-    private void configureBootstrapClassConsumerClassFinder(AopClassLoader aopClassLoader, ClassScanner classScanner, Map<String, String> nameMapping) {
-        // discover consumer classes
-        List<String> consumerClassNames = classScanner.getClassNamesWithAnnotation(BootstrapClassConsumer.class.getName());
-
-        ClassRenamer classRenamer = new ClassRenamer.Default(
-                nameMapping, 
-                aopContext.isByteCodeDumped(),
-                aopContext.getByteCodeDumpPath()
-        );
-
-        Map<String, byte[]> classesTypeMap = new LinkedHashMap<>();
-        Map<String, URL> classResourceMap = new LinkedHashMap<>(consumerClassNames.size());
-        try {
-            for (String className : consumerClassNames) {
-                String path = ClassUtils.convertClassToResource(className, true);
-                InputStream inputStream = aopClassLoader.getResourceAsStream(path);
-
-                byte[] byteCode = classRenamer.map(className, IOUtils.toByteArray(inputStream) );
-
-                classesTypeMap.put(className, byteCode);
-                classResourceMap.put(path, IOUtils.toURL(path, byteCode));
-            }
-        } catch (Exception e) {
-            if (LOGGER.isWarnEnabled())
-                LOGGER.warn("Could not load BootstrapClass consumer class", e);
-
-            throw new AopException(e);
-        }
-
-        aopClassLoader.addTypeFinder( new AopClassLoader.TypeFinder() {
-
-            @Override
-            public byte[] findByteCode(String name) {
-                return classesTypeMap.get(name);
-            }
-
-
-            @Override
-            public URL findResource(String name) {
-                return classResourceMap.get(name);
-            }
-
-            @Override
-            public Enumeration<URL> findResources(String name) throws IOException {
-                 return new SingleEnumeration<URL>( classResourceMap.get(name) );
             }
         } );
     }

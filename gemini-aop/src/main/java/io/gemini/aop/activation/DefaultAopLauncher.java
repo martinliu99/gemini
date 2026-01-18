@@ -29,13 +29,13 @@ import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics.LauncherMetrics;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.activation.support.AopClassLoaderConfigurer;
-import io.gemini.aop.activation.support.BootstrapClassLoaderConfigurer;
 import io.gemini.aop.factory.AdvisorFactories;
 import io.gemini.aop.weaver.AopWeavers;
 import io.gemini.api.activation.AopLauncher;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
 import io.gemini.core.DiagnosticLevel;
+import io.gemini.core.bootstrap.BootstrapClassConfigurer;
 import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.concurrent.DaemonThreadFactory;
 import io.gemini.core.config.ConfigView;
@@ -117,7 +117,8 @@ public class DefaultAopLauncher implements AopLauncher {
 
 
             // 4.configure ClassLoaders
-            configureClassLoader(instrumentation, builtinSettings, aopContext);
+            configureClassLoader(instrumentation, 
+                    builtinSettings, aopContext, launcherMetrics);
 
 
             // 5.create AdvisorFactory
@@ -140,11 +141,11 @@ public class DefaultAopLauncher implements AopLauncher {
                     } );
             Runtime.getRuntime().addShutdownHook(shutdownHook);
         } finally {
-            ThreadContext.setContextClassLoader(existingClassLoader);
-
             replayDeferredMessages(configView);
 
             launcherMetrics.startupAopLauncher();
+
+            ThreadContext.setContextClassLoader(existingClassLoader);
         }
     }
 
@@ -163,18 +164,28 @@ public class DefaultAopLauncher implements AopLauncher {
     }
 
     private void configureClassLoader(Instrumentation instrumentation, 
-            Map<String, Object> builtinSettings, AopContext aopContext) {
-        // 1.configure BootstrapClassLoader with bootstrap classes
-        Map<String, String> nameMapping = new BootstrapClassLoaderConfigurer(
-                instrumentation, aopContext)
-                .configure(aopContext.getAopClassLoader(), aopContext.getClassScanner());
+            Map<String, Object> builtinSettings, AopContext aopContext, LauncherMetrics launcherMetrics) {
+        // 1.configure BootstrapClassLoader and AopClassLoader with bootstrap classes
+        long startedAt = System.nanoTime();
+
+        BootstrapClassConfigurer bootstrapClassConfigurer = new BootstrapClassConfigurer(instrumentation, 
+                aopContext.getDiagnosticLevel(), aopContext.isByteCodeDumped(), aopContext.getByteCodeDumpPath());
+        Map<String, String> nameMapping = bootstrapClassConfigurer
+                .configureProviderClasses(aopContext.getAopClassLoader(), aopContext.getClassScanner());
+        bootstrapClassConfigurer.configureConsumerClasses(aopContext.getAopClassLoader(), aopContext.getClassScanner(), nameMapping);
 
         builtinSettings.put(AopContext.BOOTSTRAP_CLASS_NAME_MAPPING_KEY, nameMapping);
 
+        launcherMetrics.setBootstrapClassConfigTime(System.nanoTime() - startedAt);
 
-        // 2.configure AopClassLoader 
+
+        // 2.configure AopClassLoader
+        startedAt = System.nanoTime();
+
         new AopClassLoaderConfigurer(aopContext)
                 .configure(aopContext.getAopClassLoader(), aopContext.getClassScanner(), nameMapping);
+
+        launcherMetrics.setAopClassLoaderConfigTime(System.nanoTime() - startedAt);
     }
 
 

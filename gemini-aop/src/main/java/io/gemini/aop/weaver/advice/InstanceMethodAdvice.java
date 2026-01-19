@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,12 +41,12 @@ public class InstanceMethodAdvice {
     @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
     public static boolean beforeMethod(
             @DescriptorOffset.Descriptor Object descriptor,
-            @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object thisObject,
+            @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object targetObject,
             @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
             @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
         // 1.create dispatcher
-        dispatcher = getCreator().createDispacther(descriptor, thisObject, arguments);
+        dispatcher = getCreator().createDispacther(descriptor, targetObject, arguments);
         if (dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return false;
@@ -79,7 +79,7 @@ public class InstanceMethodAdvice {
             return;
         }
 
-        // 2.set target returning
+        // 2.2.set actual returning and throwing of target method
         dispatcher.setThrowing(throwing);
         dispatcher.setReturning(returning);
 
@@ -101,7 +101,7 @@ public class InstanceMethodAdvice {
         @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
         public static boolean beforeMethod(
                 @DescriptorOffset.Descriptor Object descriptor,
-                @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object thisObject,
+                @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object targetObject,
                 @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
                 @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
                 ) throws Throwable {
@@ -112,7 +112,7 @@ public class InstanceMethodAdvice {
                 BootstrapDispatcher.disableDispatch();
 
                 // 1.create dispatcher
-                dispatcher = getCreator().createDispacther(descriptor, thisObject, arguments);
+                dispatcher = getCreator().createDispacther(descriptor, targetObject, arguments);
                 if (dispatcher == null)
                     // ignore instrumentation and execute instrumented method
                     return false;
@@ -154,7 +154,7 @@ public class InstanceMethodAdvice {
                     return;
                 }
 
-                // 2.set target returning
+                // 2.2.set actual returning and throwing of target method
                 dispatcher.setThrowing(throwing);
                 dispatcher.setReturning(returning);
 

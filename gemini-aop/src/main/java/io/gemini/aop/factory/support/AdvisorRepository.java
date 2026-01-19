@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ public interface AdvisorRepository {
     Advisor create(AdvisorContext advisorContext);
 
 
-    static List<? extends Advisor> createAdvisors(ClassLoader joinpointClassLoader,
+    static List<? extends Advisor> createAdvisors(ClassLoader targetClassLoader,
             AdvisorContext advisorContext,
             Collection<? extends AdvisorRepository> advisorRepositories) {
         long startedAt = System.nanoTime();
@@ -77,7 +77,7 @@ public interface AdvisorRepository {
         String factoryName = factoryContext.getFactoryName();
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("^Creating advisors via {} AdvisorRepository instances under '{}' for '{}',", 
-                    advisorRepositories.size(), factoryName, joinpointClassLoader);
+                    advisorRepositories.size(), factoryName, targetClassLoader);
 
 
         AopContext aopContext = factoryContext.getAopContext();
@@ -98,7 +98,7 @@ public interface AdvisorRepository {
                 result -> {
                     ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
                     try {
-                        ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
+                        ThreadContext.setContextClassLoader(targetClassLoader);   // set targetClassLoader
                         return result.get();
                     } finally {
                         ThreadContext.setContextClassLoader(existingClassLoader);
@@ -114,13 +114,13 @@ public interface AdvisorRepository {
             if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisors.size() > 0) 
                 LOGGER.info("$Took '{}' seconds to create {} Advisor instances under '{}' for '{}', \n"
                         + "  {} \n", 
-                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisors.size(), factoryName, joinpointClassLoader,
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisors.size(), factoryName, targetClassLoader,
                         StringUtils.join(advisors, Advisor::getAdvisorName, "\n  ")
                 );
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                 LOGGER.info("$Took '{}' seconds to create {} Advisor instances under '{}' for '{}'. ", 
                         (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, 
-                        advisors.size(), factoryName, joinpointClassLoader
+                        advisors.size(), factoryName, targetClassLoader
                 );
         }
 
@@ -194,7 +194,7 @@ public interface AdvisorRepository {
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             t.getMessage(), 
                             t );
 
@@ -205,9 +205,9 @@ public interface AdvisorRepository {
 
         private boolean validateCondition(AdvisorContext advisorContext) {
             try {
-                // validate factory joinpoint classLoader matching result
+                // validate factory target classLoader matching result
                 if (this.advisorSpec.isInheritClassLoaderMatcher() 
-                        && advisorContext.isJoinpointClassLoaderAccepted() == false)
+                        && advisorContext.isTargetClassLoaderAccepted() == false)
                     return false;
 
                 // validate advisorSpec condition
@@ -225,7 +225,7 @@ public interface AdvisorRepository {
                             + "  Syntax Error: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage()
                     );
 
@@ -239,7 +239,7 @@ public interface AdvisorRepository {
                             + "  Lint message: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage()
                     );
                 }
@@ -252,7 +252,7 @@ public interface AdvisorRepository {
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage()
                     );
                 }
@@ -266,7 +266,7 @@ public interface AdvisorRepository {
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             cause.getMessage(), 
                             cause
                     );
@@ -278,7 +278,7 @@ public interface AdvisorRepository {
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage(), 
                             e
                     );
@@ -298,7 +298,7 @@ public interface AdvisorRepository {
                             + "  Syntax Error: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage()
                     );
 
@@ -312,7 +312,7 @@ public interface AdvisorRepository {
                             + "  Lint message: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage()
                     );
                 }
@@ -326,7 +326,7 @@ public interface AdvisorRepository {
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             e.getExpression(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             cause.getMessage(), 
                             cause
                     );
@@ -338,7 +338,7 @@ public interface AdvisorRepository {
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage(), 
                             e
                     );
@@ -351,8 +351,7 @@ public interface AdvisorRepository {
         protected abstract P doCreatePointcut(AdvisorContext advisorContext);
 
         protected AspectJExprPointcut doCreateExprPointcut(AdvisorContext advisorContext, 
-                String classLoaderExpression, String pointcutExpression, 
-                TypeDescription pointcutDeclarationScope, 
+                String classLoaderExpression, String pointcutExpression, TypeDescription pointcutDeclarationType, 
                 Map<String, Generic> pointcutParameters) {
             if (StringUtils.hasText(pointcutExpression) == false) {
                 return null;
@@ -365,14 +364,14 @@ public interface AdvisorRepository {
             if (pointcutExpression != null)
                 pointcutExpression = advisorContext.getPlaceholderHelper().replace(pointcutExpression);
 
-            return pointcutDeclarationScope == null 
+            return pointcutDeclarationType == null 
                     ? new AspectJExprPointcut(
                             advisorContext.getTypeWorld(), 
                             pointcutExpression)
                     : new AspectJExprPointcut(
                             advisorContext.getTypeWorld(), 
                             pointcutExpression, 
-                            pointcutDeclarationScope, 
+                            pointcutDeclarationType, 
                             pointcutParameters)
             ;
         }
@@ -390,7 +389,7 @@ public interface AdvisorRepository {
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
-                            advisorContext.getJoinpointClassLoaderName(), 
+                            advisorContext.getTargetClassLoaderName(), 
                             e.getMessage(), 
                             e
                     );
@@ -438,7 +437,7 @@ public interface AdvisorRepository {
                                         + "  ClassLoader: {} \n",
                                         advisorName, 
                                         adviceClassName, 
-                                        advisorContext.getJoinpointClassLoaderName()
+                                        advisorContext.getTargetClassLoaderName()
                                 );
 
                             return null;
@@ -453,7 +452,7 @@ public interface AdvisorRepository {
                                         Advice.class.getName(), 
                                         advisorName, 
                                         adviceClassName, 
-                                        advisorContext.getJoinpointClassLoaderName()
+                                        advisorContext.getTargetClassLoaderName()
                                 );
 
                             return null;
@@ -468,7 +467,7 @@ public interface AdvisorRepository {
                                     + "  ClassLoader: {} \n",
                                     advisorName, 
                                     adviceClassName, 
-                                    advisorContext.getJoinpointClassLoaderName(), 
+                                    advisorContext.getTargetClassLoaderName(), 
                                     t
                             );
 
@@ -520,7 +519,7 @@ public interface AdvisorRepository {
                                     + "  ClassLoader: {} \n",
                                     advisorSpec.getAdvisorName(), 
                                     adviceClass, 
-                                    advisorContext.getJoinpointClassLoaderName(), 
+                                    advisorContext.getTargetClassLoaderName(), 
                                     t
                             );
 
@@ -631,8 +630,8 @@ public interface AdvisorRepository {
                 methodMatcher = new ElementMatcher.Junction.Conjunction<MethodDescription>(
                         new ElementMatcher<MethodDescription>() {
                             @Override
-                            public boolean matches(MethodDescription methodDescription) {
-                                return pointcut.matches(methodDescription, advisorSpec);
+                            public boolean matches(MethodDescription targetMethod) {
+                                return pointcut.matches(targetMethod, advisorSpec);
                             }
                         },
                         adviceMethodMatcher
@@ -668,7 +667,7 @@ public interface AdvisorRepository {
                                     + "  ClassLoader: {} \n",
                                     advisorName, 
                                     aspectJClassName, 
-                                    advisorContext.getJoinpointClassLoaderName(), 
+                                    advisorContext.getTargetClassLoaderName(), 
                                     t
                             );
 
@@ -688,7 +687,7 @@ public interface AdvisorRepository {
                                     + "  ClassLoader: {} \n",
                                     advisorName, 
                                     advisorSpec.getAdviceClassName(), 
-                                    advisorContext.getJoinpointClassLoaderName(), 
+                                    advisorContext.getTargetClassLoaderName(), 
                                     t
                             );
 
@@ -737,7 +736,7 @@ public interface AdvisorRepository {
                                     + "  ClassLoader: {} \n",
                                     advisorSpec.getAdvisorName(), 
                                     advisorSpec.getAdviceClassName(), 
-                                    advisorContext.getJoinpointClassLoaderName(), 
+                                    advisorContext.getTargetClassLoaderName(), 
                                     t
                             );
 

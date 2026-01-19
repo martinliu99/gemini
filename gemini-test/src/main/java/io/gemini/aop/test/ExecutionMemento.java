@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,11 @@ public class ExecutionMemento<T> {
 
     private boolean invoked;
 
-    private Lookup thisLookup;
-    private Class<?> thisClass;
+    private Lookup targetLookup;
+    private Class<?> targetClass;
     private AccessibleObject accessibleObject;
 
-    private Object thisObject;
+    private Object targetObject;
     private Object[] arguments;
     private Object returning;
     private Throwable throwing;
@@ -96,21 +96,21 @@ public class ExecutionMemento<T> {
         return memento;
     }
 
-    public Lookup getThisLookup() {
-        return thisLookup;
+    public Lookup getTargetLookup() {
+        return targetLookup;
     }
 
-    public T withThisLookup(Lookup thisLookup) {
-        this.thisLookup = thisLookup;
+    public T withTargetLookup(Lookup targetLookup) {
+        this.targetLookup = targetLookup;
         return memento;
     }
 
-    public Class<?> getThisClass() {
-        return thisClass;
+    public Class<?> getTargetClass() {
+        return targetClass;
     }
 
-    public T withThisClass(Class<?> thisClass) {
-        this.thisClass = thisClass;
+    public T withTargetClass(Class<?> targetClass) {
+        this.targetClass = targetClass;
         return memento;
     }
 
@@ -123,12 +123,12 @@ public class ExecutionMemento<T> {
         return memento;
     }
 
-    public Object getThisObject() {
-        return this.thisObject;
+    public Object getTargetObject() {
+        return this.targetObject;
     }
 
-    public T withThisObject(Object thisObject) {
-        this.thisObject = thisObject;
+    public T withTargetObject(Object targetObject) {
+        this.targetObject = targetObject;
         return memento;
     }
 

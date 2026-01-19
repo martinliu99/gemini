@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,17 +111,15 @@ public abstract class BootstrapDispatcher {
 
     /**
      * Get INDY BSM method to get and Cache {@code Descriptor}.
-     * @param lookup
+     * @param targetLookup
      * @param bsmMethodName
      * @param bsmMethodType
      * @param args
      * @return
      */
-    public static CallSite createDescriptorCallSite(MethodHandles.Lookup lookup, 
-            String bsmMethodName,
-            MethodType bsmMethodType,
-            Object... args) {
-        return CREATOR.createDescriptorCallSite(lookup, bsmMethodName, bsmMethodType, args);
+    public static CallSite createDescriptorCallSite(MethodHandles.Lookup targetLookup, 
+            String bsmMethodName, MethodType bsmMethodType, Object... args) {
+        return CREATOR.createDescriptorCallSite(targetLookup, bsmMethodName, bsmMethodType, args);
     }
 
 
@@ -192,24 +190,23 @@ public abstract class BootstrapDispatcher {
         /**
          * Create {@link Descriptor} instance to hold joinpoint metadata.
          * 
-         * @param lookup
+         * @param targetLookup
          * @param arguments
          * @return
          */
-        Object createDescriptor(MethodHandles.Lookup lookup, 
-                Object... arguments);
+        Object createDescriptor(MethodHandles.Lookup targetLookup, Object... arguments);
 
 
         /**
          * Create INDY CallSite to create {@link Descriptor} instance to hold joinpoint metadata.
          * 
-         * @param lookup
+         * @param targetLookup
          * @param bsmMethodName
          * @param bsmMethodType
          * @param arguments
          * @return
          */
-        CallSite createDescriptorCallSite(MethodHandles.Lookup lookup, 
+        CallSite createDescriptorCallSite(MethodHandles.Lookup targetLookup, 
                 String bsmMethodName, MethodType bsmMethodType, Object... arguments);
 
 
@@ -219,11 +216,11 @@ public abstract class BootstrapDispatcher {
          * @param <T>
          * @param <E>
          * @param descriptor
-         * @param thisObject
+         * @param targetObject
          * @param arguments
          * @return
          */
         <T, E extends Throwable> Dispatcher<T, E> createDispacther(
-                Object descriptor, Object thisObject, Object[] arguments);
+                Object descriptor, Object targetObject, Object[] arguments);
     }
 }

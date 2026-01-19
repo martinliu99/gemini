@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class FactoriesContext implements Closeable {
     private ElementMatcher<String> enabledFactoryMatcher;
 
     private boolean aspectClassLoaderShared;
-    private List<Set<String>> conflictJoinpointClassLoaders;
+    private List<Set<String>> conflictTargetClassLoaders;
 
     private boolean asmAutoComputed = false;
 
@@ -122,18 +122,18 @@ class FactoriesContext implements Closeable {
 
         {
             this.aspectClassLoaderShared = configView.getAsBoolean("aop.factories.aspectClassLoaderShared", false);
-            this.conflictJoinpointClassLoaders = parseConflictJoinpointClassLoaders(
-                    configView.getAsString("aop.factories.conflictJoinpointClassLoaders", "") );
+            this.conflictTargetClassLoaders = parseConflictTargetClassLoaders(
+                    configView.getAsString("aop.factories.conflictTargetClassLoaders", "") );
 
             this.asmAutoComputed = configView.getAsBoolean("aop.factories.asmAutoComputed", false);
         }
     }
 
-    List<Set<String>> parseConflictJoinpointClassLoaders(String conflictJoinpointClassLoadersStr) {
-        if (StringUtils.hasText(conflictJoinpointClassLoadersStr) == false)
+    List<Set<String>> parseConflictTargetClassLoaders(String conflictTargetClassLoadersStr) {
+        if (StringUtils.hasText(conflictTargetClassLoadersStr) == false)
             return Collections.emptyList();
 
-        StringTokenizer groupSt = new StringTokenizer(conflictJoinpointClassLoadersStr, ";");
+        StringTokenizer groupSt = new StringTokenizer(conflictTargetClassLoadersStr, ";");
 
         List<Set<String>> groupList = new ArrayList<>(groupSt.countTokens());
         while (groupSt.hasMoreTokens()) {
@@ -176,8 +176,8 @@ class FactoriesContext implements Closeable {
         return aspectClassLoaderShared;
     }
 
-    public List<Set<String>> getConflictJoinpointClassLoaders() {
-        return Collections.unmodifiableList( conflictJoinpointClassLoaders );
+    public List<Set<String>> getConflictTargetClassLoaders() {
+        return Collections.unmodifiableList( conflictTargetClassLoaders );
     }
 
     public boolean isAsmAutoComputed() {

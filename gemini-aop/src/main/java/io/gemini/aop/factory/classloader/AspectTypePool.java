@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import net.bytebuddy.utility.StreamDrainer;
 
 
 /**
- * TypePool looks up types imported by aspect class, firstly in current joinpoint 
+ * TypePool looks up types imported by aspect class, firstly in current Target 
  * ClassLoader, then in AspectClassLoader.
  *
  * @author   martin.liu
@@ -55,10 +55,10 @@ public class AspectTypePool extends TypePool.Default {
             return resolution;
 
 
-        // 2.look up JoinpointClassLoader
-        ClassLoader joinpointCL = aspectClassLoader.getJoinpointClassLoader();
+        // 2.look up TargetClassLoader
+        ClassLoader targetCL = aspectClassLoader.getTargetClassLoader();
         try {
-            resolution = doResolveViaJoinpointTypePool(name, joinpointCL);
+            resolution = doResolveViaTargetTypePool(name, targetCL);
             if (resolution != null && resolution.isResolved())
                 return resolution;
         } catch (Exception e) { }
@@ -68,17 +68,17 @@ public class AspectTypePool extends TypePool.Default {
         return super.describe(name);
     }
 
-    private Resolution doResolveViaJoinpointTypePool(String name, ClassLoader joinpointCL) {
-        if (joinpointCL == null)
+    private Resolution doResolveViaTargetTypePool(String name, ClassLoader targetCL) {
+        if (targetCL == null)
             return new Resolution.Illegal(name);
 
-        TypePool typePool = this.typePoolFactory.createTypePool(joinpointCL, null);
+        TypePool typePool = this.typePoolFactory.createTypePool(targetCL, null);
         return typePool.describe(name);
     }
 
 
     /**
-     * only resolve aspect relevant types to avoid joinpoint ClassLoader resource lookup.
+     * Only resolve aspect relevant types to avoid target ClassLoader resource lookup.
      * @param name
      * @return
      */

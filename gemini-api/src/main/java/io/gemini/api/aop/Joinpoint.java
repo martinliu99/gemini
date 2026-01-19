@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,22 +21,22 @@ import java.lang.reflect.AccessibleObject;
 public interface Joinpoint {
 
     /**
-     * get this class Lookup to access private member
+     * get Lookup of target class to access members of target object
      * @return
      */
-    Lookup getThisLookup();
+    Lookup getTargetLookup();
 
     /**
-     * get class information
+     * get target class
      * @return
      */
-    Class<?> getThisClass();
+    Class<?> getTargetClass();
 
     /**
      * Returns the static part of this joinpoint.
      *
      * <p>The static part is an accessible object on which a chain of
-     * interceptors are installed. */
+     * advices are installed. */
     AccessibleObject getStaticPart();
 
 
@@ -48,7 +48,7 @@ public interface Joinpoint {
      *
      * @return the object (can be null if the accessible object is
      * static). */
-    Object getThisObject();
+    Object getTargetObject();
 
     /**
      * Get the arguments as an array object.

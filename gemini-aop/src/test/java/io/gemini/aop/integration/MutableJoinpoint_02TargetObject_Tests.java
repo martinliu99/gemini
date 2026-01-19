@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_BeforeAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(adviceMethodInvoker.getThisObject()).isNull();
+            assertThat(adviceMethodInvoker.getTargetObject()).isNull();
 
             TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_BeforeAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
@@ -58,7 +58,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             AdviceMethod adviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TypeInitilizer_AfterAdvice_Aspect.ADVICE_TYPE_INITIALIZER);
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(adviceMethodInvoker.getThisObject()).isNull();
+            assertThat(adviceMethodInvoker.getTargetObject()).isNull();
 
             TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName());
             assertThat(targetMethodInvoker).isNotNull();
@@ -90,7 +90,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
     }
 
@@ -119,7 +119,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
     }
 
@@ -132,17 +132,17 @@ public class MutableJoinpoint_02TargetObject_Tests {
         AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_OBJECT_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(beforeAdviceMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(beforeAdviceMethodInvoker.getTargetObject()).isEqualTo(expected);
 
         AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.TARGET_OBJECT_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(afterAdviceMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(expected);
 
         TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(ClassMethod_Object.TARGET_OBJECT);
         assertThat(targetMethodInvoker).isNotNull();
         assertThat(targetMethodInvoker.isInvoked()).isTrue();
-        assertThat(targetMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(targetMethodInvoker.getTargetObject()).isEqualTo(expected);
     }
 
     public static class ClassMethod_Object {
@@ -153,7 +153,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putTargetMethodInvoker(TARGET_OBJECT, 
                     new TargetMethod()
                         .withInvoked(true)
-                        .withThisObject(null) );
+                        .withTargetObject(null) );
         }
     }
 
@@ -172,7 +172,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(TARGET_OBJECT_BEFORE_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
 
         @SuppressWarnings("rawtypes")
@@ -181,7 +181,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(TARGET_OBJECT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
     }
 
@@ -193,17 +193,17 @@ public class MutableJoinpoint_02TargetObject_Tests {
         AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_OBJECT_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(beforeAdviceMethodInvoker.getThisObject()).isEqualTo(null);
+        assertThat(beforeAdviceMethodInvoker.getTargetObject()).isEqualTo(null);
 
         AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.TARGET_OBJECT_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(afterAdviceMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(expected);
 
         TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceConstructor_Object.TARGET_OBJECT);
         assertThat(targetMethodInvoker).isNotNull();
         assertThat(targetMethodInvoker.isInvoked()).isTrue();
-        assertThat(targetMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(targetMethodInvoker.getTargetObject()).isEqualTo(expected);
     }
 
     public static class InstanceConstructor_Object {
@@ -214,7 +214,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putTargetMethodInvoker(TARGET_OBJECT, 
                     new TargetMethod()
                         .withInvoked(true)
-                        .withThisObject(this) );
+                        .withTargetObject(this) );
         }
     }
 
@@ -233,7 +233,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(TARGET_OBJECT_BEFORE_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
 
         @SuppressWarnings("rawtypes")
@@ -242,7 +242,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(TARGET_OBJECT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
     }
 
@@ -255,17 +255,17 @@ public class MutableJoinpoint_02TargetObject_Tests {
         AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_OBJECT_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(beforeAdviceMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(beforeAdviceMethodInvoker.getTargetObject()).isEqualTo(expected);
 
         AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_OBJECT_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        assertThat(afterAdviceMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(expected);
 
         TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(InstanceMethod_Object.TARGET_OBJECT);
         assertThat(targetMethodInvoker).isNotNull();
         assertThat(targetMethodInvoker.isInvoked()).isTrue();
-        assertThat(targetMethodInvoker.getThisObject()).isEqualTo(expected);
+        assertThat(targetMethodInvoker.getTargetObject()).isEqualTo(expected);
     }
 
     public static class InstanceMethod_Object {
@@ -276,7 +276,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putTargetMethodInvoker(TARGET_OBJECT, 
                     new TargetMethod()
                         .withInvoked(true)
-                        .withThisObject(this) );
+                        .withTargetObject(this) );
         }
     }
 
@@ -295,7 +295,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(TARGET_OBJECT_BEFORE_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
 
         @SuppressWarnings("rawtypes")
@@ -304,7 +304,7 @@ public class MutableJoinpoint_02TargetObject_Tests {
             ExecutionMemento.putAdviceMethodInvoker(TARGET_OBJECT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(joinpoint.getThisObject()) );
+                        .withTargetObject(joinpoint.getTargetObject()) );
         }
     }
 }

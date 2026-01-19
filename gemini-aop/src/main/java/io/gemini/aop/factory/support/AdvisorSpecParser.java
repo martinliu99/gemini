@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -786,7 +786,7 @@ public interface AdvisorSpecParser {
          * {@inheritDoc}
          */
         @Override
-        public boolean match(MethodDescription methodDescription, List<NamedPointcutParameter> pointcutParameters) {
+        public boolean match(MethodDescription targetMethod, List<NamedPointcutParameter> pointcutParameters) {
             // 1.match parameter count and type
             if (pointcutParameters == null || pointcutParameters.size() != pointcutParameterNames.size()) {
                 if (LOGGER.isWarnEnabled())
@@ -799,7 +799,7 @@ public interface AdvisorSpecParser {
                             getSpecType(), getAdvisorName(), 
                             MethodUtils.getMethodSignature(aspectJMethod),
                             pointcutParameterNames,
-                            MethodUtils.getMethodSignature(methodDescription), 
+                            MethodUtils.getMethodSignature(targetMethod), 
                             pointcutParameters == null ? null : pointcutParameters.stream()
                                     .map( p -> p.getParamName() )
                                     .collect( Collectors.toList() )
@@ -822,7 +822,7 @@ public interface AdvisorSpecParser {
                                 getSpecType(), getAdvisorName(), 
                                 MethodUtils.getMethodSignature(aspectJMethod),
                                 pointcutParameterNames,
-                                MethodUtils.getMethodSignature(methodDescription), 
+                                MethodUtils.getMethodSignature(targetMethod), 
                                 pointcutParameters == null ? null : pointcutParameters.stream()
                                         .map( p -> p.getParamName() )
                                         .collect( Collectors.toList() )
@@ -832,14 +832,14 @@ public interface AdvisorSpecParser {
                 }
 
                 TypeDescription paramType = parameterDescriptionMap.get(pointcutParameterBinding.getParamName()).getType().asErasure();
-                if (ClassUtils.isVisibleTo(paramType, methodDescription.getDeclaringType().asErasure()) == false) {
+                if (ClassUtils.isVisibleTo(paramType, targetMethod.getDeclaringType().asErasure()) == false) {
                     if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under Joinpoint ClassLoader. \n"
+                        LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under target ClassLoader. \n"
                                 + "  AdvisorSpec: {} \n"
                                 + "  AdviceMethod: {} \n"
                                 + "    parameter '{}': {} {} \n",
                                 getSpecType(), getAdvisorName(), 
-                                methodDescription.toGenericString(),
+                                targetMethod.toGenericString(),
                                 name, paramType.getVisibility(), paramType
                         );
 
@@ -849,7 +849,7 @@ public interface AdvisorSpecParser {
                 this.namedPointcutParameters.put(name, pointcutParameterBinding);
             }
 
-            Generic returnType = methodDescription.getReturnType();
+            Generic returnType = targetMethod.getReturnType();
             isVoidReturningOfTargetMethod = returnType.represents(void.class);
 
             return true;

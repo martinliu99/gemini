@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,25 +98,25 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
 
     @Override
-    public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule) {
-        Map<MethodDescription, List<Advisor>> methodAdvisorMap = new LinkedHashMap<>();
+    public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
+            TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
+        Map<MethodDescription, List<Advisor>> targetMethodAdvisorMap = new LinkedHashMap<>();
         // collect advisors per method
         for (Entry<FactoryContext, DefaultAdvisorFactory> entry: advisorFactoryMap.entrySet()) {
             // get advisors per AdvisorFactory
             Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = entry.getValue()
-                    .getAdvisors(typeDescription, joinpointClassLoader, javaModule);
+                    .getAdvisors(targetType, targetClassLoader, targetModule);
 
             // merge advisors
             for (Entry<? extends MethodDescription, List<? extends Advisor>> methodAdvisorEntry : advisorMap.entrySet()) {
-                methodAdvisorMap
+                targetMethodAdvisorMap
                 .computeIfAbsent(methodAdvisorEntry.getKey(), key -> new ArrayList<>() )
                 .addAll(methodAdvisorEntry.getValue());
             }
         }
 
-        return methodAdvisorMap.size() == 0 
-                ? Collections.emptyMap() : new LinkedHashMap<MethodDescription, List<? extends Advisor>>(methodAdvisorMap);
+        return targetMethodAdvisorMap.size() == 0 
+                ? Collections.emptyMap() : new LinkedHashMap<MethodDescription, List<? extends Advisor>>(targetMethodAdvisorMap);
     }
 
     @Override

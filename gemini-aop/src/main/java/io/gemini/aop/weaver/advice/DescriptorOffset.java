@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,10 +54,11 @@ import net.bytebuddy.utility.JavaConstant;
  */
 public interface DescriptorOffset {
 
-    static OffsetMapping.Factory<Descriptor> createDescriptorOffset(MethodDescription methodDescription, String... arguments) {
-        return ClassFileVersion.JAVA_V6.isLessThan(methodDescription.getDeclaringType().asErasure().getClassFileVersion())
-                ? new DescriptorOffset.ForDynamicInvocation(methodDescription, arguments)
-                : new DescriptorOffset.ForRegularInvocation(methodDescription, arguments);
+    static OffsetMapping.Factory<Descriptor> createDescriptorOffset(
+            MethodDescription targetMethod, String... arguments) {
+        return ClassFileVersion.JAVA_V6.isLessThan(targetMethod.getDeclaringType().asErasure().getClassFileVersion())
+                ? new DescriptorOffset.ForDynamicInvocation(targetMethod, arguments)
+                : new DescriptorOffset.ForRegularInvocation(targetMethod, arguments);
     }
 
 
@@ -75,12 +76,12 @@ public interface DescriptorOffset {
                 TypeDescription.ForLoadedType.of(BootstrapDispatcher.class);
 
 
-        protected final MethodDescription methodDescription;
+        protected final MethodDescription targetMethod;
         protected final String[] arguments;
 
 
-        public AbstractBase(MethodDescription methodDescription, String[] arguments) {
-            this.methodDescription = methodDescription;
+        public AbstractBase(MethodDescription targetMethod, String[] arguments) {
+            this.targetMethod = targetMethod;
             this.arguments = arguments;
         }
 
@@ -137,18 +138,19 @@ public interface DescriptorOffset {
 
 
         /**
-         * @param methodSignature
-         * @param methodDescription
+         * 
+         * @param targetMethod
+         * @param arguments
          */
-        public ForRegularInvocation(MethodDescription methodDescription, String... arguments) {
-            super(methodDescription, arguments);
+        public ForRegularInvocation(MethodDescription targetMethod, String... arguments) {
+            super(targetMethod, arguments);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public OffsetMapping make(InDefinedShape target, Loadable<Descriptor> annotation,
+        public OffsetMapping make(InDefinedShape targetParameter, Loadable<Descriptor> annotation,
                 AdviceType adviceType) {
             return new ForStackManipulation(
                     new StackManipulation.Compound(
@@ -158,8 +160,8 @@ public interface DescriptorOffset {
                                     doGetMethodArgumentStackManipulations()),
                             MethodInvocation.invoke(CREATE_DESCRIPTOR_METHOD)
                     ),
-                    target.getType(), 
-                    target.getType(), 
+                    targetParameter.getType(), 
+                    targetParameter.getType(), 
                     Assigner.Typing.STATIC
             );
         }
@@ -182,8 +184,8 @@ public interface DescriptorOffset {
                 .getOnly();
 
 
-        public ForDynamicInvocation(MethodDescription methodDescription, String... arguments) {
-            super(methodDescription, arguments);
+        public ForDynamicInvocation(MethodDescription targetMethod, String... arguments) {
+            super(targetMethod, arguments);
         }
 
 

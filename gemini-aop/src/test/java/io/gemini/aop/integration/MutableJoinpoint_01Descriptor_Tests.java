@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,10 +50,10 @@ public class MutableJoinpoint_01Descriptor_Tests {
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
 
-            assertThat(adviceMethodInvoker.getThisLookup()).isNotNull();
-            assertThat(adviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+            assertThat(adviceMethodInvoker.getTargetLookup()).isNotNull();
+            assertThat(adviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-            assertThat(adviceMethodInvoker.getThisClass()).isEqualTo(TypeInitializer_BeforeAdvice_Object.class);
+            assertThat(adviceMethodInvoker.getTargetClass()).isEqualTo(TypeInitializer_BeforeAdvice_Object.class);
             assertThat(adviceMethodInvoker.getStaticPart()).isNull();
 
             TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitializer_BeforeAdvice_Object.class.getName());
@@ -68,10 +68,10 @@ public class MutableJoinpoint_01Descriptor_Tests {
             assertThat(adviceMethodInvoker).isNotNull();
             assertThat(adviceMethodInvoker.isInvoked()).isTrue();
 
-            assertThat(adviceMethodInvoker.getThisLookup()).isNotNull();
-            assertThat(adviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+            assertThat(adviceMethodInvoker.getTargetLookup()).isNotNull();
+            assertThat(adviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-            assertThat(adviceMethodInvoker.getThisClass()).isEqualTo(TypeInitializer_AfterAdvice_Object.class);
+            assertThat(adviceMethodInvoker.getTargetClass()).isEqualTo(TypeInitializer_AfterAdvice_Object.class);
             assertThat(adviceMethodInvoker.getStaticPart()).isNull();
 
             TargetMethod targetMethodInvoker = ExecutionMemento.getTargetMethodInvoker(TypeInitializer_AfterAdvice_Object.class.getName());
@@ -105,8 +105,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass())
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass())
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }
@@ -136,8 +136,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(ADVICE_TYPE_INITIALIZER, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass())
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass())
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }
@@ -151,20 +151,20 @@ public class MutableJoinpoint_01Descriptor_Tests {
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
 
-        assertThat(beforeAdviceMethodInvoker.getThisLookup()).isNotNull();
-        assertThat(beforeAdviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(ClassMethod_Object.class);
+        assertThat(beforeAdviceMethodInvoker.getTargetClass()).isEqualTo(ClassMethod_Object.class);
         assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(ClassMethod_Object.DESCRIPTOR_METHOD);
 
         AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ClassMethod_Aspect.DESCRIPTOR_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
 
-        assertThat(afterAdviceMethodInvoker.getThisLookup()).isNotNull();
-        assertThat(afterAdviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+        assertThat(afterAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(afterAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(ClassMethod_Object.class);
+        assertThat(afterAdviceMethodInvoker.getTargetClass()).isEqualTo(ClassMethod_Object.class);
         assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(ClassMethod_Object.DESCRIPTOR_METHOD);
     }
 
@@ -204,8 +204,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(DESCRIPTOR_BEFORE_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass()) 
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
 
@@ -215,8 +215,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(DESCRIPTOR_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass()) 
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }
@@ -230,20 +230,20 @@ public class MutableJoinpoint_01Descriptor_Tests {
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
 
-        assertThat(beforeAdviceMethodInvoker.getThisLookup()).isNotNull();
-        assertThat(beforeAdviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceConstructor_Object.class);
+        assertThat(beforeAdviceMethodInvoker.getTargetClass()).isEqualTo(InstanceConstructor_Object.class);
         assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceConstructor_Object.DESCRIPTOR_CONSTRUCTOR);
 
         AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceConstructor_Aspect.DESCRIPTOR_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
 
-        assertThat(afterAdviceMethodInvoker.getThisLookup()).isNotNull();
-        assertThat(afterAdviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+        assertThat(afterAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(afterAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceConstructor_Object.class);
+        assertThat(afterAdviceMethodInvoker.getTargetClass()).isEqualTo(InstanceConstructor_Object.class);
         assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceConstructor_Object.DESCRIPTOR_CONSTRUCTOR);
     }
 
@@ -267,7 +267,7 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putTargetMethodInvoker(DESCRIPTOR, 
                     new TargetMethod()
                         .withInvoked(true)
-                        .withThisObject(this) );
+                        .withTargetObject(this) );
         }
     }
 
@@ -286,8 +286,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(DESCRIPTOR_BEFORE_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass()) 
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
 
@@ -297,8 +297,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(DESCRIPTOR_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass()) 
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }
@@ -313,20 +313,20 @@ public class MutableJoinpoint_01Descriptor_Tests {
         assertThat(beforeAdviceMethodInvoker).isNotNull();
         assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
 
-        assertThat(beforeAdviceMethodInvoker.getThisLookup()).isNotNull();
-        assertThat(beforeAdviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(beforeAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceMethod_Object.class);
+        assertThat(beforeAdviceMethodInvoker.getTargetClass()).isEqualTo(InstanceMethod_Object.class);
         assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceMethod_Object.DESCRIPTOR_METHOD);
 
         AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.DESCRIPTOR_AFTER_ADVICE);
         assertThat(afterAdviceMethodInvoker).isNotNull();
         assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
 
-        assertThat(afterAdviceMethodInvoker.getThisLookup()).isNotNull();
-        assertThat(afterAdviceMethodInvoker.getThisLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+        assertThat(afterAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(afterAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(afterAdviceMethodInvoker.getThisClass()).isEqualTo(InstanceMethod_Object.class);
+        assertThat(afterAdviceMethodInvoker.getTargetClass()).isEqualTo(InstanceMethod_Object.class);
         assertThat(afterAdviceMethodInvoker.getStaticPart()).isEqualTo(InstanceMethod_Object.DESCRIPTOR_METHOD);
     }
 
@@ -365,8 +365,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(DESCRIPTOR_BEFORE_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass()) 
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
 
@@ -376,8 +376,8 @@ public class MutableJoinpoint_01Descriptor_Tests {
             ExecutionMemento.putAdviceMethodInvoker(DESCRIPTOR_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisLookup(joinpoint.getThisLookup())
-                        .withThisClass(joinpoint.getThisClass()) 
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }

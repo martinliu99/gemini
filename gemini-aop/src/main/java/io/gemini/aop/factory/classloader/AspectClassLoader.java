@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,24 +39,24 @@ import net.bytebuddy.matcher.ElementMatchers;
  * load user-defined Advice, Pointcut, AdvisorSpec classes and AOP framework classes.
  * <li>
  * The other delegates to {@code ThreadContext} (runtime application ClassLoader) or explicitly defined
- * application ClassLoader to load joinpoint relevant classes.
+ * target ClassLoader to load target classes.
  * 
  * <p>
- * AspectClassLoader loads class from Aspect resources firstly. If not found, then delegates to application 
- * ClassLoader, and generally this loading class should be joinpoint class. 
+ * AspectClassLoader loads class from Aspect resources firstly. If not found, then delegates to target 
+ * ClassLoader, and generally this loading class should be target class. 
  * If one class could be loaded by two ClassLoaders, and there might have class conflicting, 
- * joinpointTypeMatcher could be used to load class by Joinpoint ClassLoader firstly.
+ * targetTypeMatcher could be used to load class by target ClassLoader firstly.
  * 
  * <p>
  * Below figure demonstrates runtime relationship between ClassLoaders. 
  * 
- *                           Logical Parent CL           Actual Parent CL          Jointpoint CL
+ *                           Logical Parent CL           Actual Parent CL           Target CL
  * ----------------         -------------------          ---------------           -----------
  * | Bootstrap CL |  <----  | Ext/Platform CL |  <----   | Launcher CL |   <----   |  XXX CL |
  * ----------------         -------------------          ---------------           -----------
  *                                   ^                         ^                        ^
- *                                   | 1.JavaSE class          | 2.launcher-first       | 2.jointpoint-first 
- *                                   |                         |       class            |       class
+ *                                   | 1.JavaSE class          | 2.launcher-first       | 2.target-first 
+ *                                   |                         |       class            |     class
  *                              ---------- --------------------|                   -------------
  *                              | Aop CL | <-------------------------------------- | Aspect CL |
  *                              ----------                        1.AOP class      -------------
@@ -70,8 +70,8 @@ public class AspectClassLoader extends BaseClassLoader {
 
     private final String loaderName;
 
-    private ElementMatcher<String> joinpointFirstTypeMatcher = ElementMatchers.none();
-    private ElementMatcher<String> joinpointFirstResourceMatcher = ElementMatchers.none();
+    private ElementMatcher<String> targetFirstTypeMatcher = ElementMatchers.none();
+    private ElementMatcher<String> targetFirstResourceMatcher = ElementMatchers.none();
 
 
     static {
@@ -81,8 +81,7 @@ public class AspectClassLoader extends BaseClassLoader {
 
 
     /**
-     * Create AspectClassLoader instance working in dedicated mode with predefined JoinpointClassLoader 
-     * when instantiation AspectClassLoader.
+     * Create AspectClassLoader instance with AopClassLoader.
      * 
      * @param loaderName
      * @param urls
@@ -101,12 +100,12 @@ public class AspectClassLoader extends BaseClassLoader {
     }
 
 
-    public void setJoinpointFirstTypeMatcher(ElementMatcher<String> joinpointFirstTypeMatcher) {
-        this.joinpointFirstTypeMatcher = joinpointFirstTypeMatcher;
+    public void setTargetFirstTypeMatcher(ElementMatcher<String> targetFirstTypeMatcher) {
+        this.targetFirstTypeMatcher = targetFirstTypeMatcher;
     }
 
-    public void setJoinpointFirstResourceMatcher(ElementMatcher<String> joinpointFirstResourceMatcher) {
-        this.joinpointFirstResourceMatcher = joinpointFirstResourceMatcher;
+    public void setTargetFirstResourceMatcher(ElementMatcher<String> targetFirstResourceMatcher) {
+        this.targetFirstResourceMatcher = targetFirstResourceMatcher;
     }
 
 
@@ -135,10 +134,10 @@ public class AspectClassLoader extends BaseClassLoader {
             } catch (ClassNotFoundException ignored) { /* ignored */ }
 
 
-            ClassLoader joinpointCL = getJoinpointClassLoader();
-            if (this.joinpointFirstTypeMatcher.matches(name) == true) {
-                // 3.delegate to joinpoint CL to load joinpoint first classes
-                type = joinpointCL == null ? null : this.loadClassFromJoinpointCL(joinpointCL, name, resolve, false);
+            ClassLoader targetCL = getTargetClassLoader();
+            if (this.targetFirstTypeMatcher.matches(name) == true) {
+                // 3.delegate to target CL to load target first classes
+                type = targetCL == null ? null : this.loadClassFromTargetCL(targetCL, name, resolve, false);
                 if (type != null) {
                     return type;
                 }
@@ -147,13 +146,13 @@ public class AspectClassLoader extends BaseClassLoader {
                 return this.loadClassFromCurrentCL(name, resolve, true);
             } else {
                 // 3.delegate to current CL to load Aspect relevant classes
-                type = this.loadClassFromCurrentCL(name, resolve, joinpointCL == null);
+                type = this.loadClassFromCurrentCL(name, resolve, targetCL == null);
                 if (type != null) {
                     return type;
                 }
 
-                // 4.delegate to joinpoint CL to load joinpoint relevant classes
-                return joinpointCL == null ? null : this.loadClassFromJoinpointCL(joinpointCL, name, resolve, true);
+                // 4.delegate to Target CL to load target classes
+                return targetCL == null ? null : this.loadClassFromTargetCL(targetCL, name, resolve, true);
             }
         }
     }
@@ -174,10 +173,10 @@ public class AspectClassLoader extends BaseClassLoader {
         return null;
     }
 
-    private Class<?> loadClassFromJoinpointCL(ClassLoader joinpointCL, String name, boolean resolve, 
+    private Class<?> loadClassFromTargetCL(ClassLoader targetCL, String name, boolean resolve, 
             boolean throwException) throws ClassNotFoundException {
         try {
-            Class<?> type = joinpointCL.loadClass(name);
+            Class<?> type = targetCL.loadClass(name);
             if (resolve) {
                 resolveClass(type);
             }
@@ -191,9 +190,9 @@ public class AspectClassLoader extends BaseClassLoader {
     }
 
 
-    public ClassLoader getJoinpointClassLoader() {
-        ClassLoader joinpointCL =  ThreadContext.getContextClassLoader();
-        return this == joinpointCL ? null : joinpointCL;
+    public ClassLoader getTargetClassLoader() {
+        ClassLoader targetCL =  ThreadContext.getContextClassLoader();
+        return this == targetCL ? null : targetCL;
     }
 
 
@@ -211,29 +210,29 @@ public class AspectClassLoader extends BaseClassLoader {
         }
 
 
-        ClassLoader joinpointCL = getJoinpointClassLoader();
+        ClassLoader targetCL = getTargetClassLoader();
 
-        // 2.delegate to joinpoint CL to load joinpoint only resources
-        if (joinpointCL != null && this.joinpointFirstResourceMatcher.matches(name) == true) {
-            // load resource by JoinpointClassLoader
-            return this.findResourceWithJoinpointCL(joinpointCL, name);
+        // 2.delegate to target CL to load target resources
+        if (targetCL != null && this.targetFirstResourceMatcher.matches(name) == true) {
+            // load resource by TargetClassLoader
+            return this.findResourceWithTargetCL(targetCL, name);
         }
 
 
-        // 3.delegate to joinpoint CL and current CL
+        // 3.delegate to target CL and current CL
         // load resource by current ClassLoader
         url = this.findResource(name);
         if (url != null) {
             return url;
         }
 
-        // load resource by JoinpointClassLoader
-        return joinpointCL != null ? this.findResourceWithJoinpointCL(joinpointCL, name) : null;
+        // load resource by TargetClassLoader
+        return targetCL != null ? this.findResourceWithTargetCL(targetCL, name) : null;
     }
 
 
-    private URL findResourceWithJoinpointCL(ClassLoader joinpointCL, String name) {
-        return joinpointCL.getResource(name);
+    private URL findResourceWithTargetCL(ClassLoader targetCL, String name) {
+        return targetCL.getResource(name);
     }
 
 
@@ -262,12 +261,12 @@ public class AspectClassLoader extends BaseClassLoader {
         }
 
 
-        ClassLoader joinpointCL = getJoinpointClassLoader();
+        ClassLoader targetCL = getTargetClassLoader();
 
-        // 2.delegate to joinpoint CL to load joinpoint only resources
-        if (joinpointCL != null && this.joinpointFirstResourceMatcher.matches(name) == true) {
-            // load resources by JoinpointClassLoader
-            urls = this.findResourcesWithJoinpointCL(joinpointCL, name);
+        // 2.delegate to target CL to load target resources
+        if (targetCL != null && this.targetFirstResourceMatcher.matches(name) == true) {
+            // load resources by TargetClassLoader
+            urls = this.findResourcesWithTargetCL(targetCL, name);
             if (urls != null) {
                 urlsList.add(urls);
             }
@@ -276,15 +275,15 @@ public class AspectClassLoader extends BaseClassLoader {
         }
 
 
-        // 3.delegate to joinpoint CL and current CL
+        // 3.delegate to target CL and current CL
         // load resources by current ClassLoader
         urls = this.findResources(name);
         if (urls != null) {
             urlsList.add(urls);
         }
 
-        // load resources by JoinpointClassLoader
-        urls = joinpointCL != null ? this.findResourcesWithJoinpointCL(joinpointCL, name) : null;
+        // load resources by TargetClassLoader
+        urls = targetCL != null ? this.findResourcesWithTargetCL(targetCL, name) : null;
         if (urls != null) {
             urlsList.add(urls);
         }
@@ -292,14 +291,14 @@ public class AspectClassLoader extends BaseClassLoader {
         return new CompoundEnumeration<>( urlsList );
     }
 
-    private Enumeration<URL> findResourcesWithJoinpointCL(ClassLoader joinpointCL, String name) throws IOException {
-        return joinpointCL.getResources(name);
+    private Enumeration<URL> findResourcesWithTargetCL(ClassLoader targetCL, String name) throws IOException {
+        return targetCL.getResources(name);
     }
 
     private String getLoaderName() {
         return super.toString()
                 + "-" + loaderName
-                + "-" + ClassLoaderUtils.getClassLoaderName(this.getJoinpointClassLoader());
+                + "-" + ClassLoaderUtils.getClassLoaderName(this.getTargetClassLoader());
     }
 
     

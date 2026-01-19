@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,14 +28,13 @@ import net.bytebuddy.utility.JavaModule;
 public interface AopWeaver extends RawMatcher, Transformer, Closeable {
 
     @Override
-    boolean matches(TypeDescription typeDescription,
-            ClassLoader joinpointClassLoader, JavaModule javaModule,
-            Class<?> classBeingRedefined, ProtectionDomain protectionDomain);
+    boolean matches(TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule,
+            Class<?> classBeingRedefined, ProtectionDomain targetProtectionDomain);
 
 
     @Override
-    Builder<?> transform(Builder<?> builder, TypeDescription typeDescription, ClassLoader joinpointClassLoader,
-            JavaModule javaModule, ProtectionDomain protectionDomain);
+    Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
+            JavaModule targetModule, ProtectionDomain targetProtectionDomain);
 
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ public class InstanceConstructorAdvice {
     // Advice.Thrown and try-catch is not allowed for constructor at this time
     @Advice.OnMethodExit(/* onThrowable = Throwable.class */ inline = true)
     public static void afterConstructor(
-            @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object thisObject,
+            @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object targetObject,
 //            @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,
 //            @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
@@ -72,9 +72,9 @@ public class InstanceConstructorAdvice {
         if (dispatcher == null)
             return;
 
-        // 1.set target returning
+        // 1.set actual returning of target method
         dispatcher.setThrowing(null);       // could not catch exception for constructor
-        dispatcher.setReturning(thisObject);
+        dispatcher.setReturning(targetObject);
 
         // 2.invoke AfterAdvices
         dispatcher.dispatch();
@@ -125,7 +125,7 @@ public class InstanceConstructorAdvice {
         // Advice.Thrown and try-catch is not allowed for constructor at this time
         @Advice.OnMethodExit(/* onThrowable = Throwable.class */ inline = true)
         public static void afterConstructor(
-                @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object thisObject,
+                @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object targetObject,
 //                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,
 //                @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
                 @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
@@ -139,9 +139,9 @@ public class InstanceConstructorAdvice {
                 if (dispatcher == null)
                     return;
 
-                // 1.set target returning
+                // 1.set actual returning of target method
                 dispatcher.setThrowing(null);       // could not catch exception for constructor
-                dispatcher.setReturning(thisObject);
+                dispatcher.setReturning(targetObject);
 
                 // 2.invoke AfterAdvices
                 dispatcher.dispatch();

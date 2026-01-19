@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,7 +187,7 @@ public interface TypePoolFactory {
                 // reuse loaded Aop framework classes for better performance
                 return TypePool.ClassLoading.of(classLoader);
             else
-                // eagerly look up TypeDescription of joinpoint type.
+                // eagerly look up TypeDescription of target type.
                 return doCreateFrameworkTypePool(
                         ClassLoaderUtils.getClassLoaderName(classLoader),
                         cacheProvider != null ? cacheProvider : new TypePool.CacheProvider.Simple.UsingSoftReference(), 

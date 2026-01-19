@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,14 +60,14 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
     ElementMatcher<MethodDescription> getMethodMatcher();
 
 
-    boolean matches(MethodDescription methodDescription);
+    boolean matches(MethodDescription targetMethod);
 
-    boolean matches(MethodDescription methodDescription, PointcutParameterMatcher pointcutParameterMatcher);
+    boolean matches(MethodDescription targetMethod, PointcutParameterMatcher pointcutParameterMatcher);
 
 
     interface PointcutParameterMatcher {
 
-        boolean match(MethodDescription methodDescription, List<NamedPointcutParameter> pointcutParameters);
+        boolean match(MethodDescription targetMethod, List<NamedPointcutParameter> pointcutParameters);
 
         enum True implements PointcutParameterMatcher {
 
@@ -77,7 +77,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
              * {@inheritDoc}
              */
             @Override
-            public boolean match(MethodDescription methodDescription, List<NamedPointcutParameter> pointcutParameters) {
+            public boolean match(MethodDescription targetMethod, List<NamedPointcutParameter> pointcutParameters) {
                 return true;
             }
         }
@@ -96,7 +96,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         private final String pointcutExpression;
         private final Pointcut pointcut;
 
-        private final TypeDescription pointcutDeclarationScope;
+        private final TypeDescription pointcutDeclarationType;
         private final Map<String, Generic> pointcutParameters;
 
 
@@ -129,21 +129,21 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         /**
          * Create a new AspectJExprPointcut with the given settings.
          * 
-         * @param declarationScope the declaration scope for the pointcut
+         * @param pointcutDeclarationType the declaration type for the pointcut
          * @param pointcutParameterNames the parameter names for the pointcut
          * @param pointcutParameterTypes the parameter types for the pointcut
          */
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression,
-                TypeDescription declarationScope, Map<String, Generic> pointcutParametes) {
+                TypeDescription pointcutDeclarationType, Map<String, Generic> pointcutParametes) {
             this.typeWorld = typeWorld;
 
             this.pointcutExpression = pointcutExpression;
-            this.pointcutDeclarationScope = declarationScope;
+            this.pointcutDeclarationType = pointcutDeclarationType;
             this.pointcutParameters = pointcutParametes;
 
             // Build the underlying pointcut expression.
             this.pointcut = ExprParser.INSTANCE.parsePointcutExpr(typeWorld, SUPPORTED_PRIMITIVES, 
-                    pointcutExpression, pointcutDeclarationScope, pointcutParameters);
+                    pointcutExpression, pointcutDeclarationType, pointcutParameters);
         }
 
 
@@ -158,8 +158,8 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         public ElementMatcher<TypeDescription> getTypeMatcher() {
             return new ElementMatcher<TypeDescription>() {
                 @Override
-                public boolean matches(TypeDescription typeDescription) {
-                    return AspectJExprPointcut.this.matches(typeDescription);
+                public boolean matches(TypeDescription targetType) {
+                    return AspectJExprPointcut.this.matches(targetType);
                 }
             };
         }
@@ -169,9 +169,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             return this;
         }
 
-        public boolean matches(TypeDescription typeDescription) {
+        public boolean matches(TypeDescription targetType) {
             try {
-                FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(typeDescription), null, typeWorld.getWorld());
+                FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(targetType), null, typeWorld.getWorld());
                 FuzzyBoolean fastMatch = pointcut.fastMatch(info);
                 return fastMatch.maybeTrue();
             } catch (Exception e) {
@@ -180,7 +180,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
                             + "  TargetType: {} \n"
                             + "  PointcutExpression: {} \n"
                             + "  Error reason: {} \n", 
-                            typeDescription.getTypeName(), pointcutExpression, e.getMessage(), e);
+                            targetType.getTypeName(), pointcutExpression, e.getMessage(), e);
 
                 return false;
             }
@@ -189,20 +189,21 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         /** 
          * {@inheritDoc}
          */
-        public boolean matches(MethodDescription methodDescription) {
-            return doMatch(methodDescription, false, PointcutParameterMatcher.True.INSTANCE);
+        public boolean matches(MethodDescription targetMethod) {
+            return doMatch(targetMethod, false, PointcutParameterMatcher.True.INSTANCE);
         }
 
         /** 
          * {@inheritDoc}
          */
         @Override
-        public boolean matches(MethodDescription methodDescription, PointcutParameterMatcher pointcutParameterMatcher) {
-            return this.doMatch(methodDescription, false, pointcutParameterMatcher);
+        public boolean matches(MethodDescription targetMethod, PointcutParameterMatcher pointcutParameterMatcher) {
+            return this.doMatch(targetMethod, false, pointcutParameterMatcher);
         }
 
-        protected boolean doMatch(MethodDescription methodDescription, boolean beanHasIntroductions, PointcutParameterMatcher pointcutParameterMatcher) {
-            Shadow shadow = typeWorld.makeShadow(methodDescription);
+        protected boolean doMatch(MethodDescription targetMethod, 
+                boolean beanHasIntroductions, PointcutParameterMatcher pointcutParameterMatcher) {
+            Shadow shadow = typeWorld.makeShadow(targetMethod);
             FuzzyBoolean matchResult = pointcut.match(shadow);
 
 //            Test residueTest = Literal.TRUE;
@@ -216,7 +217,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             // in Spring - we can optimize since we know we have exactly this class,
             // and there will never be matching subclass at runtime.
             if (matchResult.alwaysTrue()) {
-                return pointcutParameterMatcher.match(methodDescription, 
+                return pointcutParameterMatcher.match(targetMethod, 
                         createParamterBindings(pointcutParameters, exposedState));
             }
             else if (matchResult.alwaysFalse()) {
@@ -264,14 +265,14 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             }
             AspectJExprPointcut otherPc = (AspectJExprPointcut) other;
             return ObjectUtils.equals(this.getPointcutExpression(), otherPc.getPointcutExpression()) &&
-                    ObjectUtils.equals(this.pointcutDeclarationScope, otherPc.pointcutDeclarationScope) &&
+                    ObjectUtils.equals(this.pointcutDeclarationType, otherPc.pointcutDeclarationType) &&
                     ObjectUtils.equals(this.pointcutParameters, otherPc.pointcutParameters);
         }
 
         @Override
         public int hashCode() {
             int hashCode = ObjectUtils.hashCode(this.getPointcutExpression());
-            hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutDeclarationScope);
+            hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutDeclarationType);
             hashCode = 31 * hashCode + ObjectUtils.hashCode(this.pointcutParameters);
             return hashCode;
         }

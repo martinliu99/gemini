@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import net.bytebuddy.description.type.TypeDescription;
 
 
 /**
- * TypeWorld resolves types imported by aspect class, firstly in current joinpoint 
+ * TypeWorld resolves types imported by aspect class, firstly in current Target 
  * ClassLoader, then in AspectClassLoader.
  *
  * @author   martin.liu
@@ -60,14 +60,14 @@ public class AspectTypeWorld extends BytebuddyWorld {
         boolean isAspectType = (aspectType != null && aspectType.equals(unresolvedType.getName()))
                 || unresolvedType.isPrimitiveType();
 
-        // 1.resolve joinpoint type firstly
+        // 1.resolve target type firstly
         if (!isAspectType) {
-            ClassLoader joinpointCL = aspectClassLoader != null 
-                    ? aspectClassLoader.getJoinpointClassLoader() : null;
+            ClassLoader targetCL = aspectClassLoader != null 
+                    ? aspectClassLoader.getTargetClassLoader() : null;
 
             try {
-                TypeWorld joinpointTypeWorld = typeWorldFactory.createTypeWorld(joinpointCL, null);
-                ResolvedType resolvedType = joinpointTypeWorld == null ? null : joinpointTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
+                TypeWorld targetTypeWorld = typeWorldFactory.createTypeWorld(targetCL, null);
+                ResolvedType resolvedType = targetTypeWorld == null ? null : targetTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
                 if (resolvedType != null && resolvedType.isMissing() == false)
                     return resolvedType;
             } catch (Exception e) {}

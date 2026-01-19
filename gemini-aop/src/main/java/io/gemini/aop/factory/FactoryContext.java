@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,8 +71,8 @@ public class FactoryContext implements Closeable {
 
     private static final String FACTORY_INTERNAL_PROPERTIES = "META-INF/factory-internal.properties";
 
-    private static final String FACTORY_JOINPOINT_FIRST_TYPE_EXPRESSIONS = "aop.factory.joinpointFirstTypeExpressions";
-    private static final String FACTORY_JOINPOINT_FIRST_RESOURCE_EXPRESSIONS = "aop.factory.joinpointFirstResourceExpressions";
+    private static final String FACTORY_TARGET_FIRST_TYPE_EXPRESSIONS = "aop.factory.targetFirstTypeExpressions";
+    private static final String FACTORY_TARGET_FIRST_RESOURCE_EXPRESSIONS = "aop.factory.targetFirstResourceExpressions";
 
     private static final String FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY = "aop.factory.factoryClassLoaderTypeExpressions";
 
@@ -98,15 +98,15 @@ public class FactoryContext implements Closeable {
     private final PlaceholderHelper placeholderHelper;
 
 
-    private ElementMatcher<String> joinpointFirstTypeMatcher;
-    private ElementMatcher<String> joinpointFirstResourcesMatcher;
+    private ElementMatcher<String> targetFirstTypeMatcher;
+    private ElementMatcher<String> targetFirstResourcesMatcher;
 
     private Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> factoryClassLoaderTypeMatchers;
 
     private ElementMatcher<String> enabledAdvisorMatcher;
 
     private boolean aspectClassLoaderShared;
-    private List<Set<String>> conflictJoinpointClassLoaders;
+    private List<Set<String>> conflictTargetClassLoaders;
 
     private final TypePoolFactory typePoolFactory;
     private final TypeWorldFactory typeWorldFactory;
@@ -230,23 +230,23 @@ public class FactoryContext implements Closeable {
 
     private void loadSettings(FactoriesContext factoriesContext, ConfigView configView) {
         {
-            Set<String> joinpointFirstTypeExpressions = configView.getAsStringSet(FACTORY_JOINPOINT_FIRST_TYPE_EXPRESSIONS, Collections.emptySet());
+            Set<String> targetFirstTypeExpressions = configView.getAsStringSet(FACTORY_TARGET_FIRST_TYPE_EXPRESSIONS, Collections.emptySet());
 
-            this.joinpointFirstTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    FACTORY_JOINPOINT_FIRST_TYPE_EXPRESSIONS, joinpointFirstTypeExpressions, ElementMatchers.none() );
+            this.targetFirstTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
+                    FACTORY_TARGET_FIRST_TYPE_EXPRESSIONS, targetFirstTypeExpressions, ElementMatchers.none() );
 
-            this.classLoader.setJoinpointFirstTypeMatcher(joinpointFirstTypeMatcher);
+            this.classLoader.setTargetFirstTypeMatcher(targetFirstTypeMatcher);
 
 
-            Set<String> joinpointResourceExpressions = new LinkedHashSet<>();
-            joinpointResourceExpressions.addAll(
-                    configView.getAsStringSet(FACTORY_JOINPOINT_FIRST_RESOURCE_EXPRESSIONS, Collections.emptySet()) );
-            joinpointResourceExpressions.addAll(joinpointFirstTypeExpressions);
+            Set<String> targetResourceExpressions = new LinkedHashSet<>();
+            targetResourceExpressions.addAll(
+                    configView.getAsStringSet(FACTORY_TARGET_FIRST_RESOURCE_EXPRESSIONS, Collections.emptySet()) );
+            targetResourceExpressions.addAll(targetFirstTypeExpressions);
 
-            this.joinpointFirstResourcesMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
-                    FACTORY_JOINPOINT_FIRST_RESOURCE_EXPRESSIONS, joinpointResourceExpressions, ElementMatchers.none() );
+            this.targetFirstResourcesMatcher = ElementMatcherFactory.INSTANCE.createResourceNameMatcher(
+                    FACTORY_TARGET_FIRST_RESOURCE_EXPRESSIONS, targetResourceExpressions, ElementMatchers.none() );
 
-            this.classLoader.setJoinpointFirstResourceMatcher(joinpointFirstResourcesMatcher);
+            this.classLoader.setTargetFirstResourceMatcher(targetFirstResourcesMatcher);
         }
 
         {
@@ -312,12 +312,12 @@ public class FactoryContext implements Closeable {
             boolean aspectClassLoaderShared = configView.getAsBoolean("aop.factory.aspectClassLoaderShared", false);
             this.aspectClassLoaderShared = aspectClassLoaderShared && factoriesContext.isAspectClassLoaderShared();
 
-            List<Set<String>> conflictJoinpointClassLoaders = new ArrayList<>();
-            conflictJoinpointClassLoaders.addAll(
-                    factoriesContext.parseConflictJoinpointClassLoaders(
-                            configView.getAsString("aop.factory.conflictJoinpointClassLoaders", "") ) );
-            conflictJoinpointClassLoaders.addAll( factoriesContext.getConflictJoinpointClassLoaders() );  // merge settings in weaverContext
-            this.conflictJoinpointClassLoaders = conflictJoinpointClassLoaders;
+            List<Set<String>> conflictTargetClassLoaders = new ArrayList<>();
+            conflictTargetClassLoaders.addAll(
+                    factoriesContext.parseConflictTargetClassLoaders(
+                            configView.getAsString("aop.factory.conflictTargetClassLoaders", "") ) );
+            conflictTargetClassLoaders.addAll( factoriesContext.getConflictTargetClassLoaders() );  // merge settings in weaverContext
+            this.conflictTargetClassLoaders = conflictTargetClassLoaders;
         }
     }
 
@@ -420,32 +420,32 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            boolean joinpointClassLoaderAccepted) {
-        return createAdvisorContext(joinpointClassLoader, javaModule, joinpointClassLoaderAccepted, false);
+    public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
+            boolean targetClassLoaderAccepted) {
+        return createAdvisorContext(targetClassLoader, targetJavaModule, targetClassLoaderAccepted, false);
     }
 
-    public AdvisorContext createAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            boolean joinpointClassLoaderAccepted, boolean validateContext) {
-        ClassLoader cacheKey = ClassLoaderUtils.maskNull(joinpointClassLoader);
+    public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
+            boolean targetClassLoaderAccepted, boolean validateContext) {
+        ClassLoader cacheKey = ClassLoaderUtils.maskNull(targetClassLoader);
         return this.advisorContextMap.computeIfAbsent( 
                 cacheKey, 
                 key -> doCreateAdvisorContext(
-                        joinpointClassLoader, javaModule, 
-                        joinpointClassLoaderAccepted, validateContext,
+                        targetClassLoader, targetJavaModule, 
+                        targetClassLoaderAccepted, validateContext,
                         useSharedAspectClassLoader(cacheKey)
                 )
         );
     }
 
-    private boolean useSharedAspectClassLoader(ClassLoader joinpointClassLoader) {
+    private boolean useSharedAspectClassLoader(ClassLoader targetClassLoader) {
         // 1.use existing AspectClassLoader
-        if (advisorContextMap.containsKey(joinpointClassLoader) == true)
+        if (advisorContextMap.containsKey(targetClassLoader) == true)
             return true;
 
 
         // 2.used shared AspectClassLoader for system ClassLoaders
-        if (ClassLoaders.getBuiltinClassLoaders().contains(joinpointClassLoader) == true)
+        if (ClassLoaders.getBuiltinClassLoaders().contains(targetClassLoader) == true)
             return true;
 
 
@@ -455,23 +455,23 @@ public class FactoryContext implements Closeable {
 
 
         // 4.check potentially class loading conflict
-        // exist ClassLoader is same instance of the joinpointClassLoader
-        Class<? extends ClassLoader> classLoaderClass = joinpointClassLoader.getClass();
+        // exist ClassLoader is same instance of the TargetClassLoader
+        Class<? extends ClassLoader> classLoaderClass = targetClassLoader.getClass();
         for (ClassLoader existingCL : advisorContextMap.keySet()) {
             if (existingCL.getClass() == classLoaderClass)
                 return false;
         }
 
-        // exist ClassLoader might conflict with the joinpintClassLoader 
-        String joinpointCLClassName = ClassLoaderUtils.getClassLoaderName(joinpointClassLoader);
-        List<Set<String>> conflictJoinpointClassLoaderList = conflictJoinpointClassLoaders.stream()
-                .filter( classLoaders -> classLoaders.contains(joinpointCLClassName) )
+        // exist ClassLoader might conflict with the TargetClassLoader 
+        String targetCLClassName = ClassLoaderUtils.getClassLoaderName(targetClassLoader);
+        List<Set<String>> conflictTargetClassLoaderList = conflictTargetClassLoaders.stream()
+                .filter( classLoaders -> classLoaders.contains(targetCLClassName) )
                 .collect( Collectors.toList() );
 
         for (ClassLoader existingCL : advisorContextMap.keySet()) {
             String existingCLClassName = ClassLoaderUtils.getClassLoaderName(existingCL);
 
-            for (Set<String> classLoaders : conflictJoinpointClassLoaderList) {
+            for (Set<String> classLoaders : conflictTargetClassLoaderList) {
                 if (classLoaders.contains(existingCLClassName))
                     return false;
             }
@@ -481,8 +481,8 @@ public class FactoryContext implements Closeable {
         return true;
     }
 
-    protected AdvisorContext doCreateAdvisorContext(ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            boolean joinpointClassLoaderAccepted, boolean validateContext, boolean sharedMode) {
+    protected AdvisorContext doCreateAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
+            boolean targetClassLoaderAccepted, boolean validateContext, boolean sharedMode) {
         // create AspectClassLoader & objectFactory per ClassLoader
         AspectClassLoader classLoader = this.classLoader;
         ObjectFactory objectFactory = this.objectFactory;
@@ -492,18 +492,18 @@ public class FactoryContext implements Closeable {
                     factoryResourceURLs, 
                     aopContext.getAopClassLoader() );
 
-            classLoader.setJoinpointFirstTypeMatcher(joinpointFirstTypeMatcher);
-            classLoader.setJoinpointFirstResourceMatcher(joinpointFirstResourcesMatcher);
+            classLoader.setTargetFirstTypeMatcher(targetFirstTypeMatcher);
+            classLoader.setTargetFirstResourceMatcher(targetFirstResourcesMatcher);
 
             objectFactory = createObjectFactory(classLoader, classScanner);
         }
 
         return new AdvisorContext(this,
-                ClassLoaderUtils.getClassLoaderName(joinpointClassLoader), javaModule,
+                ClassLoaderUtils.getClassLoaderName(targetClassLoader), targetJavaModule,
                 classLoader, objectFactory, 
-                typePool, typePoolFactory.createTypePool(joinpointClassLoader, javaModule),
-                typeWorld, typeWorldFactory.createTypeWorld(joinpointClassLoader, javaModule),
-                joinpointClassLoaderAccepted, validateContext);
+                typePool, typePoolFactory.createTypePool(targetClassLoader, targetJavaModule),
+                typeWorld, typeWorldFactory.createTypeWorld(targetClassLoader, targetJavaModule),
+                targetClassLoaderAccepted, validateContext);
     }
 
     @Override

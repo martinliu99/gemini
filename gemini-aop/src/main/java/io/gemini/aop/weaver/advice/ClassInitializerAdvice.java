@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ public class ClassInitializerAdvice {
             return;
         }
 
-        // 2.set target returning
+        // 2.set actual throwing of target method
         dispatcher.setThrowing(throwing);
         dispatcher.setReturning(null);
 
@@ -144,7 +144,7 @@ public class ClassInitializerAdvice {
                     return;
                 }
 
-                // 2.set target returning
+                // 2.set actual throwing of target method
                 dispatcher.setThrowing(throwing);
                 dispatcher.setReturning(null);
 

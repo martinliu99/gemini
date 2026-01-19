@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,29 +43,30 @@ public class DefaultTransformationListener extends Listener.Adapter {
 
 
     @Override
-    public void onTransformation(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule,
-            boolean loaded, DynamicType dynamicType) {
+    public void onTransformation(TypeDescription targetType, ClassLoader targetClassLoader, 
+            JavaModule targetModule, boolean loaded, DynamicType dynamicType) {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("{} type '{}' loaded by ClassLoader '{}'.", 
-                    loaded ? "Redefined loaded" : "Transformed", typeDescription.getTypeName(), classLoader
+                    loaded ? "Redefined loaded" : "Transformed", targetType.getTypeName(), targetClassLoader
             );
     }
 
     @Override
-    public void onError(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded,
-            Throwable throwable) {
+    public void onError(String targetTypeName,  ClassLoader targetClassLoader, 
+            JavaModule targetModule, boolean loaded, Throwable throwable) {
         if (LOGGER.isWarnEnabled())
             LOGGER.warn("Could not {} type '{}' loaded by ClassLoader '{}'. \n"
                     + "  Error reason: {} \n", 
-                    loaded ? "redefine loaded" : "transform", typeName, classLoader, 
+                    loaded ? "redefine loaded" : "transform", targetTypeName, targetClassLoader, 
                     throwable.getMessage(), throwable
             );
     }
 
     @Override
-    public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
+    public void onComplete(String targetTypeName, ClassLoader targetClassLoader, 
+            JavaModule targetJavaModule, boolean loaded) {
         // release cached data
-        this.aopContext.getTypePoolFactory().removeTypeResolution(typeName);
+        this.aopContext.getTypePoolFactory().removeTypeResolution(targetTypeName);
     }
 
 
@@ -79,32 +80,35 @@ public class DefaultTransformationListener extends Listener.Adapter {
         }
 
         @Override
-        public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+        public void onDiscovery(String targetTypeName,  ClassLoader targetClassLoader, 
+                JavaModule targetModule, boolean loaded) {
+            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName))
                 LOGGER.info("Discovering {} type '{}' loaded by ClassLoader '{}'.", 
-                        loaded ? "loaded" : "", typeName, classLoader
+                        loaded ? "loaded" : "", targetTypeName, targetClassLoader
                 );
         }
 
         @Override
-        public void onIgnored(TypeDescription typeDescription, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-            String typeName = typeDescription.getTypeName();
+        public void onIgnored(TypeDescription targetType, ClassLoader targetClassLoader, 
+                JavaModule targetModule, boolean loaded) {
+            String typeName = targetType.getTypeName();
             if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
                 LOGGER.info("Ignored {} type '{}' loaded by ClassLoader '{}'.", 
-                        loaded ? "loaded" : "", typeName, classLoader
+                        loaded ? "loaded" : "", typeName, targetClassLoader
                 );
         }
 
         @Override
-        public void onComplete(String typeName, ClassLoader classLoader, JavaModule javaModule, boolean loaded) {
-            super.onComplete(typeName, classLoader, javaModule, loaded);
+        public void onComplete(String targetTypeName, ClassLoader targetClassLoader, 
+                JavaModule targetModule, boolean loaded) {
+            super.onComplete(targetTypeName, targetClassLoader, targetModule, loaded);
 
             // release cached data
-            getAopContext().removeCachedDiagnosticType(typeName);
+            getAopContext().removeCachedDiagnosticType(targetTypeName);
 
-            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName))
                 LOGGER.info("Finished to {} type '{}' loaded by ClassLoader '{}'.", 
-                        loaded ? "redefine loaded" : "transform", typeName, classLoader);
+                        loaded ? "redefine loaded" : "transform", targetTypeName, targetClassLoader);
         }
     }
 }

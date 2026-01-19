@@ -9,9 +9,6 @@
     <version>${revision}</version>
 
     <name>${project.artifactId}</name>
-
-    <inceptionYear>2023</inceptionYear>
-
     <description>Java-agent based, runtime-weaving aop framework</description>
     <url>https://github.com/martinliu99/gemini</url>
 
@@ -578,7 +575,7 @@
                         </includes>
                         <strictCheck>true</strictCheck>
                         <properties>
-                            <license.year.period>2023</license.year.period>
+                            <license.year.period>2023 - present</license.year.period>
                         </properties>
                     </configuration>
                 </plugin>

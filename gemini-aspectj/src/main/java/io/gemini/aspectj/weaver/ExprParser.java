@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,17 +187,17 @@ public enum ExprParser {
     }
 
     public Pointcut parsePointcutExpr(TypeWorld typeWorld, Set<PointcutPrimitive> supportedPointcutKinds, 
-            String pointcutExpression, TypeDescription pointcutDeclarationScope, 
+            String pointcutExpression, TypeDescription pointcutDeclarationType, 
             Map<String, ? extends TypeDefinition> pointcutParameters) 
             throws ExprParseException, ExprLintException, ExprUnknownException {
         pointcutExpression = validateExpression(pointcutExpression);
-        pointcutDeclarationScope = pointcutDeclarationScope == null
-                ? TypeDescription.ForLoadedType.of(Object.class) : pointcutDeclarationScope;
+        pointcutDeclarationType = pointcutDeclarationType == null
+                ? TypeDescription.ForLoadedType.of(Object.class) : pointcutDeclarationType;
 
         String existingAspectType = ThreadContext.getContextAspectType();
         try {
-            ThreadContext.setContextAspectType(pointcutDeclarationScope.getTypeName());
-            ResolvedType pointcutDeclarationScopeType = typeWorld.resolve(pointcutDeclarationScope);
+            ThreadContext.setContextAspectType(pointcutDeclarationType.getTypeName());
+            ResolvedType pointcutDeclarationScopeType = typeWorld.resolve(pointcutDeclarationType);
 
             return new PointcutParser(typeWorld, supportedPointcutKinds).parsePointcut(
                     pointcutExpression, pointcutDeclarationScopeType, pointcutParameters);

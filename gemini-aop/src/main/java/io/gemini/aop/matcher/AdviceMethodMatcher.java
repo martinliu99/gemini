@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,37 +87,37 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
     /**
      * {@inheritDoc}
      */
-    public boolean matches(MethodDescription methodDescription) {
+    public boolean matches(MethodDescription targetMethod) {
         // 1.verify returning and throwing with matched method
         // verify returning type argument
-        Generic targetReturningType = methodDescription.isConstructor() 
-                ? methodDescription.getDeclaringType().asGenericType() : methodDescription.getReturnType();
+        Generic targetReturningType = targetMethod.isConstructor() 
+                ? targetMethod.getDeclaringType().asGenericType() : targetMethod.getReturnType();
 
         if (parameterizedReturningType != null 
-                && matchesReturningType(methodDescription, true, targetReturningType, parameterizedReturningType) == false) {
+                && matchesReturningType(targetMethod, true, targetReturningType, parameterizedReturningType) == false) {
             return false;
         }
 
         if (adviceReturningParameterType != null
-                && matchesReturningType(methodDescription, false, targetReturningType, adviceReturningParameterType) == false) {
+                && matchesReturningType(targetMethod, false, targetReturningType, adviceReturningParameterType) == false) {
             return false;
         }
 
         // verify throwing type argument
         if (parameterizedThrowingType != null
-                && matchesThrowingType(methodDescription, true, parameterizedThrowingType) == false) {
+                && matchesThrowingType(targetMethod, true, parameterizedThrowingType) == false) {
             return false;
         }
 
         if (adviceThrowingParameterType != null
-                && matchesThrowingType(methodDescription, false, adviceThrowingParameterType) == false) {
+                && matchesThrowingType(targetMethod, false, adviceThrowingParameterType) == false) {
             return false;
         }
 
         return true;
     }
 
-    private boolean matchesReturningType(MethodDescription methodDescription, 
+    private boolean matchesReturningType(MethodDescription targetMethod, 
             boolean parameterizedReturningType, Generic targetReturningType, Generic adviceReturningType) {
         targetReturningType = TypeDefinition.Sort.NON_GENERIC == adviceReturningType.getSort() 
                 || TypeDefinition.Sort.GENERIC_ARRAY == adviceReturningType.getSort()
@@ -127,7 +127,7 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
 
         if (ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
             if (LOGGER.isWarnEnabled())
-                LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under Joinpoint ClassLoader. \n"
+                LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under target ClassLoader. \n"
                         + "  AdvisorSpec: {} \n"
                         + "  AdviceMethod: {} \n"
                         + "    {}: {} {} \n",
@@ -153,7 +153,7 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
                             getAdvisorName(),
                             MethodUtils.getMethodSignature(adviceMethod),
                             matchingReturningTypeMsg, adviceReturningType, 
-                            MethodUtils.getMethodSignature(methodDescription),
+                            MethodUtils.getMethodSignature(targetMethod),
                             targetReturningType
                     );
 
@@ -172,7 +172,7 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
                             getAdvisorName(),
                             MethodUtils.getMethodSignature(adviceMethod),
                             matchingReturningTypeMsg, adviceReturningType, 
-                            MethodUtils.getMethodSignature(methodDescription),
+                            MethodUtils.getMethodSignature(targetMethod),
                             targetReturningType
                     );
 
@@ -182,13 +182,13 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
         return true;
     }
 
-    private boolean matchesThrowingType(MethodDescription methodDescription, 
+    private boolean matchesThrowingType(MethodDescription targetMethod, 
             boolean parameterizedThrowingType, Generic adviceThrowingType) {
         String matchingThrowingTypeMsg = parameterizedThrowingType ? "ParameterizedThrowing" : "AdviceThrowing";
 
         if (ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
             if (LOGGER.isWarnEnabled())
-                LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under Joinpoint ClassLoader. \n"
+                LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under target ClassLoader. \n"
                         + "  AdvisorSpec: {} \n"
                         + "  AdviceMethod: {} \n"
                         + "    {}: {} {} \n",
@@ -201,7 +201,7 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
             return false;
         }
 
-        TypeList.Generic exceptionTypes = methodDescription.getExceptionTypes();
+        TypeList.Generic exceptionTypes = targetMethod.getExceptionTypes();
         if (exceptionTypes.size() == 0) {
             if (ClassUtils.equals(adviceThrowingType, RUNTIME_EXCEPTION) == false) {
                 if (LOGGER.isWarnEnabled())
@@ -214,7 +214,7 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
                             getAdvisorName(),
                             MethodUtils.getMethodSignature(adviceMethod),
                             matchingThrowingTypeMsg, adviceThrowingType, 
-                            MethodUtils.getMethodSignature(methodDescription)
+                            MethodUtils.getMethodSignature(targetMethod)
                     );
 
                 return false;
@@ -241,7 +241,7 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
                         getAdvisorName(),
                         MethodUtils.getMethodSignature(adviceMethod),
                         matchingThrowingTypeMsg, adviceThrowingType, 
-                        MethodUtils.getMethodSignature(methodDescription),
+                        MethodUtils.getMethodSignature(targetMethod),
                         exceptionTypes
                 );
 
@@ -329,7 +329,8 @@ public class AdviceMethodMatcher implements ElementMatcher<MethodDescription> {
                     adviceReturningParameterType, adviceThrowingParameterType);
         }
 
-        private static Pair<Generic, Generic> resolveJoinpointParamTypeArguments(String advisorName, MethodDescription adviceMethod) {
+        private static Pair<Generic, Generic> resolveJoinpointParamTypeArguments(
+                String advisorName, MethodDescription adviceMethod) {
             Generic joinpointType = adviceMethod.getParameters().get(0).getType();
             if (TypeDefinition.Sort.PARAMETERIZED != joinpointType.getSort()) {
                 return null;

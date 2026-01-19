@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -381,11 +381,11 @@ public class MutableJoinpoint_03TargetArgument_Tests {
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Object thisObject = new InstanceMethod_Object();
+        InstanceMethod_Object targetObject = new InstanceMethod_Object();
 
         {
             List<Integer> input = Lists.list(1, 2, 3);
-            thisObject.targetArguments(input);
+            targetObject.targetArguments(input);
 
             Object[] expected = new Object[] {input};
 
@@ -408,7 +408,7 @@ public class MutableJoinpoint_03TargetArgument_Tests {
         {
             List<Long> input = Lists.list(1L, 2L, 3L);
             long l = 0L;
-            thisObject.modifyTargetArguments(l, input);
+            targetObject.modifyTargetArguments(l, input);
 
             List<Long> input2 = new ArrayList<>(input);
             input2.add(0, l);

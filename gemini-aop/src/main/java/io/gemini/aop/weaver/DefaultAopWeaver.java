@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import io.gemini.aop.AopMetrics.TypeMetrics;
 import io.gemini.aop.AopWeaver;
 import io.gemini.aop.weaver.BootstrapDispatcher.Dispatcher;
 import io.gemini.aop.weaver.Joinpoints.Descriptor;
-import io.gemini.aop.weaver.WeaverCache.TypeCache;
+import io.gemini.aop.weaver.WeaverCache.TargetTypeCache;
 import io.gemini.aop.weaver.advice.DescriptorOffset;
 import io.gemini.api.classloader.BaseClassLoader;
 import io.gemini.core.bootstrap.BootstrapClassConsumer;
@@ -110,45 +110,44 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
 
 
     @Override
-    public boolean matches(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule,
-            Class<?> classBeingRedefined, ProtectionDomain protectionDomain) {
+    public boolean matches(TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
+            Class<?> classBeingRedefined, ProtectionDomain targetProtectionDomain) {
         // 1.check cached result since bytebuddy will enter this method twice when class redefinition, or retransmission
-        String typeName = typeDescription.getTypeName();
-        TypeCache typeCache = weaverCache.getTypeCache(joinpointClassLoader, typeName);
-        if (typeCache != null && typeCache.isMatched() == true)
+        String targetTypeName = targetType.getTypeName();
+        TargetTypeCache targetTypeCache = weaverCache.getTypeCache(targetClassLoader, targetTypeName);
+        if (targetTypeCache != null && targetTypeCache.isMatched() == true)
             return true;
 
 
         // 2.filter type by ClassLoaderMatcher
         long startedAt = System.nanoTime();
         ElementMatcher<String> typeMatcher = this.typeMatcherPerClassLoaderMap.computeIfAbsent(
-                ClassLoaderUtils.maskNull(joinpointClassLoader), 
-                key -> doCreateTypeMatcher(joinpointClassLoader, typeName)
+                ClassLoaderUtils.maskNull(targetClassLoader), 
+                key -> doCreateTypeMatcher(targetClassLoader, targetTypeName)
         );
 
         boolean isRejectedClassLoader = ElementMatchers.none().equals(typeMatcher);
         TypeMetrics typeMetrics = aopContext.getAopMetrics().createTypeMetrics(
-                isRejectedClassLoader ? AopMetrics.REJECTED_CLASS_LOADER : joinpointClassLoader, typeName, startedAt);
+                isRejectedClassLoader ? AopMetrics.REJECTED_CLASS_LOADER : targetClassLoader, targetTypeName, startedAt);
 
         ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
         try {
             if (isRejectedClassLoader)
                 return false;
 
-            ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
+            ThreadContext.setContextClassLoader(targetClassLoader);   // set targetClassLoader
 
             // 3.filter type by TypeMatcher
-            if (ElementMatchers.any().equals(typeMatcher) == false && doAcceptType(typeName, typeMatcher) == false)
+            if (ElementMatchers.any().equals(typeMatcher) == false && doAcceptType(targetTypeName, typeMatcher) == false)
                 return false;
 
 
             // 4.get or create/cache advisors
-            return getAdvisors(typeDescription, joinpointClassLoader, javaModule).size() > 0;
+            return getAdvisors(targetType, targetClassLoader, targetModule).size() > 0;
         } catch (Throwable t) {
             if (LOGGER.isWarnEnabled())
                 LOGGER.warn("Could not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", 
-                        typeName, joinpointClassLoader, t);
+                        targetTypeName, targetClassLoader, t);
 
             Throwables.throwIfRequired(t);
             return false;
@@ -160,8 +159,8 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
         }
     }
 
-    protected ElementMatcher<String> doCreateTypeMatcher(ClassLoader joinpointClassLoader, String typeName) {
-        if (joinpointClassLoader instanceof BaseClassLoader)
+    protected ElementMatcher<String> doCreateTypeMatcher(ClassLoader targetClassLoader, String targetTypeName) {
+        if (targetClassLoader instanceof BaseClassLoader)
             return ElementMatchers.none();
 
         if (this.weaverContext.getClassLoaderTypeMatchers().size() == 0)
@@ -170,7 +169,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
         List<ElementMatcher<? super String>> typeMatchers = new ArrayList<>();
         ElementMatcher<String> typeMatcher = null;
         for (Entry<ElementMatcher<ClassLoader>, ElementMatcher<String>> entry : this.weaverContext.getClassLoaderTypeMatchers().entrySet()) {
-            if (entry.getKey().matches(joinpointClassLoader) == false)
+            if (entry.getKey().matches(targetClassLoader) == false)
                 continue;
 
             typeMatcher = entry.getValue();
@@ -184,52 +183,51 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
                         : new ElementMatcher.Junction.Disjunction<>(typeMatchers);
     }
 
-    protected boolean doAcceptType(String typeName, ElementMatcher<String> typeMatcher) {
-        return typeMatcher.matches(typeName);
+    protected boolean doAcceptType(String targetTypeName, ElementMatcher<String> typeMatcher) {
+        return typeMatcher.matches(targetTypeName);
     }
 
 
-    private Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule) {
-        Map<? extends MethodDescription, List<? extends Advisor>> methodDescriptionAdvisors = 
-                this.advisorFactory.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
-        if (CollectionUtils.isEmpty(methodDescriptionAdvisors) == true) 
+    private Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
+            TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
+        Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors = 
+                this.advisorFactory.getAdvisors(targetType, targetClassLoader, targetModule);
+        if (CollectionUtils.isEmpty(targetMethodAdvisors) == true) 
             return Collections.emptyMap();
 
 
-        TypeCache typeCache = weaverCache.createTypeCache(typeDescription.getTypeName());
-        weaverCache.putTypeCache(joinpointClassLoader, typeCache);
-        typeCache.setMethodDescriptionAdvisors(methodDescriptionAdvisors);
-        return methodDescriptionAdvisors;
+        TargetTypeCache typeCache = weaverCache.createTargetTypeCache(targetType.getTypeName());
+        weaverCache.putTypeCache(targetClassLoader, typeCache);
+        typeCache.setMethodDescriptionAdvisors(targetMethodAdvisors);
+        return targetMethodAdvisors;
     }
 
 
     @Override
-    public Builder<?> transform(Builder<?> builder, TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            ProtectionDomain protectionDomain) {
+    public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
+            JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
         // 1.check if cached advisorChain exists
-        String typeName = typeDescription.getTypeName();
-        TypeCache typeCache = weaverCache.getTypeCache(joinpointClassLoader, typeName);
-        if (typeCache.isMatched() == false)
+        String targetTypeName = targetType.getTypeName();
+        TargetTypeCache targetTypeCache = weaverCache.getTypeCache(targetClassLoader, targetTypeName);
+        if (targetTypeCache.isMatched() == false)
             return builder;
 
 
         // 2.transform type
         long startedAt = System.nanoTime();
         TypeMetrics typeMetrics = aopContext.getAopMetrics().createTypeMetrics(
-                joinpointClassLoader, typeName, startedAt);
+                targetClassLoader, targetTypeName, startedAt);
 
         ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
         try {
-            ThreadContext.setContextClassLoader(joinpointClassLoader);   // set joinpointClassLoader
+            ThreadContext.setContextClassLoader(targetClassLoader);   // set targetClassLoader
 
-            for (Entry<String, MethodDescription> entry : typeCache.getMethodSignatureMap().entrySet()) {
-                builder = this.transformMatchedMethods(builder, typeDescription, entry.getValue(), entry.getKey());
+            for (Entry<String, MethodDescription> entry : targetTypeCache.getMethodSignatureMap().entrySet()) {
+                builder = this.transformMatchedMethods(builder, targetType, entry.getValue(), entry.getKey());
             }
 
-            if (Boolean.TRUE == typeCache.setTransformed(true)) {
-                LOGGER.error("Reweaved type '{}' loaded by ClassLoader '{}' since it was already transformed!\n", typeName, joinpointClassLoader);
+            if (Boolean.TRUE == targetTypeCache.setTransformed(true)) {
+                LOGGER.error("Reweaved type '{}' loaded by ClassLoader '{}' since it was already transformed!\n", targetTypeName, targetClassLoader);
             }
 
             return builder;
@@ -244,36 +242,36 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
         }
     }
 
-    private Builder<?> transformMatchedMethods(Builder<?> builder, 
-            TypeDescription typeDescription, MethodDescription methodDescription, String methodSignature) {
+    private Builder<?> transformMatchedMethods(Builder<?> builder, TypeDescription targetType, 
+            MethodDescription targetMethod, String targetMethodSignature) {
         WithCustomMapping withCustomMapping = net.bytebuddy.asm.Advice.withCustomMapping()
         .bind(
-                DescriptorOffset.createDescriptorOffset(methodDescription, methodSignature)
+                DescriptorOffset.createDescriptorOffset(targetMethod, targetMethodSignature)
         );
 
-        if (methodDescription.isStatic()) {
-            if (methodDescription.isTypeInitializer()) {
+        if (targetMethod.isStatic()) {
+            if (targetMethod.isTypeInitializer()) {
                 builder = builder.visit(
                         withCustomMapping
-                        .to(this.weaverContext.getClassInitializerAdvice(typeDescription))
-                        .on(ElementMatchers.is(methodDescription) ) );
+                        .to(this.weaverContext.getClassInitializerAdvice(targetType))
+                        .on(ElementMatchers.is(targetMethod) ) );
             } else {
                 builder = builder.visit(
                         withCustomMapping
-                            .to(this.weaverContext.getClassMethodAdvice(typeDescription))
-                            .on(ElementMatchers.is(methodDescription) ) );
+                            .to(this.weaverContext.getClassMethodAdvice(targetType))
+                            .on(ElementMatchers.is(targetMethod) ) );
             }
         } else {
-            if (methodDescription.isConstructor()) {
+            if (targetMethod.isConstructor()) {
                 builder = builder.visit(
                         withCustomMapping
-                            .to(this.weaverContext.getInstanceConstructorAdvice(typeDescription))
-                            .on(ElementMatchers.is(methodDescription) ) );  
-            } else if (methodDescription.isMethod()) {
+                            .to(this.weaverContext.getInstanceConstructorAdvice(targetType))
+                            .on(ElementMatchers.is(targetMethod) ) );  
+            } else if (targetMethod.isMethod()) {
                 builder = builder.visit(
                         withCustomMapping
-                            .to(this.weaverContext.getInstanceMethodAdvice(typeDescription))
-                            .on(ElementMatchers.is(methodDescription) ) );
+                            .to(this.weaverContext.getInstanceMethodAdvice(targetType))
+                            .on(ElementMatchers.is(targetMethod) ) );
             }
         }
         // type initializer, native, etc
@@ -286,9 +284,9 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
      * {@inheritDoc}
      */
     @Override
-    public Object createDescriptor(Lookup lookup, Object... arguments) {
-        String methodSignature = (String) arguments[0];
-        return weaverCache.getJoinpointDescriptor(lookup, methodSignature);
+    public Object createDescriptor(Lookup targetLookup, Object... arguments) {
+        String targetMethodSignature = (String) arguments[0];
+        return weaverCache.getJoinpointDescriptor(targetLookup, targetMethodSignature);
     }
 
 
@@ -296,10 +294,10 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
      * {@inheritDoc}
      */
     @Override
-    public CallSite createDescriptorCallSite(Lookup lookup, 
-            String bsmMethodName, MethodType bsmMethodType, Object... arguments) {
-        String methodSignature = (String) arguments[0];
-        Joinpoints.Descriptor descriptor = weaverCache.getJoinpointDescriptor(lookup, methodSignature);
+    public CallSite createDescriptorCallSite(Lookup targetLookup, String bsmMethodName, 
+            MethodType bsmMethodType, Object... arguments) {
+        String targetMethodSignature = (String) arguments[0];
+        Joinpoints.Descriptor descriptor = weaverCache.getJoinpointDescriptor(targetLookup, targetMethodSignature);
 
         MethodHandle constant = MethodHandles.constant(Object.class, descriptor);
         return new ConstantCallSite( constant );
@@ -310,11 +308,11 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
      * {@inheritDoc}
      */
     @Override
-    public <T, E extends Throwable> Dispatcher<T, E> createDispacther(
-            Object descriptor, Object thisObject, Object[] arguments) {
+    public <T, E extends Throwable> Dispatcher<T, E> createDispacther(Object descriptor, 
+            Object targetObject, Object[] arguments) {
         return descriptor == null
                 ? null
-                : new Joinpoints.MutableJoinpointDispatcher<>( (Descriptor) descriptor, thisObject, arguments, aopContext );
+                : new Joinpoints.MutableJoinpointDispatcher<>( (Descriptor) descriptor, targetObject, arguments, aopContext );
     }
 
 
@@ -345,23 +343,22 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
 
 
         @Override
-        public boolean matches(TypeDescription typeDescription, 
-                ClassLoader joinpointClassLoader, JavaModule javaModule,
-                Class<?> classBeingRedefined, ProtectionDomain protectionDomain) {
+        public boolean matches(TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule,
+                Class<?> classBeingRedefined, ProtectionDomain targetProtectionDomain) {
             // diagnostic log
-            String typeName = typeDescription.getTypeName();
-            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
-                LOGGER.info("Matching type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
+            String targetTypeName = targetType.getTypeName();
+            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName))
+                LOGGER.info("Matching type '{}' loaded by ClassLoader '{}' in AopWeaver.", targetTypeName, targetClassLoader);
 
-            return super.matches(typeDescription, 
-                    joinpointClassLoader, javaModule, 
-                    classBeingRedefined, protectionDomain);
+            return super.matches(targetType, 
+                    targetClassLoader, targetModule, 
+                    classBeingRedefined, targetProtectionDomain);
         }
 
         @Override
-        protected boolean doAcceptType(String typeName, ElementMatcher<String> typeMatcher) {
+        protected boolean doAcceptType(String targetTypeName, ElementMatcher<String> typeMatcher) {
             try {
-                return super.doAcceptType(typeName, typeMatcher);
+                return super.doAcceptType(targetTypeName, typeMatcher);
             } finally {
                 TypeMetrics typeMetrics = AopMetrics.currentTypeMetrics();
                 typeMetrics.incrTypeAcceptingTime(System.nanoTime() - typeMetrics.getStartedAt());
@@ -370,23 +367,24 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
 
 
         @Override
-        public Builder<?> transform(Builder<?> builder, TypeDescription typeDescription, 
-                ClassLoader joinpointClassLoader, JavaModule javaModule, ProtectionDomain protectionDomain) {
-            String typeName = typeDescription.getTypeName();
-            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
-                LOGGER.info("Transforming type '{}' loaded by ClassLoader '{}' in AopWeaver.", typeName, joinpointClassLoader);
+        public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
+                JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
+            String targetTypeName = targetType.getTypeName();
+            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName))
+                LOGGER.info("Transforming type '{}' loaded by ClassLoader '{}' in AopWeaver.", targetTypeName, targetClassLoader);
 
-            return super.transform(builder, typeDescription, 
-                    joinpointClassLoader, javaModule, protectionDomain);
+            return super.transform(builder, targetType, 
+                    targetClassLoader, targetModule, targetProtectionDomain);
         }
 
 
         @Override
-        public <T, E extends Throwable> Dispatcher<T, E> createDispacther(
-                Object descriptor, Object thisObject, Object[] arguments) {
+        public <T, E extends Throwable> Dispatcher<T, E> createDispacther(Object descriptor, 
+                Object targetObject, Object[] arguments) {
             return descriptor == null
                     ? null
-                    : new Joinpoints.MutableJoinpointDispatcher.Diagnostic<>( (Descriptor) descriptor, thisObject, arguments, getAopContext() );
+                    : new Joinpoints.MutableJoinpointDispatcher.Diagnostic<>(
+                            (Descriptor) descriptor, targetObject, arguments, getAopContext() );
         }
     }
 }

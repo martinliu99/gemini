@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,8 +39,8 @@ public class AdvisorContext implements Closeable {
 
     private final FactoryContext factoryContext;
 
-    private final String joinpointClassLoaderName;
-    private final JavaModule javaModule;
+    private final String targetClassLoaderName;
+    private final JavaModule targetJavaModule;
 
     private final AspectClassLoader classLoader;
     private final ObjectFactory objectFactory;
@@ -50,7 +50,7 @@ public class AdvisorContext implements Closeable {
 
     private final PlaceholderHelper placeholderHelper;
 
-    private final boolean joinpointClassLoaderAccepted;
+    private final boolean targetClassLoaderAccepted;
     private final boolean validateContext;
 
     private final MatchingContext matchingContext;
@@ -59,15 +59,15 @@ public class AdvisorContext implements Closeable {
 
 
     protected AdvisorContext(FactoryContext factoryContext, 
-            String joinpointClassLoaderName, JavaModule javaModule,
+            String targetClassLoaderName, JavaModule targetJavaModule,
             AspectClassLoader classLoader, ObjectFactory objectFactory, 
-            TypePool typePool, TypePool joinpointTypePool,
-            TypeWorld typeWorld, TypeWorld joinpointTypeWorld,
-            boolean joinpointClassLoaderAccepted, boolean validateContext) {
+            TypePool typePool, TypePool targetTypePool,
+            TypeWorld typeWorld, TypeWorld targetTypeWorld,
+            boolean targetClassLoaderAccepted, boolean validateContext) {
         this.factoryContext = factoryContext;
 
-        this.joinpointClassLoaderName = joinpointClassLoaderName;
-        this.javaModule = javaModule;
+        this.targetClassLoaderName = targetClassLoaderName;
+        this.targetJavaModule = targetJavaModule;
 
         this.classLoader = classLoader;
         this.objectFactory = objectFactory;
@@ -77,10 +77,10 @@ public class AdvisorContext implements Closeable {
 
         this.placeholderHelper = factoryContext.getPlaceholderHelper();
 
-        this.joinpointClassLoaderAccepted = joinpointClassLoaderAccepted;
+        this.targetClassLoaderAccepted = targetClassLoaderAccepted;
         this.validateContext = validateContext;
 
-        this.matchingContext = new DefultMatchingContext(classLoader, joinpointTypePool, joinpointTypeWorld);
+        this.matchingContext = new DefultMatchingContext(classLoader, targetTypePool, targetTypeWorld);
 
         this.asmAutoComputed = factoryContext.getFactoriesContext().isAsmAutoComputed();
     }
@@ -90,12 +90,12 @@ public class AdvisorContext implements Closeable {
         return factoryContext;
     }
 
-    public String getJoinpointClassLoaderName() {
-        return joinpointClassLoaderName;
+    public String getTargetClassLoaderName() {
+        return targetClassLoaderName;
     }
 
-    public JavaModule getJavaModule() {
-        return javaModule;
+    public JavaModule getTargetJavaModule() {
+        return targetJavaModule;
     }
 
 
@@ -125,8 +125,8 @@ public class AdvisorContext implements Closeable {
         return matchingContext;
     }
 
-    public boolean isJoinpointClassLoaderAccepted() {
-        return joinpointClassLoaderAccepted;
+    public boolean isTargetClassLoaderAccepted() {
+        return targetClassLoaderAccepted;
     }
 
     public boolean isValidateContext() {
@@ -155,26 +155,26 @@ public class AdvisorContext implements Closeable {
 
         private final AspectClassLoader classLoader;
 
-        private final TypePool typePool;
-        private final TypeWorld typeWorld;
+        private final TypePool targetTypePool;
+        private final TypeWorld targetTypeWorld;
 
 
         public DefultMatchingContext(AspectClassLoader classLoader, 
-                TypePool joinpointTypePool, TypeWorld joinpointTypeWorld) {
+                TypePool targetTypePool, TypeWorld targetTypeWorld) {
             this.classLoader = classLoader;
 
-            this.typePool = joinpointTypePool;
-            this.typeWorld = joinpointTypeWorld;
+            this.targetTypePool = targetTypePool;
+            this.targetTypeWorld = targetTypeWorld;
         }
 
         @Override
-        public TypePool getTypePool() {
-            return typePool;
+        public TypePool getTargetTypePool() {
+            return targetTypePool;
         }
 
         @Override
         public boolean isBootstrapClassLoader() {
-            return ClassLoaders.isBootstrapClassLoader(classLoader.getJoinpointClassLoader());
+            return ClassLoaders.isBootstrapClassLoader(classLoader.getTargetClassLoader());
         }
 
         /**
@@ -182,7 +182,7 @@ public class AdvisorContext implements Closeable {
          */
         @Override
         public boolean isExtClassLoader() {
-            return ClassLoaders.isExtClassLoader(classLoader.getJoinpointClassLoader());
+            return ClassLoaders.isExtClassLoader(classLoader.getTargetClassLoader());
         }
 
         /**
@@ -190,7 +190,7 @@ public class AdvisorContext implements Closeable {
          */
         @Override
         public boolean isAppClassLoader() {
-            return ClassLoaders.isAppClassLoader(classLoader.getJoinpointClassLoader());
+            return ClassLoaders.isAppClassLoader(classLoader.getTargetClassLoader());
 
         }
 
@@ -200,7 +200,7 @@ public class AdvisorContext implements Closeable {
         @Override
         public boolean isClassLoader(String classLoaderExpression) {
             return ExprParser.INSTANCE.parseClassLoaderExpr(classLoaderExpression)
-                    .matches(classLoader.getJoinpointClassLoader());
+                    .matches(classLoader.getTargetClassLoader());
         }
 
         /**
@@ -208,7 +208,7 @@ public class AdvisorContext implements Closeable {
          */
         @Override
         public boolean hasType(String requiredTypeExpression) {
-            return ExprParser.INSTANCE.hasType(typeWorld, requiredTypeExpression);
+            return ExprParser.INSTANCE.hasType(targetTypeWorld, requiredTypeExpression);
         }
 
         /**
@@ -216,21 +216,21 @@ public class AdvisorContext implements Closeable {
          */
         @Override
         public boolean hasFiled(String requiredFieldExpression) {
-            return ExprParser.INSTANCE.hasField(typeWorld, requiredFieldExpression);
+            return ExprParser.INSTANCE.hasField(targetTypeWorld, requiredFieldExpression);
         }
 
         /** {@inheritDoc} 
          */
         @Override
         public boolean hasConstructor(String requiredConstructorExpression) {
-            return ExprParser.INSTANCE.hasConstructor(typeWorld, requiredConstructorExpression);
+            return ExprParser.INSTANCE.hasConstructor(targetTypeWorld, requiredConstructorExpression);
         }
 
         /** {@inheritDoc} 
          */
         @Override
         public boolean hasMethod(String requiredMethodExpression) {
-            return ExprParser.INSTANCE.hasMethod(typeWorld, requiredMethodExpression);
+            return ExprParser.INSTANCE.hasMethod(targetTypeWorld, requiredMethodExpression);
         }
     }
 }

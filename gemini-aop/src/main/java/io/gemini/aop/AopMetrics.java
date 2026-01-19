@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,9 +106,9 @@ public class AopMetrics {
     }
 
 
-    public TypeMetrics createTypeMetrics(ClassLoader classLoader, String typeName, long startedAt) {
+    public TypeMetrics createTypeMetrics(ClassLoader targetClassLoader, String targetTypeName, long startedAt) {
         TYPE_METRICS_HOLDER.set(
-                new TypeMetrics(classLoader, typeName, startedAt) );
+                new TypeMetrics(targetClassLoader, targetTypeName, startedAt) );
 
         return TYPE_METRICS_HOLDER.get();
     }
@@ -151,7 +151,7 @@ public class AopMetrics {
 
     protected void doProcessMetrics(List<TypeMetrics> typeMetricsList) {
         for (TypeMetrics typeMetrics : typeMetricsList) {
-            ClassLoader cacheKey = ClassLoaderUtils.maskNull(typeMetrics.getClassLoader());
+            ClassLoader cacheKey = ClassLoaderUtils.maskNull(typeMetrics.getTargetClassLoader());
             ClassLoaderMetrics classLoaderMetrics = this.classLoaderMetricsMap.computeIfAbsent(
                     cacheKey, 
                     key -> new ClassLoaderMetrics(cacheKey)
@@ -442,7 +442,7 @@ public class AopMetrics {
 
                 Map<String, Object> valueMap = new HashMap<>();
 
-                ClassLoader classLoader = classLoaderMetrics.getClassLoader();
+                ClassLoader classLoader = classLoaderMetrics.getTargetClassLoader();
                 boolean isRejectedClassLoader = classLoader == REJECTED_CLASS_LOADER;
                 String classLoaderId = isRejectedClassLoader 
                         ? "RejectedClassLoader" : ClassLoaderUtils.getClassLoaderId(classLoader);
@@ -515,7 +515,7 @@ public class AopMetrics {
 
                 Map<String, Object> valueMap = new HashMap<>();
                 valueMap.put("classLoader", formatStr(
-                        ClassUtils.abbreviate( ClassLoaderUtils.getClassLoaderId(classLoaderMetrics.getClassLoader()), ITEM_NAME_LENGTH), ITEM_NAME_LENGTH, true ) );
+                        ClassUtils.abbreviate( ClassLoaderUtils.getClassLoaderId(classLoaderMetrics.getTargetClassLoader()), ITEM_NAME_LENGTH), ITEM_NAME_LENGTH, true ) );
 
                 renderResult.append(
                         PlaceholderHelper.create( 
@@ -759,7 +759,7 @@ public class AopMetrics {
 
     static class BaseMetrics {
 
-        private final WeakReference<ClassLoader> classLoaderRef;
+        private final WeakReference<ClassLoader> targetClassLoaderRef;
 
         private long typeWeavingTime = 0;
 
@@ -775,13 +775,13 @@ public class AopMetrics {
         private long typeTransformationTime = 0;
 
 
-        public BaseMetrics(ClassLoader classLoader) {
-            this.classLoaderRef = new WeakReference<>(classLoader);
+        public BaseMetrics(ClassLoader targetClassLoader) {
+            this.targetClassLoaderRef = new WeakReference<>(targetClassLoader);
         }
 
 
-        public ClassLoader getClassLoader() {
-            return classLoaderRef.get();
+        public ClassLoader getTargetClassLoader() {
+            return targetClassLoaderRef.get();
         }
 
         public long getTypeWeavingTime() {
@@ -859,8 +859,8 @@ public class AopMetrics {
         private List<Map<String /* AdvisorName */, ResolutionLevel>> advisorResolutuonLevelMaps;
 
 
-        public TypeMetrics(ClassLoader classLoader, String typeName, long startedAt) {
-            super(classLoader);
+        public TypeMetrics(ClassLoader targetClassLoader, String targetTypeName, long startedAt) {
+            super(targetClassLoader);
 
             this.startedAt = startedAt;
             this.advisorResolutuonLevelMaps = new ArrayList<>();

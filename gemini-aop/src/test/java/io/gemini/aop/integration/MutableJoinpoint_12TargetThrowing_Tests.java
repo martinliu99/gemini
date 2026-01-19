@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -289,10 +289,10 @@ public class MutableJoinpoint_12TargetThrowing_Tests {
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Object thisObject = new InstanceMethod_Object();
+        InstanceMethod_Object targetObject = new InstanceMethod_Object();
 
         try {
-            thisObject.targetThrowing();
+            targetObject.targetThrowing();
             assertThat(false).isTrue();
         } catch (IOException expected) {
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.TARGET_THROWING_BEFORE_ADVICE);

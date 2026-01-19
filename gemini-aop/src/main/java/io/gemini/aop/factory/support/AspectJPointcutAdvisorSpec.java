@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ interface AspectJPointcutAdvisorSpec extends AdvisorSpec.ExprPointcutSpec, Point
      * {@inheritDoc}
      */
     @Override
-    boolean match(MethodDescription methodDescription, List<NamedPointcutParameter> pointcutParameters);
+    boolean match(MethodDescription targetMethod, List<NamedPointcutParameter> pointcutParameters);
 
 
     enum AdviceCategory {

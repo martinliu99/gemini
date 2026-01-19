@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,14 +45,14 @@ public class Advice_06AspectJParamBinding_Tests {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetObjectBinding_Aspect.BIND_TARGET_OBJECT_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(afterAdviceMethodInvoker.getThisObject()).isEqualTo(object);
+            assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(object);
         }
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetObjectBinding_Aspect.REFERENCE_POINTCUT_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(afterAdviceMethodInvoker.getThisObject()).isEqualTo(object);
+            assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(object);
         }
     }
 
@@ -76,7 +76,7 @@ public class Advice_06AspectJParamBinding_Tests {
             ExecutionMemento.putAdviceMethodInvoker(BIND_TARGET_OBJECT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(targetObject) );
+                        .withTargetObject(targetObject) );
         }
 
 
@@ -90,7 +90,7 @@ public class Advice_06AspectJParamBinding_Tests {
             ExecutionMemento.putAdviceMethodInvoker(REFERENCE_POINTCUT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
-                        .withThisObject(targetObject) );
+                        .withTargetObject(targetObject) );
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class WeaverContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverContext.class);
 
-    private static final String WEAVER_JOINPOINT_MATCHED_KEY = "aop.weaver.joinpointMatched";
+    private static final String WEAVER_ENABLED_KEY = "aop.weaver.weaverEnabled";
 
     private static final String WEAVER_CLASSLOADER_TYPE_EXPRESSIONS_KEY = "aop.weaver.classLoaderTypeExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
@@ -67,7 +67,7 @@ class WeaverContext {
     private final AopContext aopContext;
 
     // weaver settings
-    private boolean joinpointMatched;
+    private boolean weaverEnabled;
 
     private Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> classLoaderTypeMatchers;
 
@@ -115,9 +115,9 @@ class WeaverContext {
 
         // load joinpoint matcher settings
         {
-            this.joinpointMatched = configView.getAsBoolean(WEAVER_JOINPOINT_MATCHED_KEY, true);
-            if (LOGGER.isWarnEnabled() && joinpointMatched == false)
-                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_JOINPOINT_MATCHED_KEY);
+            this.weaverEnabled = configView.getAsBoolean(WEAVER_ENABLED_KEY, true);
+            if (LOGGER.isWarnEnabled() && weaverEnabled == false)
+                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_ENABLED_KEY);
         }
 
         {
@@ -276,8 +276,8 @@ class WeaverContext {
     }
 
 
-    public boolean isJoinpointMatched() {
-        return joinpointMatched;
+    public boolean isWeaverEnabled() {
+        return weaverEnabled;
     }
 
     public Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> getClassLoaderTypeMatchers() {
@@ -285,32 +285,32 @@ class WeaverContext {
     }
 
 
-    public Class<?> getClassInitializerAdvice(TypeDescription typeDescription) {
-        return isBreakingCircularity(typeDescription)
+    public Class<?> getClassInitializerAdvice(TypeDescription targetType) {
+        return isBreakingCircularity(targetType)
                 ? classInitializerAdviceBreakingCircularity
                 : classInitializerAdvice;
     }
 
-    public Class<?> getClassMethodAdvice(TypeDescription typeDescription) {
-        return isBreakingCircularity(typeDescription)
+    public Class<?> getClassMethodAdvice(TypeDescription targetType) {
+        return isBreakingCircularity(targetType)
                 ? classMethodAdviceBreakingCircularity
                 : classMethodAdvice;
     }
 
-    public Class<?> getInstanceConstructorAdvice(TypeDescription typeDescription) {
-        return isBreakingCircularity(typeDescription)
+    public Class<?> getInstanceConstructorAdvice(TypeDescription targetType) {
+        return isBreakingCircularity(targetType)
                 ? instanceConstructorAdviceBreakingCircularity
                 : instanceConstructorAdvice;
     }
 
-    public Class<?> getInstanceMethodAdvice(TypeDescription typeDescription) {
-        return isBreakingCircularity(typeDescription)
+    public Class<?> getInstanceMethodAdvice(TypeDescription targetType) {
+        return isBreakingCircularity(targetType)
                 ? instanceMethodAdviceBreakingCircularity
                 : instanceMethodAdvice;
     }
 
-    private boolean isBreakingCircularity(TypeDescription typeDescription) {
-        return dispatcherCircularityTypeMatcher.matches( typeDescription.getTypeName() );
+    private boolean isBreakingCircularity(TypeDescription targetType) {
+        return dispatcherCircularityTypeMatcher.matches( targetType.getTypeName() );
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,19 +53,19 @@ public class TypeMatchers {
     public static ElementMatcher.Junction<TypeDescription> isExtendedFrom(final String... superTypes) {
         return new AbstractMatcher(superTypes) {
             @Override
-            protected boolean doMatch(TypeDescription typeDescription) {
-                return superTypeCheck(typeDescription, Arrays.asList(superTypes));
+            protected boolean doMatch(TypeDescription targetType) {
+                return superTypeCheck(targetType, Arrays.asList(superTypes));
             }
         };
     }
 
-    private static boolean superTypeCheck(TypeDescription typeDescription, Collection<String> superTypeNames) {
+    private static boolean superTypeCheck(TypeDescription targetType, Collection<String> superTypeNames) {
         final Set<String> superTypeNameSet = new HashSet<>(superTypeNames);
-        if (superTypeNameSet.contains(typeDescription.getTypeName())) {
+        if (superTypeNameSet.contains(targetType.getTypeName())) {
             return false;
         }
         final Queue<TypeDefinition> queue = new LinkedList<>();
-        queue.add(typeDescription);
+        queue.add(targetType);
         for (TypeDefinition current = queue.poll();
              current != null && !superTypeNameSet.isEmpty();
              current = queue.poll()) {

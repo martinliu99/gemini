@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,7 +176,8 @@ interface AdviceClassMaker {
         }
 
         @SuppressWarnings("unchecked")
-        public DynamicType.Unloaded<? extends Advice> make(AdvisorContext advisorContext, ByteBuddyMaker classMaker) {
+        public DynamicType.Unloaded<? extends Advice> make(AdvisorContext advisorContext, 
+                ByteBuddyMaker classMaker) {
             AspectJPointcutAdvisorSpec aspectJAdvisorSpec = classMaker.aspectJAdvisorSpec;
             AdviceCategory adviceCategory = aspectJAdvisorSpec.getAdviceCategory();
 
@@ -207,12 +208,12 @@ interface AdviceClassMaker {
             }
 
             String adviceClassName = aspectJAdvisorSpec.getAdviceClassName();
-            TypeDescription adviceTypeDescription = aspectJAdvisorSpec.getAspectJType();
+            TypeDescription adviceType = aspectJAdvisorSpec.getAspectJType();
 
             DynamicType.Builder<?> builder = new ByteBuddy()
                     .subclass(Object.class, ConstructorStrategy.Default.NO_CONSTRUCTORS)
                     .name(adviceClassName)
-                    .modifiers(adviceTypeDescription.getModifiers() | Opcodes.ACC_SYNTHETIC)
+                    .modifiers(adviceType.getModifiers() | Opcodes.ACC_SYNTHETIC)
                     .implement(implementTypeDefinitions)
                     .visit( new AsmVisitorWrapper.AbstractBase() {
                         @Override
@@ -233,13 +234,13 @@ interface AdviceClassMaker {
 
 
             // 2.define field
-            builder = builder.defineField(TARGET_FILED, adviceTypeDescription, Modifier.PRIVATE | Modifier.FINAL);
+            builder = builder.defineField(TARGET_FILED, adviceType, Modifier.PRIVATE | Modifier.FINAL);
 
 
             // 3.define constructor
             builder = builder
                     .defineConstructor(Modifier.PUBLIC)
-                    .withParameter(adviceTypeDescription, TARGET_FILED)
+                    .withParameter(adviceType, TARGET_FILED)
                     .intercept(
                             MethodCall.invoke(OBJECT_DEFAULT_CONSTRUCTOR)
                             .andThen(
@@ -278,7 +279,7 @@ interface AdviceClassMaker {
 
             private static final MethodDescription.InDefinedShape GET_ARGUMENTS_METHOD = JOINPOINT_TYPE.getDeclaredMethods().filter(named("getArguments")).getOnly();
             private static final MethodDescription.InDefinedShape GET_STATIC_PART_METHOD = JOINPOINT_TYPE.getDeclaredMethods().filter(named("getStaticPart")).getOnly();
-            private static final MethodDescription.InDefinedShape GET_THIS_OBJECT_METHOD = JOINPOINT_TYPE.getDeclaredMethods().filter(named("getThisObject")).getOnly();
+            private static final MethodDescription.InDefinedShape GET_TARGET_OBJECT_METHOD = JOINPOINT_TYPE.getDeclaredMethods().filter(named("getTargetObject")).getOnly();
 
             private static final MethodDescription.InDefinedShape GET_RETURNING_METHOD = MUTABLE_JOINPOINT_TYPE.getDeclaredMethods().filter(named("getReturning")).getOnly();
             private static final MethodDescription.InDefinedShape GET_THROWING_METHOD = MUTABLE_JOINPOINT_TYPE.getDeclaredMethods().filter(named("getThrowing")).getOnly();
@@ -305,7 +306,8 @@ interface AdviceClassMaker {
             }
 
             @Override
-            public Size apply(MethodVisitor methodVisitor, Context implementationContext, MethodDescription instrumentedMethod) {
+            public Size apply(MethodVisitor methodVisitor, Context implementationContext, 
+                    MethodDescription instrumentedMethod) {
                 TypeDescription instrumentedType = instrumentedMethod.getDeclaringType().asErasure();
                 AdviceCategory adviceCategory = aspectJAdvisorSpec.getAdviceCategory();
                 MethodDescription aspectJMethod = aspectJAdvisorSpec.getAspectJMethod();
@@ -408,7 +410,7 @@ interface AdviceClassMaker {
                         case TARGET_VAR: {
                             methodVisitor.visitVarInsn(Opcodes.ALOAD, PARAM_INDEX1_MUTABLE_JOINPOINT);
                             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, MUTABLE_JOINPOINT_TYPE.getInternalName(), 
-                                    GET_THIS_OBJECT_METHOD.getInternalName(), GET_THIS_OBJECT_METHOD.getDescriptor(), true);
+                                    GET_TARGET_OBJECT_METHOD.getInternalName(), GET_TARGET_OBJECT_METHOD.getDescriptor(), true);
                             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, parameterType.getInternalName());
 
                             break;

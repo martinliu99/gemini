@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -344,10 +344,10 @@ public class MutableJoinpoint_13AdviceReturning_Tests {
 
     @Test
     public void testInstanceMethod() {
-        InstanceMethod_Object thisObject = new InstanceMethod_Object();
+        InstanceMethod_Object targetObject = new InstanceMethod_Object();
 
         {
-            int expected = thisObject.beforeAdviceReturning();
+            int expected = targetObject.beforeAdviceReturning();
 
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.BEFORE_ADVICE_RETURNING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
@@ -362,7 +362,7 @@ public class MutableJoinpoint_13AdviceReturning_Tests {
         }
 
         {
-            int expected = thisObject.afterAdviceReturning();
+            int expected = targetObject.afterAdviceReturning();
 
             AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.AFTER_ADVICE_RETURNING_BEFORE_ADVICE);
             assertThat(beforeAdviceMethodInvoker).isNotNull();
@@ -380,7 +380,7 @@ public class MutableJoinpoint_13AdviceReturning_Tests {
         }
 
         {
-            int expected = thisObject.adviceReturning_wrongType();
+            int expected = targetObject.adviceReturning_wrongType();
 
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(InstanceMethod_Aspect.ADVICE_RETURNING_WRONG_TYPE_BEFORE_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();

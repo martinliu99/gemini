@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,18 +130,18 @@ class DefaultAdvisorFactory implements AdvisorFactory {
      * {@inheritDoc}
      */
     @Override
-    public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule) {
+    public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
+            TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
         // 1.get advisors per ClassLoader
         ElementMatcher<String> typeMatcher = typeMatcherPerClassLoaderMap.computeIfAbsent(
-                ClassLoaderUtils.maskNull(joinpointClassLoader), 
-                key -> doCreateTypeMatcher(joinpointClassLoader)
+                ClassLoaderUtils.maskNull(targetClassLoader), 
+                key -> doCreateTypeMatcher(targetClassLoader)
         );
 
-        boolean joinpointClassLoaderAccepted = ElementMatchers.any().equals(typeMatcher);
+        boolean targetClassLoaderAccepted = ElementMatchers.any().equals(typeMatcher);
         List<? extends Advisor> candidateAdvisors = this.advisorPerClassLoaderMap.computeIfAbsent(
-                ClassLoaderUtils.maskNull(joinpointClassLoader), 
-                key ->  doCreateAdvisors( joinpointClassLoader, javaModule, joinpointClassLoaderAccepted )
+                ClassLoaderUtils.maskNull(targetClassLoader), 
+                key ->  doCreateAdvisors( targetClassLoader, targetModule, targetClassLoaderAccepted )
         );
         if (CollectionUtils.isEmpty(candidateAdvisors))
             return Collections.emptyMap();
@@ -150,40 +150,40 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         try {
             // 2.fast match advisors for given type
             List<Advisor.PointcutAdvisor> pointcutAdvisors = doFastMatchAdvisors(
-                    typeDescription, 
-                    joinpointClassLoader, 
-                    javaModule, 
+                    targetType, 
+                    targetClassLoader, 
+                    targetModule, 
                     typeMatcher,
                     candidateAdvisors
             );
             // ignore synthetic class
-            if (CollectionUtils.isEmpty(pointcutAdvisors) || typeDescription.isSynthetic())
+            if (CollectionUtils.isEmpty(pointcutAdvisors) || targetType.isSynthetic())
                 return Collections.emptyMap();
 
 
             // 3.match advisors for given type's methods
             return doMatchAdvisors(
-                    typeDescription, 
-                    joinpointClassLoader, 
-                    javaModule,
+                    targetType, 
+                    targetClassLoader, 
+                    targetModule,
                     pointcutAdvisors
             );
         } finally {
             TypeWorld typeWorld = factoryContext.getTypeWorld();
             if (typeWorld != null && typeWorld instanceof TypeWorld.CacheResolutionFacade) {
-                ((TypeWorld.CacheResolutionFacade) typeWorld).releaseCache(typeDescription);
+                ((TypeWorld.CacheResolutionFacade) typeWorld).releaseCache(targetType);
             }
         }
     }
 
-    protected ElementMatcher<String> doCreateTypeMatcher(ClassLoader joinpointClassLoader) {
+    protected ElementMatcher<String> doCreateTypeMatcher(ClassLoader targetClassLoader) {
         if (this.factoryContext.getFactoryClassLoaderTypeMatchers().size() == 0)
             return ElementMatchers.any();
 
         List<ElementMatcher<? super String>> typeMatchers = new ArrayList<>();
         ElementMatcher<String> typeMatcher = null;
         for (Entry<ElementMatcher<ClassLoader>, ElementMatcher<String>> entry : this.factoryContext.getFactoryClassLoaderTypeMatchers().entrySet()) {
-            if (entry.getKey().matches(joinpointClassLoader) == false)
+            if (entry.getKey().matches(targetClassLoader) == false)
                 continue;
 
             typeMatcher = entry.getValue();
@@ -197,27 +197,27 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                         : new ElementMatcher.Junction.Disjunction<>(typeMatchers);
     }
 
-    protected List<? extends Advisor> doCreateAdvisors(ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            boolean joinpointClassLoaderAccepted) {
+    protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, 
+            JavaModule targetJavaModule, boolean targetClassLoaderAccepted) {
         return AdvisorRepository.createAdvisors(
-                joinpointClassLoader, 
-                factoryContext.createAdvisorContext(joinpointClassLoader, javaModule, joinpointClassLoaderAccepted), 
+                targetClassLoader, 
+                factoryContext.createAdvisorContext(targetClassLoader, 
+                        targetJavaModule, targetClassLoaderAccepted), 
                 advisorRepositories
         );
     }
 
 
-    protected List<Advisor.PointcutAdvisor> doFastMatchAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            ElementMatcher<String> typeMatcher, 
-            List<? extends Advisor> advisors) {
+    protected List<Advisor.PointcutAdvisor> doFastMatchAdvisors(TypeDescription targetType, 
+            ClassLoader targetClassLoader, JavaModule targetModule, 
+            ElementMatcher<String> typeMatcher, List<? extends Advisor> advisors) {
         // check typeMatcher of AdvisorFactory
-        boolean typeAccepted = doAcceptType(typeDescription, typeMatcher);
+        boolean typeAccepted = doAcceptType(targetType, typeMatcher);
 
         // check typeMatcher of Advisors
         List<Advisor.PointcutAdvisor> matchedAdvisors = new ArrayList<>();
         for (Advisor advisor : advisors) {
-            PointcutAdvisor pointcutAdvisor = doFastMatchAdvisor(typeDescription, typeAccepted, advisor);
+            PointcutAdvisor pointcutAdvisor = doFastMatchAdvisor(targetType, typeAccepted, advisor);
             if (pointcutAdvisor == null)
                 continue;
 
@@ -227,16 +227,17 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         return matchedAdvisors;
     }
 
-    protected boolean doAcceptType(TypeDescription typeDescription, ElementMatcher<String> typeMatcher) {
+    protected boolean doAcceptType(TypeDescription targetType, 
+            ElementMatcher<String> typeMatcher) {
         try {
-            return typeMatcher.matches(typeDescription.getTypeName());
+            return typeMatcher.matches(targetType.getTypeName());
         } catch (Exception e) {}
 
         return false;
     }
 
 
-    protected Advisor.PointcutAdvisor doFastMatchAdvisor(TypeDescription typeDescription, 
+    protected Advisor.PointcutAdvisor doFastMatchAdvisor(TypeDescription targetType, 
             boolean typeAccepted, Advisor advisor) {
         try {
             if (advisor instanceof Advisor.PointcutAdvisor == false)
@@ -253,7 +254,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     && advisorSpecMap.get( advisor.getAdvisorName() ).isInheritTypeMatcher() )
                 return null;
 
-            if (pointcut.getTypeMatcher().matches(typeDescription) == false)
+            if (pointcut.getTypeMatcher().matches(targetType) == false)
                 return null;
 
             return pointcutAdvisor;
@@ -265,19 +266,20 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
     }
 
-    protected Map<MethodDescription, List<? extends Advisor>> doMatchAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule, 
+    protected Map<MethodDescription, List<? extends Advisor>> doMatchAdvisors(
+            TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
             List<Advisor.PointcutAdvisor> pointcutAdvisors) {
         Map<MethodDescription, List<? extends Advisor>> methodAdvisorsMap = new LinkedHashMap<>();
-        for (InDefinedShape methodDescription : MethodUtils.getAllMethodDescriptions(typeDescription)) {
+        for (InDefinedShape targetMethod : MethodUtils.getAllMethodDescriptions(targetType)) {
             // ignore synthetic method?
-            if (methodDescription.isNative() || methodDescription.isAbstract()
-                    || (methodDescription.isSynthetic() && !methodDescription.isBridge()) )
+            if (targetMethod.isAbstract()
+                    || (targetMethod.isSynthetic() && !targetMethod.isBridge()) )
                 continue;
 
             List<Advisor> candidateAdvisors = new LinkedList<>();
             for (Advisor.PointcutAdvisor pointcutAdvisor : pointcutAdvisors) {
-                if (doMatchAdvisor(typeDescription, joinpointClassLoader, javaModule, methodDescription, pointcutAdvisor) == false)
+                if (doMatchAdvisor(targetType, targetClassLoader, targetModule, 
+                        targetMethod, pointcutAdvisor) == false)
                     continue;
 
                 candidateAdvisors.add(pointcutAdvisor);
@@ -289,16 +291,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
             // convert matched bridge method to overridden method
             MethodGraph.Linked methodGraph = null;
-            if (methodDescription.isBridge()) {
+            if (targetMethod.isBridge()) {
                 if (methodGraph == null)
-                    methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) typeDescription);
+                    methodGraph = MethodGraph.Compiler.Default.forJavaHierarchy().compile( (TypeDefinition) targetType);
 
-                MethodGraph.Node locatedNode = methodGraph.locate(methodDescription.asSignatureToken());
+                MethodGraph.Node locatedNode = methodGraph.locate(targetMethod.asSignatureToken());
                 if (locatedNode != null)
-                    methodDescription = locatedNode.getRepresentative().asDefined();
+                    targetMethod = locatedNode.getRepresentative().asDefined();
             }
 
-            methodAdvisorsMap.merge(methodDescription, candidateAdvisors, 
+            methodAdvisorsMap.merge(targetMethod, candidateAdvisors, 
                     (oldValue, value) -> CollectionUtils.merge(oldValue, value) 
             );
         }
@@ -307,24 +309,24 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
 
-    protected boolean doMatchAdvisor(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule, 
-            InDefinedShape methodDescription, Advisor.PointcutAdvisor pointcutAdvisor) {
+    protected boolean doMatchAdvisor(TypeDescription targetType, 
+            ClassLoader targetClassLoader, JavaModule targetModule, 
+            InDefinedShape targetMethod, Advisor.PointcutAdvisor pointcutAdvisor) {
         try {
-            if (pointcutAdvisor.getPointcut().getMethodMatcher().matches(methodDescription) == false)
+            if (pointcutAdvisor.getPointcut().getMethodMatcher().matches(targetMethod) == false)
                 return false;
 
             return true;
         } catch (Throwable t) {
             if (LOGGER.isInfoEnabled())
                 LOGGER.info("Could not match joinpoint with pointcut. \n"
-                        + "  Joinpoitn: {} \n"
+                        + "  Joinpoint: {} \n"
                         + "  Advisor: {} \n"
                         + "  ClassLoader: {} \n"
                         + "  Error reason: {} \n",
-                        MethodUtils.getMethodSignature(methodDescription), 
+                        MethodUtils.getMethodSignature(targetMethod), 
                         pointcutAdvisor, 
-                        joinpointClassLoader, 
+                        targetClassLoader, 
                         t.getMessage(), 
                         t
                 );
@@ -362,31 +364,31 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
         @Override
-        public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
-                ClassLoader joinpointClassLoader, JavaModule javaModule) {
+        public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
+                TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
             // diagnostic log
-            String typeName = typeDescription.getTypeName();
-            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName))
+            String targetTypeName = targetType.getTypeName();
+            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName))
                 LOGGER.info("Getting Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.", 
-                        typeName, joinpointClassLoader, getFactoryContext().getFactoryName());
+                        targetTypeName, targetClassLoader, getFactoryContext().getFactoryName());
 
             // get advisors per AdvisorFactory
             Map<? extends MethodDescription, List<? extends Advisor>> advisorMap = 
-                    super.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
+                    super.getAdvisors(targetType, targetClassLoader, targetModule);
 
-            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(typeName)) {
+            if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName)) {
                 if (advisorMap.size() == 0)
                     LOGGER.info("Did not get Advisors for type '{}' loaded by ClassLoader '{}' from AdvisorFactory '{}'.",
-                            typeName, joinpointClassLoader, getFactoryContext().getFactoryName()
+                            targetTypeName, targetClassLoader, getFactoryContext().getFactoryName()
                     );
                 else
                     LOGGER.info("Got Advisors for type '{}' in AdvisorFactory, \n"
                             + "  AdvisorFactory: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  {} ",
-                            typeName, 
+                            targetTypeName, 
                             getFactoryContext().getFactoryName(),
-                            joinpointClassLoader, 
+                            targetClassLoader, 
                             StringUtils.join(
                                     advisorMap.entrySet(), 
                                     methodAdvisorEntry -> 
@@ -404,24 +406,24 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
 
         @Override
-        protected ElementMatcher<String> doCreateTypeMatcher(ClassLoader joinpointClassLoader) {
+        protected ElementMatcher<String> doCreateTypeMatcher(ClassLoader targetClassLoader) {
             long startedAt = System.nanoTime();
 
             try {
-                return super.doCreateTypeMatcher(joinpointClassLoader);
+                return super.doCreateTypeMatcher(targetClassLoader);
             } finally {
                 AopMetrics.currentTypeMetrics().incrTypeAcceptingTime(System.nanoTime() - startedAt);
             }
         }
 
         @Override
-        protected List<? extends Advisor> doCreateAdvisors(ClassLoader joinpointClassLoader, JavaModule javaModule, 
-                boolean joinpointClassLoaderAccepted) {
+        protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, 
+                JavaModule targetJavaModule, boolean targetClassLoaderAccepted) {
             long startedAt = System.nanoTime();
             List<? extends Advisor> advisors = Collections.emptyList();
 
             try {
-                return (advisors = super.doCreateAdvisors(joinpointClassLoader, javaModule, joinpointClassLoaderAccepted));
+                return (advisors = super.doCreateAdvisors(targetClassLoader, targetJavaModule, targetClassLoaderAccepted));
             } finally {
                 AopMetrics.currentTypeMetrics().incrAdvisorCreationCount(advisors.size());
                 AopMetrics.currentTypeMetrics().incrAdvisorCreationTime(System.nanoTime() - startedAt);
@@ -429,17 +431,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
         @Override
-        protected List<Advisor.PointcutAdvisor> doFastMatchAdvisors(TypeDescription typeDescription, 
-                ClassLoader joinpointClassLoader, JavaModule javaModule, 
-                ElementMatcher<String> typeMatcher, 
-                List<? extends Advisor> advisors) {
+        protected List<Advisor.PointcutAdvisor> doFastMatchAdvisors(
+                TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
+                ElementMatcher<String> typeMatcher, List<? extends Advisor> advisors) {
             long startedAt = System.nanoTime();
 
             try {
                 return super.doFastMatchAdvisors(
-                        typeDescription, 
-                        joinpointClassLoader, 
-                        javaModule,
+                        targetType, 
+                        targetClassLoader, 
+                        targetModule,
                         typeMatcher,
                         advisors
                 );
@@ -449,27 +450,28 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
         @Override
-        protected boolean doAcceptType(TypeDescription typeDescription, ElementMatcher<String> typeMatcher) {
+        protected boolean doAcceptType(TypeDescription targetType, 
+                ElementMatcher<String> typeMatcher) {
             long startedAt = System.nanoTime();
 
             try {
-                return super.doAcceptType(typeDescription, typeMatcher);
+                return super.doAcceptType(targetType, typeMatcher);
             } finally {
                 AopMetrics.currentTypeMetrics().incrTypeAcceptingTime(System.nanoTime() - startedAt);
             }
         }
 
         @Override
-        protected Map<MethodDescription, List<? extends Advisor>> doMatchAdvisors(TypeDescription typeDescription, 
-                ClassLoader joinpointClassLoader, JavaModule javaModule, 
+        protected Map<MethodDescription, List<? extends Advisor>> doMatchAdvisors(
+                TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
                 List<Advisor.PointcutAdvisor> pointcutAdvisors) {
             long startedAt = System.nanoTime();
 
             try {
                 return super.doMatchAdvisors(
-                        typeDescription, 
-                        joinpointClassLoader, 
-                        javaModule,
+                        targetType, 
+                        targetClassLoader, 
+                        targetModule,
                         pointcutAdvisors
                 );
             } finally {
@@ -491,43 +493,42 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
 
-        protected ConcurrentMap<String, ResolutionLevel> getAdvisorTypeResolutionLevels(
-                TypeDescription typeDescription) {
+        protected ConcurrentMap<String, ResolutionLevel> getAdvisorTypeResolutionLevels(TypeDescription targetType) {
             return typeAdvisorTypeResolutionLevels.computeIfAbsent(
-                    typeDescription.getTypeName(), 
+                    targetType.getTypeName(), 
                     key -> new ConcurrentHashMap<>()
             );
         }
 
-        protected ConcurrentMap<String, ResolutionLevel> removeAdvisorTypeResolutionLevels(
-                TypeDescription typeDescription) {
-            return typeAdvisorTypeResolutionLevels.remove(typeDescription.getTypeName());
+        protected ConcurrentMap<String, ResolutionLevel> removeAdvisorTypeResolutionLevels(TypeDescription targetType) {
+            return typeAdvisorTypeResolutionLevels.remove(targetType.getTypeName());
         }
 
 
         @Override
         public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
-                TypeDescription typeDescription, ClassLoader joinpointClassLoader, JavaModule javaModule) {
+                TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
             try {
-                return super.getAdvisors(typeDescription, joinpointClassLoader, javaModule);
+                return super.getAdvisors(targetType, 
+                        targetClassLoader, targetModule);
             } finally {
                 AopMetrics.currentTypeMetrics().addAdvisorResolutuonLevelMap(
-                        removeAdvisorTypeResolutionLevels(typeDescription) );
+                        removeAdvisorTypeResolutionLevels(targetType) );
             }
         }
 
         @Override
-        protected Advisor.PointcutAdvisor doFastMatchAdvisor(TypeDescription typeDescription, 
+        protected Advisor.PointcutAdvisor doFastMatchAdvisor(TypeDescription targetType, 
                 boolean matchAdvisor, Advisor advisor) {
             // match pointcut of advisor and record type resolution info
-            TypeResolutionInspector typeResolutionInspector = typeDescription instanceof TypeResolutionInspector
-                    ? (TypeResolutionInspector) typeDescription : null;
+            TypeResolutionInspector typeResolutionInspector = targetType instanceof TypeResolutionInspector
+                    ? (TypeResolutionInspector) targetType : null;
 
             try {
                 if (typeResolutionInspector != null)
                     typeResolutionInspector.resetInspection();
 
-                return super.doFastMatchAdvisor(typeDescription, matchAdvisor, advisor);
+                return super.doFastMatchAdvisor(targetType, matchAdvisor, advisor);
             } finally {
                 // record type resolution information
                 ResolutionLevel resolutionLevel = null;
@@ -535,7 +536,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     resolutionLevel = typeResolutionInspector.getResolutionLevel();
 
                     Map<String, ResolutionLevel> advisorTypeResolutionLevels = 
-                            getAdvisorTypeResolutionLevels(typeDescription);
+                            getAdvisorTypeResolutionLevels(targetType);
                     if (ResolutionLevel.NO_RESOLUTION != resolutionLevel)
                         advisorTypeResolutionLevels.put(advisor.getAdvisorName(), resolutionLevel);
                 }
@@ -544,20 +545,19 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
         @Override
-        protected boolean doMatchAdvisor(TypeDescription typeDescription, 
-                ClassLoader joinpointClassLoader, JavaModule javaModule, 
-                InDefinedShape methodDescription, Advisor.PointcutAdvisor pointcutAdvisor) {
-            if (super.doMatchAdvisor(typeDescription,
-                    joinpointClassLoader, javaModule, 
-                    methodDescription, pointcutAdvisor) == false)
+        protected boolean doMatchAdvisor(TypeDescription targetType, 
+                ClassLoader targetClassLoader, JavaModule targetModule, 
+                InDefinedShape targetMethod, Advisor.PointcutAdvisor pointcutAdvisor) {
+            if (super.doMatchAdvisor(targetType,
+                    targetClassLoader, targetModule, targetMethod, pointcutAdvisor) == false)
                 return false;
 
             // exclude Advisor
-            TypeResolutionInspector typeResolutionInspector = typeDescription instanceof TypeResolutionInspector
-                    ? (TypeResolutionInspector) typeDescription : null;
+            TypeResolutionInspector typeResolutionInspector = targetType instanceof TypeResolutionInspector
+                    ? (TypeResolutionInspector) targetType : null;
             if (typeResolutionInspector != null) {
                 Map<String, ResolutionLevel> advisorTypeResolutionLevels = 
-                        getAdvisorTypeResolutionLevels(typeDescription);
+                        getAdvisorTypeResolutionLevels(targetType);
                 advisorTypeResolutionLevels.remove(pointcutAdvisor.getAdvisorName());
             }
 

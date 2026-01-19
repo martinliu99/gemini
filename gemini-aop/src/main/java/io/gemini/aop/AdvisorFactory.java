@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023, the original author or authors. All Rights Reserved.
+ * Copyright © 2023 - present, the original author or authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@ public interface AdvisorFactory extends Closeable {
 
     Map<String, Integer> getAdvisorSpecNum();
 
-    Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(TypeDescription typeDescription, 
-            ClassLoader joinpointClassLoader, JavaModule javaModule);
+    Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
+            TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule);
 
     void close() throws IOException ;
 }

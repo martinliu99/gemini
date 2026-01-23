@@ -231,12 +231,12 @@ class WeaverContext {
 
             this.classMethodAdvice = configView.getAsClass(
                     "aop.weaver.classMethodAdvice", ClassMethodAdvice.class);
-            this.classMethodAdvice = configView.getAsClass(
+            this.classMethodAdviceBreakingCircularity = configView.getAsClass(
                     "aop.weaver.classMethodAdvice.breakingCircularity", ClassMethodAdvice.BreakingCircularity.class);
 
             this.instanceConstructorAdvice = configView.getAsClass(
                     "aop.weaver.instanceConstructorAdvice", InstanceConstructorAdvice.class);
-            this.instanceConstructorAdvice = configView.getAsClass(
+            this.instanceConstructorAdviceBreakingCircularity = configView.getAsClass(
                     "aop.weaver.instanceConstructorAdvice.breakingCircularity", InstanceConstructorAdvice.BreakingCircularity.class);
 
             this.instanceMethodAdvice = configView.getAsClass(

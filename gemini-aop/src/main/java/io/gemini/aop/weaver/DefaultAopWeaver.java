@@ -15,6 +15,8 @@
  */
 package io.gemini.aop.weaver;
 
+import static net.bytebuddy.matcher.ElementMatchers.is;
+import static net.bytebuddy.matcher.ElementMatchers.named;
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.CallSite;
@@ -25,7 +27,6 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -50,10 +51,12 @@ import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.Throwables;
+import net.bytebuddy.asm.Advice;
 import net.bytebuddy.asm.Advice.WithCustomMapping;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType.Builder;
+import net.bytebuddy.implementation.MethodCall;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
@@ -114,7 +117,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
             Class<?> classBeingRedefined, ProtectionDomain targetProtectionDomain) {
         // 1.check cached result since bytebuddy will enter this method twice when class redefinition, or retransmission
         String targetTypeName = targetType.getTypeName();
-        TargetTypeCache targetTypeCache = weaverCache.getTypeCache(targetClassLoader, targetTypeName);
+        TargetTypeCache targetTypeCache = weaverCache.getTargetTypeCache(targetClassLoader, targetTypeName);
         if (targetTypeCache != null && targetTypeCache.isMatched() == true)
             return true;
 
@@ -142,8 +145,15 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
                 return false;
 
 
-            // 4.get or create/cache advisors
-            return getAdvisors(targetType, targetClassLoader, targetModule).size() > 0;
+            // 4.get advisors
+            Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors = 
+                    this.advisorFactory.getAdvisors(targetType, targetClassLoader, targetModule);
+            if (CollectionUtils.isEmpty(targetMethodAdvisors)) 
+                return false;
+
+            weaverCache.createTargetTypeCache(targetClassLoader, 
+                    targetType.getTypeName(), classBeingRedefined != null, targetMethodAdvisors);
+            return true;
         } catch (Throwable t) {
             if (LOGGER.isWarnEnabled())
                 LOGGER.warn("Could not match type '{}' loaded by ClassLoader '{}' in AopWeaver.", 
@@ -188,27 +198,12 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
     }
 
 
-    private Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
-            TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
-        Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors = 
-                this.advisorFactory.getAdvisors(targetType, targetClassLoader, targetModule);
-        if (CollectionUtils.isEmpty(targetMethodAdvisors) == true) 
-            return Collections.emptyMap();
-
-
-        TargetTypeCache typeCache = weaverCache.createTargetTypeCache(targetType.getTypeName());
-        weaverCache.putTypeCache(targetClassLoader, typeCache);
-        typeCache.setMethodDescriptionAdvisors(targetMethodAdvisors);
-        return targetMethodAdvisors;
-    }
-
-
     @Override
     public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
             JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
         // 1.check if cached advisorChain exists
         String targetTypeName = targetType.getTypeName();
-        TargetTypeCache targetTypeCache = weaverCache.getTypeCache(targetClassLoader, targetTypeName);
+        TargetTypeCache targetTypeCache = weaverCache.getTargetTypeCache(targetClassLoader, targetTypeName);
         if (targetTypeCache.isMatched() == false)
             return builder;
 
@@ -223,7 +218,7 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
             ThreadContext.setContextClassLoader(targetClassLoader);   // set targetClassLoader
 
             for (Entry<String, MethodDescription> entry : targetTypeCache.getMethodSignatureMap().entrySet()) {
-                builder = this.transformMatchedMethods(builder, targetType, entry.getValue(), entry.getKey());
+                builder = this.transformMatchedMethods(builder, targetTypeCache, targetType, entry.getValue(), entry.getKey());
             }
 
             if (Boolean.TRUE == targetTypeCache.setTransformed(true)) {
@@ -242,39 +237,64 @@ class DefaultAopWeaver implements AopWeaver, BootstrapDispatcher.Creator {
         }
     }
 
-    private Builder<?> transformMatchedMethods(Builder<?> builder, TypeDescription targetType, 
+    private Builder<?> transformMatchedMethods(Builder<?> builder, 
+            TargetTypeCache targetTypeCache, TypeDescription targetType, 
             MethodDescription targetMethod, String targetMethodSignature) {
-        WithCustomMapping withCustomMapping = net.bytebuddy.asm.Advice.withCustomMapping()
-        .bind(
-                DescriptorOffset.createDescriptorOffset(targetMethod, targetMethodSignature)
-        );
+        WithCustomMapping withCustomMapping = Advice.withCustomMapping().bind( 
+                DescriptorOffset.createDescriptorOffset(targetMethod, targetMethodSignature) );
 
         if (targetMethod.isStatic()) {
             if (targetMethod.isTypeInitializer()) {
                 builder = builder.visit(
                         withCustomMapping
-                        .to(this.weaverContext.getClassInitializerAdvice(targetType))
-                        .on(ElementMatchers.is(targetMethod) ) );
-            } else {
+                        .to( this.weaverContext.getClassInitializerAdvice(targetType) )
+                        .on( is(targetMethod) ) 
+                );
+            } else if (targetMethod.isNative()){
+                if (targetTypeCache.isLoaded()) {
+                    LOGGER.warn("Could not retransform type '{}' loaded by ClassLoader '{}' in AopWeaver, \n"
+                            + "  NativeTargetMethod: {}",
+                            targetType.getTypeName(),
+                            targetMethodSignature);
+                    return builder;
+                }
+
+                String renamedMethodName = weaverContext.getNativeMethodPrefix() + targetMethod.getName();
+                // define renamed native method
+                builder = builder.defineMethod( 
+                        renamedMethodName, targetMethod.getReturnType(), targetMethod.getActualModifiers() )
+                .withParameters(
+                        targetMethod.getParameters().asTypeList())
+                .withoutCode()
+                .method( is(targetMethod) )
+                // wrap original native method with Advice, and call renamed native method
+                .intercept(
+                        withCustomMapping
+                        .to( this.weaverContext.getClassMethodAdvice(targetType) )
+                        .wrap( MethodCall.invoke( named(renamedMethodName) ).withAllArguments() )
+                );
+            } else { 
                 builder = builder.visit(
                         withCustomMapping
-                            .to(this.weaverContext.getClassMethodAdvice(targetType))
-                            .on(ElementMatchers.is(targetMethod) ) );
+                        .to( this.weaverContext.getClassMethodAdvice(targetType) )
+                        .on( is(targetMethod) ) 
+                );
             }
         } else {
             if (targetMethod.isConstructor()) {
                 builder = builder.visit(
                         withCustomMapping
-                            .to(this.weaverContext.getInstanceConstructorAdvice(targetType))
-                            .on(ElementMatchers.is(targetMethod) ) );  
+                        .to( this.weaverContext.getInstanceConstructorAdvice(targetType) )
+                        .on( is(targetMethod) ) 
+                );  
             } else if (targetMethod.isMethod()) {
                 builder = builder.visit(
                         withCustomMapping
-                            .to(this.weaverContext.getInstanceMethodAdvice(targetType))
-                            .on(ElementMatchers.is(targetMethod) ) );
+                        .to( this.weaverContext.getInstanceMethodAdvice(targetType) )
+                        .on( is(targetMethod) ) 
+                );
             }
         }
-        // type initializer, native, etc
 
         return builder;
     }

@@ -17,7 +17,9 @@ package io.gemini.aop.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Method;
+import java.util.zip.Deflater;
 
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
@@ -30,6 +32,8 @@ import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.annotation.Advisor;
+import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 
 /**
  *
@@ -476,6 +480,65 @@ public class Target_02TargetMethod_Tests {
             ExecutionMemento.putAdviceMethodInvoker(OVERRIDDEN_COVARIANT_BRIDGE_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
+                        .withStaticPart(joinpoint.getStaticPart()) );
+        }
+    }
+
+
+    @Test
+    public void testNativeMethod() {
+        {
+            byte[] data = "This is a long text that needs compression".getBytes();
+
+            Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+            deflater.setInput(data);
+            deflater.finish();
+
+            deflater.end();
+        }
+
+        AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(NativeMethod_Aspect.NATIVE_METHOD_BEFORE_ADVICE);
+        assertThat(beforeAdviceMethodInvoker).isNotNull();
+        assertThat(beforeAdviceMethodInvoker.isInvoked()).isTrue();
+
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup()).isNotNull();
+        assertThat(beforeAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
+
+        assertThat(beforeAdviceMethodInvoker.getTargetClass()).isEqualTo(Deflater.class);
+        assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(NativeMethod_Aspect.NATIVE_METHOD);
+    }
+
+    @Aspect
+    public static class NativeMethod_Aspect {
+
+        private static final String NATIVE_METHOD_POINTCUT = 
+                "execution(private native static long java.util.zip.Deflater.init(int, int, boolean))";
+
+        private static final String NATIVE_METHOD_BEFORE_ADVICE = NativeMethod_Aspect.class.getName() + ".nativeMethod_before";
+
+        private static final Method NATIVE_METHOD;
+
+        static {
+            Method method = null;
+            try {
+                method = Deflater.class.getDeclaredMethod("init", int.class, int.class, boolean.class);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            NATIVE_METHOD = method;
+        }
+
+
+        @SuppressWarnings("rawtypes")
+        @Before(NATIVE_METHOD_POINTCUT)
+        @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
+        @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+        public void nativeMethod_before(MutableJoinpoint joinpoint) {
+            ExecutionMemento.putAdviceMethodInvoker(NATIVE_METHOD_BEFORE_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withTargetLookup(joinpoint.getTargetLookup())
+                        .withTargetClass(joinpoint.getTargetClass()) 
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }

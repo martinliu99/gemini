@@ -60,26 +60,24 @@ class WeaverCache implements Closeable {
         this.classLoaderTypeCache = new ConcurrentReferenceHashMap<>();
     }
 
-    public TargetTypeCache createTargetTypeCache(String targetTypeName) {
-        return weaverContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() == false
-                ? new TargetTypeCache(targetTypeName, weaverContext.getAopContext())
-                : new TargetTypeCache.Diagnostic(targetTypeName, weaverContext.getAopContext());
-    }
-
-    public TargetTypeCache putTypeCache(ClassLoader targetClassLoader, TargetTypeCache targetTypeCache) {
+    public TargetTypeCache createTargetTypeCache(ClassLoader targetClassLoader, 
+            String targetTypeName, boolean loaded,
+            Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(targetClassLoader);
         return this.classLoaderTypeCache
                 .computeIfAbsent(
                         cacheKey, 
-                        cl -> new ConcurrentHashMap<>()
+                        key -> new ConcurrentHashMap<>()
                 )
                 .computeIfAbsent( 
-                        targetTypeCache.getTypeName(), 
-                        key -> targetTypeCache
+                        targetTypeName, 
+                        key -> weaverContext.getAopContext().getDiagnosticLevel().isSimpleEnabled() == false
+                                ? new TargetTypeCache(weaverContext.getAopContext(), targetTypeName, loaded, targetMethodAdvisors)
+                                : new TargetTypeCache.Diagnostic(weaverContext.getAopContext(), targetTypeName, loaded, targetMethodAdvisors)
                 );
     }
 
-    public TargetTypeCache getTypeCache(ClassLoader targetClassLoader, String targetTypeName) {
+    public TargetTypeCache getTargetTypeCache(ClassLoader targetClassLoader, String targetTypeName) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(targetClassLoader);
         ConcurrentMap<String /* typeName */, TargetTypeCache> targetTypeCaches = this.classLoaderTypeCache.get(cacheKey);
         if (targetTypeCaches == null)
@@ -91,7 +89,7 @@ class WeaverCache implements Closeable {
 
     public Joinpoints.Descriptor getJoinpointDescriptor(Lookup targetLookup, String targetMethodSignature) {
         Class<?> targetClass = targetLookup.lookupClass();
-        TargetTypeCache targetTypeCache = getTypeCache(targetClass.getClassLoader(), targetClass.getName());
+        TargetTypeCache targetTypeCache = getTargetTypeCache(targetClass.getClassLoader(), targetClass.getName());
 
         return targetTypeCache == null
                 ? null
@@ -112,34 +110,36 @@ class WeaverCache implements Closeable {
 
     static class TargetTypeCache {
 
-        private final String typeName;
         private final AopContext aopContext;
+
+        private final String typeName;
+        private final boolean loaded;
+
+        // cache transformation result per ClassLoader and Type in local storage
+        private AtomicBoolean transformed;
 
         // cache matching result per ClassLoader and Type in local storage for future transformation
         private Map<String /* methodSignature */, MethodDescription> methodSignatureMap;
         private Map<String /* methodSignature */, List<? extends Advisor>> methodSignatureAdvisorsMap;
 
-        // cache transformation result per ClassLoader and Type in local storage
-        private AtomicBoolean transformed;
-
         // cache joinpoint descriptors
         private Map<String /* methodSignature */, Joinpoints.Descriptor> joinpointDescriptors;
 
 
-        TargetTypeCache(String typeName, AopContext aopContext) {
-            this.typeName = typeName;
+        public TargetTypeCache(AopContext aopContext, String typeName, boolean loaded,
+                Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors) {
             this.aopContext = aopContext;
 
-            this.methodSignatureMap = Collections.emptyMap();
-            this.methodSignatureAdvisorsMap = Collections.emptyMap();
+            this.typeName = typeName;
+            this.loaded = loaded;
 
             this.transformed = new AtomicBoolean(false);
 
-            this.joinpointDescriptors = Collections.emptyMap();
+            this.setMethodDescriptionAdvisors(targetMethodAdvisors);
         }
 
 
-        public void setMethodDescriptionAdvisors(
+        private void setMethodDescriptionAdvisors(
                 Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors) {
             Map<String /* methodSignature */, MethodDescription> methodSignatureMap = new LinkedHashMap<>(targetMethodAdvisors.size());
             Map<String /* methodSignature */, List<? extends Advisor>> methodSignatureAdvisorMap = new LinkedHashMap<>(targetMethodAdvisors.size());
@@ -156,12 +156,17 @@ class WeaverCache implements Closeable {
         }
 
 
+        protected AopContext getAopContext() {
+            return aopContext;
+        }
+
+
         public String getTypeName() {
             return typeName;
         }
 
-        protected AopContext getAopContext() {
-            return aopContext;
+        public boolean isLoaded() {
+            return loaded;
         }
 
 
@@ -291,8 +296,9 @@ class WeaverCache implements Closeable {
             private static final Logger LOGGER = LoggerFactory.getLogger(Diagnostic.class);
 
 
-            Diagnostic(String typeName, AopContext aopContext) {
-                super(typeName, aopContext);
+            public Diagnostic(AopContext aopContext, String targetTypeName, boolean loaded,
+                    Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors) {
+                super(aopContext, targetTypeName, loaded, targetMethodAdvisors);
             }
 
 

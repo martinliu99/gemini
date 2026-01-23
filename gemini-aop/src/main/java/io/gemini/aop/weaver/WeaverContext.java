@@ -90,6 +90,8 @@ class WeaverContext {
     // weaver installer settings
     private RedefinitionStrategy redefinitionStrategy;
 
+    private String nativeMethodPrefix;
+
 
     public WeaverContext(AopContext aopContext) {
         long startedAt = System.nanoTime();
@@ -258,6 +260,8 @@ class WeaverContext {
 
                 this.redefinitionStrategy = RedefinitionStrategy.RETRANSFORMATION;
             }
+
+            this.nativeMethodPrefix = configView.getAsString("aop.weaver.nativeMethodPrefix", "$$original$$_");
         }
     }
 
@@ -316,5 +320,9 @@ class WeaverContext {
 
     public RedefinitionStrategy getRedefinitionStrategy() {
         return redefinitionStrategy;
+    }
+
+    public String getNativeMethodPrefix() {
+        return nativeMethodPrefix;
     }
 }

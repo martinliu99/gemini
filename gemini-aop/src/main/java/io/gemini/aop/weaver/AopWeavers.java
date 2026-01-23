@@ -134,8 +134,11 @@ public class AopWeavers {
             )
             .ignore( BooleanMatcher.of(weaverContext.isWeaverEnabled() == false) )
             // better performance than REDEFINE or REDEFINE_FROZEN
-            .with( TypeStrategy.Default.DECORATE )
+            .with( TypeStrategy.Default.REBASE )
+//            .with( TypeStrategy.Default.DECORATE)
             .with( InjectionStrategy.UsingUnsafe.INSTANCE )
+            // support native method
+            .enableNativeMethodPrefix( weaverContext.getNativeMethodPrefix() )
             // support lambda, for debug only
 //              .with( AgentBuilder.LambdaInstrumentationStrategy.ENABLED )
             .with( aopContext.getTypePoolFactory().getPoolStrategy() )
@@ -160,7 +163,7 @@ public class AopWeavers {
             .with( aopContext.getDiagnosticLevel().isSimpleEnabled() == false
                     ? new DefaultTransformationListener(aopContext)
                     : new DefaultTransformationListener.Diagnostic(aopContext) )
-            .disableClassFormatChanges()
+//            .disableClassFormatChanges()
             .type( aopWeaver )
             .transform( aopWeaver )
             .installOn( instrumentation )

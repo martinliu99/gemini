@@ -63,8 +63,8 @@ public class AopContext implements Closeable {
 
     private static final String DIAGNOSTIC_TYPE_EXPRESSIONS_KEY = "aop.launcher.diagnosticTypeExpressions";
 
-    private static final String AOP_LAUNCHER_BYTECODE_DUMPED_KEY = "aop.launcher.byteCodeDumped";
-    private final static String CLASS_SCANNER_VERBOSE_ENABLED_KEY = "aop.classScanner.verboseEnabled";
+    private static final String AOP_LAUNCHER_DUMP_BYTECODE_KEY = "aop.launcher.dumpByteCode";
+    private final static String CLASS_SCANNER_ENABLE_VERBOSE_KEY = "aop.classScanner.enableVerbose";
 
 
     private final LauncherConfig launcherConfig;
@@ -76,7 +76,7 @@ public class AopContext implements Closeable {
     private final ConcurrentMap<String, Boolean> diagnosticTypeCache = new ConcurrentHashMap<>();
     private ElementMatcher<String> diagnosticTypeMatcher;
 
-    private boolean typeResolutionDetected;
+    private boolean detectTypeResolution;
 
 
     private final ConfigView configView;
@@ -94,7 +94,7 @@ public class AopContext implements Closeable {
     private final TaskExecutor globalTaskExecutor;
 
 
-    private boolean byteCodeDumped;
+    private boolean dumpByteCode;
     private String byteCodeDumpPath;
 
 
@@ -185,15 +185,15 @@ public class AopContext implements Closeable {
                     DIAGNOSTIC_TYPE_EXPRESSIONS_KEY, diagnosticTypeExpressions, ElementMatchers.none());
             this.diagnosticTypeMatcher = new CachingMatcher<>(diagnosticTypeMatcher, diagnosticTypeCache);
 
-            this.typeResolutionDetected = configView.getAsBoolean("aop.launcher.typeResolutionDetected", false);
+            this.detectTypeResolution = configView.getAsBoolean("aop.launcher.detectTypeResolution", false);
         }
 
         {
             if (diagnosticLevel.isDebugEnabled()) {
-                builtinSettings.put(AOP_LAUNCHER_BYTECODE_DUMPED_KEY, true);
+                builtinSettings.put(AOP_LAUNCHER_DUMP_BYTECODE_KEY, true);
             }
 
-            this.byteCodeDumped = configView.getAsBoolean(AOP_LAUNCHER_BYTECODE_DUMPED_KEY, false);
+            this.dumpByteCode = configView.getAsBoolean(AOP_LAUNCHER_DUMP_BYTECODE_KEY, false);
             this.byteCodeDumpPath = configView.getAsString("aop.launcher.byteCodeDumpPath");
         }
     }
@@ -202,7 +202,7 @@ public class AopContext implements Closeable {
         long startedAt = System.nanoTime();
 
         ClassScanner.Builder builder = new ClassScanner.Builder()
-                .enableVerbose( configView.getAsBoolean(CLASS_SCANNER_VERBOSE_ENABLED_KEY, false) )
+                .enableVerbose( configView.getAsBoolean(CLASS_SCANNER_ENABLE_VERBOSE_KEY, false) )
                 .diagnosticLevel( this.diagnosticLevel )
                 ;
 
@@ -233,14 +233,14 @@ public class AopContext implements Closeable {
     }
 
     private TypePoolFactory createTypePoolFactory() {
-        return isTypeResolutionDetected() == false
+        return isDetectTypeResolution() == false
                 ? new TypePoolFactory.Default(LocationStrategy.ForClassLoader.WEAK)
                 : new TypePoolFactory.Default.TyepResolutionDetector(LocationStrategy.ForClassLoader.WEAK)
         ;
     }
 
     private TypeWorldFactory createTypeWorldFactory(TypePoolFactory typePoolFactory) {
-        return isTypeResolutionDetected() == false
+        return isDetectTypeResolution() == false
                 ? new TypeWorldFactory.Default(typePoolFactory)
                 : new TypeWorldFactory.Default.TyepResolutionDetector(typePoolFactory)
         ;
@@ -267,8 +267,8 @@ public class AopContext implements Closeable {
         return diagnosticTypeCache.remove(typeName);
     }
 
-    public boolean isTypeResolutionDetected() {
-        return typeResolutionDetected || DiagnosticLevel.DISABLED == diagnosticLevel;
+    public boolean isDetectTypeResolution() {
+        return detectTypeResolution || DiagnosticLevel.DISABLED == diagnosticLevel;
     }
 
 
@@ -317,8 +317,8 @@ public class AopContext implements Closeable {
         return launcherConfig.isClassesFolderScanned();
     }
 
-    public boolean isByteCodeDumped() {
-        return byteCodeDumped;
+    public boolean isDumpByteCode() {
+        return dumpByteCode;
     }
 
     public String getByteCodeDumpPath() {

@@ -48,7 +48,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
 
     private URL[] launchResourceURLs;
 
-    private final boolean classesFolderScanned;
+    private final boolean scanClassesFolder;
     private Map<String /* AspectAppName */, URL[]> aspectAppResourceURLs;
 
 
@@ -60,7 +60,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     }
 
     public UnpackedArchiveConfig(Path launchPath, Path launchFile, String launchArgsStr, 
-            LauncherScanner launcherScanner, boolean classesFolderScanned, AspectAppScanner aspectAppScanner) throws IOException {
+            LauncherScanner launcherScanner, boolean scanClassesFolder, AspectAppScanner aspectAppScanner) throws IOException {
         this.launchedAt = System.nanoTime();
 
         this.launchPath = launchPath;
@@ -76,7 +76,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
             launcherScanner = new LauncherScanner.Default(launchPath, launchFile);
         this.launchResourceURLs = launcherScanner.scanClassPathURLs();
 
-        this.classesFolderScanned = classesFolderScanned;
+        this.scanClassesFolder = scanClassesFolder;
 
         if (aspectAppScanner == null)
             aspectAppScanner = new AspectAppScanner.Default( launchPath.resolve(FOLDER_ASPECTAPPS) );
@@ -148,7 +148,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
 
     @Override
     public boolean isClassesFolderScanned() {
-        return classesFolderScanned;
+        return scanClassesFolder;
     }
 
     @Override

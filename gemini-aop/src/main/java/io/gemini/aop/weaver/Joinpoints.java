@@ -57,12 +57,12 @@ interface Joinpoints {
         private final String accessibleName;
         private final AccessibleObject accessibleObject;
 
-        private final boolean isTypeInitializer;
-        private final boolean isConstructor;
+        private final boolean typeInitializer;
+        private final boolean constructor;
 
-        private final boolean isStatic;
+        private final boolean staticMethod;
 
-        private final boolean isVoidReturning;
+        private final boolean voidReturning;
 
         // refresh at runtime
         private List<? extends Advisor> advisorChain;
@@ -76,24 +76,24 @@ interface Joinpoints {
             this.accessibleObject = accessibleObject;
 
             if (accessibleObject == null) {
-                this.isTypeInitializer = true;
+                this.typeInitializer = true;
 
-                this.isConstructor = false;
-                this.isStatic = true;
-                this.isVoidReturning = true;
+                this.constructor = false;
+                this.staticMethod = true;
+                this.voidReturning = true;
             } else {
-                this.isTypeInitializer = false;
+                this.typeInitializer = false;
 
                 if (accessibleObject instanceof Constructor) {
-                    this.isConstructor = true;
-                    this.isStatic = false;
-                    this.isVoidReturning = true;
+                    this.constructor = true;
+                    this.staticMethod = false;
+                    this.voidReturning = true;
                 } else {
-                    this.isConstructor = false;
+                    this.constructor = false;
 
                     Method method = (Method) accessibleObject;
-                    this.isStatic = Modifier.isStatic(method.getModifiers());
-                    this.isVoidReturning = method.getReturnType() == void.class;
+                    this.staticMethod = Modifier.isStatic(method.getModifiers());
+                    this.voidReturning = method.getReturnType() == void.class;
                 }
             }
 
@@ -114,11 +114,11 @@ interface Joinpoints {
         }
 
         public Constructor<?> getTargetConstructor() {
-            return (this.isTypeInitializer || this.isConstructor == false) ? null : (Constructor<?>) this.getStaticPart();
+            return (this.typeInitializer || this.constructor == false) ? null : (Constructor<?>) this.getStaticPart();
         }
 
         public Method getTargetMethod() {
-            return (this.isTypeInitializer || this.isConstructor == true) ? null : (Method) this.getStaticPart();
+            return (this.typeInitializer || this.constructor == true) ? null : (Method) this.getStaticPart();
         }
 
         private AccessibleObject getStaticPart() {
@@ -126,19 +126,19 @@ interface Joinpoints {
         }
 
         public boolean isTypeInitializer() {
-            return isTypeInitializer;
+            return typeInitializer;
         }
 
-        public boolean isStatic() {
-            return isStatic;
+        public boolean isStaticMethod() {
+            return staticMethod;
         }
 
         public boolean isConstructor() {
-            return isConstructor;
+            return constructor;
         }
 
         public boolean isVoidReturning() {
-            return isVoidReturning;
+            return voidReturning;
         }
 
         public List<? extends Advisor> getAdvisorChain() {
@@ -176,7 +176,7 @@ interface Joinpoints {
             } else {
                 this.lazyInitializeThis = false;
 
-                if (descriptor.isStatic == false) {
+                if (descriptor.staticMethod == false) {
                     Assert.notNull(targetObject, "'targetObject' must not be null.");
 
                     this.targetObject = targetObject;
@@ -319,7 +319,7 @@ interface Joinpoints {
 
         public void setAdviceReturning(T returning) {
             Descriptor descriptor = getDescriptor();
-            if (descriptor.isVoidReturning) {
+            if (descriptor.voidReturning) {
                 this.adviceReturning = null;
                 return;
             }

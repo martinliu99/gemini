@@ -85,18 +85,18 @@ public class BootstrapClassConfigurer {
 
     private final DiagnosticLevel diagnosticLevel;
 
-    private final boolean isByteCodeDumped;
+    private final boolean dumpByteCode;
     private final String byteCodeDumpPath;
 
 
     public BootstrapClassConfigurer(Instrumentation instrumentation, DiagnosticLevel diagnosticLevel, 
-            boolean isByteCodeDumped, String byteCodeDumpPath) {
+            boolean dumpByteCode, String byteCodeDumpPath) {
         Assert.notNull(instrumentation, "'instrumentation' must not be null.");
         this.instrumentation = instrumentation;
 
         this.diagnosticLevel = diagnosticLevel;
 
-        this.isByteCodeDumped = isByteCodeDumped;
+        this.dumpByteCode = dumpByteCode;
         this.byteCodeDumpPath = byteCodeDumpPath;
     }
 
@@ -157,7 +157,7 @@ public class BootstrapClassConfigurer {
 
 
     private ClassRenamer getClassRenamer(Map<String, String> nameMapping) {
-        return new ClassRenamer.Default(nameMapping, isByteCodeDumped, byteCodeDumpPath);
+        return new ClassRenamer.Default(nameMapping, dumpByteCode, byteCodeDumpPath);
     }
 
     private Map<Class<?>, Set<ProviderClass>> scanProviderClasses(ClassLoader sourceClassLoader, 

@@ -169,7 +169,7 @@ public class DefaultAopLauncher implements AopLauncher {
         long startedAt = System.nanoTime();
 
         BootstrapClassConfigurer bootstrapClassConfigurer = new BootstrapClassConfigurer(instrumentation, 
-                aopContext.getDiagnosticLevel(), aopContext.isByteCodeDumped(), aopContext.getByteCodeDumpPath());
+                aopContext.getDiagnosticLevel(), aopContext.isDumpByteCode(), aopContext.getByteCodeDumpPath());
         Map<String, String> nameMapping = bootstrapClassConfigurer
                 .configureProviderClasses(aopContext.getAopClassLoader(), aopContext.getClassScanner());
         bootstrapClassConfigurer.configureConsumerClasses(aopContext.getAopClassLoader(), aopContext.getClassScanner(), nameMapping);

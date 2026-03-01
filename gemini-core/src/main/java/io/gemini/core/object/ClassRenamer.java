@@ -64,16 +64,16 @@ public interface ClassRenamer {
         private final Set<String> removedInnerClasses;
         private final Set<String> removedAnnotationDescriptors;
 
-        private final boolean byteCodeDumped;
+        private final boolean dumpByteCode;
         private final String byteCodeDumpPath;
 
 
-        public Default(Map<String, String> nameMapping, boolean byteCodeDumped, String byteCodeDumpPath) {
-            this(nameMapping, null, byteCodeDumped, byteCodeDumpPath);
+        public Default(Map<String, String> nameMapping, boolean dumpByteCode, String byteCodeDumpPath) {
+            this(nameMapping, null, dumpByteCode, byteCodeDumpPath);
         }
 
         public Default(Map<String, String> nameMapping, Collection<String> removedAnnotations,
-                boolean byteCodeDumped, String byteCodeDumpPath) {
+                boolean dumpByteCode, String byteCodeDumpPath) {
             nameMapping = nameMapping == null ? Collections.emptyMap() : nameMapping;
             this.nameMapping = new LinkedHashMap<>(nameMapping.size());
             for (Entry<String, String> entry : nameMapping.entrySet()) {
@@ -100,10 +100,10 @@ public interface ClassRenamer {
                 this.removedAnnotationDescriptors.add("L" + descriptor + ";" );
             }
 
-            this.byteCodeDumped = byteCodeDumped;
+            this.dumpByteCode = dumpByteCode;
             this.byteCodeDumpPath = byteCodeDumpPath + File.separator + "class-renamer" + File.separator;
 
-            if (byteCodeDumped) {
+            if (dumpByteCode) {
                 File path = new File(this.byteCodeDumpPath);
                 path.mkdirs();
             }
@@ -145,7 +145,7 @@ public interface ClassRenamer {
         }
 
         private void dumpByteCode(String className, byte[] originByteCode, byte[] mappedByteCode) throws IOException {
-            if (byteCodeDumped == false)
+            if (dumpByteCode == false)
                 return;
 
             long timestamp = System.currentTimeMillis();

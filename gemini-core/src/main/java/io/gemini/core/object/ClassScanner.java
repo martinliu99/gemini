@@ -96,7 +96,7 @@ public interface ClassScanner {
         private final ClassInfoList classInfoList;   // cache found class info globally.
 
 
-        protected Default(boolean verboseEnabled, DiagnosticLevel diagnosticLevel,
+        protected Default(boolean enableVerbose, DiagnosticLevel diagnosticLevel,
                 Set<ClassLoader> scannedClassLoaders, Set<URL> overrideClasspaths, 
                 Set<String> acceptJarPatterns, Set<String> acceptPackages, 
                 int workThreads, Set<URL> filteredClasspathElementUrls) {
@@ -123,7 +123,7 @@ public interface ClassScanner {
             ScanResult result = null;
             try {
                 ClassGraph classGraph = new ClassGraph()
-                        .verbose(verboseEnabled)
+                        .verbose(enableVerbose)
 //                        .enableMemoryMapping()
                         .enableClassInfo()
                         .enableAnnotationInfo()
@@ -169,7 +169,7 @@ public interface ClassScanner {
                 if (LOGGER.isInfoEnabled()) {
                     if (diagnosticLevel.isDebugEnabled())
                         LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
-                                + "  verboseEnabled: {} \n"
+                                + "  enableVerbose: {} \n"
                                 + "  diagnosticLevel: {} \n"
                                 + "  scannedClassLoaders: {} \n"
                                 + "  overrideClasspaths: {}\n"
@@ -178,7 +178,7 @@ public interface ClassScanner {
                                 + "  workThreads: {} \n"
                                 + "  filteredClasspathElementUrls: {} \n",
                                 (System.nanoTime() - startedAt) / 1e9, 
-                                verboseEnabled, diagnosticLevel, 
+                                enableVerbose, diagnosticLevel, 
                                 scannedClassLoaders, overrideClasspaths,
                                 acceptPackages, acceptJarPatterns, 
                                 workThreads, filteredClasspathElementUrls
@@ -394,7 +394,7 @@ public interface ClassScanner {
 
     public class Builder {
 
-        private boolean verboseEnabled = false;
+        private boolean enableVerbose = false;
         private DiagnosticLevel diagnosticLevel;
 
         private final Set<ClassLoader> scannedClassLoaders;
@@ -420,8 +420,8 @@ public interface ClassScanner {
         }
 
 
-        public Builder enableVerbose(boolean verboseEnabled) {
-            this.verboseEnabled = verboseEnabled;
+        public Builder enableVerbose(boolean enableVerbose) {
+            this.enableVerbose = enableVerbose;
 
             return this;
         }
@@ -522,7 +522,7 @@ public interface ClassScanner {
 
         public ClassScanner build() {
             return this.classScanner == null
-                    ? new Default(verboseEnabled, diagnosticLevel,
+                    ? new Default(enableVerbose, diagnosticLevel,
                             scannedClassLoaders, overrideClasspaths,
                             acceptJarPatterns, acceptPackages, 
                             workThreads, filteredClasspathElementUrls)

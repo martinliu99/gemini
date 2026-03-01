@@ -77,7 +77,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             // create AdvisorFactory
             DefaultAdvisorFactory advisorFactory = aopContext.getDiagnosticLevel().isSimpleEnabled() == false
                     ? new DefaultAdvisorFactory(factoryContext)
-                    : aopContext.isTypeResolutionDetected() == false 
+                    : aopContext.isDetectTypeResolution() == false 
                             ? new DefaultAdvisorFactory.Diagnostic(factoryContext)
                             : new DefaultAdvisorFactory.TyepResolutionDetector(factoryContext);
 

@@ -16,10 +16,7 @@
 package io.gemini.aop.weaver;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -33,11 +30,13 @@ import io.gemini.aop.weaver.advice.ClassMethodAdvice;
 import io.gemini.aop.weaver.advice.InstanceConstructorAdvice;
 import io.gemini.aop.weaver.advice.InstanceMethodAdvice;
 import io.gemini.api.annotation.NoMatching;
+import io.gemini.api.classloader.BaseClassLoader;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.util.StringUtils;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
+import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
@@ -54,11 +53,10 @@ class WeaverContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverContext.class);
 
-    private static final String WEAVER_ENABLED_KEY = "aop.weaver.weaverEnabled";
+    private static final String ENABLE_WEAVER_KEY = "aop.weaver.enableWeaver";
 
-    private static final String WEAVER_CLASSLOADER_TYPE_EXPRESSIONS_KEY = "aop.weaver.classLoaderTypeExpressions";
+    private static final String WEAVER_CLASSLOADER_EXPRESSIONS_KEY = "aop.weaver.classLoaderExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
-    private static final String WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS = "aop.weaver.defaultExcludedTypeExpressions";
 
     private static final String WEAVER_BUILTIN_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY = "aop.weaver.builtinDispatcherCircularityTypeExpressions";
     private static final String WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY = "aop.weaver.dispatcherCircularityTypeExpressions";
@@ -67,25 +65,16 @@ class WeaverContext {
     private final AopContext aopContext;
 
     // weaver settings
-    private boolean weaverEnabled;
+    private boolean enableWeaver;
 
-    private Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> classLoaderTypeMatchers;
-
+    private ElementMatcher<ClassLoader> classLoaderMatcher;
 
     private ElementMatcher<String> dispatcherCircularityTypeMatcher;
 
     private Class<?> classInitializerAdvice;
-    private Class<?> classInitializerAdviceBreakingCircularity;
-
     private Class<?> classMethodAdvice;
-    private Class<?> classMethodAdviceBreakingCircularity;
-
     private Class<?> instanceConstructorAdvice;
-    private Class<?> instanceConstructorAdviceBreakingCircularity;
-
     private Class<?> instanceMethodAdvice;
-    private Class<?> instanceMethodAdviceBreakingCircularity;
-
 
     // weaver installer settings
     private RedefinitionStrategy redefinitionStrategy;
@@ -117,46 +106,22 @@ class WeaverContext {
 
         // load joinpoint matcher settings
         {
-            this.weaverEnabled = configView.getAsBoolean(WEAVER_ENABLED_KEY, true);
-            if (LOGGER.isWarnEnabled() && weaverEnabled == false)
-                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", WEAVER_ENABLED_KEY);
+            this.enableWeaver = configView.getAsBoolean(ENABLE_WEAVER_KEY, true);
+            if (LOGGER.isWarnEnabled() && enableWeaver == false)
+                LOGGER.warn("WARNING! Setting '{}' is false, and switched off aop weaving.\n", ENABLE_WEAVER_KEY);
         }
 
         {
-            Set<String> classLoaderTypeExpressions = 
-                    configView.getAsStringSet(WEAVER_CLASSLOADER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-            Map<String, String> classLoaderTypeExpressionPairs = new LinkedHashMap<>();
-            for (String classLoaderTypeExpression : classLoaderTypeExpressions) {
-                int pos = classLoaderTypeExpression.indexOf(":");
-                String classLoaderExpression = pos != -1 ? classLoaderTypeExpression.substring(0, pos) : classLoaderTypeExpression;
-                String typeExpression = pos != -1 ? classLoaderTypeExpression.substring(pos+1) : "*";
+            Set<String> classLoaderExpressions = 
+                    configView.getAsStringSet(WEAVER_CLASSLOADER_EXPRESSIONS_KEY, Collections.emptySet());
 
-                classLoaderTypeExpressionPairs.put(classLoaderExpression.trim(), typeExpression.trim());
-            }
-            if (LOGGER.isWarnEnabled() && classLoaderTypeExpressionPairs.size() > 0)
+            if (LOGGER.isWarnEnabled() && classLoaderExpressions.size() > 0)
                 LOGGER.warn("Loaded {} rules from '{}' setting. \n"
                         + "  {} \n", 
-                        classLoaderTypeExpressionPairs.size(), WEAVER_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
-                        StringUtils.join(classLoaderTypeExpressionPairs.entrySet(), entry -> entry.getKey() + ": " + entry.getValue(), "\n  ")
+                        classLoaderExpressions.size(), WEAVER_CLASSLOADER_EXPRESSIONS_KEY, 
+                        StringUtils.join(classLoaderExpressions, "\n  ")
                 );
 
-            Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> classLoaderTypeMatchers = 
-                    new LinkedHashMap<>(classLoaderTypeExpressions.size() + 1);
-            for (Entry<String, String> entry : classLoaderTypeExpressionPairs.entrySet()) {
-                ElementMatcher<ClassLoader> classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        WEAVER_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
-                        Collections.singleton(entry.getKey()), 
-                        ElementMatchers.none()
-                );
-
-                ElementMatcher<String> typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        WEAVER_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
-                        Collections.singleton(entry.getValue().trim()), 
-                        ElementMatchers.none()
-                );
-
-                classLoaderTypeMatchers.put(classLoaderMatcher, typeMatcher);
-            }
 
             Set<String> defaultExcludedClassLoaderExpressions = new LinkedHashSet<>();
             defaultExcludedClassLoaderExpressions.addAll(
@@ -178,31 +143,15 @@ class WeaverContext {
                             ElementMatchers.none() 
                     ) 
             );
+            if (classLoaderExpressions.size() > 0)
+                classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                        WEAVER_CLASSLOADER_EXPRESSIONS_KEY, 
+                        classLoaderExpressions, 
+                        ElementMatchers.none() 
+                )
+                .and(classLoaderMatcher);
 
-            Set<String> defaultExcludedTypeExpressions = new LinkedHashSet<>();
-            defaultExcludedTypeExpressions.addAll(
-                    configView.getAsStringList(WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, Collections.emptyList()) );
-            defaultExcludedTypeExpressions.addAll(
-                    noMatchingClassInfoList.filter( this::isClass ).getNames() );
-
-            if (LOGGER.isInfoEnabled())
-                LOGGER.info("Loaded {} rules from '{}' setting. \n"
-                        + "  {} \n", 
-                        defaultExcludedTypeExpressions.size(), WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, 
-                        StringUtils.join(defaultExcludedTypeExpressions, "\n  ")
-                );
-
-            ElementMatcher<String> typeMatcher = ElementMatchers.not(
-                    ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                            WEAVER_DEFAULT_EXCLUDED_TYPE_EXPRESSIONS, 
-                            defaultExcludedTypeExpressions, 
-                            ElementMatchers.none()
-                    ) 
-            );
-
-            classLoaderTypeMatchers.put(classLoaderMatcher, typeMatcher);
-
-            this.classLoaderTypeMatchers = classLoaderTypeMatchers;
+            this.classLoaderMatcher = classLoaderMatcher;
         }
 
         // load joinpoint transformer settings
@@ -228,23 +177,12 @@ class WeaverContext {
 
             this.classInitializerAdvice = configView.getAsClass(
                     "aop.weaver.classInitializerAdvice", ClassInitializerAdvice.class);
-            this.classInitializerAdviceBreakingCircularity = configView.getAsClass(
-                    "aop.weaver.classInitializerAdvice.breakingCircularity", ClassInitializerAdvice.BreakingCircularity.class);
-
             this.classMethodAdvice = configView.getAsClass(
                     "aop.weaver.classMethodAdvice", ClassMethodAdvice.class);
-            this.classMethodAdviceBreakingCircularity = configView.getAsClass(
-                    "aop.weaver.classMethodAdvice.breakingCircularity", ClassMethodAdvice.BreakingCircularity.class);
-
             this.instanceConstructorAdvice = configView.getAsClass(
                     "aop.weaver.instanceConstructorAdvice", InstanceConstructorAdvice.class);
-            this.instanceConstructorAdviceBreakingCircularity = configView.getAsClass(
-                    "aop.weaver.instanceConstructorAdvice.breakingCircularity", InstanceConstructorAdvice.BreakingCircularity.class);
-
             this.instanceMethodAdvice = configView.getAsClass(
                     "aop.weaver.instanceMethodAdvice", InstanceMethodAdvice.class);
-            this.instanceMethodAdviceBreakingCircularity = configView.getAsClass(
-                    "aop.weaver.instanceMethodAdvice.breakingCircularity", InstanceMethodAdvice.BreakingCircularity.class);
         }
 
         // load weaver installer settings
@@ -270,50 +208,38 @@ class WeaverContext {
                 classInfo.getAnnotationInfo(NoMatching.class).getParameterValues().get("classLoader").getValue() );
     }
 
-    private boolean isClass(ClassInfo classInfo) {
-        return !isClassLoader(classInfo);
-    }
-
 
     public AopContext getAopContext() {
         return aopContext;
     }
 
 
-    public boolean isWeaverEnabled() {
-        return weaverEnabled;
+    public boolean isEnableWeaver() {
+        return enableWeaver;
     }
 
-    public Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> getClassLoaderTypeMatchers() {
-        return classLoaderTypeMatchers;
+    public boolean acceptTargetClassLoader(ClassLoader targetClassLoader) {
+        return targetClassLoader instanceof BaseClassLoader 
+                ? false : classLoaderMatcher.matches(targetClassLoader);
     }
 
-
-    public Class<?> getClassInitializerAdvice(TypeDescription targetType) {
-        return isBreakingCircularity(targetType)
-                ? classInitializerAdviceBreakingCircularity
-                : classInitializerAdvice;
+    public Class<?> getByteBuddyAdvice(TypeDescription targetType, MethodDescription targetMethod) {
+        if (targetMethod.isStatic()) {
+            if (targetMethod.isTypeInitializer()) {
+                return classInitializerAdvice;
+            } else { 
+                return classMethodAdvice;
+            }
+        } else {
+            if (targetMethod.isConstructor()) {
+                return instanceConstructorAdvice;
+            } else {
+                return instanceMethodAdvice;
+            }
+        }
     }
 
-    public Class<?> getClassMethodAdvice(TypeDescription targetType) {
-        return isBreakingCircularity(targetType)
-                ? classMethodAdviceBreakingCircularity
-                : classMethodAdvice;
-    }
-
-    public Class<?> getInstanceConstructorAdvice(TypeDescription targetType) {
-        return isBreakingCircularity(targetType)
-                ? instanceConstructorAdviceBreakingCircularity
-                : instanceConstructorAdvice;
-    }
-
-    public Class<?> getInstanceMethodAdvice(TypeDescription targetType) {
-        return isBreakingCircularity(targetType)
-                ? instanceMethodAdviceBreakingCircularity
-                : instanceMethodAdvice;
-    }
-
-    private boolean isBreakingCircularity(TypeDescription targetType) {
+    public boolean isBreakingCircularity(TypeDescription targetType) {
         return dispatcherCircularityTypeMatcher.matches( targetType.getTypeName() );
     }
 

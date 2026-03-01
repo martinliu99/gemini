@@ -65,7 +65,7 @@ public class DeferredLoggerFactory {
     private final Map<String, WeakReference<DeferredLogger>> loggers = new HashMap<String, WeakReference<DeferredLogger>>();
     private final LinkedBlockingQueue<DeferredMessage> eventQueue = new LinkedBlockingQueue<DeferredMessage>();
 
-    private volatile boolean deferModeEnabled = false;
+    private volatile boolean enableDeferMode = false;
 
 
     static {
@@ -128,7 +128,7 @@ public class DeferredLoggerFactory {
         WeakReference<DeferredLogger> loggerRef = loggers.get(name);
         if (loggerRef == null || loggerRef.get() == null) {
             loggerRef = new WeakReference<DeferredLogger>(
-                    new DeferredLogger(name, eventQueue, deferModeEnabled) );
+                    new DeferredLogger(name, eventQueue, enableDeferMode) );
             loggers.put(name, loggerRef);
         }
 
@@ -136,23 +136,23 @@ public class DeferredLoggerFactory {
     }
 
     private void enableDeferModeInternal() {
-        if (deferModeEnabled == true)
+        if (enableDeferMode == true)
             return;
 
         // enable defer mode, and cache log messages
-        deferModeEnabled = true;
+        enableDeferMode = true;
 
-        adjustDelayLoggers(deferModeEnabled);
+        adjustDelayLoggers(enableDeferMode);
     }
 
     private void replayDeferredMessagesInternal(Level loggingLevel) {
-        if (deferModeEnabled == false)
+        if (enableDeferMode == false)
             return;
 
         // disable defer mode, and log message in-time
-        deferModeEnabled = false;
+        enableDeferMode = false;
 
-        adjustDelayLoggers(deferModeEnabled);
+        adjustDelayLoggers(enableDeferMode);
 
         // replay log messages
         replayMessages(loggingLevel);
@@ -251,11 +251,11 @@ public class DeferredLoggerFactory {
         private final Queue<DeferredMessage> eventQueue;
 
 
-        public DeferredLogger(String name, Queue<DeferredMessage> eventQueue, boolean deferModeEnabled) {
+        public DeferredLogger(String name, Queue<DeferredMessage> eventQueue, boolean enableDeferMode) {
             this.name = name;
             this.eventQueue = eventQueue;
 
-            if (deferModeEnabled == true)
+            if (enableDeferMode == true)
                 this.enableDeferMode();
             else
                 this.disableDeferMode();

@@ -50,12 +50,11 @@ public class AdvisorContext implements Closeable {
 
     private final PlaceholderHelper placeholderHelper;
 
-    private final boolean targetClassLoaderAccepted;
     private final boolean validateContext;
 
     private final MatchingContext matchingContext;
 
-    private final boolean asmAutoComputed;
+    private final boolean autoComputeAsm;
 
 
     protected AdvisorContext(FactoryContext factoryContext, 
@@ -63,7 +62,7 @@ public class AdvisorContext implements Closeable {
             AspectClassLoader classLoader, ObjectFactory objectFactory, 
             TypePool typePool, TypePool targetTypePool,
             TypeWorld typeWorld, TypeWorld targetTypeWorld,
-            boolean targetClassLoaderAccepted, boolean validateContext) {
+            boolean validateContext) {
         this.factoryContext = factoryContext;
 
         this.targetClassLoaderName = targetClassLoaderName;
@@ -77,12 +76,11 @@ public class AdvisorContext implements Closeable {
 
         this.placeholderHelper = factoryContext.getPlaceholderHelper();
 
-        this.targetClassLoaderAccepted = targetClassLoaderAccepted;
         this.validateContext = validateContext;
 
         this.matchingContext = new DefultMatchingContext(classLoader, targetTypePool, targetTypeWorld);
 
-        this.asmAutoComputed = factoryContext.getFactoriesContext().isAsmAutoComputed();
+        this.autoComputeAsm = factoryContext.getFactoriesContext().isAutoComputeAsm();
     }
 
 
@@ -125,8 +123,8 @@ public class AdvisorContext implements Closeable {
         return matchingContext;
     }
 
-    public boolean isTargetClassLoaderAccepted() {
-        return targetClassLoaderAccepted;
+    public boolean acceptTargetClassloader() {
+        return factoryContext.acceptTargetClassLoader(classLoader.getTargetClassLoader());
     }
 
     public boolean isValidateContext() {
@@ -134,8 +132,8 @@ public class AdvisorContext implements Closeable {
     }
 
 
-    public boolean isASMAutoComputed() {
-        return asmAutoComputed;
+    public boolean isAutoComputeAsm() {
+        return autoComputeAsm;
     }
 
 

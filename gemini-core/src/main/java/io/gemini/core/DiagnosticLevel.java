@@ -27,19 +27,19 @@ public enum DiagnosticLevel {
     DEBUG(true, true)
     ;
 
-    private final boolean simpleEnabled;
-    private final boolean debugEnabled;
+    private final boolean enableSimple;
+    private final boolean enableDebug;
 
-    DiagnosticLevel(boolean simpleEnabled, boolean debugEnabled) {
-        this.simpleEnabled = simpleEnabled;
-        this.debugEnabled = debugEnabled;
+    DiagnosticLevel(boolean enableSimple, boolean enableDebug) {
+        this.enableSimple = enableSimple;
+        this.enableDebug = enableDebug;
     }
 
     public boolean isSimpleEnabled() {
-        return simpleEnabled;
+        return enableSimple;
     }
 
     public boolean isDebugEnabled() {
-        return debugEnabled;
+        return enableDebug;
     }
 }

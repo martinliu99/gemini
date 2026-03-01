@@ -88,7 +88,7 @@ interface AdviceClassMaker {
         private final AdviceMethodMatcher adviceMethodMatcher;
 
         private ConcurrentMap<ClassLoader, WeakReference<Class<? extends Advice>>> adviceClassRefMap;
-        private DynamicType.Unloaded<? extends Advice> adviceClassUnloaded;
+        private DynamicType.Unloaded<? extends Advice> unloadedAdviceClass;
 
 
         public ByteBuddyMaker(AopContext aopContext, AspectJPointcutAdvisorSpec aspectJAdvisorSpec, AdviceMethodMatcher adviceMethodMatcher) {
@@ -111,9 +111,9 @@ interface AdviceClassMaker {
                     key -> {
                         // try to generate advice class
                         long startedAt = System.nanoTime();
-                        this.adviceClassUnloaded = ByteCodeGenerator.INSTANCE.make(advisorContext, this);
+                        this.unloadedAdviceClass = ByteCodeGenerator.INSTANCE.make(advisorContext, this);
 
-                        Class<? extends Advice> adviceClass = adviceClassUnloaded
+                        Class<? extends Advice> adviceClass = unloadedAdviceClass
                                 .load(aspectClassLoader, new ClassLoadingStrategy.ForUnsafeInjection())
                                 .getLoaded();
 
@@ -219,7 +219,7 @@ interface AdviceClassMaker {
                         @Override
                         public int mergeWriter(int flags) {
                             // auto-calculate stack frame map flag if needed
-                            return advisorContext.isASMAutoComputed() ? flags | ClassWriter.COMPUTE_FRAMES : flags;
+                            return advisorContext.isAutoComputeAsm() ? flags | ClassWriter.COMPUTE_FRAMES : flags;
                         }
 
                         @Override
@@ -384,7 +384,7 @@ interface AdviceClassMaker {
                             break;
                         }
                         case RETURNING_ANNOTATION: {
-                            if (aspectJAdvisorSpec.isVoidReturningOfTargetMethod()) {
+                            if (aspectJAdvisorSpec.isVoidReturning()) {
                                 Assigner.DEFAULT.assign(VOID.asGenericType(), parameterType.asGenericType(), Typing.DYNAMIC).apply(methodVisitor, implementationContext);
                             } else {
                                 methodVisitor.visitVarInsn(Opcodes.ALOAD, PARAM_INDEX1_MUTABLE_JOINPOINT);

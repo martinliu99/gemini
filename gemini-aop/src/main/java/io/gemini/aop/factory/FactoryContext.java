@@ -27,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -74,7 +73,7 @@ public class FactoryContext implements Closeable {
     private static final String FACTORY_TARGET_FIRST_TYPE_EXPRESSIONS = "aop.factory.targetFirstTypeExpressions";
     private static final String FACTORY_TARGET_FIRST_RESOURCE_EXPRESSIONS = "aop.factory.targetFirstResourceExpressions";
 
-    private static final String FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY = "aop.factory.factoryClassLoaderTypeExpressions";
+    private static final String FACTORY_FACTORY_CLASSLOADER_EXPRESSIONS_KEY = "aop.factory.factoryClassLoaderExpressions";
 
     private static final String FACTORY_ENABLED_ADVISOR_EXPRESSIONS_KEY = "aop.factory.enabledAdvisorExpressions";
 
@@ -101,11 +100,11 @@ public class FactoryContext implements Closeable {
     private ElementMatcher<String> targetFirstTypeMatcher;
     private ElementMatcher<String> targetFirstResourcesMatcher;
 
-    private Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> factoryClassLoaderTypeMatchers;
+    private ElementMatcher<ClassLoader> factoryClassLoaderMatcher;
 
     private ElementMatcher<String> enabledAdvisorMatcher;
 
-    private boolean aspectClassLoaderShared;
+    private boolean shareAspectClassLoader;
     private List<Set<String>> conflictTargetClassLoaders;
 
     private final TypePoolFactory typePoolFactory;
@@ -251,43 +250,24 @@ public class FactoryContext implements Closeable {
 
         {
             // parse classLoader/type expression pair
-            Set<String> classLoaderTypeExpressions = 
-                    configView.getAsStringSet(FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, Collections.emptySet());
-            Map<String, String> classLoaderTypeExpressionPairs = new LinkedHashMap<>();
-            for (String classLoaderTypeExpression : classLoaderTypeExpressions) {
-                int pos = classLoaderTypeExpression.indexOf(":");
-                String classLoaderExpression = pos != -1 ? classLoaderTypeExpression.substring(0, pos) : classLoaderTypeExpression;
-                String typeExpression = pos != -1 ? classLoaderTypeExpression.substring(pos+1) : "*";
+            Set<String> classLoaderExpressions = 
+                    configView.getAsStringSet(FACTORY_FACTORY_CLASSLOADER_EXPRESSIONS_KEY, Collections.emptySet());
 
-                classLoaderTypeExpressionPairs.put(classLoaderExpression.trim(), typeExpression.trim());
-            }
-            if (LOGGER.isWarnEnabled() && classLoaderTypeExpressionPairs.size() > 0)
+            if (LOGGER.isWarnEnabled() && classLoaderExpressions.size() > 0)
                 LOGGER.warn("WARNING! Loaded {} rules from '{}' setting under '{}'. \n"
                         + "  {} \n", 
-                        classLoaderTypeExpressionPairs.size(), FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, factoryName,
-                        StringUtils.join(classLoaderTypeExpressionPairs.entrySet(), entry -> entry.getKey() + ": " + entry.getValue(), "\n  ")
+                        classLoaderExpressions.size(), FACTORY_FACTORY_CLASSLOADER_EXPRESSIONS_KEY, factoryName,
+                        StringUtils.join(classLoaderExpressions, "\n  ")
                 );
 
-            // parse classLoader/type matcher
-            Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> classLoaderTypeMatchers = 
-                    new LinkedHashMap<>(classLoaderTypeExpressions.size() + 1);
-            for (Entry<String, String> entry : classLoaderTypeExpressionPairs.entrySet()) {
-                ElementMatcher<ClassLoader> classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
-                        FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
-                        entry.getKey(), 
-                        ElementMatchers.none()
-                );
+            // parse classLoader matcher
+            ElementMatcher<ClassLoader> classLoaderMatcher = ElementMatcherFactory.INSTANCE.createClassLoaderMatcher(
+                    FACTORY_FACTORY_CLASSLOADER_EXPRESSIONS_KEY, 
+                    classLoaderExpressions, 
+                    ElementMatchers.none()
+            );
 
-                ElementMatcher<String> typeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                        FACTORY_FACTORY_CLASSLOADER_TYPE_EXPRESSIONS_KEY, 
-                        entry.getValue(),
-                        ElementMatchers.none()
-                );
-
-                classLoaderTypeMatchers.put(classLoaderMatcher, typeMatcher);
-            }
-
-            this.factoryClassLoaderTypeMatchers = classLoaderTypeMatchers;
+            this.factoryClassLoaderMatcher = classLoaderMatcher;
         }
 
         {
@@ -309,8 +289,8 @@ public class FactoryContext implements Closeable {
 
         {
             // load and merge global factory settings
-            boolean aspectClassLoaderShared = configView.getAsBoolean("aop.factory.aspectClassLoaderShared", false);
-            this.aspectClassLoaderShared = aspectClassLoaderShared && factoriesContext.isAspectClassLoaderShared();
+            boolean shareAspectClassLoader = configView.getAsBoolean("aop.factory.shareAspectClassLoader", false);
+            this.shareAspectClassLoader = shareAspectClassLoader && factoriesContext.isShareAspectClassLoader();
 
             List<Set<String>> conflictTargetClassLoaders = new ArrayList<>();
             conflictTargetClassLoaders.addAll(
@@ -377,8 +357,8 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public Map<ElementMatcher<ClassLoader>, ElementMatcher<String>> getFactoryClassLoaderTypeMatchers() {
-        return factoryClassLoaderTypeMatchers;
+    public boolean acceptTargetClassLoader(ClassLoader targetClassLoader) {
+        return factoryClassLoaderMatcher.matches(targetClassLoader);
     }
 
     public boolean isEnabledAdvisor(String advisorName) {
@@ -420,25 +400,24 @@ public class FactoryContext implements Closeable {
     }
 
 
-    public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
-            boolean targetClassLoaderAccepted) {
-        return createAdvisorContext(targetClassLoader, targetJavaModule, targetClassLoaderAccepted, false);
+    public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule) {
+        return createAdvisorContext(targetClassLoader, targetJavaModule, false);
     }
 
     public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
-            boolean targetClassLoaderAccepted, boolean validateContext) {
+            boolean validateContext) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(targetClassLoader);
         return this.advisorContextMap.computeIfAbsent( 
                 cacheKey, 
                 key -> doCreateAdvisorContext(
                         targetClassLoader, targetJavaModule, 
-                        targetClassLoaderAccepted, validateContext,
-                        useSharedAspectClassLoader(cacheKey)
+                        validateContext,
+                        isUseSharedAspectClassLoader(cacheKey)
                 )
         );
     }
 
-    private boolean useSharedAspectClassLoader(ClassLoader targetClassLoader) {
+    private boolean isUseSharedAspectClassLoader(ClassLoader targetClassLoader) {
         // 1.use existing AspectClassLoader
         if (advisorContextMap.containsKey(targetClassLoader) == true)
             return true;
@@ -449,8 +428,8 @@ public class FactoryContext implements Closeable {
             return true;
 
 
-        // 3.check aspectClassLoaderShared flag
-        if (aspectClassLoaderShared == false) 
+        // 3.check shareAspectClassLoader flag
+        if (shareAspectClassLoader == false) 
             return false;
 
 
@@ -482,7 +461,7 @@ public class FactoryContext implements Closeable {
     }
 
     protected AdvisorContext doCreateAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
-            boolean targetClassLoaderAccepted, boolean validateContext, boolean sharedMode) {
+            boolean validateContext, boolean sharedMode) {
         // create AspectClassLoader & objectFactory per ClassLoader
         AspectClassLoader classLoader = this.classLoader;
         ObjectFactory objectFactory = this.objectFactory;
@@ -503,7 +482,7 @@ public class FactoryContext implements Closeable {
                 classLoader, objectFactory, 
                 typePool, typePoolFactory.createTypePool(targetClassLoader, targetJavaModule),
                 typeWorld, typeWorldFactory.createTypeWorld(targetClassLoader, targetJavaModule),
-                targetClassLoaderAccepted, validateContext);
+                validateContext);
     }
 
     @Override

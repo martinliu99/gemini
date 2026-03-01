@@ -26,7 +26,7 @@ public interface LoggingSystem {
 
     static final String LOGGER_CONFIG_LOCATION_KEY = "aop.logger.configLocation";
     static final String LOGGER_ALL_LOG_LEVEL_KEY = "aop.logger.allLogLevel";
-    static final String LOGGER_LOCATION_INCLUDED_KEY = "aop.logger.locationIncluded";
+    static final String LOGGER_INCLUDE_LOCATION_KEY = "aop.logger.includeLocation";
 
 
     void initialize(ClassLoader currentClassLoader);

@@ -126,6 +126,14 @@ public class Advisor_01SpecScanning_Tests {
          * {@inheritDoc}
          */
         @Override
+        public boolean isBreakCircularity() {
+            return false;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public Pointcut getPointcut() {
             return new Pointcut.Default(
                     named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object"),
@@ -214,6 +222,14 @@ public class Advisor_01SpecScanning_Tests {
         @Override
         public int getOrder() {
             return 0;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isBreakCircularity() {
+            return false;
         }
 
         /**
@@ -474,6 +490,14 @@ public class Advisor_01SpecScanning_Tests {
          * {@inheritDoc}
          */
         @Override
+        public boolean isBreakCircularity() {
+            return false;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public Pointcut getPointcut() {
             return new Pointcut.Default(
                     named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object"),
@@ -559,6 +583,14 @@ public class Advisor_01SpecScanning_Tests {
         @Override
         public int getOrder() {
             return 0;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isBreakCircularity() {
+            return false;
         }
 
         /**
@@ -654,6 +686,14 @@ public class Advisor_01SpecScanning_Tests {
         @Override
         public int getOrder() {
             return 0;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isBreakCircularity() {
+            return false;
         }
 
         /**

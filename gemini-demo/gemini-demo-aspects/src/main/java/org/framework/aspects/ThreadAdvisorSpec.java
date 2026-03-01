@@ -27,14 +27,13 @@ public class ThreadAdvisorSpec extends AdvisorSpec.PojoPointcutSpec.Default {
     public ThreadAdvisorSpec() {
         super(
                 context -> context.isBootstrapClassLoader(),
-                false,
-                true,
-                new Pointcut.Default(
-                        named("java.lang.Thread"),
-                        named("start") ), 
                 ThreadAdvice.class.getName(), 
                 false, 
-                1
+                1,
+                new Pointcut.Default(
+                        named("java.lang.Thread"),
+                        named("start") 
+                )
         );
     }
 

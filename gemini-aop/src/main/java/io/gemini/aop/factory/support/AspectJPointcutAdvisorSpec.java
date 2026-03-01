@@ -48,7 +48,7 @@ interface AspectJPointcutAdvisorSpec extends AdvisorSpec.ExprPointcutSpec, Point
     Generic getAdviceThrowingParameterType();
 
 
-    boolean isVoidReturningOfTargetMethod();
+    boolean isVoidReturning();
 
 
     /** 

@@ -15,9 +15,6 @@
  */
 package io.gemini.api.aop.annotation;
 
-import static io.gemini.api.aop.AdvisorSpec.DEFAULT_ORDER;
-import static io.gemini.api.aop.AdvisorSpec.DEFAULT_PER_INSTANCE;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -25,22 +22,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 
- * 
+ *
+ *
  * @author   martin.liu
- * @since    1.0
+ * @since	 1.0
  */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface Advisor {
-
-    String advisorName() default "";
-
-
-    boolean perInstance() default DEFAULT_PER_INSTANCE;
-
-
-    int order() default DEFAULT_ORDER;
-
+public @interface EnableCircularityBreaker {
 }

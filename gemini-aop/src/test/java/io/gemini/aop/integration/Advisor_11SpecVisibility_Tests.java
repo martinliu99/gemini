@@ -98,6 +98,14 @@ public class Advisor_11SpecVisibility_Tests {
          * {@inheritDoc}
          */
         @Override
+        public boolean isBreakCircularity() {
+            return false;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public Pointcut getPointcut() {
             return new Pointcut.Default(
                     named("io.gemini.aop.integration.Advisor_11SpecVisibility_Tests$SpecVisibility_Object"),
@@ -150,6 +158,14 @@ public class Advisor_11SpecVisibility_Tests {
         @Override
         public int getOrder() {
             return 0;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isBreakCircularity() {
+            return false;
         }
 
         /**

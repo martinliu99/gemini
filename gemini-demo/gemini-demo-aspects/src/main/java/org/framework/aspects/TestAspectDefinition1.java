@@ -27,12 +27,12 @@ public class TestAspectDefinition1 extends AdvisorSpec.PojoPointcutSpec.Default 
      */
     public TestAspectDefinition1() {
         super(
-                new Pointcut.Default(
-                        named("org.framework.test.Test"),
-                        named("doTest") ), 
                 "org.framework.aspects.TestAdvice1", 
                 false, 
-                1
+                1, 
+                new Pointcut.Default(
+                        named("org.framework.test.Test"),
+                        named("doTest") )
         );
     }
 

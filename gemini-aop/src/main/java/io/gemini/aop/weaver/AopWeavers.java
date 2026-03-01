@@ -91,7 +91,7 @@ public class AopWeavers {
         // 2.initialize BootstrapDispatcher
         BootstrapDispatcher.setCreator(aopWeaver);
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
-            LOGGER.info("$Initialized BootstrapAdvice.Bridger with '{}' loaded by classLoader '{}'.", 
+            LOGGER.info("$Initialized BootstrapDispatcher.Creator with '{}' loaded by classLoader '{}'.", 
                     aopWeaver, AopWeavers.class.getClassLoader());
 
         launcherMetrics.setAopWeaverCreationTime(System.nanoTime() - startedAt);
@@ -132,7 +132,7 @@ public class AopWeavers {
             .with( new ByteBuddy()
                     .with( MethodGraph.Compiler.ForDeclaredMethods.INSTANCE )
             )
-            .ignore( BooleanMatcher.of(weaverContext.isWeaverEnabled() == false) )
+            .ignore( BooleanMatcher.of(weaverContext.isEnableWeaver() == false) )
             // better performance than REDEFINE or REDEFINE_FROZEN
             .with( TypeStrategy.Default.REBASE )
 //            .with( TypeStrategy.Default.DECORATE)

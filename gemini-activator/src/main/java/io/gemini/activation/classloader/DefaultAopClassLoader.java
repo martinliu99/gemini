@@ -76,7 +76,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
 
 
     static {
-        // invoke registerAsParallelCapable directly since JDK 7+
+        // load class in parallel
         registerAsParallelCapable();
 
 

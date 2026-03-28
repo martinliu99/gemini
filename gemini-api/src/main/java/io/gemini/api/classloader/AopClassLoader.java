@@ -33,6 +33,12 @@ import java.util.List;
  */
 public abstract class AopClassLoader extends BaseClassLoader {
 
+    static {
+        // load class in parallel
+        ClassLoader.registerAsParallelCapable();
+    }
+
+
     /**
      * @param urls
      * @param launcherClassLoader

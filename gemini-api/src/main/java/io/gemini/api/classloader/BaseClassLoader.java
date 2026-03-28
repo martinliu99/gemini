@@ -26,6 +26,12 @@ import java.net.URLClassLoader;
  */
 public abstract class BaseClassLoader extends URLClassLoader {
 
+    static {
+        // load class in parallel
+        ClassLoader.registerAsParallelCapable();
+    }
+
+
     /**
      * @param urls
      * @param parent

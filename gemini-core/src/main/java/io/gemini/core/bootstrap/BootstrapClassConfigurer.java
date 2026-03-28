@@ -193,7 +193,7 @@ public class BootstrapClassConfigurer {
         if (ClassInjector.UsingLookup.isAvailable() == false) {
             Map<String, byte[]> classBytecodeMap = new HashMap<>();
             for (Entry<Class<?>, Set<ProviderClass>> entry : providerClasses.entrySet()) {
-                for(ProviderClass provider : entry.getValue()) {
+                for (ProviderClass provider : entry.getValue()) {
                     byte[] renamedByteCode = classRenamer.map(provider.getSrcClassName(), provider.getByteCode());
                     classBytecodeMap.put(provider.getDestClassName(), renamedByteCode);
                 }
@@ -231,7 +231,7 @@ public class BootstrapClassConfigurer {
 
             // inject byte code
             Map<String, byte[]> classBytecodeMap = new HashMap<>();
-            for(ProviderClass provider : entry.getValue()) {
+            for (ProviderClass provider : entry.getValue()) {
                 byte[] renamedByteCode = classRenamer.map(provider.getSrcClassName(), provider.getByteCode());
                 classBytecodeMap.put(provider.getDestClassName(), renamedByteCode);
             }

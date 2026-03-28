@@ -62,15 +62,15 @@ public interface TaskExecutor {
      * @param batchCount
      * @return
      */
-    <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
+    <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
             boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper);
 
-    default <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor) {
+    default <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor) {
         return executeTasks(tasks, taskExecutor, 
                 isParallel(), DEFAULT_BATCH_COUNT, null);
     }
 
-    default <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
+    default <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
             Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
         return executeTasks(tasks, taskExecutor, 
                 isParallel(), Default.DEFAULT_BATCH_COUNT, executionWrapper);
@@ -139,7 +139,7 @@ public interface TaskExecutor {
          * {@inheritDoc}
          */
         @Override
-        public <T, R> Collection<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
+        public <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
                 boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
             if (tasks.size() == 0 || taskExecutor == null)
                 return Collections.emptyList();
@@ -151,7 +151,7 @@ public interface TaskExecutor {
             return executeTasksInParallel(splitTasks(tasks, batchCount), taskExecutor, executionWrapper, tasks.size());
         }
 
-        private <T, R> Collection<R> executeTaskSequentially(Collection<T> tasks, Function<T, R> taskExecutor) {
+        private <T, R> List<R> executeTaskSequentially(Collection<T> tasks, Function<T, R> taskExecutor) {
             List<R> resultList = new ArrayList<R>(tasks.size());
             for (T task : tasks) {
                 R result = taskExecutor.apply(task);

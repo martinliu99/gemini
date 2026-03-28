@@ -188,7 +188,8 @@ public interface ConversionService {
         }
 
 
-        /* {@inheritDoc}
+        /** 
+         * {@inheritDoc}
          */
         @Override
         @SuppressWarnings("unchecked")

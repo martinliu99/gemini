@@ -133,14 +133,16 @@ public interface TypePoolFactory {
         }
 
 
-        /* {@inheritDoc}
+        /** 
+         * {@inheritDoc}
          */
         @Override
         public boolean isLoadedFirst() {
             return true;
         }
 
-        /* {@inheritDoc}
+        /** 
+         * {@inheritDoc}
          */
         @Override
         public TypeDescription apply(String typeName, Class<?> type, TypePool byteBuddyTypePool, 
@@ -209,7 +211,8 @@ public interface TypePoolFactory {
         }
 
 
-        /* {@inheritDoc}
+        /** 
+         * {@inheritDoc}
          */
         @Override
         public Resolution removeTypeResolution(String typeName) {

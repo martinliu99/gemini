@@ -26,7 +26,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +41,7 @@ import io.gemini.api.annotation.Initializer;
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.ClassUtils;
+import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
@@ -65,11 +65,11 @@ public interface ObjectFactory extends Closeable {
     <T> boolean isInstantiatable(Class<T> clazz);
 
 
+    <T> T createObject(Class<T> clazz, Object... arguments) throws ObjectsException;
+
     <T> T createObject(Class<T> clazz, Map<String, Object> arguments) throws ObjectsException;
 
-    <T> T createObject(Class<T> clazz) throws ObjectsException;
-
-    <T> List<T> createObjectsImplementing(Class<T> clazz) throws ObjectsException;
+    <T> List<T> createObjectsImplementing(Class<T> clazz, boolean ignoredException, Object... arguments) throws ObjectsException;
 
 
     void close() throws IOException;
@@ -93,6 +93,9 @@ public interface ObjectFactory extends Closeable {
     }
 
 
+    /**
+     * 
+     */
     abstract class AbstractBase implements ObjectFactory {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(ObjectFactory.class);
@@ -127,6 +130,10 @@ public interface ObjectFactory extends Closeable {
             return classScanner;
         }
 
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         @SuppressWarnings("unchecked")
         public <T> Class<T> loadClass(String className) throws ObjectsException {
@@ -141,6 +148,9 @@ public interface ObjectFactory extends Closeable {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public <T> boolean isInstantiatable(Class<T> clazz) {
             // top level or nested, concrete class
@@ -156,50 +166,29 @@ public interface ObjectFactory extends Closeable {
          * {@inheritDoc}
          */
         @Override
-        @SuppressWarnings("unchecked")
-        public <T> T createObject(Class<T> clazz, Map<String, Object> arguments) throws ObjectsException {
+        public <T> T createObject(Class<T> clazz,  Object... arguments) throws ObjectsException {
             Assert.notNull(clazz, "'clazz' must not be null.");
-            arguments =  arguments == null ? Collections.emptyMap() : arguments;
+            Assert.isTrue(isInstantiatable(clazz), "clazz '" + clazz + "' must be top-level or nested, concrete class.");
 
-
-            // find constructor with @Initializer
-            Constructor<T> candidateConstructor = null;
-            for (Constructor<T> constructor : (Constructor<T>[]) clazz.getDeclaredConstructors()) {
-                if (constructor.getAnnotationsByType(Initializer.class) == null)
-                    continue;
-
-                if (candidateConstructor == null)
-                    candidateConstructor = constructor;
-                else
-                    throw new ObjectsException("Class [" + clazz.getName() + "] contains multiple constructors annotated with @" + Initializer.class.getName());
-            }
-
-            if (candidateConstructor == null)
+            // 1.deduce constructor and instantiate instance if no argument pass in 
+            if (arguments == null || arguments.length == 0)
                 return doCreateObject(clazz);
 
 
-            // prepare arguments
-            Object[] invocationArgs = new Object[candidateConstructor.getParameterCount()];
-            int i = 0;
-            for (Parameter parameter : candidateConstructor.getParameters()) {
-                String parameterName = parameter.getName();
-                Class<?> parameterType = parameter.getType();
+            // 2.find constructor and instantiate instance with arguments
+            return doCreateObject(clazz, CollectionUtils.of(String.class, arguments));
+        }
 
-                Object argument = arguments.get(parameterName);
-                if (argument == null || ClassUtils.isAssignableFrom(parameterType, argument.getClass()) == false)
-                    throw new ObjectsException("Illegal argument type [" + (argument == null ? "null" : argument.getClass())
-                            + "] for parameter [" + parameterName 
-                            + "] of constrcutor [" + candidateConstructor + "]");
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public <T> T createObject(Class<T> clazz, Map<String, Object> arguments) throws ObjectsException {
+            Assert.notNull(clazz, "'clazz' must not be null.");
+            Assert.isTrue(isInstantiatable(clazz), "clazz '" + clazz + "' must be top-level or nested, concrete class.");
 
-                invocationArgs[i++] = argument;
-            }
-
-            // instantiate and class
-            try {
-                return doInstantiateObject(clazz, candidateConstructor, invocationArgs);
-            } catch (Exception e) {
-                throw new ObjectsException("Cannot instantiate class [" + clazz.getName() + "]", e);
-            }
+            // find constructor and instantiate instance with arguments
+            return doCreateObject(clazz, arguments);
         }
 
         protected <T> T doInstantiateObject(Class<T> clazz, Constructor<T> constructor, Object[] arguments) 
@@ -215,20 +204,67 @@ public interface ObjectFactory extends Closeable {
             return object;
         }
 
+        protected abstract <T> T doCreateObject(Class<T> clazz) throws ObjectsException;
 
-        @Override
-        public <T> T createObject(Class<T> clazz) throws ObjectsException {
-            Assert.notNull(clazz, "'clazz must not be null.'");
-            Assert.isTrue(isInstantiatable(clazz), "clazz '" + clazz + "' must be top-level or nested, concrete class.");
+        @SuppressWarnings("unchecked")
+        private <T> T doCreateObject(Class<T> clazz, Map<String, Object> arguments) {
+            // find constructor with @Initializer
+            Constructor<T> candidateConstructor = null;
+            Constructor<T>[] constructors = (Constructor<T>[])  clazz.getDeclaredConstructors();
+            for (Constructor<T> constructor : constructors) {
+                if (constructor.getAnnotationsByType(Initializer.class) == null)
+                    continue;
 
-            return this.doCreateObject(clazz);
+                if (candidateConstructor == null)
+                    candidateConstructor = constructor;
+                else
+                    throw new ObjectsException("Class [" + clazz.getName() + "] contains multiple constructors annotated with @" + Initializer.class.getName());
+            }
+
+            if (candidateConstructor == null) {
+                if (constructors.length == 0)
+                    candidateConstructor = constructors[0];
+                else
+                    throw new ObjectsException("Class [" + clazz.getName() + "] contains no constructor annotated with @" + Initializer.class.getName());
+            }
+
+
+            // prepare arguments
+            Object[] invocationArgs = new Object[candidateConstructor.getParameterCount()];
+            int i = 0;
+            for (Parameter parameter : candidateConstructor.getParameters()) {
+                // class file contains parameter names.
+                String parameterName = parameter.getName();
+                Class<?> parameterType = parameter.getType();
+
+                Object argument = arguments.get(parameterName);
+                if (argument != null && ClassUtils.isAssignableFrom(parameterType, argument.getClass()) == false)
+                    throw new ObjectsException("Illegal argument type [" + (argument == null ? "null" : argument.getClass())
+                            + "] for parameter [" + parameterName 
+                            + "] of constrcutor [" + candidateConstructor + "]");
+
+                invocationArgs[i++] = argument;
+            }
+
+            // instantiate and class
+            try {
+                return doInstantiateObject(clazz, candidateConstructor, invocationArgs);
+            } catch (Exception e) {
+                throw new ObjectsException("Cannot instantiate class [" + clazz.getName() + "]", e);
+            }
         }
 
-        @Override
-        public <T> List<T> createObjectsImplementing(Class<T> clazz) throws ObjectsException {
-            Assert.notNull(clazz, "'clazz must not be null.'");
 
-            List<String> classNames = classScanner.getClassNamesImplementing(clazz.getName());
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public <T> List<T> createObjectsImplementing(Class<T> baseClass, boolean ignoredException,
+                Object... arguments) throws ObjectsException {
+            Assert.notNull(baseClass, "'baseClass' must not be null.'");
+            Map<String, Object> args = CollectionUtils.of(String.class, arguments);
+
+            List<String> classNames = classScanner.getClassNamesImplementing(baseClass.getName());
 
             List<T> objects = new ArrayList<>(classNames.size());
             for (String className : classNames) {
@@ -236,19 +272,25 @@ public interface ObjectFactory extends Closeable {
                 if (isInstantiatable(canidateType) == false) 
                     continue;
 
-                objects.add(this.doCreateObject(canidateType));
+                try {
+                    objects.add(args.size() == 0
+                            ? doCreateObject(canidateType)
+                            : doCreateObject(canidateType, args)
+                    );
+                } catch (ObjectsException e) {
+                    if (ignoredException == false)
+                        throw e;
+                }
             }
 
             if (LOGGER.isDebugEnabled())
                 LOGGER.debug("Instantiated '{}' objects implemeting '{}'. {}", 
-                        objects.size(), clazz.getName(),
+                        objects.size(), baseClass.getName(),
                         StringUtils.join(objects, obj -> obj.toString(), "\n  ", "\n  ", "\n")
                 );
 
             return objects;
         }
-
-        protected abstract <T> T doCreateObject(Class<T> clazz) throws ObjectsException;
     }
 
 

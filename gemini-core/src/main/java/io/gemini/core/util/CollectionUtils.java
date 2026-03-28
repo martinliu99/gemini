@@ -18,6 +18,7 @@ package io.gemini.core.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +37,6 @@ public abstract class CollectionUtils {
     }
 
 
-
     public static <T> List<T> merge(List<? extends T> list1, List<? extends T> list2) {
         list1 = list1 == null ? Collections.emptyList() : list1;
         list2 = list2 == null ? Collections.emptyList() : list2;
@@ -46,5 +46,26 @@ public abstract class CollectionUtils {
         all.addAll(list2);
 
         return all;
+    }
+
+
+    @SuppressWarnings("unchecked")
+    public static <K> Map<K, Object> of(Class<?> keyClass, Object... arguments) {
+        Assert.notNull(keyClass, "'keyClass' must not be null.");
+
+        if (arguments == null || arguments.length == 0) 
+            return Collections.emptyMap();
+        Assert.isTrue(arguments.length % 2 == 0, "Odd argument count.");
+
+        Map<K, Object> map = new LinkedHashMap<>(arguments.length / 2);
+        for (int i = 0; i < arguments.length; i += 2) {
+            Object key = arguments[i];
+            Assert.isTrue(key != null && ClassUtils.isAssignableFrom(keyClass, key.getClass()), 
+                    "key '" + key + "' must be instanceof '" + keyClass + "'.");
+
+            Object value = arguments[i + 1];
+            map.put( (K) key, value);
+        }
+        return map;
     }
 }

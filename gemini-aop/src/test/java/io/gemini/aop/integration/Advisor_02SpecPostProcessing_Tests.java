@@ -104,7 +104,7 @@ public class Advisor_02SpecPostProcessing_Tests {
          */
         @Override
         public boolean matches(MatchingContext context) {
-            return context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
+            return context.isAppClassLoader() && context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
         }
         
     }

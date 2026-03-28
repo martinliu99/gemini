@@ -15,9 +15,6 @@
  */
 package io.gemini.api.aop.annotation;
 
-import static io.gemini.api.aop.AdvisorSpec.DEFAULT_ORDER;
-import static io.gemini.api.aop.AdvisorSpec.DEFAULT_PER_INSTANCE;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -34,6 +31,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Advisor {
+
+    static final boolean DEFAULT_PER_INSTANCE = false;
+
+    static final int DEFAULT_ORDER = Integer.MAX_VALUE;
+
 
     String advisorName() default "";
 

@@ -33,9 +33,12 @@ import org.junit.jupiter.api.Test;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.annotation.PojoPointcut;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
 
 
 public class Pointcut_01JoinpointMatching_Tests {
@@ -83,8 +86,8 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = VoidMatching_Advice.AdvicePointcut.class)
+    public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> {
 
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advice.class.getName() + ".after";
 
@@ -99,21 +102,26 @@ public class Pointcut_01JoinpointMatching_Tests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            VoidMatching_Advice.class.getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Object") )
-                    .methodMatcher(
-                            named("matchVoid")
-                                .and(isPrivate())
-                                .and(returns(void.class)) )
-                    .builder();
+        private static class AdvicePointcut implements Pointcut {
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public ElementMatcher<TypeDescription> getTypeMatcher() {
+                return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$VoidMatching_Object");
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public ElementMatcher<MethodDescription> getMethodMatcher() {
+                return named("matchVoid")
+                        .and(isPrivate())
+                        .and(returns(void.class));
+            }
+            
         }
     }
 
@@ -182,8 +190,8 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    public static class PrimitiveMatching_Advice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = PrimitiveMatching_Advice.AdvicePointcut.class)
+    public static class PrimitiveMatching_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
 
         private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advice.class.getName() + ".after";
 
@@ -198,22 +206,27 @@ public class Pointcut_01JoinpointMatching_Tests {
                         .withReturning(joinpoint.getReturning()) );
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Object") )
-                    .methodMatcher(
-                            named("matchPrimitive")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(long.class)))
-                                .and(returns(long.class)) )
-                    .builder();
+        private static class AdvicePointcut implements Pointcut {
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public ElementMatcher<TypeDescription> getTypeMatcher() {
+                return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$PrimitiveMatching_Object");
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public ElementMatcher<MethodDescription> getMethodMatcher() {
+                return named("matchPrimitive")
+                        .and(isPublic())
+                        .and(takesArgument(0, is(long.class)))
+                        .and(returns(long.class));
+            }
+            
         }
     }
 
@@ -262,8 +275,8 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    public static class GenericMatching_Advice extends Advice.AbstractAfter<Number, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = GenericMatching_Advice.class)
+    public static class GenericMatching_Advice extends Advice.AbstractAfter<Number, RuntimeException> implements Pointcut {
 
         private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advice.class.getName() + ".after";
 
@@ -282,18 +295,19 @@ public class Pointcut_01JoinpointMatching_Tests {
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            GenericMatching_Advice.class.getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Object") )
-                    .methodMatcher(
-                            named("matchGeneric")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(Number.class)))
-                                .and(returns(Number.class)) )
-                    .builder();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericMatching_Object");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("matchGeneric")
+                    .and(isPublic())
+                    .and(takesArgument(0, is(Number.class)))
+                    .and(returns(Number.class));
         }
     }
 
@@ -342,8 +356,8 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    public static class GenericArrayMatching_Advice extends Advice.AbstractAfter<Number[], RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = GenericArrayMatching_Advice.class)
+    public static class GenericArrayMatching_Advice extends Advice.AbstractAfter<Number[], RuntimeException> implements Pointcut {
 
         private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advice.class.getName() + ".after";
 
@@ -362,18 +376,19 @@ public class Pointcut_01JoinpointMatching_Tests {
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            GenericArrayMatching_Advice.class.getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Object") )
-                    .methodMatcher(
-                            named("matchGenericArray")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(Number[].class)))
-                                .and(returns(Number[].class)) )
-                    .builder();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericArrayMatching_Object");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("matchGenericArray")
+                    .and(isPublic())
+                    .and(takesArgument(0, is(Number[].class)))
+                    .and(returns(Number[].class));
         }
     }
 
@@ -424,8 +439,8 @@ public class Pointcut_01JoinpointMatching_Tests {
     }
 
     @SuppressWarnings("rawtypes")
-    public static class GenericCollectionMatching_Advice extends Advice.AbstractAfter<List, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = GenericCollectionMatching_Advice.class)
+    public static class GenericCollectionMatching_Advice extends Advice.AbstractAfter<List, RuntimeException> implements Pointcut {
 
         private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advice.class.getName() + ".after";
 
@@ -444,18 +459,19 @@ public class Pointcut_01JoinpointMatching_Tests {
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            GenericCollectionMatching_Advice.class.getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Object") )
-                    .methodMatcher(
-                            named("matchGenericCollection")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(List.class)))
-                                .and(returns(List.class)) )
-                    .builder();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$GenericCollectionMatching_Object");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("matchGenericCollection")
+                    .and(isPublic())
+                    .and(takesArgument(0, is(List.class)))
+                    .and(returns(List.class));
         }
     }
 
@@ -504,8 +520,8 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    public static class ParameterizedCollectionMatching_Advice extends Advice.AbstractAfter<List<String>, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = ParameterizedCollectionMatching_Advice.class)
+    public static class ParameterizedCollectionMatching_Advice extends Advice.AbstractAfter<List<String>, RuntimeException> implements Pointcut {
 
         private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advice.class.getName() + ".after";
 
@@ -524,18 +540,19 @@ public class Pointcut_01JoinpointMatching_Tests {
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            ParameterizedCollectionMatching_Advice.class.getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Object") )
-                    .methodMatcher(
-                            named("matchParameterizedCollection")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(List.class)))
-                                .and(returns(List.class)) )
-                    .builder();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$ParameterizedCollectionMatching_Object");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("matchParameterizedCollection")
+                    .and(isPublic())
+                    .and(takesArgument(0, is(List.class)))
+                    .and(returns(List.class));
         }
     }
 
@@ -584,8 +601,8 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    public static class WildCardCollectionMatching_Advice extends Advice.AbstractAfter<List<? extends Number>, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = WildCardCollectionMatching_Advice.class)
+    public static class WildCardCollectionMatching_Advice extends Advice.AbstractAfter<List<? extends Number>, RuntimeException> implements Pointcut {
 
         private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Advice.class.getName() + ".after";
 
@@ -604,18 +621,19 @@ public class Pointcut_01JoinpointMatching_Tests {
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            WildCardCollectionMatching_Advice.class.getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Object") )
-                    .methodMatcher(
-                            named("matchWildCardCollection")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(List.class)))
-                                .and(returns(List.class)) )
-                    .builder();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Pointcut_01JoinpointMatching_Tests$WildCardCollectionMatching_Object");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("matchWildCardCollection")
+                    .and(isPublic())
+                    .and(takesArgument(0, is(List.class)))
+                    .and(returns(List.class));
         }
     }
 }

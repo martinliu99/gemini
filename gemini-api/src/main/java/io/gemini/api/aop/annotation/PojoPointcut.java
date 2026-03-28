@@ -13,11 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.framework.aspects;
+package io.gemini.api.aop.annotation;
 
-/**
- * 
- */
-public interface Sample10_TargetClass {
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import io.gemini.api.aop.Pointcut;
+
+
+@Target( {ElementType.TYPE} )
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface PojoPointcut {
+
+    /**
+     * @return the pointcutClass where to bind the advice
+     */
+    Class<? extends Pointcut> pointcutClass();
 
 }

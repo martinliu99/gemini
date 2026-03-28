@@ -32,7 +32,6 @@ import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.aop.test.ExecutionMemento.TargetMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
-import io.gemini.api.aop.annotation.Advisor;
 import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 
 /**
@@ -413,7 +412,8 @@ public class Target_02TargetMethod_Tests {
             return null;
         }
 
-        /** {@inheritDoc} 
+        /** 
+         * {@inheritDoc} 
          */
         @Override
         public Long covariantBridge() {
@@ -530,9 +530,8 @@ public class Target_02TargetMethod_Tests {
 
 
         @SuppressWarnings("rawtypes")
-        @Before(NATIVE_METHOD_POINTCUT)
-        @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
         @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+        @Before(NATIVE_METHOD_POINTCUT)
         public void nativeMethod_before(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(NATIVE_METHOD_BEFORE_ADVICE, 
                     new AdviceMethod()

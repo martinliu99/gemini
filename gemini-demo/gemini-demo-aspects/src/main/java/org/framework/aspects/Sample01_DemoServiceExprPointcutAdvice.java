@@ -17,20 +17,25 @@ package org.framework.aspects;
 
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.annotation.ExprPointcut;
 
-public class TestAdvice3 extends Advice.AbstractBeforeAfter<Object, RuntimeException> {
+@ExprPointcut(pointcutExpression = "execution(java.lang.String org.framework.demo.service.DemoServiceImpl.process2(java.lang.String))")
+public class Sample01_DemoServiceExprPointcutAdvice extends Advice.AbstractBeforeAfter<String, RuntimeException> {
 
     @Override
-    public void before(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
+    public void before(MutableJoinpoint<String, RuntimeException> joinpoint) throws Throwable {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("before '{}', with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+            LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+
+        String request = (String) joinpoint.getArguments()[0];
+
+        // TODO:
+        joinpoint.getArguments()[0] = "modified-" + request;
     }
 
     @Override
-    public void after(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
+    public void after(MutableJoinpoint<String, RuntimeException> joinpoint) throws Throwable {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("after '{}': ", this.getClass().getSimpleName());
+            LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
     }
-
-
 }

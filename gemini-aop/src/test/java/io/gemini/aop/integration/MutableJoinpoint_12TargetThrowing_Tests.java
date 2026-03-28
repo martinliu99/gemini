@@ -111,22 +111,17 @@ public class MutableJoinpoint_12TargetThrowing_Tests {
 
 
     public static class TypeInitilizer_AfterAdvice_Object {
+
         static {
             try {
                 throwing();
-            } catch (RuntimeException e) {
+            } catch (Throwable e) {
                 ExecutionMemento.putTargetMethodInvoker(TypeInitilizer_AfterAdvice_Object.class.getName(), 
                         new TargetMethod()
                             .withInvoked(true)
                             .withThrowing(e) );
                 throw e;
             }
-        }
-
-        static final Logger LOGGER;
-
-        static {
-            LOGGER = LoggerFactory.getLogger(TypeInitilizer_AfterAdvice_Object.class);
         }
 
         private static void throwing() {
@@ -178,12 +173,17 @@ public class MutableJoinpoint_12TargetThrowing_Tests {
         private static final String TARGET_THROWING = "targetThrowing";
 
         public static void targetThrowing() throws IOException {
+            try {
             IOException exp = new IOException();
-            ExecutionMemento.putTargetMethodInvoker(TARGET_THROWING, 
-                    new TargetMethod()
-                        .withInvoked(true)
-                        .withThrowing(exp) );
+
             throw exp;
+            } catch (IOException e) {
+                ExecutionMemento.putTargetMethodInvoker(TARGET_THROWING, 
+                        new TargetMethod()
+                            .withInvoked(true)
+                            .withThrowing(e) );
+                throw e;
+            }
         }
     }
 
@@ -317,12 +317,17 @@ public class MutableJoinpoint_12TargetThrowing_Tests {
         private static final String TARGET_THROWING = "targetThrowing";
 
         public void targetThrowing() throws IOException {
+            try {
             IOException exp = new IOException();
-            ExecutionMemento.putTargetMethodInvoker(TARGET_THROWING, 
-                    new TargetMethod()
-                        .withInvoked(true)
-                        .withThrowing(exp) );
             throw exp;
+            } catch (IOException e) {
+                ExecutionMemento.putTargetMethodInvoker(TARGET_THROWING, 
+                        new TargetMethod()
+                            .withInvoked(true)
+                            .withThrowing(e) );
+
+                throw e;
+            }
         }
     }
 

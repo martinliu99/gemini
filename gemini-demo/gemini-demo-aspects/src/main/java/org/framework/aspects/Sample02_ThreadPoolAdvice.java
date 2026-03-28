@@ -22,9 +22,9 @@ import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 import io.gemini.api.aop.annotation.ExprPointcut;
 
 @Advisor(advisorName = "ThreadPoolAdvisor", perInstance = false)
-@ExprPointcut(pointcutExpression = "execution(public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable))")
 @ConditionalOnClassLoader(isBootstrapClassLoader = true)
-public class ThreadPoolAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
+@ExprPointcut(pointcutExpression = "execution(public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable))")
+public class Sample02_ThreadPoolAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
     @Override
     public void before(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {

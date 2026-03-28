@@ -15,7 +15,7 @@
  */
 package org.framework.aspects;
 
-import static net.bytebuddy.matcher.ElementMatchers.*;
+import static net.bytebuddy.matcher.ElementMatchers.named;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,13 +24,19 @@ import org.framework.demo.api.Request;
 import org.framework.demo.api.Response;
 
 import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.AdvisorSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.annotation.PojoPointcut;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
 
-public class DemoServiceAdvice_process extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
-        implements AdvisorSpec.PojoPointcutSpec.Factory {
+@PojoPointcut(pointcutClass = Sample01_DemoServicePojoPointcutAdvice.class)
+public class Sample01_DemoServicePojoPointcutAdvice extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
+        implements Pointcut {
 
-    private static final String DEMO_SERVICE_ADVICE = "DemoServiceAdvice_process";
+    private static final String DEMO_SERVICE_ADVICE = Sample01_DemoServicePojoPointcutAdvice.class.getSimpleName();
+
 
     @Override
     public void before(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
@@ -49,12 +55,19 @@ public class DemoServiceAdvice_process extends Advice.AbstractBeforeAfter<Respon
             LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
     }
 
+    /** 
+     * {@inheritDoc}
+     */
     @Override
-    public AdvisorSpec.PojoPointcutSpec getAdvisorSpec() {
-        return new AdvisorSpec.PojoPointcutSpec.Builder()
-                .adviceClassName(this.getClass().getName())
-                .typeMatcher( named("org.framework.demo.service.DemoServiceImpl") )
-                .methodMatcher( named("process") )
-                .builder();
+    public ElementMatcher<TypeDescription> getTypeMatcher() {
+        return named("org.framework.demo.service.DemoServiceImpl");
+    }
+
+    /** 
+     * {@inheritDoc}
+     */
+    @Override
+    public ElementMatcher<MethodDescription> getMethodMatcher() {
+        return named("process");
     }
 }

@@ -30,12 +30,12 @@ import org.slf4j.LoggerFactory;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 @Aspect
-public class DemoServiceAspect_process {
+public class Sample01_DemoServiceAspectJAspect {
 
     protected Logger LOGGER = null;
 
-    public DemoServiceAspect_process() {
-        LOGGER = LoggerFactory.getLogger(DemoServiceAspect_process.class);
+    public Sample01_DemoServiceAspectJAspect() {
+        LOGGER = LoggerFactory.getLogger(Sample01_DemoServiceAspectJAspect.class);
     }
 
     @Pointcut("execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")

@@ -30,13 +30,16 @@ import org.junit.jupiter.api.Test;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.MatchingContext;
+import io.gemini.api.aop.Pointcut;
 import io.gemini.api.aop.annotation.Conditional;
 import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 import io.gemini.api.aop.annotation.ConditionalOnField;
+import io.gemini.api.aop.annotation.ConditionalOnMethod;
+import io.gemini.api.aop.annotation.PojoPointcut;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -95,8 +98,8 @@ public class Pointcut_02ConditionMatching_Tests {
 
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Aspect.class.getName() + ".matchVoid_afterAdvice";
 
-        @After(MATCH_VOID_POINTCUT)
         @ConditionalOnField(fieldExpression = "io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
+        @After(MATCH_VOID_POINTCUT)
         public void matchVoid_afterAdvice(MutableJoinpoint<Void, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(MATCH_VOID_AFTER_ADVICE, 
                     new AdviceMethod()
@@ -104,47 +107,6 @@ public class Pointcut_02ConditionMatching_Tests {
                         .withReturning(joinpoint.getReturning()) );
         }
     }
-
-    public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
-
-        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(MATCH_VOID_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            VoidMatching_Advice.class.getName() )
-                    .condition(new ElementMatcher<MatchingContext>() {
-                        @Override
-                        public boolean matches(MatchingContext context) {
-                            return context.hasMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()");
-                        }
-                    })
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$VoidMatching_Object") )
-                    .methodMatcher(
-                            named("matchVoid")
-                                .and(isPrivate())
-                                .and(returns(void.class)) )
-                    .builder();
-        }
-    }
-
 
     @Conditional(OnMarkCondition.class)
     @interface ConditionalOnMark {
@@ -165,8 +127,46 @@ public class Pointcut_02ConditionMatching_Tests {
          */
         @Override
         public boolean matches(MatchingContext context) {
-            return context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
+            return context.isAppClassLoader() && context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
         }
         
+    }
+
+    @PojoPointcut(pointcutClass = VoidMatching_Advice.class)
+    @ConditionalOnClassLoader(isAppClassLoader = true)
+    @ConditionalOnMethod(methodExpression = "private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()")
+    public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> 
+            implements Pointcut {
+
+        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advice.class.getName() + ".after";
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(MATCH_VOID_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(joinpoint.getReturning()) );
+        }
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$VoidMatching_Object");
+        }
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("matchVoid")
+                    .and(isPrivate())
+                    .and(returns(void.class));
+        }
     }
 }

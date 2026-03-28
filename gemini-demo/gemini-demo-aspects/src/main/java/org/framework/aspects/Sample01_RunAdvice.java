@@ -15,10 +15,20 @@
  */
 package org.framework.aspects;
 
-import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
+import static net.bytebuddy.matcher.ElementMatchers.named;
 
-public class RunAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> {
+import io.gemini.api.aop.Advice;
+import io.gemini.api.aop.Pointcut;
+import io.gemini.api.aop.annotation.PojoPointcut;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
+import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.matcher.TypeMatchers;
+
+@PojoPointcut(pointcutClass = Sample01_RunAdvice.class)
+public class Sample01_RunAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> implements Pointcut {
 
     @Override
     public void before(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
@@ -28,6 +38,22 @@ public class RunAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeExcepti
     @Override
     public void after(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
         LOGGER.info("after run: " + joinpoint);
+    }
+
+    /** 
+     * {@inheritDoc}
+     */
+    @Override
+    public ElementMatcher<TypeDescription> getTypeMatcher() {
+        return nameStartsWith("io.gemini.weaver.transformer").and( TypeMatchers.isExtendedFrom("java.lang.Runnable"));
+    }
+
+    /** 
+     * {@inheritDoc}
+     */
+    @Override
+    public ElementMatcher<MethodDescription> getMethodMatcher() {
+        return named("run");
     }
 
 }

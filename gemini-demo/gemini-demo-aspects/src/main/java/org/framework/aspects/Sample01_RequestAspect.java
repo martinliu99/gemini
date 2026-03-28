@@ -26,9 +26,9 @@ import org.slf4j.LoggerFactory;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 @Aspect
-public class RequestAspect {
+public class Sample01_RequestAspect {
 
-    protected Logger LOGGER = LoggerFactory.getLogger(RequestAspect.class);
+    protected Logger LOGGER = LoggerFactory.getLogger(Sample01_RequestAspect.class);
 
     @Before("execution(* org.framework.demo.api.Request.getInput())")
     public void before(MutableJoinpoint<List<String>, RuntimeException> joinpoint) throws Throwable {

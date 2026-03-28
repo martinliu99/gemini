@@ -15,10 +15,20 @@
  */
 package org.framework.aspects;
 
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
+import io.gemini.api.aop.annotation.PojoPointcut;
+import io.gemini.api.aop.Pointcut;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
 
-public class ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
+@ConditionalOnClassLoader(isBootstrapClassLoader = true)
+@PojoPointcut(pointcutClass = Sample02_ThreadAdvice.class)
+public class Sample02_ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> implements Pointcut {
 
     @Override
     public void before(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
@@ -28,6 +38,22 @@ public class ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeExcept
     @Override
     public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
 //        LOGGER.info("after thread's run: " + joinpoint);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ElementMatcher<TypeDescription> getTypeMatcher() {
+        return named("java.lang.Thread");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ElementMatcher<MethodDescription> getMethodMatcher() {
+        return named("start");
     }
 
 

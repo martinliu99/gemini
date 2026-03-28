@@ -30,7 +30,6 @@ import io.gemini.api.aop.Joinpoint.ProceedingJoinpoint;
  */
 public interface Advice {
 
-
     interface Before<T, E extends Throwable> extends Advice {
 
         void before(MutableJoinpoint<T, E> joinpoint) throws Throwable;
@@ -52,19 +51,21 @@ public interface Advice {
     }
 
 
-    abstract class AbstractBefore<T, E extends Throwable> implements Before<T, E> {
+    abstract class AbstractBase implements Advice {
 
         protected static final Logger LOGGER = LoggerFactory.getLogger(Advice.class);
+    }
+
+    abstract class AbstractBefore<T, E extends Throwable> extends AbstractBase implements Before<T, E> {
 
     }
 
-    abstract class AbstractAfter<T, E extends Throwable> implements After<T, E> {
 
-        protected static final Logger LOGGER = LoggerFactory.getLogger(Advice.class);
-
+    abstract class AbstractAfter<T, E extends Throwable> extends AbstractBase implements After<T, E> {
     }
 
-    abstract class AbstractBeforeAfter<T, E extends Throwable> extends AbstractBefore<T, E> implements After<T, E> {
+
+    abstract class AbstractBeforeAfter<T, E extends Throwable> extends AbstractBase implements Before<T, E>, After<T, E> {
 
     }
 }

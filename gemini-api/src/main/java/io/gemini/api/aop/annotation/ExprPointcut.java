@@ -30,6 +30,6 @@ public @interface ExprPointcut {
     /**
      * @return the pointcut expression where to bind the advice
      */
-    String pointcutExpression();
+    String pointcutExpression() default "";
 
 }

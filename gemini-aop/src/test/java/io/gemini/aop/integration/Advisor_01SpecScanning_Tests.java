@@ -29,13 +29,13 @@ import org.junit.jupiter.api.Test;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
-import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Pointcut;
-import io.gemini.api.aop.annotation.Advisor;
 import io.gemini.api.aop.annotation.ExprPointcut;
+import io.gemini.api.aop.annotation.PojoPointcut;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
 
 
 public class Advisor_01SpecScanning_Tests {
@@ -45,20 +45,7 @@ public class Advisor_01SpecScanning_Tests {
         new SpecScanning_Object().scanSpec(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNotNull();
-            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNotNull();
-            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        }
-
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_AtPojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
@@ -94,200 +81,43 @@ public class Advisor_01SpecScanning_Tests {
         }
     }
 
-    public static class SpecScanning_PojoPointcutSpec implements AdvisorSpec.PojoPointcutSpec {
+    @PojoPointcut(pointcutClass = SpecScanning_AtPojoPointcutAdvice.class)
+    public static class SpecScanning_AtPojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> implements Pointcut {
 
-        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutSpec.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_AtPojoPointcutAdvice.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public boolean isPerInstance() {
-            return false;
+        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(joinpoint.getReturning()) );
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public String getAdviceClassName() {
-            return SpecScanning_PojoPointcut_Advice.class.getName();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object");
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public int getOrder() {
-            return 0;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isBreakCircularity() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Pointcut getPointcut() {
-            return new Pointcut.Default(
-                    named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object"),
-                    named("scanSpec")
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("scanSpec")
                     .and(isPublic())
                     .and(takesArgument(0, is(long.class)))
-                    .and(returns(long.class)) );
-        }
-
-
-        public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-                ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                        new AdviceMethod()
-                            .withInvoked(true)
-                            .withReturning(joinpoint.getReturning()) );
-            }
-        }
-    }
-
-    public static class SpecScanning_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object") )
-                    .methodMatcher(
-                            named("scanSpec")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(long.class)))
-                                .and(returns(long.class)) )
-                    .builder();
+                    .and(returns(long.class));
         }
     }
 
 
-    public static class SpecScanning_ExprPointcutSpec implements AdvisorSpec.ExprPointcutSpec {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutSpec.class.getName() + ".after";
-
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isPerInstance() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getAdviceClassName() {
-            return SpecScanning_ExprPointcut_Advice.class.getName();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public int getOrder() {
-            return 0;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isBreakCircularity() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getPointcutExpression() {
-            return "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))";
-        }
-
-
-        public static class SpecScanning_ExprPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-                ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                        new AdviceMethod()
-                            .withInvoked(true)
-                            .withReturning(joinpoint.getReturning()) );
-            }
-        }
-    }
-
-
-    public static class SpecScanning_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.ExprPointcutSpec.Factory {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ExprPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.ExprPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .pointcutExpression("execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))")
-                    .builder();
-        }
-    }
-
-
-    @Advisor
     @ExprPointcut(pointcutExpression = "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))")
     public static class SpecScanning_AtExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> {
 
@@ -339,25 +169,26 @@ public class Advisor_01SpecScanning_Tests {
         }
     }
 
-    public static class SpecScanning_Advice_Sub extends SpecScanning_Advice_Base
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+    @PojoPointcut(pointcutClass = SpecScanning_Advice_Sub.class)
+    public static class SpecScanning_Advice_Sub extends SpecScanning_Advice_Base implements Pointcut {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object") )
-                    .methodMatcher(
-                            named("scanSpec")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(long.class)))
-                                .and(returns(long.class)) )
-                    .builder();
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
+            return named("scanSpec")
+                    .and(isPublic())
+                    .and(takesArgument(0, is(long.class)))
+                    .and(returns(long.class));
         }
     }
 
@@ -376,40 +207,12 @@ public class Advisor_01SpecScanning_Tests {
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceClass_PojoPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceClass_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoPointcut_PojoPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoPointcut_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
-        }
-
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoExpr_ExprPointcutSpec.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoExpr_ExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
-        }
+        
     }
 
+    @PojoPointcut(pointcutClass = SpecScanning_NullAdvisorSpec_PojoPointcutAdvice.class)
     public static class SpecScanning_NullAdvisorSpec_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
+            implements Pointcut {
 
         private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullAdvisorSpec_PojoPointcutAdvice.class.getName() + ".after";
 
@@ -428,13 +231,21 @@ public class Advisor_01SpecScanning_Tests {
          * {@inheritDoc}
          */
         @Override
-        public PojoPointcutSpec getAdvisorSpec() {
+        public ElementMatcher<TypeDescription> getTypeMatcher() {
+            return null;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public ElementMatcher<MethodDescription> getMethodMatcher() {
             return null;
         }
     }
 
-    public static class SpecScanning_NullAdvisorSpec_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.ExprPointcutSpec.Factory {
+    @ExprPointcut(pointcutExpression = "")
+    public static class SpecScanning_NullAdvisorSpec_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> {
 
         private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullAdvisorSpec_ExprPointcutAdvice.class.getName() + ".after";
 
@@ -447,304 +258,6 @@ public class Advisor_01SpecScanning_Tests {
                     new AdviceMethod()
                         .withInvoked(true)
                         .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ExprPointcutSpec getAdvisorSpec() {
-            return null;
-        }
-    }
-
-    public static class SpecScanning_NoAdviceClass_PojoPointcutSpec implements AdvisorSpec.PojoPointcutSpec {
-
-        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoAdviceClass_PojoPointcutSpec.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isPerInstance() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getAdviceClassName() {
-            return null;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public int getOrder() {
-            return 0;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isBreakCircularity() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Pointcut getPointcut() {
-            return new Pointcut.Default(
-                    named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object"),
-                    named("ignoreIllegalSpec")
-                    .and(isPublic())
-                    .and(takesArgument(0, is(long.class)))
-                    .and(returns(long.class)) );
-        }
-
-
-        public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-                ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                        new AdviceMethod()
-                            .withInvoked(true)
-                            .withReturning(joinpoint.getReturning()) );
-            }
-        }
-    }
-
-    public static class SpecScanning_NoAdviceClass_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .typeMatcher(
-                            named("io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object") )
-                    .methodMatcher(
-                            named("ignoreIllegalSpec")
-                                .and(isPublic())
-                                .and(takesArgument(0, is(long.class)))
-                                .and(returns(long.class)) )
-                    .builder();
-        }
-    }
-
-    public static class SpecScanning_NoPointcut_PojoPointcutSpec implements AdvisorSpec.PojoPointcutSpec {
-
-        static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoPointcut_PojoPointcutSpec.class.getName() + ".after";
-
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isPerInstance() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getAdviceClassName() {
-            return SpecScanning_PojoPointcut_Advice.class.getName();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public int getOrder() {
-            return 0;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isBreakCircularity() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Pointcut getPointcut() {
-            return null;
-        }
-
-
-        public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-                ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                        new AdviceMethod()
-                            .withInvoked(true)
-                            .withReturning(joinpoint.getReturning()) );
-            }
-        }
-    }
-
-    public static class SpecScanning_NoPointcut_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.PojoPointcutSpec.Factory {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoPointcut_PojoPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PojoPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.PojoPointcutSpec.Builder()
-                    .adviceClassName(SpecScanning_PojoPointcut_Advice.class.getName())
-                    .builder();
-        }
-
-
-        public static class SpecScanning_PojoPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-                ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                        new AdviceMethod()
-                            .withInvoked(true)
-                            .withReturning(joinpoint.getReturning()) );
-            }
-        }
-    }
-
-    public static class SpecScanning_NoExpr_ExprPointcutSpec implements AdvisorSpec.ExprPointcutSpec {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoExpr_ExprPointcutSpec.class.getName() + ".after";
-
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isPerInstance() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getAdviceClassName() {
-            return SpecScanning_ExprPointcut_Advice.class.getName();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public int getOrder() {
-            return 0;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isBreakCircularity() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getPointcutExpression() {
-            return "";
-        }
-
-
-        public static class SpecScanning_ExprPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-                ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                        new AdviceMethod()
-                            .withInvoked(true)
-                            .withReturning(joinpoint.getReturning()) );
-            }
-        }
-    }
-
-    public static class SpecScanning_NoExpr_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
-            implements AdvisorSpec.ExprPointcutSpec.Factory {
-
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoExpr_ExprPointcutAdvice.class.getName() + ".after";
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) throws Throwable {
-            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
-                    new AdviceMethod()
-                        .withInvoked(true)
-                        .withReturning(joinpoint.getReturning()) );
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public ExprPointcutSpec getAdvisorSpec() {
-            return new AdvisorSpec.ExprPointcutSpec.Builder()
-                    .adviceClassName(
-                            this.getClass().getName() )
-                    .builder();
         }
     }
 

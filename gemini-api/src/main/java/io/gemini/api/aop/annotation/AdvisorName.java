@@ -22,27 +22,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 
- * 
+ *
+ *
  * @author   martin.liu
- * @since    1.0
+ * @since	 1.0
  */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface Advisor {
+public @interface AdvisorName {
 
-    static final boolean DEFAULT_PER_INSTANCE = false;
-
-    static final int DEFAULT_ORDER = Integer.MAX_VALUE;
-
-
-    String advisorName() default "";
-
-
-    boolean perInstance() default DEFAULT_PER_INSTANCE;
-
-
-    int order() default DEFAULT_ORDER;
-
+    String value();
 }

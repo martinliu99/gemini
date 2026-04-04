@@ -17,11 +17,11 @@ package org.framework.aspects;
 
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
-import io.gemini.api.aop.annotation.Advisor;
+import io.gemini.api.aop.annotation.AdvisorName;
 import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 import io.gemini.api.aop.annotation.ExprPointcut;
 
-@Advisor(advisorName = "ThreadPoolAdvisor", perInstance = false)
+@AdvisorName("ThreadPoolAdvisor")
 @ConditionalOnClassLoader(isBootstrapClassLoader = true)
 @ExprPointcut(pointcutExpression = "execution(public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable))")
 public class Sample02_ThreadPoolAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {

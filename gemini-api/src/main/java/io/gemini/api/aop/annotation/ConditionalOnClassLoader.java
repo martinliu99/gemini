@@ -24,6 +24,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnClassLoaderCondition;
 
 
@@ -31,6 +32,7 @@ import io.gemini.api.aop.condition.OnClassLoaderCondition;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Conditional(OnClassLoaderCondition.class)
+@Order(0)
 public @interface ConditionalOnClassLoader {
 
     String classLoaderExpression() default "";

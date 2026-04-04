@@ -24,6 +24,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnConstructorCondition;
 
 
@@ -31,6 +32,7 @@ import io.gemini.api.aop.condition.OnConstructorCondition;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Conditional(OnConstructorCondition.class)
+@Order(110)
 public @interface ConditionalOnConstructor {
 
     String constructorExpression();

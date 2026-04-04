@@ -32,6 +32,7 @@ import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.api.aop.AopException;
 import io.gemini.api.aop.MatchingContext;
 import io.gemini.api.aop.annotation.Conditional;
+import io.gemini.core.OrderComparator;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.object.ObjectFactory;
@@ -61,14 +62,26 @@ public abstract class AdvisorConditionParser {
                 .filter( classInfo -> classInfo.isAnnotation() )
                 .getNames();
 
-        // create @Conditional annotation class, and corresponding Condition class map
-        Map<Class<? extends Annotation>, Class<?>> conditionalAndConditions = new HashMap<>(conditionalAnnotationClassNames.size());
+        // create and sort @Conditional annotation class
+        List<Class<? extends Annotation>> conditionalClasses = new ArrayList<>(conditionalAnnotationClassNames.size());
         for (String annotationClassName : conditionalAnnotationClassNames) {
             try {
                 Class<? extends Annotation> annotationClass = (Class<? extends Annotation>) classLoader.loadClass(annotationClassName);
-                Class<?> conditionClass = annotationClass.getAnnotation(Conditional.class).value();
+                conditionalClasses.add(annotationClass);
+            } catch (Throwable t) {
+                Throwables.throwIfRequired(t);
+            }
+        }
+        OrderComparator.sort(conditionalClasses);
 
-                conditionalAndConditions.put(annotationClass, conditionClass);
+
+        // create & @Conditional and Condition class map
+        Map<Class<? extends Annotation>, Class<?>> conditionalAndConditions = new LinkedHashMap<>(conditionalClasses.size());
+        for (Class<? extends Annotation> conditionalClass : conditionalClasses) {
+            try {
+                Class<?> conditionClass = conditionalClass.getAnnotation(Conditional.class).value();
+
+                conditionalAndConditions.put(conditionalClass, conditionClass);
             } catch (Throwable t) {
                 Throwables.throwIfRequired(t);
             }

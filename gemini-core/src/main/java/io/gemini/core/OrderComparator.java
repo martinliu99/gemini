@@ -20,12 +20,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class OrderComparator implements Comparator<Object> {
+import io.gemini.api.annotation.Order;
 
-    /**
-     * Shared default instance of {@code OrderComparator}.
-     */
-    public static final OrderComparator INSTANCE = new OrderComparator();
+public enum OrderComparator implements Comparator<Object> {
+
+    INSTANCE;
 
 
     @Override
@@ -40,70 +39,36 @@ public class OrderComparator implements Comparator<Object> {
         return (i1 < i2) ? -1 : (i1 > i2) ? 1 : 0;
     }
 
+    @SuppressWarnings("rawtypes")
+    protected int getOrder(Object obj) {
+        if (obj == null)
+            return Order.LOWEST_PRECEDENCE;
 
-    /**
-     * Determine the order value for the given object.
-     * <p>The default implementation checks against the {@link Ordered} interface
-     * through delegating to {@link #findOrder}. Can be overridden in subclasses.
-     * @param obj the object to check
-     * @return the order value, or {@code Ordered.LOWEST_PRECEDENCE} as fallback
-     */
-    protected int getOrder( Object obj) {
-        if (obj != null) {
-            Integer order = findOrder(obj);
-            if (order != null) {
-                return order;
-            }
-        }
-        return Ordered.LOWEST_PRECEDENCE;
+        if (obj instanceof Ordered)
+            return ((Ordered) obj).getOrder();
+        else if (obj instanceof Class)
+            return getOrder( (Class)obj );
+        else
+            return getOrder( obj.getClass() );
     }
 
-    /**
-     * Find an order value indicated by the given object.
-     * <p>The default implementation checks against the {@link Ordered} interface.
-     * Can be overridden in subclasses.
-     * @param obj the object to check
-     * @return the order value, or {@code null} if none found
-     */
-    
-    protected Integer findOrder(Object obj) {
-        return (obj instanceof Ordered) ? ((Ordered) obj).getOrder() : null;
+    private int getOrder(Class<?> clazz) {
+        Order orderAnnotation = clazz.getAnnotation(Order.class);
+        return orderAnnotation != null ? orderAnnotation.value() : Order.LOWEST_PRECEDENCE;
     }
 
-
-    /**
-     * Sort the given List with a default OrderComparator.
-     * <p>Optimized to skip sorting for lists with size 0 or 1,
-     * in order to avoid unnecessary array extraction.
-     * @param list the List to sort
-     */
     public static void sort(List<?> list) {
         if (list.size() > 1) {
             Collections.sort(list, INSTANCE);
         }
     }
 
-    /**
-     * Sort the given array with a default OrderComparator.
-     * <p>Optimized to skip sorting for lists with size 0 or 1,
-     * in order to avoid unnecessary array extraction.
-     * @param array the array to sort
-     * @see java.util.Arrays#sort(Object[], java.util.Comparator)
-     */
     public static void sort(Object[] array) {
         if (array.length > 1) {
             Arrays.sort(array, INSTANCE);
         }
     }
 
-    /**
-     * Sort the given array or List with a default OrderComparator,
-     * if necessary. Simply skips sorting when given any other value.
-     * <p>Optimized to skip sorting for lists with size 0 or 1,
-     * in order to avoid unnecessary array extraction.
-     * @param value the array or List to sort
-     * @see java.util.Arrays#sort(Object[], java.util.Comparator)
-     */
     public static void sortIfNecessary(Object value) {
         if (value instanceof Object[]) {
             sort( (Object[]) value);
@@ -112,5 +77,4 @@ public class OrderComparator implements Comparator<Object> {
             sort( (List<?>) value );
         }
     }
-
 }

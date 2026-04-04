@@ -74,14 +74,16 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
-    /** {@inheritDoc} 
+    /** 
+     * {@inheritDoc} 
      */
     @Override
     public IWeavingSupport getWeavingSupport() {
         return null;
     }
 
-    /** {@inheritDoc} 
+    /** 
+     * {@inheritDoc} 
      */
     @Override
     public boolean isLoadtimeWeaving() {

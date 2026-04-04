@@ -40,7 +40,8 @@ public interface ReferenceTypes {
             return false;
         }
 
-        /** {@inheritDoc} 
+        /** 
+         * {@inheritDoc} 
          */
         public ResolvedType resolve(World world) {
             return this;

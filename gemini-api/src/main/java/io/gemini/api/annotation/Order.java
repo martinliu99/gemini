@@ -13,7 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.core;
+package io.gemini.api.annotation;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  *
@@ -21,7 +27,15 @@ package io.gemini.core;
  * @author   martin.liu
  * @since	 1.0
  */
-public interface Ordered {
+@Target( {ElementType.TYPE, ElementType.METHOD} )
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Order {
 
-    int getOrder();
+    int HIGHEST_PRECEDENCE = Integer.MIN_VALUE;
+
+    int LOWEST_PRECEDENCE = Integer.MAX_VALUE;
+
+
+    int value();
 }

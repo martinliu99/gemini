@@ -70,14 +70,12 @@
 
         <!-- dependencies settings -->
         <slf4j-api.version>2.0.17</slf4j-api.version>
-        <log4j.version>2.24.3</log4j.version>
-        <disruptor.version>3.4.4</disruptor.version>
         <logback.version>1.3.16</logback.version>
 
         <jspecify.version>1.0.0</jspecify.version>
-        <bytebuddy.version>1.18.2</bytebuddy.version>
+        <bytebuddy.version>1.18.8</bytebuddy.version>
         <classgraph.version>4.8.184</classgraph.version>
-        <aspectj.version>1.9.25</aspectj.version>
+        <aspectj.version>1.9.25.1</aspectj.version>
 
         <javax.inject.version>1</javax.inject.version>
         <jakarta.inject-api.version>2.0.1</jakarta.inject-api.version>
@@ -87,6 +85,9 @@
 
         <junit-jupiter-api.version>5.14.1</junit-jupiter-api.version>
         <assertj-core.version>3.27.6</assertj-core.version>
+
+        <log4j.version>2.24.3</log4j.version>
+        <disruptor.version>3.4.4</disruptor.version>
 
 
         <!-- plugin settings -->

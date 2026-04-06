@@ -24,13 +24,11 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
-import io.gemini.aop.AdvisorFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics.LauncherMetrics;
-import io.gemini.aop.AopWeaver;
 import io.gemini.aop.activation.support.AopClassLoaderConfigurer;
-import io.gemini.aop.factory.AdvisorFactories;
-import io.gemini.aop.weaver.AopWeavers;
+import io.gemini.aop.factory.AdvisorFactory;
+import io.gemini.aop.weaver.AopWeaver;
 import io.gemini.api.activation.AopLauncher;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
@@ -122,11 +120,11 @@ public class DefaultAopLauncher implements AopLauncher {
 
 
             // 5.create AdvisorFactory
-            this.advisorFactory = AdvisorFactories.createAdvisorFactory(aopContext);
+            this.advisorFactory = AdvisorFactory.Creator.INSTANCE.create(aopContext);
 
 
             // 6.create AopWeaver
-            aopWeaver = AopWeavers.createAopWeaver(instrumentation, aopContext, advisorFactory);
+            aopWeaver = AopWeaver.Creator.INSTANCE.create(instrumentation, aopContext, advisorFactory);
             this.aopWeaver = aopWeaver;
 
 

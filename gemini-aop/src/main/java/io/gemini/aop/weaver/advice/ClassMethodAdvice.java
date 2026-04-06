@@ -16,12 +16,8 @@
 package io.gemini.aop.weaver.advice;
 
 import static io.gemini.aop.weaver.BootstrapDispatcher.VAR_ADVICE_DISPATCHER;
-import static io.gemini.aop.weaver.BootstrapDispatcher.disableDispatch;
-import static io.gemini.aop.weaver.BootstrapDispatcher.enableDispatch;
-import static io.gemini.aop.weaver.BootstrapDispatcher.getCreator;
-import static io.gemini.aop.weaver.BootstrapDispatcher.isInDispatch;
+import static io.gemini.aop.weaver.BootstrapDispatcher.getDelegator;
 
-import io.gemini.aop.weaver.BootstrapDispatcher;
 import io.gemini.aop.weaver.BootstrapDispatcher.Dispatcher;
 import io.gemini.core.bootstrap.BootstrapClassConsumer;
 import net.bytebuddy.asm.Advice;
@@ -45,7 +41,7 @@ public class ClassMethodAdvice {
             @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
         // 1.create dispatcher
-        dispatcher = getCreator().createDispacther(descriptor, null, arguments);
+        dispatcher = getDelegator().createDispacther(descriptor, null, arguments);
         if (dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return false;
@@ -90,84 +86,6 @@ public class ClassMethodAdvice {
             throwing = dispatcher.getAdviceThrowing();
         } else if (dispatcher.hasAdviceReturning()) {
             returning = dispatcher.getAdviceReturning();
-        }
-    }
-
-
-    @BootstrapClassConsumer
-    public static class BreakingCircularity {
-
-        @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
-        public static boolean beforeStaticMethod(
-                @DescriptorOffset.Descriptor Object descriptor,
-                @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
-                @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
-                ) throws Throwable {
-            if (isInDispatch())
-                return false;
-
-            try {
-                disableDispatch();
-
-                // 1.create dispatcher
-                dispatcher = getCreator().createDispacther(descriptor, null, arguments);
-                if (dispatcher == null)
-                    // ignore instrumentation and execute instrumented method
-                    return false;
-
-                // 2.invoke BeforeAdvices
-                dispatcher.dispatch();
-
-                // 3.replace arguments
-                arguments = dispatcher.getArguments();
-
-                return dispatcher.hasAdviceThrowing() || dispatcher.hasAdviceReturning();
-            } finally {
-                BootstrapDispatcher.enableDispatch();
-            }
-        }
-
-
-        @Advice.OnMethodExit(onThrowable = Throwable.class, inline = true)
-        public static void afterStaticMethod(
-                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,
-                @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
-                @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
-                ) throws Throwable {
-            if (isInDispatch())
-                return;
-
-            try {
-                disableDispatch();
-
-                if (dispatcher == null)
-                    return;
-
-                // 1.assign return value if BeforeAdvices marked return before execute instrumented method
-                if (dispatcher.hasAdviceThrowing()) {
-                    throwing = dispatcher.getAdviceThrowing();
-                    return;
-                } else if (dispatcher.hasAdviceReturning()) {
-                    returning = dispatcher.getAdviceReturning();
-                    return;
-                }
-
-                // 2.set actual returning and throwing of target method
-                dispatcher.setThrowing(throwing);
-                dispatcher.setReturning(returning);
-
-                // 3.invoke AfterAdvices
-                dispatcher.dispatch();
-
-                // check invocation result
-                if (dispatcher.hasAdviceThrowing()) {
-                    throwing = dispatcher.getAdviceThrowing();
-                } else if (dispatcher.hasAdviceReturning()) {
-                    returning = dispatcher.getAdviceReturning();
-                }
-            } finally {
-                enableDispatch();
-            }
         }
     }
 }

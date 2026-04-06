@@ -37,7 +37,6 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
 import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
@@ -49,7 +48,7 @@ import net.bytebuddy.matcher.ElementMatchers;
  * @author   martin.liu
  * @since	 1.0
  */
-class WeaverContext {
+public class WeaverContext {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeaverContext.class);
 
@@ -58,9 +57,6 @@ class WeaverContext {
     private static final String WEAVER_CLASSLOADER_EXPRESSIONS_KEY = "aop.weaver.classLoaderExpressions";
     private static final String WEAVER_DEFAULT_EXCLUDED_CLASS_LOADER_EXPRESSIONS = "aop.weaver.defaultExcludedClassLoaderExpressions";
 
-    private static final String WEAVER_BUILTIN_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY = "aop.weaver.builtinDispatcherCircularityTypeExpressions";
-    private static final String WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY = "aop.weaver.dispatcherCircularityTypeExpressions";
-
 
     private final AopContext aopContext;
 
@@ -68,8 +64,6 @@ class WeaverContext {
     private boolean enableWeaver;
 
     private ElementMatcher<ClassLoader> classLoaderMatcher;
-
-    private ElementMatcher<String> dispatcherCircularityTypeMatcher;
 
     private Class<?> classInitializerAdvice;
     private Class<?> classMethodAdvice;
@@ -156,25 +150,6 @@ class WeaverContext {
 
         // load joinpoint transformer settings
         {
-            Set<String> dispatcherCircularityTypeExpressions = new LinkedHashSet<>();
-            dispatcherCircularityTypeExpressions.addAll(
-                    configView.getAsStringSet(
-                            WEAVER_BUILTIN_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, new LinkedHashSet<>() ) );
-            dispatcherCircularityTypeExpressions.addAll(
-                    configView.getAsStringSet(
-                            WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, new LinkedHashSet<>() ) );
-
-            if (LOGGER.isInfoEnabled() && dispatcherCircularityTypeExpressions.size() > 0)
-                LOGGER.info("Loaded {} rules from '{}' setting. \n"
-                        + "  {} \n", 
-                        dispatcherCircularityTypeExpressions.size(), WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, 
-                        StringUtils.join(dispatcherCircularityTypeExpressions, "\n  ")
-                );
-
-            this.dispatcherCircularityTypeMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
-                    WEAVER_DISPATCHER_CIRCULARITY_TYPE_EXPRESSIONS_KEY, dispatcherCircularityTypeExpressions, ElementMatchers.none() );
-
-
             this.classInitializerAdvice = configView.getAsClass(
                     "aop.weaver.classInitializerAdvice", ClassInitializerAdvice.class);
             this.classMethodAdvice = configView.getAsClass(
@@ -223,7 +198,7 @@ class WeaverContext {
                 ? false : classLoaderMatcher.matches(targetClassLoader);
     }
 
-    public Class<?> getByteBuddyAdvice(TypeDescription targetType, MethodDescription targetMethod) {
+    public Class<?> getFrameworkAdviceClass(MethodDescription targetMethod) {
         if (targetMethod.isStatic()) {
             if (targetMethod.isTypeInitializer()) {
                 return classInitializerAdvice;
@@ -238,11 +213,6 @@ class WeaverContext {
             }
         }
     }
-
-    public boolean isBreakingCircularity(TypeDescription targetType) {
-        return dispatcherCircularityTypeMatcher.matches( targetType.getTypeName() );
-    }
-
 
     public RedefinitionStrategy getRedefinitionStrategy() {
         return redefinitionStrategy;

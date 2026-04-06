@@ -89,8 +89,8 @@ public class Pointcut_02ConditionMatching_Tests {
 
 
     @Aspect
-    @ConditionalOnMark
     @ConditionalOnClassLoader(classLoaderExpression = "AppClassLoader")
+    @ConditionalOnMark
     public static class VoidMatching_Aspect {
 
         private static final String MATCH_VOID_POINTCUT = 
@@ -127,14 +127,14 @@ public class Pointcut_02ConditionMatching_Tests {
          */
         @Override
         public boolean matches(MatchingContext context) {
-            return context.isAppClassLoader() && context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
+            return context.hasType("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object");
         }
         
     }
 
     @PojoPointcut(pointcutClass = VoidMatching_Advice.class)
-    @ConditionalOnClassLoader(isAppClassLoader = true)
     @ConditionalOnMethod(methodExpression = "private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()")
+    @ConditionalOnClassLoader(isAppClassLoader = true)
     public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> 
             implements Pointcut {
 

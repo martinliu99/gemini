@@ -217,14 +217,16 @@ public class AdvisorContext implements Closeable {
             return ExprParser.INSTANCE.hasField(targetTypeWorld, requiredFieldExpression);
         }
 
-        /** {@inheritDoc} 
+        /** 
+         * {@inheritDoc} 
          */
         @Override
         public boolean hasConstructor(String requiredConstructorExpression) {
             return ExprParser.INSTANCE.hasConstructor(targetTypeWorld, requiredConstructorExpression);
         }
 
-        /** {@inheritDoc} 
+        /** 
+         * {@inheritDoc} 
          */
         @Override
         public boolean hasMethod(String requiredMethodExpression) {

@@ -437,7 +437,7 @@ public class AopMetrics {
 
             // 2.render detail metrics per ClassLoader and Advisor
             for (ClassLoaderMetrics classLoaderMetrics : weaverMetrics.getClassLoaderMetricsList()) {
-                if (classLoaderMetrics.getTypeWeavingCount() <= 1 && classLoaderMetrics.getAdvisorCreationCount() == 0)
+                if (classLoaderMetrics.getTypeWeavingTime() == 0.0 && classLoaderMetrics.getAdvisorCreationTime() == 0.0)
                     continue;
 
                 Map<String, Object> valueMap = new HashMap<>();

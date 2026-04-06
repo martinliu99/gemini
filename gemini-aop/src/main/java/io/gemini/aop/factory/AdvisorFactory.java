@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gemini.aop;
+package io.gemini.aop.factory;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import io.gemini.aop.Advisor;
+import io.gemini.aop.AopContext;
+import io.gemini.aop.AopMetrics;
+import io.gemini.core.util.Assert;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
@@ -32,4 +36,28 @@ public interface AdvisorFactory extends Closeable {
             TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule);
 
     void close() throws IOException ;
+
+
+    enum Creator {
+
+        INSTANCE;
+
+
+        public AdvisorFactory create(AopContext aopContext) {
+            Assert.notNull(aopContext, "'aopContext' must not be null.");
+
+            long startedAt = System.nanoTime();
+            AopMetrics.LauncherMetrics launcherMetrics = aopContext.getAopMetrics().getLauncherMetrics();
+            CompoundAdvisorFactory advisorFactory = null;
+            try {
+                advisorFactory = new CompoundAdvisorFactory(aopContext);
+                return advisorFactory;
+            } finally {
+                if (advisorFactory != null)
+                    launcherMetrics.setAdvisorSpecs(advisorFactory.getAdvisorSpecNum());
+
+                launcherMetrics.setAdvisorFactoryCreationTime(System.nanoTime() - startedAt);
+            }
+        }
+    }
 }

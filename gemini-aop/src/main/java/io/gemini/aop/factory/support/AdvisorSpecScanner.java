@@ -15,9 +15,7 @@
  */
 package io.gemini.aop.factory.support;
 
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -26,39 +24,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.aspectj.lang.annotation.After;
-import org.aspectj.lang.annotation.AfterReturning;
-import org.aspectj.lang.annotation.AfterThrowing;
-import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.factory.FactoryContext;
-import io.gemini.aop.factory.support.AdvisorSpecParser.IgnoredSpecException;
+import io.gemini.aop.factory.support.AdviceSpec.AspectJAdviceSpec;
+import io.gemini.aop.factory.support.AdvisorSpec.PointcutAdvisorSpec;
 import io.gemini.api.annotation.NoScanning;
-import io.gemini.api.aop.Advice;
-import io.gemini.api.aop.AdvisorSpec;
-import io.gemini.api.aop.AdvisorSpec.ExprPointcutSpec;
-import io.gemini.api.aop.AdvisorSpec.PojoPointcutSpec;
+import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.MatchingContext;
-import io.gemini.api.aop.annotation.Advisor;
-import io.gemini.api.aop.annotation.ExprPointcut;
-import io.gemini.core.concurrent.TaskExecutor;
+import io.gemini.api.aop.annotation.AdvisorName;
+import io.gemini.api.aop.annotation.EnablePerInstance;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.CollectionUtils;
-import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
 import io.github.classgraph.ClassInfo;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
-import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.method.MethodDescription.InDefinedShape;
-import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
@@ -70,100 +56,138 @@ import net.bytebuddy.matcher.ElementMatcher;
  */
 public interface AdvisorSpecScanner {
 
-    static final Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecScanner.class);
+    Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecScanner.class);
 
 
     Collection<? extends AdvisorSpec> scan(FactoryContext factoryContext);
 
 
-    static Map<String, ? extends AdvisorSpec> scanSpecs(FactoryContext factoryContext) {
-        long startedAt = System.nanoTime();
-        String factoryName = factoryContext.getFactoryName();
-        List<AdvisorSpecScanner> advisorSpecScanners = factoryContext.getAdvisorSpecScanners();
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("^Scanning AdvisorSpec under '{}' via AdvisorSpecScanners, \n"
-                    + "  {} \n", 
-                    factoryName,
-                    StringUtils.join(advisorSpecScanners, AdvisorSpecScanner::toString, "\n  ")
-            );
+    @NoScanning
+    class Compound implements AdvisorSpecScanner {
+
+        private final List<? extends AdvisorSpecScanner> advisorSpecScanners;
+
+        public Compound(FactoryContext factoryContext) {
+            this.advisorSpecScanners = factoryContext.getObjectFactory().createObjectsImplementing(
+                    AdvisorSpecScanner.class, true, "factoryContext", factoryContext);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Collection<? extends AdvisorSpec> scan(FactoryContext factoryContext) {
+            long startedAt = System.nanoTime();
+
+            String factoryName = factoryContext.getFactoryName();
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("^Scanning AdvisorSpec under '{}' via AdvisorSpecScanners, \n"
+                        + "  {} \n", 
+                        factoryName,
+                        StringUtils.join(advisorSpecScanners, AdvisorSpecScanner::toString, "\n  ")
+                );
 
 
-        // 1.scan and load AdvisorSpec instances via AdvisorSpecScanner
-        Map<String, AdvisorSpec> advisorSpecMap = new LinkedHashMap<>();
-        for (AdvisorSpecScanner advisorSpecScanner : advisorSpecScanners) {
-            Collection<? extends AdvisorSpec> scannedSpecs = null;
-            try {
-                scannedSpecs = advisorSpecScanner.scan(factoryContext);
-            } catch (Exception e) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not scan AdvisorSpec instances via '{}'. \n"
-                            + "  Error reason: {} \n", 
-                            advisorSpecScanner, 
-                            e.getMessage(), e
+            // 1.scan and load AdvisorSpec instances via AdvisorSpecScanner
+            Map<String, AdvisorSpec> advisorSpecMap = new LinkedHashMap<>();
+            for (AdvisorSpecScanner advisorSpecScanner : advisorSpecScanners) {
+                Collection<? extends AdvisorSpec> scannedSpecs = Collections.emptyList();
+
+                // try to scan AdvisorSpec
+                try {
+                    scannedSpecs = advisorSpecScanner.scan(factoryContext);
+                } catch (Throwable t) {
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Could not scan AdvisorSpec via '{}'. \n"
+                                + "  Error reason: {} \n", 
+                                advisorSpecScanner, 
+                                t.getMessage(), t
+                        );
+
+                    Throwables.throwIfRequired(t);
+                    continue;
+                }
+
+                // validate and collect AdvisorSpec
+                for (AdvisorSpec advisorSpec : scannedSpecs) {
+                    if (advisorSpec == null) 
+                        continue;
+    
+                    if (StringUtils.hasText(advisorSpec.getAdvisorName()) == false) {
+                        if (LOGGER.isWarnEnabled())
+                            LOGGER.warn("Ignored empty AdvisorName AdvisorSpec. \n"
+                                    + "    AdviceClassName: {} \n",
+                                    advisorSpec.getAdviceSpec().getAdviceClassName()
+                            );
+
+                        continue;
+                    }
+
+                    String advisorName = advisorSpec.getAdvisorName();
+                    if (advisorSpecMap.containsKey(advisorName)) {
+                        AdvisorSpec existingAdvisorSpec = advisorSpecMap.get(advisorName);
+
+                        if (LOGGER.isWarnEnabled())
+                            LOGGER.warn("Overwrote existing same name AdvisorSpec. \n"
+                                    + "  AdvisorName : {} \n"
+                                    + "    ExistingSpec AdviceClassName: {} \n"
+                                    + "    NewSpec AdviceClassName: {} \n",
+                                    advisorName, 
+                                    existingAdvisorSpec.getAdviceSpec().getAdviceClassName(), 
+                                    advisorSpec.getAdviceSpec().getAdviceClassName() 
+                            );
+                    }
+
+                    advisorSpecMap.put(advisorName, advisorSpec);
+                }
+            }
+
+            // 2.post process loaded AdvisorSpec instances
+            new AdvisorSpecPostProcessor.Compound(factoryContext).postProcess(factoryContext, advisorSpecMap);
+
+
+            if (LOGGER.isInfoEnabled()) {
+                if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0) 
+                    LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpecs under '{}', \n"
+                            + "  {} \n",
+                            (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
+                            StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ")
                     );
-
-                continue;
+                else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
+                    LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpecs under '{}'. ",
+                            (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
+                    );
             }
-
-            for (AdvisorSpec advisorSpec : scannedSpecs ) {
-                if (advisorSpec == null) 
-                    continue;
-
-                if (StringUtils.hasText(advisorSpec.getAdvisorName()) == false) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored empty AdvisorName AdvisorSpec. \n"
-                                + "    AdviceClassName: {} \n",
-                                advisorSpec.getAdviceClassName()
-                        );
-
-                    continue;
-                }
-
-                String advisorName = advisorSpec.getAdvisorName();
-                if (advisorSpecMap.containsKey(advisorName)) {
-                    AdvisorSpec existingAdvisorSpec = advisorSpecMap.get(advisorName);
-
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Overwrote existing same AdvisorName AdvisorSpec. \n"
-                                + "  AdvisorName : {} \n"
-                                + "    ExistingSpec AdviceClassName: {} \n"
-                                + "    NewSpec AdviceClassName: {} \n",
-                                advisorName, 
-                                existingAdvisorSpec.getAdviceClassName(), 
-                                advisorSpec.getAdviceClassName() 
-                        );
-                }
-
-                advisorSpecMap.put(advisorName, advisorSpec);
-            }
+    
+            return advisorSpecMap.values();
         }
-
-        // 2.post process loaded AdvisorSpec instances
-        AdvisorSpecPostProcessor.postProcessSpecs(factoryContext, advisorSpecMap);
-
-
-        if (LOGGER.isInfoEnabled()) {
-            if (factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled() && advisorSpecMap.size() > 0) 
-                LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}', \n"
-                        + "  {} \n",
-                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
-                        StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ")
-                );
-            else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
-                LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpec instances under '{}'. ",
-                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
-                );
-        }
-
-        return advisorSpecMap;
     }
 
 
-    abstract class AbstractBase<S extends AdvisorSpec> extends ClassScanner.InstantiableClassInfoFilter 
+    abstract class AbstractBase extends ClassScanner.InstantiableClassInfoFilter 
             implements AdvisorSpecScanner {
 
-        protected String resolverName = this.getClass().getName();
+        private final FactoryContext factoryContext;
+        private String resolverName;
 
+
+        public AbstractBase(FactoryContext factoryContext) {
+            this.factoryContext = factoryContext;
+            this.resolverName = this.getClass().getName();
+        }
+
+
+        public FactoryContext getFactoryContext() {
+            return factoryContext;
+        }
+
+        public String getResolverName() {
+            return resolverName;
+        }
+
+        protected AdviceSpecParser createAdviceSpecParser() {
+            return new AdviceSpecParser.Compound(factoryContext);
+        }
 
         /**
          * {@inheritDoc}
@@ -176,9 +200,9 @@ public interface AdvisorSpecScanner {
             if (classInfo.isAnonymousInnerClass() == false)
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec class is NOT top-level or nested, concrete class. \n"
-                            + "  {}: {} \n"
+                            + "  AdvisorSpec: {} \n"
                             + "  Use @{} annotation to ignore this illegal AdvisorSpec. \n", 
-                            getSpecType(), classInfo.getName(), 
+                            classInfo.getName(), 
                             NoScanning.class.getName()
                     );
 
@@ -187,17 +211,17 @@ public interface AdvisorSpecScanner {
 
 
         @Override
-        public Collection<? extends AdvisorSpec> scan(FactoryContext factoryContext) {
+        public Collection<AdvisorSpec> scan(FactoryContext factoryContext) {
             Assert.notNull(factoryContext, "'factoryContext' must not be null");
 
             // scan AdvisorSpec implementation
             try {
-                List<S> advisorSpecs = this.doScanSpecs(factoryContext);
+                List<AdvisorSpec> advisorSpecs = this.doScanAdvisorSpecs(factoryContext);
 
                 if (advisorSpecs != null) {
-                    Iterator<S> it = advisorSpecs.iterator();
+                    Iterator<AdvisorSpec> it = advisorSpecs.iterator();
                     while (it.hasNext()) {
-                        S advisorSpec = it.next();
+                        AdvisorSpec advisorSpec = it.next();
                         if (advisorSpec == null)
                             it.remove();
                     }
@@ -205,16 +229,16 @@ public interface AdvisorSpecScanner {
 
                 if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled()) {
                     if (CollectionUtils.isEmpty(advisorSpecs)) {
-                        LOGGER.info("Did not find AdvisorSpec.{} via '{}'.", getSpecType(), resolverName);
+                        LOGGER.info("Did not find AdvisorSpec via '{}'.", resolverName);
                     } else {
-                        LOGGER.info("Found {} AdvisorSpec.{} via '{}'. ", advisorSpecs.size(), getSpecType(), resolverName);
+                        LOGGER.info("Found {} AdvisorSpecs via '{}'. ", advisorSpecs.size(), resolverName);
                     }
                 }
 
                 return advisorSpecs;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not scan {} via '{}'.", getSpecType(), resolverName, t);
+                    LOGGER.warn("Could not scan AdvisorSpec via '{}'.", resolverName, t);
 
                 Throwables.throwIfRequired(t);
             }
@@ -222,315 +246,185 @@ public interface AdvisorSpecScanner {
             return Collections.emptyList();
         }
 
-        protected abstract String getSpecType();
-
-        protected abstract List<S> doScanSpecs(FactoryContext factoryContext);
-    }
+        protected abstract List<AdvisorSpec> doScanAdvisorSpecs(FactoryContext factoryContext);
 
 
-    public class ForPojoPointcut extends AbstractBase<AdvisorSpec.PojoPointcutSpec> {
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected String getSpecType() {
-            return AdvisorSpec.PojoPointcutSpec.class.getSimpleName();
-        }
-
-        @Override
-        protected List<AdvisorSpec.PojoPointcutSpec> doScanSpecs(FactoryContext factoryContext) {
-            List<String> implementorClassNames = factoryContext.getClassScanner()
-                    .getClassesImplementing( AdvisorSpec.PojoPointcutSpec.class.getName() )
-                    .filter(this)
-                    .getNames();
-
-            List<String> factoryClassNames = factoryContext.getClassScanner()
-                    .getClassesImplementing( AdvisorSpec.PojoPointcutSpec.Factory.class.getName() )
-                    .filter(this)
-                    .getNames();
-
-            List<AdvisorSpec.PojoPointcutSpec> advisorSpecs = new ArrayList<>(implementorClassNames.size() + factoryClassNames.size());
-
-            advisorSpecs.addAll(
-                    factoryContext.getAopContext().getGlobalTaskExecutor().executeTasks(
-                            implementorClassNames, 
-                            className -> loadSpecClass(factoryContext, className) 
-                    )
-            );
-
-            advisorSpecs.addAll(
-                    factoryContext.getAopContext().getGlobalTaskExecutor().executeTasks(
-                            factoryClassNames, 
-                            className -> loadFactoryClass(factoryContext, className) 
-                    )
-            );
-
-            return advisorSpecs;
-        }
-
-        private AdvisorSpec.PojoPointcutSpec loadSpecClass(FactoryContext factoryContext, String className) {
+        protected PointcutAdvisorSpec parsePointcutAdvisorSpec(FactoryContext factoryContext, ClassInfo classInfo) {
             try {
-                Class<?> clazz = factoryContext.getClassLoader().loadClass(className);
-                AdvisorSpec.PojoPointcutSpec advisorSpec = (AdvisorSpec.PojoPointcutSpec) factoryContext.getObjectFactory().createObject(clazz);
-
-                if (StringUtils.hasText( advisorSpec.getAdvisorName() ) == false) {
-                    advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
-                            className,
-                            advisorSpec.getCondition(),
-                            advisorSpec.isInheritClassLoaderMatcher(),
-                            advisorSpec.isInheritTypeMatcher(),
-                            advisorSpec.getPointcut(), 
-                            advisorSpec.getAdviceClassName(),
-                            advisorSpec.isPerInstance(),
-                            advisorSpec.getOrder()
-                    );
-                }
-
-                return advisorSpec;
-            } catch (IgnoredSpecException e) {
-                return null;
-            } catch (Throwable t) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load {} '{}'. \n", 
-                            getSpecType(), className, t);
-
-                Throwables.throwIfRequired(t);
-                return null;
-            }
-        }
-
-        private AdvisorSpec.PojoPointcutSpec loadFactoryClass(FactoryContext factoryContext, String className) {
-            try {
-                Class<?> clazz = factoryContext.getClassLoader().loadClass(className);
-                AdvisorSpec.PojoPointcutSpec.Factory factory = (AdvisorSpec.PojoPointcutSpec.Factory) factoryContext.getObjectFactory().createObject(clazz);
-
-                PojoPointcutSpec advisorSpec = factory.getAdvisorSpec();
-                if (advisorSpec == null) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored null AdvisorSpec. \n"
-                                + "  {}: {} \n", getSpecType(), className);
-
+                String adviceClassName = classInfo.getName();
+                TypeDescription decalringType = factoryContext.getTypePool().describeAspectType(adviceClassName).resolve();
+                if (decalringType == null) 
                     return null;
-                }
 
-                if (StringUtils.hasText( advisorSpec.getAdvisorName() ) == false) {
-                    advisorSpec = new AdvisorSpec.PojoPointcutSpec.Default(
-                            className,
-                            advisorSpec.getCondition(),
-                            advisorSpec.isInheritClassLoaderMatcher(),
-                            advisorSpec.isInheritTypeMatcher(),
-                            advisorSpec.getPointcut(), 
-                            advisorSpec.getAdviceClassName(),
-                            advisorSpec.isPerInstance(), 
-                            advisorSpec.getOrder()
-                    );
-                }
+                AnnotationList annotations = decalringType.getDeclaredAnnotations();
 
-                return advisorSpec;
-            } catch (IgnoredSpecException e) {
+                String advisorName = null;
+                AnnotationDescription advisorNameAnnotation = annotations.ofType(AdvisorName.class);
+                if (advisorNameAnnotation != null)
+                    advisorName = advisorNameAnnotation.getValue("value").resolve(String.class).trim();
+                if (StringUtils.hasText(advisorName) == false)
+                    advisorName = adviceClassName;
+
+                ElementMatcher<MatchingContext> condition = doParseCondition(factoryContext, annotations);
+
+                AdviceSpec adviceSpec = doParseAdviceSpec(factoryContext, advisorName, decalringType);
+                if (adviceSpec == null)
+                    return null;
+
+                PointcutSpec pointcutSpec = doParsePointcutSpecs(factoryContext, adviceSpec);
+                if (pointcutSpec == null)
+                    return null;
+
+                boolean perInstance = annotations.isAnnotationPresent(EnablePerInstance.class);
+
+                int order = Order.LOWEST_PRECEDENCE;
+                AnnotationDescription orderAnnotation = annotations.ofType(Order.class);
+                if (orderAnnotation != null)
+                    order = orderAnnotation.getValue("value").resolve(Integer.class);
+
+                return new PointcutAdvisorSpec.Default(
+                        advisorName, condition, 
+                        adviceSpec, perInstance, order, 
+                        pointcutSpec);
+            } catch (IllegalSpecException e) {
                 return null;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
+                    LOGGER.warn("Could not load AdvisorSpec '{}'. \n", classInfo.getName(), t);
 
                 Throwables.throwIfRequired(t);
                 return null;
             }
         }
+
+        protected ElementMatcher<MatchingContext> doParseCondition(FactoryContext factoryContext, AnnotationList annotationList) {
+            return AdvisorConditionParser.parseAdvisorCondition(
+                    factoryContext, annotationList);
+        }
+
+        protected AdviceSpec doParseAdviceSpec(FactoryContext factoryContext, 
+                String advisorName, TypeDescription adviceType) {
+            Collection<? extends AdviceSpec> adviceSpecs = doGetAdviceSpecParser().parse(factoryContext, adviceType);
+            if (CollectionUtils.isEmpty(adviceSpecs))
+                return null;
+            return adviceSpecs.iterator().next();
+        }
+
+        protected abstract AdviceSpecParser doGetAdviceSpecParser();
+
+        protected PointcutSpec doParsePointcutSpecs(FactoryContext factoryContext, AdviceSpec adviceSpec) {
+            return null;
+        }
     }
 
 
-    public class ForExprPointcut extends AbstractBase<AdvisorSpec.ExprPointcutSpec> {
+    public class ForAtPojoPointcut extends AbstractBase {
+
+        private final AdviceSpecParser adviceSpecParser;
+        private final PointcutSpecParser.ForPojoPointcut pojoPointcutParser;
+
+
+        public ForAtPojoPointcut(FactoryContext factoryContext) {
+            super(factoryContext);
+
+            this.adviceSpecParser = createAdviceSpecParser();
+            this.pojoPointcutParser = new PointcutSpecParser.ForPojoPointcut();
+        }
+
+        @Override
+        protected List<AdvisorSpec> doScanAdvisorSpecs(FactoryContext factoryContext) {
+            List<ClassInfo> atPojoPointcutClasses = factoryContext.getClassScanner()
+                    .getClassesWithAnnotation( io.gemini.api.aop.annotation.PojoPointcut.class.getName() )
+                    .filter(this)
+                    ;
+
+            return factoryContext.getAopContext().getGlobalTaskExecutor().executeTasks(
+                    atPojoPointcutClasses, 
+                    classInfo -> parsePointcutAdvisorSpec(factoryContext, classInfo)
+            );
+        }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        protected String getSpecType() {
-            return AdvisorSpec.ExprPointcutSpec.class.getSimpleName();
+        protected AdviceSpecParser doGetAdviceSpecParser() {
+            return adviceSpecParser;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected PointcutSpec doParsePointcutSpecs(FactoryContext factoryContext, AdviceSpec adviceSpec) {
+            return pojoPointcutParser.parse(factoryContext, adviceSpec);
+        }
+    }
+
+
+    public class ForAtExprPointcut extends AbstractBase {
+
+        private final AdviceSpecParser adviceSpecParser;
+        private final PointcutSpecParser.ForExprPointcut exprPointcutParser;
+
+
+        public ForAtExprPointcut(FactoryContext factoryContext) {
+            super(factoryContext);
+
+            this.adviceSpecParser = createAdviceSpecParser();
+            this.exprPointcutParser = new PointcutSpecParser.ForExprPointcut();
         }
 
         @Override
-        protected List<AdvisorSpec.ExprPointcutSpec> doScanSpecs(FactoryContext factoryContext) {
-            List<String> implementorClassNames = factoryContext.getClassScanner()
-                    .getClassesImplementing( AdvisorSpec.ExprPointcutSpec.class.getName() )
-                    .filter(this)
-                    .getNames();
-
-            List<String> factoryClassNames = factoryContext.getClassScanner()
-                    .getClassesImplementing( AdvisorSpec.ExprPointcutSpec.Factory.class.getName() )
-                    .filter(this)
-                    .getNames();
-
-            List<String> annotatedClassNames = factoryContext.getClassScanner()
+        protected List<AdvisorSpec> doScanAdvisorSpecs(FactoryContext factoryContext) {
+            List<ClassInfo> atExprPointcutClasses = factoryContext.getClassScanner()
                     .getClassesWithAnnotation( io.gemini.api.aop.annotation.ExprPointcut.class.getName() )
                     .filter(this)
-                    .filter( classInfo -> classInfo.implementsInterface(Advice.class) )
-                    .getNames();
+                    ;
 
-            List<AdvisorSpec.ExprPointcutSpec> advisorSpecs = new ArrayList<>(
-                    implementorClassNames.size() 
-                    + factoryClassNames.size()
-                    + annotatedClassNames.size());
-
-
-            TaskExecutor globalTaskExecutor = factoryContext.getAopContext().getGlobalTaskExecutor();
-
-            advisorSpecs.addAll(
-                    globalTaskExecutor.executeTasks(
-                            implementorClassNames, 
-                            className -> loadSpecClass(factoryContext, className) 
-                    )
+            return factoryContext.getAopContext().getGlobalTaskExecutor().executeTasks(
+                    atExprPointcutClasses, 
+                    classInfo -> parsePointcutAdvisorSpec(factoryContext, classInfo)
             );
-
-            advisorSpecs.addAll(
-                    globalTaskExecutor.executeTasks(
-                            factoryClassNames, 
-                            className -> loadFactoryClass(factoryContext, className) 
-                    )
-            );
-
-            advisorSpecs.addAll(
-                    globalTaskExecutor.executeTasks(
-                            annotatedClassNames, 
-                            className -> parseExprPointcutSpec(factoryContext, className)
-                    )
-
-            );
-
-            return advisorSpecs;
         }
 
-        private AdvisorSpec.ExprPointcutSpec loadSpecClass(FactoryContext factoryContext, String className) {
-            try {
-                Class<?> clazz = factoryContext.getClassLoader().loadClass(className);
-                AdvisorSpec.ExprPointcutSpec advisorSpec = (AdvisorSpec.ExprPointcutSpec) factoryContext.getObjectFactory().createObject(clazz);
-
-                if (StringUtils.hasText( advisorSpec.getAdvisorName() ) == false) {
-                    advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
-                            className,
-                            advisorSpec.getCondition(),
-                            advisorSpec.isInheritClassLoaderMatcher(),
-                            advisorSpec.isInheritTypeMatcher(),
-                            advisorSpec.getClassLoaderExpression(),
-                            advisorSpec.getPointcutExpression(), 
-                            advisorSpec.getAdviceClassName(),
-                            advisorSpec.isPerInstance(), 
-                            advisorSpec.getOrder()
-                    );
-                }
-
-                return advisorSpec;
-            } catch (IgnoredSpecException e) {
-                return null;
-            } catch (Throwable t) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
-
-                Throwables.throwIfRequired(t);
-                return null;
-            }
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected AdviceSpecParser doGetAdviceSpecParser() {
+            return adviceSpecParser;
         }
 
-        private AdvisorSpec.ExprPointcutSpec loadFactoryClass(FactoryContext factoryContext, String className) {
-            try {
-                Class<?> clazz = factoryContext.getClassLoader().loadClass(className);
-                AdvisorSpec.ExprPointcutSpec.Factory factory = (AdvisorSpec.ExprPointcutSpec.Factory) factoryContext.getObjectFactory().createObject(clazz);
-
-                ExprPointcutSpec advisorSpec = factory.getAdvisorSpec();
-                if (advisorSpec == null) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored null AdvisorSpec. \n"
-                                + "  {}: {} \n", 
-                                getSpecType(), className
-                        );
-
-                    return null;
-                }
-
-                if (StringUtils.hasText( advisorSpec.getAdvisorName() ) == false) {
-                    advisorSpec = new AdvisorSpec.ExprPointcutSpec.Default(
-                            className,
-                            advisorSpec.getCondition(),
-                            advisorSpec.isInheritClassLoaderMatcher(),
-                            advisorSpec.isInheritTypeMatcher(),
-                            advisorSpec.getClassLoaderExpression(),
-                            advisorSpec.getPointcutExpression(), 
-                            advisorSpec.getAdviceClassName(),
-                            advisorSpec.isPerInstance(), 
-                            advisorSpec.getOrder()
-                    );
-                }
-
-                return advisorSpec;
-            } catch (IgnoredSpecException e) {
-                return null;
-            } catch (Throwable t) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
-
-                Throwables.throwIfRequired(t);
-                return null;
-            }
-        }
-
-        private AdvisorSpec.ExprPointcutSpec parseExprPointcutSpec(FactoryContext factoryContext, String className) {
-            try {
-                TypeDescription adviceType = factoryContext.getTypePool().describeAspectType(className).resolve();
-                if (adviceType == null) 
-                    return null;
-
-                AnnotationList annotations = adviceType.getDeclaredAnnotations();
-
-                ElementMatcher<MatchingContext> condition = AdvisorConditionParser.parseAdvisorCondition(
-                        factoryContext, annotations);
-
-                AnnotationDescription advisorAnnotation = annotations.ofType(Advisor.class);
-                AnnotationDescription exprPointcutAnnotation = annotations.ofType(
-                        io.gemini.api.aop.annotation.ExprPointcut.class);
-
-                return AdvisorSpecParser.parseExprPointcutAdvisorSpec(
-                        factoryContext,
-                        adviceType.getTypeName(),
-                        condition,
-                        advisorAnnotation, 
-                        exprPointcutAnnotation
-                );
-            } catch (IgnoredSpecException e) {
-                return null;
-            } catch (Throwable t) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), className, t);
-
-                Throwables.throwIfRequired(t);
-                return null;
-            }
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected PointcutSpec doParsePointcutSpecs(FactoryContext factoryContext, AdviceSpec adviceSpec) {
+            return exprPointcutParser.parse(factoryContext, adviceSpec);
         }
     }
 
 
-    public class ForAspectJPointcut extends AbstractBase<AspectJPointcutAdvisorSpec> {
+    public class ForAspectJPointcutAdvisor extends AbstractBase {
 
-        private static final List<Class<? extends Annotation>> ADVICE_ANNOTATIONS = Arrays.asList(
-                Before.class, After.class, 
-                AfterReturning.class, AfterThrowing.class, 
-                Around.class);
+        private final AdviceSpecParser adviceSpecParser;
+        private final PointcutSpecParser.ForAspectJPointcut aspectJPointcut;
 
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected String getSpecType() {
-            return AspectJPointcutAdvisorSpec.class.getSimpleName();
+        public ForAspectJPointcutAdvisor(FactoryContext factoryContext) {
+            super(factoryContext);
+
+            this.adviceSpecParser = createAdviceSpecParser();
+            this.aspectJPointcut = new PointcutSpecParser.ForAspectJPointcut();
         }
 
+
         /**
          * {@inheritDoc}
          */
         @Override
-        protected List<AspectJPointcutAdvisorSpec> doScanSpecs(FactoryContext factoryContext) {
+        protected List<AdvisorSpec> doScanAdvisorSpecs(FactoryContext factoryContext) {
             List<String> classNames = factoryContext.getClassScanner()
                     .getClassesWithAnnotation( Aspect.class.getName() )
                     .filter(this)
@@ -538,163 +432,103 @@ public interface AdvisorSpecScanner {
 
             return factoryContext.getAopContext().getGlobalTaskExecutor().executeTasks(
                     classNames, 
-                    className -> parseAspectJClass(factoryContext, className))
+                    className -> parsePointcutAdvisorSpec(factoryContext, className))
             .stream()
             .flatMap( e -> e.stream() )
             .collect( Collectors.toList() );
         }
 
-        private Collection<AspectJPointcutAdvisorSpec> parseAspectJClass(FactoryContext factoryContext, String aspectJClassName) {
-            TypeDescription aspectJType = factoryContext.getTypePool().describeAspectType(aspectJClassName).resolve();
-            if (aspectJType == null) 
+        private Collection<PointcutAdvisorSpec> parsePointcutAdvisorSpec(FactoryContext factoryContext, String adviceClassName) {
+            TypeDescription aspectType = factoryContext.getTypePool().describeAspectType(adviceClassName).resolve();
+            if (aspectType == null) 
                 return Collections.emptyList();
 
             try {
-                AdvisorSpec advisorSpec = parseAdvisorSpec(factoryContext, aspectJType);
+                TypeDescription adviceType = factoryContext.getTypePool().describeAspectType(adviceClassName).resolve();
+                if (adviceType == null) 
+                    return null;
 
-                MethodList<InDefinedShape> declaredMethods = aspectJType.getDeclaredMethods();
-                Map<String, AspectJPointcutAdvisorSpec> advisorSpecMap = new LinkedHashMap<>(declaredMethods.size());
-                for (MethodDescription.InDefinedShape aspectJMethod : declaredMethods) {
-                    AnnotationList annotations = aspectJMethod.getDeclaredAnnotations();
+                Collection<? extends AdviceSpec> adviceSpecs = doGetAdviceSpecParser().parse(factoryContext, adviceType);
+                if (CollectionUtils.isEmpty(adviceSpecs))
+                    return null;
 
-                    ElementMatcher<MatchingContext> condition = AdvisorConditionParser.parseAdvisorCondition(
-                            factoryContext, annotations);
-                    // merge method level and class level condition definition
-                    if (condition == null)
-                        condition = advisorSpec.getCondition();
-                    else if (advisorSpec.getCondition() != null)
-                        condition = new ElementMatcher.Junction.Conjunction<>(
-                                advisorSpec.getCondition(), condition);
+                AnnotationList adviceTypeAnnotations = adviceType.getDeclaredAnnotations();
+                AnnotationDescription typeAdvisorNameAnnotation = adviceTypeAnnotations.ofType(AdvisorName.class);
+                AnnotationDescription typePerInstanceAnnotation = adviceTypeAnnotations.ofType(EnablePerInstance.class);
+                AnnotationDescription typeOrderAnnotation = adviceTypeAnnotations.ofType(Order.class);
 
-                    AnnotationDescription advisorAnnotation = annotations.ofType(Advisor.class);
+                ElementMatcher<MatchingContext> adviceTypeCondition = doParseCondition(factoryContext, adviceTypeAnnotations);
 
-                    for (Class<? extends Annotation> annotationType : ADVICE_ANNOTATIONS) {
-                        AnnotationDescription aspectJAnnotation = annotations.ofType(annotationType);
-                        if (aspectJAnnotation == null)
-                            continue;
+                List<PointcutAdvisorSpec> pointcutAdvisorSpecs = new ArrayList<>(adviceSpecs.size());
+                for (AdviceSpec adviceSpec : adviceSpecs) {
+                    try {
+                        AspectJAdviceSpec aspectJAdviceSpec = (AspectJAdviceSpec) adviceSpec;
 
-                        AspectJPointcutAdvisorSpec aspectJAdvisorSpec = parseAspectJAdvisorSpec(
-                                factoryContext,
-                                aspectJType, 
-                                aspectJMethod,
-                                condition,
-                                advisorAnnotation, 
-                                aspectJAnnotation,
-                                advisorSpec
-                        );
-                        if (aspectJAdvisorSpec == null)
-                            continue;
+                        AnnotationList adviceMethodAnnotations = aspectJAdviceSpec.getAdviceMethod().getDeclaredAnnotations();
 
-                        if (LOGGER.isWarnEnabled() && advisorSpecMap.containsKey(aspectJAdvisorSpec.getAdvisorName()))
-                            LOGGER.warn("Ignored duplicate name AspectJ advice method. \n"
-                                    + "  {}: {} \n"
-                                    + "  AdviceMethod: {} \n",
-                                    getSpecType(), aspectJAdvisorSpec.getAdvisorName(), 
-                                    MethodUtils.getMethodSignature(aspectJMethod) 
-                            );
-                        else
-                            advisorSpecMap.put(aspectJAdvisorSpec.getAdvisorName(), aspectJAdvisorSpec);
+                        AnnotationDescription advisorNameAnnotation = adviceMethodAnnotations.ofType(AdvisorName.class);
+                        if (advisorNameAnnotation == null)
+                            advisorNameAnnotation = typeAdvisorNameAnnotation;
 
+                        String advisorName = aspectJAdviceSpec.getAdviceClassName();
+                        if (advisorNameAnnotation != null)
+                            advisorName = advisorNameAnnotation.getValue("advisorName").resolve(String.class).trim();
+
+                        // merge method level and class level condition definition
+                        ElementMatcher<MatchingContext> condition = AdvisorConditionParser.parseAdvisorCondition(
+                                factoryContext, adviceMethodAnnotations);
+                        if (condition == null)
+                            condition = adviceTypeCondition;
+                        else if (adviceTypeCondition != null)
+                            condition = new ElementMatcher.Junction.Conjunction<>(
+                                    adviceTypeCondition, condition);
+
+                        // merge method level and class level order definition
+                        AnnotationDescription perInstanceAnnotation = adviceMethodAnnotations.ofType(EnablePerInstance.class);
+                        if (perInstanceAnnotation == null)
+                            perInstanceAnnotation = typePerInstanceAnnotation;
+
+                        boolean perInstance = perInstanceAnnotation != null;
+
+                        AnnotationDescription orderAnnotation = adviceMethodAnnotations.ofType(Order.class);
+                        if (orderAnnotation == null)
+                            orderAnnotation = typeOrderAnnotation;
+
+                        int order = Order.LOWEST_PRECEDENCE;
+                        if (orderAnnotation != null)
+                            order = orderAnnotation.getValue("order").resolve(Integer.class);
+
+                        PointcutSpec pointcutSpec = aspectJPointcut.parse(factoryContext, aspectJAdviceSpec);
+
+                        PointcutAdvisorSpec pointcutAdvisorSpec = new PointcutAdvisorSpec.Default(
+                                advisorName, condition, 
+                                adviceSpec, perInstance, order, 
+                                pointcutSpec);
+
+                        pointcutAdvisorSpecs.add(pointcutAdvisorSpec);
+                    } catch (Exception e) {
+                        LOGGER.error(adviceClassName, e);
                     }
                 }
 
-                if (advisorSpecMap.size() == 0) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored AdvisorSpec contains no advice methods. \n"
-                                + "  {}: {} \n", 
-                                getSpecType(), aspectJClassName );
-
-                    return Collections.emptyList();
-                }
-
-                return advisorSpecMap.values();
-            } catch (IgnoredSpecException e) {
-                return null;
-            } catch (Throwable t) {
-                LOGGER.warn("Could not load {} '{}'. \n", getSpecType(), aspectJClassName, t);
-
-                Throwables.throwIfRequired(t);
-                return Collections.emptyList();
-            }
-        }
-
-        private AdvisorSpec parseAdvisorSpec(FactoryContext factoryContext, TypeDescription aspectJType) {
-            AnnotationList annotations = aspectJType.getDeclaredAnnotations();
-
-            ElementMatcher<MatchingContext> condition = AdvisorConditionParser.parseAdvisorCondition(
-                    factoryContext, annotations);
-
-            AnnotationDescription advisorAnnotation = annotations.ofType(Advisor.class);
-
-            return AdvisorSpecParser.parseAdvisorSpec(
-                    factoryContext,
-                    aspectJType.getTypeName(),
-                    condition,
-                    advisorAnnotation
-            );
-        }
-
-        private AspectJPointcutAdvisorSpec parseAspectJAdvisorSpec(
-                FactoryContext factoryContext, 
-                TypeDescription aspectJType, 
-                MethodDescription.InDefinedShape aspectJMethod, 
-                ElementMatcher<MatchingContext> condition,
-                AnnotationDescription advisorAnnotation, 
-                AnnotationDescription adviceAnnotation,
-                AdvisorSpec advisorSpec) {
-            try {
-                if (aspectJMethod.isAbstract()) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored abstract AspectJ advice method. \n"
-                                + "  {}: {} \n"
-                                + "  AdviceMethod: {} \n",
-                                getSpecType(), aspectJType.getTypeName(), 
-                                MethodUtils.getMethodSignature(aspectJMethod) 
-                        );
-
-                    return null;
-                }
-
-                if (aspectJMethod.isPrivate()) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored private AspectJ advice method. \n"
-                                + "  {}: {} \n"
-                                + "  AdviceMethod: {} \n",
-                                getSpecType(), aspectJType.getTypeName(), 
-                                MethodUtils.getMethodSignature(aspectJMethod) 
-                        );
-
-                    return null;
-                }
-
-                // create AspectJAdvisorSpec
-                AnnotationDescription exprPointcutAnnotation = aspectJMethod.getDeclaredAnnotations()
-                        .ofType(ExprPointcut.class);
-
-                return AdvisorSpecParser.parseAspectJPointcutAdvisorSpec(
-                        factoryContext,
-                        aspectJType, 
-                        aspectJMethod, 
-                        condition,
-                        advisorAnnotation, 
-                        exprPointcutAnnotation,
-                        adviceAnnotation 
-                );
-            } catch (IgnoredSpecException e) {
+                return pointcutAdvisorSpecs;
+            } catch (IllegalSpecException e) {
                 return null;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load AdvisorSpec. \n"
-                            + "  {}: {} \n"
-                            + "  AdviceMethod: {} \n",
-                            getSpecType(), aspectJType.getTypeName(), 
-                            MethodUtils.getMethodSignature(aspectJMethod),
-                            t
-                    );
+                    LOGGER.warn("Could not load AdvisorSpec '{}'. \n", adviceClassName, t);
 
                 Throwables.throwIfRequired(t);
                 return null;
             }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected AdviceSpecParser doGetAdviceSpecParser() {
+            return adviceSpecParser;
         }
     }
 }

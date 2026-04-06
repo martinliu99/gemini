@@ -15,6 +15,7 @@
  */
 package io.gemini.aop.factory.support;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,15 +28,15 @@ import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.factory.FactoryContext;
-import io.gemini.api.aop.AdvisorSpec;
+import io.gemini.aop.factory.support.AdvisorSpec.PointcutAdvisorSpec;
+import io.gemini.api.annotation.NoScanning;
+import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.MatchingContext;
-import io.gemini.aspectj.weaver.ExprParser;
+import io.gemini.core.OrderComparator;
 import io.gemini.core.Ordered;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
-import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -46,54 +47,81 @@ import net.bytebuddy.matcher.ElementMatcher;
  */
 public interface AdvisorSpecPostProcessor {
 
-    static final Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecPostProcessor.class);
+    Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecPostProcessor.class);
 
 
     Map<String, AdvisorSpec> postProcess(FactoryContext factoryContext, Map<String, AdvisorSpec> advisorSpecMap);
 
 
-    static Map<String, AdvisorSpec> postProcessSpecs(FactoryContext factoryContext, Map<String, AdvisorSpec> advisorSpecMap) {
-        long startedAt = System.nanoTime();
-        String factoryName = factoryContext.getFactoryName();
-        List<AdvisorSpecPostProcessor> advisorSpecPostProcessors = factoryContext.getAdvisorSpecProcessors();
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("^Post-processing AdvisorSpec instances under '{}' via AdvisorSpecPostProcessors, \n"
-                    + "  {} \n", 
-                    factoryName,
-                    StringUtils.join(advisorSpecPostProcessors, AdvisorSpecPostProcessor::toString, "\n  ")
-            );
+    @NoScanning
+    class Compound implements AdvisorSpecPostProcessor {
+
+        private final List<? extends AdvisorSpecPostProcessor> advisorSpecPostProcessors;
 
 
-        for (AdvisorSpecPostProcessor advisorSpecPostProcessor : advisorSpecPostProcessors) {
-            try {
-                advisorSpecMap = advisorSpecPostProcessor.postProcess(factoryContext, advisorSpecMap);
-            } catch (Exception e) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not post-process loaded AdvisorSpec instances via '{}', \n"
-                            + "  Error reason: {} \n",
-                            advisorSpecPostProcessor, 
-                            e.getMessage(), 
-                            e
-                    );
-            }
+        public Compound(FactoryContext factoryContext) {
+            List<? extends AdvisorSpecPostProcessor> advisorSpecPostProcessors = factoryContext.getObjectFactory()
+                    .createObjectsImplementing(
+                            AdvisorSpecPostProcessor.class, true, "factoryContext", factoryContext);
+            this.advisorSpecPostProcessors = advisorSpecPostProcessors == null 
+                    ? Collections.emptyList() : advisorSpecPostProcessors;
+
+            OrderComparator.sort(this.advisorSpecPostProcessors);
         }
 
 
-        if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
-            LOGGER.info("$Took '{}' seconds to post-process {} AdvisorSpec instances under '{}'. ", 
-                    (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
-            );
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public Map<String, AdvisorSpec> postProcess(FactoryContext factoryContext,
+                Map<String, AdvisorSpec> advisorSpecMap) {
+            long startedAt = System.nanoTime();
+            String factoryName = factoryContext.getFactoryName();
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("^Post-processing AdvisorSpecs under '{}' via AdvisorSpecPostProcessors, \n"
+                        + "  {} \n", 
+                        factoryName,
+                        StringUtils.join(advisorSpecPostProcessors, AdvisorSpecPostProcessor::toString, "\n  ")
+                );
 
-        return advisorSpecMap;
+
+            for (AdvisorSpecPostProcessor advisorSpecPostProcessor : advisorSpecPostProcessors) {
+                try {
+                    advisorSpecMap = advisorSpecPostProcessor.postProcess(factoryContext, advisorSpecMap);
+                } catch (IllegalSpecException e) {
+                } catch (Throwable t) {
+                    if (LOGGER.isWarnEnabled())
+                        LOGGER.warn("Could not post-process loaded AdvisorSpecs via '{}', \n"
+                                + "  Error reason: {} \n",
+                                advisorSpecPostProcessor, 
+                                t.getMessage(), 
+                                t
+                        );
+
+                    Throwables.throwIfRequired(t);
+                }
+            }
+
+
+            if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
+                LOGGER.info("$Took '{}' seconds to post-process {} AdvisorSpecs under '{}'. ", 
+                        (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName
+                );
+
+            return advisorSpecMap;
+        }
+        
     }
 
 
     class ParsingConfigViewAdvisorSpec implements AdvisorSpecPostProcessor, Ordered {
 
-        private static final String ADVISOR_NAME = "advisorName";
+        private static final String ADVISOR_NAME_CONFIG_KEY_SUFFIX = "advisorName";
 
 
-        /** {@inheritDoc} 
+        /** 
+         * {@inheritDoc} 
          */
         @Override
         public Map<String, AdvisorSpec> postProcess(FactoryContext factoryContext, 
@@ -111,7 +139,7 @@ public interface AdvisorSpecPostProcessor {
         private Set<String> findConfiguredAdvisorSpecPrefix(FactoryContext factoryContext) {
             Set<String> configuredAdvisorSpecPrefixes = new LinkedHashSet<>();
             for (String key : factoryContext.getConfigView().keys("aop.advisorSpecs.")) {
-                int endPos = key.lastIndexOf(ADVISOR_NAME);
+                int endPos = key.lastIndexOf(ADVISOR_NAME_CONFIG_KEY_SUFFIX);
                 if (endPos > -1) {
                     configuredAdvisorSpecPrefixes.add( key.substring(0, endPos).trim() );
                 }
@@ -122,9 +150,13 @@ public interface AdvisorSpecPostProcessor {
 
         private void parseConfiguredAdvisorSpecs(FactoryContext factoryContext, Map<String, AdvisorSpec> advisorSpecMap, 
                 Set<String> configuredAdvisorSpecPrefixs) {
+            AdviceSpecParser adviceSpecParser = new AdviceSpecParser.Compound(factoryContext);
+            PointcutSpecParser pointcutSpecParser = new PointcutSpecParser.Compound(factoryContext);
+
             for (String configKeyPrefix : configuredAdvisorSpecPrefixs) {
                 AdvisorSpec configuredAdvisorSpec = doParseConfiguredAdvisorSpec(
-                        factoryContext, advisorSpecMap, factoryContext.getConfigView(), configKeyPrefix);
+                        factoryContext, advisorSpecMap, factoryContext.getConfigView(), configKeyPrefix,
+                        adviceSpecParser, pointcutSpecParser);
                 if (configuredAdvisorSpec == null)
                     continue;
 
@@ -134,106 +166,45 @@ public interface AdvisorSpecPostProcessor {
 
         protected AdvisorSpec doParseConfiguredAdvisorSpec(
                 FactoryContext factoryContext, Map<String, AdvisorSpec> advisorSpecMap, 
-                ConfigView configView, String configKeyPrefix) {
-            String advisorName = configView.getAsString(configKeyPrefix + ADVISOR_NAME, "");
-            if (StringUtils.hasText(advisorName) == false)
-                return null;
+                ConfigView configView, String configKeyPrefix, 
+                AdviceSpecParser adviceSpecParser, PointcutSpecParser pointcutSpecParser) {
+            String advisorName = configView.getAsString(configKeyPrefix + ADVISOR_NAME_CONFIG_KEY_SUFFIX, "");
 
             try {
-                String adviceMethodExpression = configView.getAsString(configKeyPrefix + "adviceMethodExpression", "").trim();
-                String pointcutExpression = configView.getAsString(configKeyPrefix + "pointcutExpression", "").trim();
+                PointcutAdvisorSpec existingAdvisorSpec = (PointcutAdvisorSpec) advisorSpecMap.get(advisorName);
 
-                AdvisorSpec existingAdvisorSpec = advisorSpecMap.get(advisorName);
+                AdviceSpec adviceSpec = adviceSpecParser.parse(factoryContext, configKeyPrefix, 
+                        existingAdvisorSpec == null ? null : existingAdvisorSpec.getAdviceSpec());
+
+                PointcutSpec pointcutSpec = pointcutSpecParser.parse(factoryContext, configKeyPrefix, adviceSpec, existingAdvisorSpec);
+
+                // overwrite configuration properties if exists
+                advisorName = StringUtils.hasText(advisorName) 
+                        ? advisorName
+                        : existingAdvisorSpec == null ? adviceSpec.getAdviceClassName() : existingAdvisorSpec.getAdvisorName();
+
+                boolean defaultPerInstance = existingAdvisorSpec == null 
+                        ? false : existingAdvisorSpec.isPerInstance();
+                boolean perInstance = configView.getAsBoolean(configKeyPrefix + "perInstance", defaultPerInstance );
+
+                int defaultOrder = existingAdvisorSpec == null 
+                        ? Order.LOWEST_PRECEDENCE : existingAdvisorSpec.getOrder();
+                int order = configView.getAsInteger(configKeyPrefix + "order", defaultOrder );
 
                 ElementMatcher<MatchingContext> condition = AdvisorConditionParser.parseAdvisorCondition(factoryContext, configKeyPrefix);
                 if (condition == null) 
                     condition = existingAdvisorSpec != null ? existingAdvisorSpec.getCondition() : null;
 
-                // create or modify AdvisorSpec instance
-                if (existingAdvisorSpec == null) {
-                    // create new AdvisorSpec instance
-                    if (StringUtils.hasText(adviceMethodExpression) == false) {
-                        return AdvisorSpecParser.parseExprPointcutAdvisorSpec(
-                                factoryContext,
-                                condition, 
-                                configView, 
-                                configKeyPrefix,
-                                (AdvisorSpec.ExprPointcutSpec) null
-                        );
-                    } else {
-                        MethodDescription aspectJMethod = findMethod(advisorName, factoryContext, adviceMethodExpression);
-                        if (aspectJMethod == null)
-                            return null;
-
-                        TypeDescription aspectJType = aspectJMethod.getDeclaringType().asErasure();
-
-                        return AdvisorSpecParser.parseAspectJPointcutAdvisorSpec(
-                                factoryContext,
-                                aspectJType, 
-                                aspectJMethod, 
-                                condition, 
-                                configView, 
-                                configKeyPrefix,
-                                null
-                        );
-                    }
-                } else {
-                    if (existingAdvisorSpec != null && StringUtils.hasText(adviceMethodExpression)) {
-                        if (LOGGER.isWarnEnabled())
-                            LOGGER.warn("Ignored configured AdvisorSpec with adviceMethodExpression for existing AdvisorSpec. \n"
-                                    + "  AdvisorSpec: {} \n"
-                                    + "  MethodExpression: {} \n"
-                                    + "  AdvisorFactory: {} \n",
-                                    existingAdvisorSpec.getAdvisorName(),
-                                    adviceMethodExpression, 
-                                    factoryContext.getFactoryName()
-                            ); 
-
-                        return null;
-                    }
-
-                    // modify existing AdvisorSpec instance
-                    if (existingAdvisorSpec instanceof AdvisorSpec.PojoPointcutSpec) {
-                        if (StringUtils.hasLength(pointcutExpression) == false) {
-                            return AdvisorSpecParser.parsePojoPointcutAdvisorSpec(
-                                    factoryContext,
-                                    condition,
-                                    configView, configKeyPrefix, 
-                                    (AdvisorSpec.PojoPointcutSpec) existingAdvisorSpec
-                            );
-                        } else {
-                            return AdvisorSpecParser.parseExprPointcutAdvisorSpec(
-                                    factoryContext,
-                                    condition,
-                                    configView, configKeyPrefix, 
-                                    (AdvisorSpec.PojoPointcutSpec) existingAdvisorSpec
-                            );
-                        }
-                    } else if (existingAdvisorSpec instanceof AdvisorSpec.ExprPointcutSpec) {
-                        return AdvisorSpecParser.parseExprPointcutAdvisorSpec(
-                                factoryContext,
-                                condition,
-                                configView, configKeyPrefix, 
-                                (AdvisorSpec.ExprPointcutSpec) existingAdvisorSpec
-                        );
-                    } else if (existingAdvisorSpec instanceof AspectJPointcutAdvisorSpec) {
-                        AspectJPointcutAdvisorSpec advisorSpec = (AspectJPointcutAdvisorSpec) existingAdvisorSpec;
-                        return AdvisorSpecParser.parseAspectJPointcutAdvisorSpec(
-                                factoryContext,
-                                advisorSpec.getAspectJType(), 
-                                advisorSpec.getAspectJMethod(), 
-                                condition,
-                                configView, configKeyPrefix,
-                                advisorSpec
-                        );
-                    }
-                }
+                return new PointcutAdvisorSpec.Default(
+                        advisorName, condition, 
+                        adviceSpec, perInstance, order, 
+                        pointcutSpec);
+            } catch (IllegalSpecException e) {
+                return null;
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load ConfiguredAdvisorSpec. \n"
-                            + "  ConfiguredAdvisorSpec: {} \n"
+                    LOGGER.warn("Could not load configured AdvisorSpec. \n"
                             + "  configKeyPrefix: {} \n", 
-                            advisorName,
                             configKeyPrefix, 
                             t
                     );
@@ -244,74 +215,12 @@ public interface AdvisorSpecPostProcessor {
             return null;
         }
 
-        private MethodDescription findMethod(String advisorName, FactoryContext factoryContext, String adviceMethodExpression) {
-            try {
-                return ExprParser.INSTANCE.findMethod(
-                        factoryContext.getTypeWorld(), adviceMethodExpression);
-            } catch (ExprParser.ExprParseException e) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not find method with unparsable MethodExpression. \n"
-                            + "  AdvisorSpec: {} \n"
-                            + "  MethodExpression: {} \n"
-                            + "  AdvisorFactory: {} \n"
-                            + "  Syntax Error: {} \n", 
-                            advisorName, 
-                            adviceMethodExpression, 
-                            factoryContext.getFactoryName(), 
-                            e.getMessage()
-                    );
-            } catch (ExprParser.ExprLintException e) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not find method with lint MethodExpression. \n"
-                            + "  AdvisorSpec: {} \n"
-                            + "  MethodExpression: {} \n"
-                            + "  AdvisorFactory: {} \n"
-                            + "  Lint message: {} \n", 
-                            advisorName, 
-                            adviceMethodExpression, 
-                            factoryContext.getFactoryName(), 
-                            e.getMessage()
-                    );
-            } catch (ExprParser.ExprUnknownException e) {
-                if (LOGGER.isWarnEnabled()) {
-                    Throwable cause = e.getCause();
-                    LOGGER.warn("Could not find method with illegal MethodExpression. \n"
-                            + "  AdvisorSpec: {} \n"
-                            + "  MethodExpression: {} \n"
-                            + "  AdvisorFactory: {} \n"
-                            + "  Error reason: {} \n", 
-                            advisorName, 
-                            adviceMethodExpression, 
-                            factoryContext.getFactoryName(), 
-                            cause.getMessage(), 
-                            cause
-                    );
-                }
-            } catch (Exception e) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not find method with illegal MethodExpression. \n"
-                            + "  AdvisorSpec: {} \n"
-                            + "  MethodExpression: {} \n"
-                            + "  AdvisorFactory: {} \n"
-                            + "  Error reason: {} \n", 
-                            advisorName, 
-                            adviceMethodExpression, 
-                            factoryContext.getFactoryName(), 
-                            e.getMessage(), 
-                            e
-                    );
-            }
-
-            return null;
-        }
-
-
         /**
          * {@inheritDoc}
          */
         @Override
         public int getOrder() {
-            return Ordered.HIGHEST_PRECEDENCE;
+            return Order.HIGHEST_PRECEDENCE;
         }
     }
 
@@ -341,7 +250,7 @@ public interface AdvisorSpecPostProcessor {
          */
         @Override
         public int getOrder() {
-            return Ordered.LOWEST_PRECEDENCE;
+            return Order.LOWEST_PRECEDENCE;
         }
     }
 }

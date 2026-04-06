@@ -40,14 +40,10 @@ import io.gemini.aop.factory.classloader.AspectClassLoader;
 import io.gemini.aop.factory.classloader.AspectTypePool;
 import io.gemini.aop.factory.classloader.AspectTypeWorld;
 import io.gemini.aop.factory.support.AdvisorConditionParser;
-import io.gemini.aop.factory.support.AdvisorRepositoryResolver;
-import io.gemini.aop.factory.support.AdvisorSpecPostProcessor;
-import io.gemini.aop.factory.support.AdvisorSpecScanner;
 import io.gemini.aop.matcher.ElementMatcherFactory;
 import io.gemini.api.classloader.ClassLoaders;
 import io.gemini.aspectj.weaver.TypeWorld;
 import io.gemini.aspectj.weaver.TypeWorldFactory;
-import io.gemini.core.OrderComparator;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.config.ConfigView;
 import io.gemini.core.config.ConfigViews;
@@ -113,10 +109,6 @@ public class FactoryContext implements Closeable {
     private final AspectTypePool typePool;
     private final TypeWorld typeWorld;
 
-    private final List<AdvisorSpecScanner> advisorSpecScanners;
-    private final List<AdvisorSpecPostProcessor> advisorSpecPostProcessors;
-    private final List<AdvisorRepositoryResolver> advisorRepositoryResolvers;
-
     private final Map<Class<? extends Annotation>, Class<?>> conditionalAndConditionClasses;
 
     private ConcurrentMap<ClassLoader, AdvisorContext> advisorContextMap;
@@ -168,16 +160,6 @@ public class FactoryContext implements Closeable {
                         new TypeWorld.LazyFacade(
                                 new AspectTypeWorld(typePool, placeholderHelper, classLoader, typeWorldFactory) ) );
 
-        // load advisorSpec relevant interface implementors
-        this.advisorSpecScanners = objectFactory.createObjectsImplementing(AdvisorSpecScanner.class);
-        Collections.sort(advisorSpecScanners, OrderComparator.INSTANCE);
-
-        this.advisorSpecPostProcessors = objectFactory.createObjectsImplementing(AdvisorSpecPostProcessor.class);
-        Collections.sort(advisorSpecPostProcessors, OrderComparator.INSTANCE);
-
-        this.advisorRepositoryResolvers = objectFactory.createObjectsImplementing(AdvisorRepositoryResolver.class);
-        Collections.sort(advisorRepositoryResolvers, OrderComparator.INSTANCE);
-
         this.conditionalAndConditionClasses = AdvisorConditionParser.loadConditionalAndConditionClasses(classScanner, classLoader);
 
         this.advisorContextMap = new ConcurrentReferenceHashMap<>();
@@ -202,7 +184,7 @@ public class FactoryContext implements Closeable {
 
         String internalConfig = classLoader.getResource(FACTORY_INTERNAL_PROPERTIES) == null ? null : FACTORY_INTERNAL_PROPERTIES;
 
-        List<Converter> loadedConverters = objectFactory.createObjectsImplementing(Converter.class);
+        List<Converter> loadedConverters = objectFactory.createObjectsImplementing(Converter.class, true);
         List<Converter<?, ?>> converters = new ArrayList<>(loadedConverters.size());
         for (Converter<?, ?> converter : loadedConverters) 
             converters.add(converter);
@@ -379,19 +361,6 @@ public class FactoryContext implements Closeable {
 
     public TypeWorld getTypeWorld() {
         return typeWorld;
-    }
-
-
-    public List<AdvisorSpecScanner> getAdvisorSpecScanners() {
-        return Collections.unmodifiableList( advisorSpecScanners );
-    }
-
-    public List<AdvisorSpecPostProcessor> getAdvisorSpecProcessors() {
-        return Collections.unmodifiableList( advisorSpecPostProcessors );
-    }
-
-    public List<AdvisorRepositoryResolver> getAdvisorRepositoryResolvers() {
-        return Collections.unmodifiableList( advisorRepositoryResolvers );
     }
 
 

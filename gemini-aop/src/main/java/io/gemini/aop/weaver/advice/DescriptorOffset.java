@@ -15,23 +15,15 @@
  */
 package io.gemini.aop.weaver.advice;
 
-import static net.bytebuddy.matcher.ElementMatchers.isPublic;
-import static net.bytebuddy.matcher.ElementMatchers.named;
-import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import io.gemini.aop.weaver.BootstrapDispatcher;
-import io.gemini.core.bootstrap.BootstrapClassConsumer;
+import io.gemini.aop.weaver.AopWeaver;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.asm.Advice.OffsetMapping;
 import net.bytebuddy.asm.Advice.OffsetMapping.ForStackManipulation;
@@ -44,6 +36,7 @@ import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.implementation.bytecode.StackManipulation;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.implementation.bytecode.collection.ArrayFactory;
+import net.bytebuddy.implementation.bytecode.constant.NullConstant;
 import net.bytebuddy.implementation.bytecode.member.Invokedynamic;
 import net.bytebuddy.implementation.bytecode.member.MethodInvocation;
 import net.bytebuddy.utility.JavaConstant;
@@ -55,10 +48,15 @@ import net.bytebuddy.utility.JavaConstant;
 public interface DescriptorOffset {
 
     static OffsetMapping.Factory<Descriptor> createDescriptorOffset(
-            MethodDescription targetMethod, String... arguments) {
-        return ClassFileVersion.JAVA_V6.isLessThan(targetMethod.getDeclaringType().asErasure().getClassFileVersion())
-                ? new DescriptorOffset.ForDynamicInvocation(targetMethod, arguments)
-                : new DescriptorOffset.ForRegularInvocation(targetMethod, arguments);
+            MethodDescription targetMethod, Object... arguments) {
+        boolean greatThanJDK6 = ClassFileVersion.JAVA_V6.isLessThan(targetMethod.getDeclaringType().asErasure().getClassFileVersion());
+        Object[] args = new Object[arguments.length + 1];
+        System.arraycopy(arguments, 0, args, 0, arguments.length);
+        args[arguments.length] = greatThanJDK6 ? "1" : "0";
+
+        return greatThanJDK6
+                ? new DescriptorOffset.ForDynamicInvocation(targetMethod, args)
+                : new DescriptorOffset.ForRegularInvocation(targetMethod, args);
     }
 
 
@@ -69,18 +67,13 @@ public interface DescriptorOffset {
     }
 
 
-    @BootstrapClassConsumer
     abstract class AbstractBase implements OffsetMapping.Factory<Descriptor> {
 
-        protected static final TypeDescription BOOTSTRAP_DISPATCHER_TYPE = 
-                TypeDescription.ForLoadedType.of(BootstrapDispatcher.class);
-
-
         protected final MethodDescription targetMethod;
-        protected final String[] arguments;
+        protected final Object[] arguments;
 
 
-        public AbstractBase(MethodDescription targetMethod, String[] arguments) {
+        public AbstractBase(MethodDescription targetMethod, Object[] arguments) {
             this.targetMethod = targetMethod;
             this.arguments = arguments;
         }
@@ -96,7 +89,7 @@ public interface DescriptorOffset {
 
         protected List<JavaConstant> doGetMethodArgumentJavaConstants() {
             List<JavaConstant> javaConstants = new ArrayList<>(arguments.length);
-            for (String argument : arguments) {
+            for (Object argument : arguments) {
                 javaConstants.add( 
                     JavaConstant.Simple.wrap(argument) );
             }
@@ -106,7 +99,7 @@ public interface DescriptorOffset {
 
         protected List<StackManipulation> doGetMethodArgumentStackManipulations() {
             List<StackManipulation> stackManipulations = new ArrayList<>(arguments.length);
-            for (String argument : arguments) {
+            for (Object argument : arguments) {
                 stackManipulations.add( 
                     JavaConstant.Simple.wrap(argument).toStackManipulation() );
             }
@@ -116,25 +109,9 @@ public interface DescriptorOffset {
     }
 
 
-    @BootstrapClassConsumer
     class ForRegularInvocation extends AbstractBase {
 
-        private static final Generic STRING = TypeDefinition.Sort.describe(String.class);
-
-        private static final MethodDescription GET_CREATOR_METHOD = 
-                BOOTSTRAP_DISPATCHER_TYPE.getDeclaredMethods().filter( named("getCreator") ).getOnly();
-
-        private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_METHOD =
-                TypeDescription.ForLoadedType.of(BootstrapDispatcher.Creator.class).getDeclaredMethods()
-                .filter( 
-                        isPublic().and(
-                                named("createDescriptor").and(
-                                        takesArguments(
-                                                Lookup.class, Object[].class)
-                                        ) 
-                                )
-                        )
-                .getOnly();
+        private static final Generic OBJECT_TYPE = TypeDefinition.Sort.describe(Object.class);
 
 
         /**
@@ -142,7 +119,7 @@ public interface DescriptorOffset {
          * @param targetMethod
          * @param arguments
          */
-        public ForRegularInvocation(MethodDescription targetMethod, String... arguments) {
+        public ForRegularInvocation(MethodDescription targetMethod, Object... arguments) {
             super(targetMethod, arguments);
         }
 
@@ -154,11 +131,12 @@ public interface DescriptorOffset {
                 AdviceType adviceType) {
             return new ForStackManipulation(
                     new StackManipulation.Compound(
-                            MethodInvocation.invoke(GET_CREATOR_METHOD),
                             MethodInvocation.lookup(),
-                            ArrayFactory.forType(STRING).withValues(
+                            NullConstant.INSTANCE,
+                            NullConstant.INSTANCE,
+                            ArrayFactory.forType(OBJECT_TYPE).withValues(
                                     doGetMethodArgumentStackManipulations()),
-                            MethodInvocation.invoke(CREATE_DESCRIPTOR_METHOD)
+                            MethodInvocation.invoke(AopWeaver.BOOTSTRAP_DISPATCHER_CALLBACK_METHOD)
                     ),
                     targetParameter.getType(), 
                     targetParameter.getType(), 
@@ -168,23 +146,9 @@ public interface DescriptorOffset {
     }
 
 
-    @BootstrapClassConsumer
     class ForDynamicInvocation extends AbstractBase {
 
-        private static final MethodDescription.InDefinedShape CREATE_DESCRIPTOR_INDY_BSM = 
-                BOOTSTRAP_DISPATCHER_TYPE.getDeclaredMethods()
-                .filter( 
-                        isPublic().and(
-                                named("createDescriptorCallSite").and(
-                                        takesArguments(
-                                                MethodHandles.Lookup.class, String.class, MethodType.class, Object[].class)
-                                        ) 
-                                )
-                        )
-                .getOnly();
-
-
-        public ForDynamicInvocation(MethodDescription targetMethod, String... arguments) {
+        public ForDynamicInvocation(MethodDescription targetMethod, Object... arguments) {
             super(targetMethod, arguments);
         }
 
@@ -197,11 +161,11 @@ public interface DescriptorOffset {
                 AdviceType adviceType) {
             return new ForStackManipulation(
                     new Invokedynamic(
-                            CREATE_DESCRIPTOR_INDY_BSM.getName(),
+                            AopWeaver.BOOTSTRAP_DISPATCHER_CALLBACK_METHOD.getName(),
                             JavaConstant.MethodType.of(
                                     target.getType().asErasure(), 
                                     Collections.<TypeDescription>emptyList()),
-                            JavaConstant.MethodHandle.of(CREATE_DESCRIPTOR_INDY_BSM),
+                            JavaConstant.MethodHandle.of(AopWeaver.BOOTSTRAP_DISPATCHER_CALLBACK_METHOD),
                             doGetMethodArgumentJavaConstants()
                     ),
                     target.getType(), 

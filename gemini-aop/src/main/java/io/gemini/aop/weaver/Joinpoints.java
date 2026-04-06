@@ -48,7 +48,7 @@ import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
 
-interface Joinpoints {
+public interface Joinpoints {
 
     class Descriptor {
 

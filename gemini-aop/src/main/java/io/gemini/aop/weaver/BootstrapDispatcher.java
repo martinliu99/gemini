@@ -15,7 +15,6 @@
  */
 package io.gemini.aop.weaver;
 
-import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
@@ -73,53 +72,53 @@ public abstract class BootstrapDispatcher {
 
     public static final Object[] ARGUMENTS = new Object[0];
 
-    private static Creator CREATOR;
+    private static Delegator DELEGATOR;
 
-    private static ThreadLocal<Boolean> IN_DISPATCHER = new ThreadLocal<>();
+    private static ThreadLocal<Boolean> IN_DISPATCHING = new ThreadLocal<>();
 
 
     private BootstrapDispatcher() {}
 
 
     /**
-     * Initializes {@code BootstrapDispatcher#Creator} field when AOP framework launches.
+     * Initializes {@code BootstrapDispatcher#Delegator} field when AOP framework launches.
      * 
-     * @param delegate
+     * @param delegator
      */
-    public static void setCreator(Creator delegate) {
-        if (CREATOR != null) {
-            System.err.println("BootstrapDispatcher.FACTORY already initialized with " + CREATOR);
+    public static void setDelegator(Delegator delegator) {
+        if (DELEGATOR != null) {
+            System.err.println("BootstrapDispatcher.Delegator already initialized with " + DELEGATOR);
             return;
         }
 
-        if (delegate == null) {
-            throw new IllegalArgumentException("BootstrapDispatcher.Creator must not be null.");
+        if (delegator == null) {
+            throw new IllegalArgumentException("BootstrapDispatcher.Delegator must not be null.");
         }
 
-        CREATOR = delegate;
+        DELEGATOR = delegator;
     }
 
     /**
-     * Get {@code BootstrapDispatcher#Creator}.
+     * Get {@code BootstrapDispatcher#Delegator}.
      * 
      * @return
      */
-    public static Creator getCreator() {
-        return CREATOR;
+    public static Delegator getDelegator() {
+        return DELEGATOR;
     }
 
 
     /**
-     * Get INDY BSM method to get and Cache {@code Descriptor}.
+     * 
      * @param targetLookup
-     * @param bsmMethodName
-     * @param bsmMethodType
-     * @param args
+     * @param methodName
+     * @param methodType
+     * @param arguments
      * @return
      */
-    public static CallSite createDescriptorCallSite(MethodHandles.Lookup targetLookup, 
-            String bsmMethodName, MethodType bsmMethodType, Object... args) {
-        return CREATOR.createDescriptorCallSite(targetLookup, bsmMethodName, bsmMethodType, args);
+    public static Object callback(MethodHandles.Lookup targetLookup, 
+            String methodName, MethodType methodType, Object... arguments) {
+        return DELEGATOR.callback(targetLookup, methodName, methodType, arguments);
     }
 
 
@@ -128,23 +127,22 @@ public abstract class BootstrapDispatcher {
      * 
      * @return
      */
-    public static boolean isInDispatch() {
-        Boolean inDispatching = IN_DISPATCHER.get();
-        return inDispatching != null;
+    public static boolean isDispatchable() {
+        return IN_DISPATCHING.get() == null;
     }
 
     /**
      * enable dispatching.
      */
     public static void enableDispatch() {
-        IN_DISPATCHER.remove();
+        IN_DISPATCHING.remove();
     }
 
     /**
      * disable dispatch.
      */
     public static void disableDispatch() {
-        IN_DISPATCHER.set( Boolean.TRUE );
+        IN_DISPATCHING.set( Boolean.TRUE );
     }
 
 
@@ -185,29 +183,18 @@ public abstract class BootstrapDispatcher {
      *
      */
     @BootstrapClassProvider( scopeType = String.class )
-    public static interface Creator {
+    public static interface Delegator {
 
         /**
-         * Create {@link Descriptor} instance to hold joinpoint metadata.
          * 
          * @param targetLookup
-         * @param arguments
+         * @param methodName
+         * @param methodType
+         * @param args
          * @return
          */
-        Object createDescriptor(MethodHandles.Lookup targetLookup, Object... arguments);
-
-
-        /**
-         * Create INDY CallSite to create {@link Descriptor} instance to hold joinpoint metadata.
-         * 
-         * @param targetLookup
-         * @param bsmMethodName
-         * @param bsmMethodType
-         * @param arguments
-         * @return
-         */
-        CallSite createDescriptorCallSite(MethodHandles.Lookup targetLookup, 
-                String bsmMethodName, MethodType bsmMethodType, Object... arguments);
+        Object callback(MethodHandles.Lookup targetLookup, 
+                String methodName, MethodType methodType, Object... args);
 
 
         /**

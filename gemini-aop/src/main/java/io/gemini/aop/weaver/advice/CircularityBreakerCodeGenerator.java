@@ -213,6 +213,9 @@ public enum CircularityBreakerCodeGenerator {
              */
             @Override
             public void visitCode() {
+                // enter origin method body
+                super.visitCode();
+
                 MethodVisitor methodVisitor = this.getDelegate();
 
                 Label ifTrue = new Label();
@@ -243,9 +246,6 @@ public enum CircularityBreakerCodeGenerator {
                         DISABLE_DISPATCH_METHOD.getDescriptor(),
                         false
                 );
-
-                // enter origin method body
-                super.visitCode();
             }
 
             @Override
@@ -365,10 +365,12 @@ public enum CircularityBreakerCodeGenerator {
              */
             @Override
             public void visitCode() {
-                MethodVisitor methodVisitor = this.getDelegate();
+                MethodVisitor methodVisitor = this.mv;
 
                 // ignore existing method body
                 this.mv = null; 
+
+                methodVisitor.visitCode();
 
                 Label ifFalse = new Label();
                 Label tryStart = new Label();
@@ -415,8 +417,6 @@ public enum CircularityBreakerCodeGenerator {
                         )
                 )
                 .apply(methodVisitor, null);
-
-                System.out.println();
 
                 // invoke advice method via method handle
 //                MethodInvocation.invoke(GET_CREATEOR).apply(methodVisitor, null);
@@ -497,6 +497,8 @@ public enum CircularityBreakerCodeGenerator {
                 methodVisitor.visitTryCatchBlock(tryStart, tryEnd, handlerStart, null);
 
                 methodVisitor.visitMaxs(0, 0);
+
+                methodVisitor.visitEnd();
             }
 
         }

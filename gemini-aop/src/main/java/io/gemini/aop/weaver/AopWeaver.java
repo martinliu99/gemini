@@ -53,9 +53,13 @@ import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType.Builder;
+import net.bytebuddy.dynamic.Nexus;
 import net.bytebuddy.dynamic.scaffold.MethodGraph;
+import net.bytebuddy.dynamic.scaffold.TypeWriter;
 import net.bytebuddy.matcher.BooleanMatcher;
+import net.bytebuddy.utility.AsmClassReader;
 import net.bytebuddy.utility.JavaModule;
+import net.bytebuddy.utility.OpenedClassReader;
 
 @BootstrapClassConsumer
 public interface AopWeaver extends RawMatcher, Transformer, Closeable {
@@ -168,7 +172,9 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
 
             };
 
-            System.getProperties().setProperty("net.bytebuddy.nexus.disabled", "true");
+            System.getProperties().setProperty(OpenedClassReader.PROCESSOR_PROPERTY, 
+                    AsmClassReader.Factory.Default.CLASS_FILE_API_FIRST.toString());
+            System.getProperties().setProperty(Nexus.PROPERTY, Boolean.TRUE.toString());
 
             // set bytebuddy setting to dump byte code
             if (aopContext.isDumpByteCode()) {
@@ -176,8 +182,9 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
                 File path = new File(byteCodeDumpPath + File.separator + "byte-buddy");
                 path.mkdirs();
 
-                System.getProperties().setProperty("net.bytebuddy.dump", path.getAbsolutePath());
+                System.getProperties().setProperty(TypeWriter.DUMP_PROPERTY, path.getAbsolutePath());
             }
+
 
             WeaverContext weaverContext = aopWeaver.getWeaverContext();
             new AgentBuilder.Default()

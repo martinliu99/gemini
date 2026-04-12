@@ -32,9 +32,7 @@ import io.gemini.aspectj.weaver.PointcutParameter.NamedPointcutParameter;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.asm.AsmVisitorWrapper;
 import net.bytebuddy.description.field.FieldDescription;
-import net.bytebuddy.description.field.FieldList;
 import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
@@ -50,12 +48,11 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.implementation.bytecode.assign.Assigner.Typing;
 import net.bytebuddy.implementation.bytecode.constant.IntegerConstant;
 import net.bytebuddy.implementation.bytecode.member.MethodInvocation;
-import net.bytebuddy.jar.asm.ClassVisitor;
+import net.bytebuddy.jar.asm.ClassReader;
 import net.bytebuddy.jar.asm.ClassWriter;
 import net.bytebuddy.jar.asm.Label;
 import net.bytebuddy.jar.asm.MethodVisitor;
 import net.bytebuddy.jar.asm.Opcodes;
-import net.bytebuddy.pool.TypePool;
 
 enum AdviceClassGenerator {
 
@@ -125,21 +122,10 @@ enum AdviceClassGenerator {
                 .name(adviceClassName)
                 .modifiers(adviceType.getModifiers() | Opcodes.ACC_SYNTHETIC)
                 .implement(implementTypeDefinitions)
-                .visit( new AsmVisitorWrapper.AbstractBase() {
-                    @Override
-                    public int mergeWriter(int flags) {
-                        // auto-calculate stack frame map flag if needed
-                        return autoComputeAsm ? flags | ClassWriter.COMPUTE_FRAMES : flags;
-                    }
-
-                    @Override
-                    public ClassVisitor wrap(TypeDescription instrumentedType, ClassVisitor classVisitor,
-                            net.bytebuddy.implementation.Implementation.Context implementationContext, TypePool typePool,
-                            FieldList<FieldDescription.InDefinedShape> fields,
-                            MethodList<?> methods, int writerFlags, int readerFlags) {
-                        return classVisitor;
-                    }
-                } )
+                .visit( new AsmVisitorWrapper.ForDeclaredMethods()
+                        .readerFlags(ClassReader.EXPAND_FRAMES)
+                        .writerFlags(autoComputeAsm ? ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS : ClassWriter.COMPUTE_MAXS)
+                )
                 ;
 
 

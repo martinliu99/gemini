@@ -47,12 +47,14 @@ import net.bytebuddy.utility.JavaConstant;
  */
 public interface DescriptorOffset {
 
-    static OffsetMapping.Factory<Descriptor> createDescriptorOffset(
-            MethodDescription targetMethod, Object... arguments) {
+    int CALLSITE_DESCRIPTOR_FLAG = 1;
+
+
+    static OffsetMapping.Factory<Descriptor> create(MethodDescription targetMethod, Object... arguments) {
         boolean greatThanJDK6 = ClassFileVersion.JAVA_V6.isLessThan(targetMethod.getDeclaringType().asErasure().getClassFileVersion());
         Object[] args = new Object[arguments.length + 1];
         System.arraycopy(arguments, 0, args, 0, arguments.length);
-        args[arguments.length] = greatThanJDK6 ? "1" : "0";
+        args[arguments.length] = greatThanJDK6 ? CALLSITE_DESCRIPTOR_FLAG : 0;
 
         return greatThanJDK6
                 ? new DescriptorOffset.ForDynamicInvocation(targetMethod, args)
@@ -68,6 +70,9 @@ public interface DescriptorOffset {
 
 
     abstract class AbstractBase implements OffsetMapping.Factory<Descriptor> {
+
+        protected static final Generic OBJECT_TYPE = TypeDefinition.Sort.describe(Object.class);
+
 
         protected final MethodDescription targetMethod;
         protected final Object[] arguments;
@@ -91,7 +96,7 @@ public interface DescriptorOffset {
             List<JavaConstant> javaConstants = new ArrayList<>(arguments.length);
             for (Object argument : arguments) {
                 javaConstants.add( 
-                    JavaConstant.Simple.wrap(argument) );
+                        JavaConstant.Simple.wrap(argument) );
             }
 
             return javaConstants;
@@ -100,8 +105,21 @@ public interface DescriptorOffset {
         protected List<StackManipulation> doGetMethodArgumentStackManipulations() {
             List<StackManipulation> stackManipulations = new ArrayList<>(arguments.length);
             for (Object argument : arguments) {
-                stackManipulations.add( 
-                    JavaConstant.Simple.wrap(argument).toStackManipulation() );
+                StackManipulation stackManipulation = JavaConstant.Simple.wrap(argument).toStackManipulation();
+                if (argument == null) {
+                    stackManipulations.add( stackManipulation );
+                    continue;
+                }
+
+                TypeDescription argumentType = TypeDescription.ForLoadedType.of( argument.getClass() );
+                if (argumentType.isPrimitiveWrapper()) {
+                    stackManipulation = new StackManipulation.Compound(
+                            stackManipulation,
+                            Assigner.DEFAULT.assign(argumentType.asUnboxed().asGenericType(), argumentType.asGenericType(), Assigner.Typing.DYNAMIC)
+                    );
+                }
+
+                stackManipulations.add( stackManipulation );
             }
 
             return stackManipulations;
@@ -110,9 +128,6 @@ public interface DescriptorOffset {
 
 
     class ForRegularInvocation extends AbstractBase {
-
-        private static final Generic OBJECT_TYPE = TypeDefinition.Sort.describe(Object.class);
-
 
         /**
          * 

@@ -88,8 +88,14 @@ public interface AdviceCreator {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not load Advice class via '{}'. \n"
+                                + "  AdvisorSpec: {} \n"
+                                + "  AdviceClass: {} \n"
+                                + "  ClassLoader: {} \n"
                                 + "  Error reason: {} \n", 
                                 adviceCreator, 
+                                advisorSpec.getAdvisorName(),
+                                advisorSpec.getAdviceSpec().getAdviceClassName(),
+                                advisorContext.getTargetClassLoaderName(), 
                                 t.getMessage(), 
                                 t
                         );
@@ -115,8 +121,14 @@ public interface AdviceCreator {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not create Advice via '{}'. \n"
+                                + "  AdvisorSpec: {} \n"
+                                + "  AdviceClass: {} \n"
+                                + "  ClassLoader: {} \n"
                                 + "  Error reason: {} \n", 
                                 adviceCreator, 
+                                advisorSpec.getAdvisorName(),
+                                adviceClass.getName(),
+                                advisorContext.getTargetClassLoaderName(), 
                                 t.getMessage(), 
                                 t
                         );
@@ -151,19 +163,20 @@ public interface AdviceCreator {
 
             try {
                 return doLoadAdviceClass(advisorContext, advisorSpec, (A) adviceSpec);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load AdviceClass. \n"
+                    LOGGER.warn("Could not load Advice class. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  AdviceClass: {} \n"
-                            + "  ClassLoader: {} \n",
+                            + "  ClassLoader: {} \n"
+                            + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
-                            adviceSpec.getDeclaringType().getTypeName(), 
+                            adviceSpec.getAdviceClassName(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -239,19 +252,20 @@ public interface AdviceCreator {
                 ObjectFactory objectFactory = advisorContext.getObjectFactory();
 
                 return objectFactory.createObject(adviceClass);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with uninstantiable AdviceClass. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  AdviceClass: {} \n"
-                            + "  ClassLoader: {} \n",
+                            + "  ClassLoader: {} \n"
+                            + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
-                            adviceClass, 
+                            adviceClass.getName(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -312,7 +326,9 @@ public interface AdviceCreator {
             try {
                 try {
                     return (Class<? extends Advice>) aspectClassLoader.loadClass(adviceSpec.getAdviceClassName());
-                } catch (Throwable t) {}
+                } catch (Throwable t) {
+                    Throwables.throwIfRequired(t);
+                }
 
                 Class<?> aspectJClass = this.loadClass(advisorContext, advisorSpec, 
                         adviceSpec, adviceSpec.getDeclaringType().getTypeName());
@@ -329,19 +345,20 @@ public interface AdviceCreator {
                     );
 
                 return adviceClass;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not generate adapter class for AspectJ advice method. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  AdapterClass: {} \n"
-                            + "  ClassLoader: {} \n",
+                            + "  ClassLoader: {} \n"
+                            + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             adviceSpec.getDeclaringType(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -363,19 +380,20 @@ public interface AdviceCreator {
                 // try to instantiate advice object
                 return (Advice) adviceConstructor.newInstance(
                         advisorContext.getObjectFactory().createObject(aspectJClass) );
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not instantiate adapter class for AspectJ advice method. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  AdapterClass: {} \n"
-                            + "  ClassLoader: {} \n",
+                            + "  ClassLoader: {} \n"
+                            + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             adviceSpec.getAdviceClassName(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -423,19 +441,20 @@ public interface AdviceCreator {
                     return new BeforeAdviceAdapter(adviceSpec, aspectJObject);
                 else
                     return new AfterAdviceAdapter(adviceSpec, aspectJObject);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not instantiate adapter class for AspectJ advice method. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  AdapterClass: {} \n"
-                            + "  ClassLoader: {} \n",
+                            + "  ClassLoader: {} \n"
+                            + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             adviceSpec.getAdviceClassName(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }

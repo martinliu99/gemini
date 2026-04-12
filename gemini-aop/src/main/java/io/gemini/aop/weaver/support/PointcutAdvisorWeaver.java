@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +89,6 @@ public interface PointcutAdvisorWeaver {
             List<? extends PointcutAdvisorWeaver> advisorWeavers = aopWeaver.getWeaverContext().getAopContext().getObjectFactory()
                     .createObjectsImplementing(PointcutAdvisorWeaver.class, 
                             true, 
-                            "1", "",
                             "aopWeaver", aopWeaver, 
                             "loadedType", loadedType,
                             "targetMethod", targetMethod, 
@@ -112,12 +110,15 @@ public interface PointcutAdvisorWeaver {
                     Builder<?> returning = advisorWeaver.weave(builder, arguments);
                     if (returning != null)
                         builder = returning;
-                } catch (Exception e) {
+                } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled()) 
-                        LOGGER.warn("Could not weave method with {}. \n"
-                                + "  TargetMethod: {}", 
+                        LOGGER.warn("Could not weave method via '{}'. \n"
+                                + "  TargetMethod: {}"
+                                + "  Error reason: {} \n", 
                                 advisorWeaver,
-                                MethodUtils.getMethodSignature(targetMethod)
+                                MethodUtils.getMethodSignature(targetMethod),
+                                t.getMessage(),
+                                t
                         );
                 }
             }
@@ -134,7 +135,7 @@ public interface PointcutAdvisorWeaver {
         private final MethodDescription targetMethod;
         private final String targetMethodSignature;
 
-        private final List<? extends PointcutAdvisor> advisors;
+        private final List<? extends PointcutAdvisor> pointcutAdvisors;
 
 
         public AbstractBase(AopWeaver aopWeaver, boolean loadedType, MethodDescription targetMethod, 
@@ -145,8 +146,8 @@ public interface PointcutAdvisorWeaver {
             this.targetMethod = targetMethod;
             this.targetMethodSignature = targetMethod.toGenericString();
 
-            this.advisors = resolveAdvisors(advisors);
-            if (CollectionUtils.isEmpty(this.advisors))
+            this.pointcutAdvisors = resolveAdvisors(advisors);
+            if (CollectionUtils.isEmpty(this.pointcutAdvisors))
                 throw new IgnoredWeaverException();
         }
 
@@ -188,8 +189,8 @@ public interface PointcutAdvisorWeaver {
             return targetMethodSignature;
         }
 
-        protected List<? extends PointcutAdvisor> getAdvisors() {
-            return advisors.stream().filter( e -> e.getAdviceClass() != null).collect( Collectors.toList() );
+        protected List<? extends PointcutAdvisor> getPointcutAdvisors() {
+            return pointcutAdvisors;
         }
 
 
@@ -200,9 +201,16 @@ public interface PointcutAdvisorWeaver {
         public Builder<?> weave(Builder<?> builder, Object... arguments) {
             try {
                 return doWeave(builder, arguments);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled()) 
-                        LOGGER.warn("111111", t);
+                    LOGGER.warn("Could not weave method via '{}'. \n"
+                            + "  TargetMethod: {}"
+                            + "  Error reason: {} \n", 
+                            this,
+                            MethodUtils.getMethodSignature(targetMethod),
+                            e.getMessage(),
+                            e
+                    );
 
                 return builder;
             }
@@ -306,8 +314,8 @@ public interface PointcutAdvisorWeaver {
             MethodDescription targetMethod = getTargetMethod();
 
             WithCustomMapping withCustomMapping = Advice.withCustomMapping().bind( 
-                    DescriptorOffset.createDescriptorOffset(
-                            targetMethod, Integer.valueOf(callbackSlot)) );
+                    DescriptorOffset.create(
+                            targetMethod, Integer.valueOf(callbackSlot) ) );
             Advice frameworkAdvice = toAdvice(
                     withCustomMapping, 
                     getWeaverContext().getFrameworkAdviceClass(targetMethod));
@@ -345,8 +353,8 @@ public interface PointcutAdvisorWeaver {
         }
 
         private boolean isBreakCircularity() {
-            for (Advisor advisor : getAdvisors()) {
-                if (((PointcutAdvisor) advisor).isBreakCircularity() == true)
+            for (PointcutAdvisor pointcutAdvisor : getPointcutAdvisors()) {
+                if (pointcutAdvisor.isBreakCircularity() == true)
                     return true;
             }
             return false;
@@ -363,7 +371,7 @@ public interface PointcutAdvisorWeaver {
                 return null;
 
             Joinpoints.Descriptor descriptor = doCreateJoinpointDescriptor(targetLookup);
-            boolean isCallSite = "1".equals( (String) arguments[1] );
+            boolean isCallSite = arguments[1].equals(DescriptorOffset.CALLSITE_DESCRIPTOR_FLAG);
             if (isCallSite == false)
                 return descriptor;
 
@@ -384,7 +392,7 @@ public interface PointcutAdvisorWeaver {
             try {
                 ThreadContext.setContextClassLoader(targetClassLoader);  // set targetClassLoader
 
-                List<? extends Advisor> advisors = this.getAdvisors();
+                List<? extends Advisor> advisors = this.getPointcutAdvisors();
 
                 if (CollectionUtils.isEmpty(advisors))
                     return null;
@@ -399,9 +407,12 @@ public interface PointcutAdvisorWeaver {
             } catch (Throwable t) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not create joinpoint descriptor for type '{}' loaded by ClassLoader '{}'. \n"
-                            + "  Method: {}", 
+                            + "  TargetMethod: {}"
+                            + "  Error reason: {} \n", 
                             targetMethod.getDeclaringType().getTypeName(), targetClassLoader, 
-                            accessibleName, t
+                            accessibleName, 
+                            t.getMessage(),
+                            t
                     );
 
                 Throwables.throwIfRequired(t);
@@ -458,7 +469,7 @@ public interface PointcutAdvisorWeaver {
             );
 
             MethodDescription targetMethod = getTargetMethod();
-            List<? extends PointcutAdvisor> advisors = this.getAdvisors();
+            List<? extends PointcutAdvisor> advisors = this.getPointcutAdvisors();
             List<MethodVisitorWrapper> methodVisitorWrappers = new ArrayList<>(advisors.size() + 1);
 
             builder = builder.visit(
@@ -545,7 +556,7 @@ public interface PointcutAdvisorWeaver {
 
         private MethodHandle getMethodHandle(String adviceTypeName, String adviceMethodName, MethodType adviceMethodType) {
             Class<?> byteBuddyAdvice = null;
-            for (PointcutAdvisor advisor : getAdvisors()) {
+            for (PointcutAdvisor advisor : getPointcutAdvisors()) {
                 if ( (byteBuddyAdvice = advisor.getAdviceClass()).getName().equals(adviceTypeName))
                     break;
             }
@@ -553,14 +564,19 @@ public interface PointcutAdvisorWeaver {
             try {
                 if (byteBuddyAdvice != null)
                     return MethodHandles.lookup().findStatic(byteBuddyAdvice, adviceMethodName, adviceMethodType);
-            } catch (NoSuchMethodException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            } catch (Exception e) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not find static advice method. \n"
+                            + "  TargetMethod: {}"
+                            + "  AdviceMethod: {} {}"
+                            + "  Error reason: {} \n", 
+                            getTargetMethodSignature(),
+                            adviceMethodName, adviceMethodType,
+                            e.getMessage(),
+                            e
+                    );
             }
-            
+
             return null;
         }
 

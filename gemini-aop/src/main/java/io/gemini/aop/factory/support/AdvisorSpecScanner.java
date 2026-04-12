@@ -40,6 +40,7 @@ import io.gemini.api.aop.annotation.EnablePerInstance;
 import io.gemini.core.object.ClassScanner;
 import io.gemini.core.util.Assert;
 import io.gemini.core.util.CollectionUtils;
+import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
 import io.github.classgraph.ClassInfo;
@@ -101,7 +102,8 @@ public interface AdvisorSpecScanner {
                         LOGGER.warn("Could not scan AdvisorSpec via '{}'. \n"
                                 + "  Error reason: {} \n", 
                                 advisorSpecScanner, 
-                                t.getMessage(), t
+                                t.getMessage(), 
+                                t
                         );
 
                     Throwables.throwIfRequired(t);
@@ -236,11 +238,14 @@ public interface AdvisorSpecScanner {
                 }
 
                 return advisorSpecs;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not scan AdvisorSpec via '{}'.", resolverName, t);
-
-                Throwables.throwIfRequired(t);
+                    LOGGER.warn("Could not scan AdvisorSpec via '{}'."
+                            + "  Error reason: {} \n", 
+                            resolverName, 
+                            e.getMessage(),
+                            e
+                    );
             }
 
             return Collections.emptyList();
@@ -288,11 +293,15 @@ public interface AdvisorSpecScanner {
                         pointcutSpec);
             } catch (IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load AdvisorSpec '{}'. \n", classInfo.getName(), t);
-
-                Throwables.throwIfRequired(t);
+                    LOGGER.warn("Could not parse AdvisorSpec. \n"
+                            + "  DeclaringType: {} \n"
+                            + "  Error reason: {} \n", 
+                            classInfo.getName(), 
+                            e.getMessage(),
+                            e
+                    );
                 return null;
             }
         }
@@ -507,18 +516,32 @@ public interface AdvisorSpecScanner {
 
                         pointcutAdvisorSpecs.add(pointcutAdvisorSpec);
                     } catch (Exception e) {
-                        LOGGER.error(adviceClassName, e);
+                        if (LOGGER.isWarnEnabled())
+                            LOGGER.warn("Could not parse AdvisorSpec. \n"
+                                    + "  DeclaringType: {} \n"
+                                    + "  AdviceMethod: {} \n" 
+                                    + "  Error reason: {} \n", 
+                                    adviceSpec.getDeclaringType().getTypeName(), 
+                                    MethodUtils.getMethodSignature(adviceSpec.getAdviceMethod()),
+                                    e.getMessage(),
+                                    e
+                            );
                     }
                 }
 
                 return pointcutAdvisorSpecs;
             } catch (IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load AdvisorSpec '{}'. \n", adviceClassName, t);
+                    LOGGER.warn("Could not parse AdvisorSpec. \n"
+                            + "  DeclaringType: {} \n"
+                            + "  Error reason: {} \n", 
+                            adviceClassName, 
+                            e.getMessage(),
+                            e
+                    );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }

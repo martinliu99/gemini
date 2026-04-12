@@ -74,7 +74,7 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
 
                 LAUNCHED = true;
             } catch (Exception e) {
-                LOGGER.warn("Could not launch Gemini Activator.", e);
+                LOGGER.warn("Could not activate AopTestActivator.", e);
             }
         }
     }

@@ -87,8 +87,10 @@ public interface PointcutSpecParser {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not parse PointcutSpec via '{}'. \n"
+                                + "  DeclaringType: {} \n"
                                 + "  Error reason: {} \n", 
                                 pointcutSpecParser, 
+                                adviceSpec.getDeclaringType().getTypeName(),
                                 t.getMessage(), 
                                 t
                         );
@@ -115,8 +117,10 @@ public interface PointcutSpecParser {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not parse PointcutSpec via '{}'. \n"
+                                + "  ConfigKeyPrefix: {} \n"
                                 + "  Error reason: {} \n", 
                                 pointcutSpecParser, 
+                                configKeyPrefix,
                                 t.getMessage(), 
                                 t
                         );
@@ -152,17 +156,16 @@ public interface PointcutSpecParser {
                 return doParse(factoryContext, (A) adviceSpec);
             } catch(IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
-                LOGGER.warn("Could not parse PointcutSpec '{}'. \n"
+            } catch (Exception e) {
+                LOGGER.warn("Could not parse '{}'. \n"
                         + "  DeclaringType: {} \n"
                         + "  Error reason: {} \n", 
                         doGetPointcutSpecClass().getSimpleName(), 
                         adviceSpec.getDeclaringType().getTypeName(), 
-                        t.getMessage(),
-                        t
+                        e.getMessage(),
+                        e
                 );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -192,17 +195,19 @@ public interface PointcutSpecParser {
                     return null;
 
                 return doParse(factoryContext, configKeyPrefix, (A) adviceSpec, existingAdvisorSpec);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not parse PointcutSpec '{}'. \n"
+                    LOGGER.warn("Could not parse '{}'. \n"
+                            + "  ConfigKeyPrefix: {} \n"
                             + "  DeclaringType: {} \n"
                             + "  Error reason: {} \n", 
                             doGetPointcutSpecClass().getSimpleName(), 
+                            configKeyPrefix,
                             adviceSpec.getDeclaringType().getTypeName(), 
-                            t.getMessage(), t
+                            e.getMessage(), 
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -391,13 +396,11 @@ public interface PointcutSpecParser {
             ConfigView configView = factoryContext.getConfigView();
 
             // overwrite configuration properties if exists
-            String pointcutExpression = configView.getAsString(
-                    configKeyPrefix + "pointcutExpression", "");
+            String pointcutExpression = configView.getAsString(configKeyPrefix + "pointcutExpression", "");
             if (StringUtils.hasText(pointcutExpression) == false)
                 return existingAdvisorSpec.getPointcutSpec();
 
-            boolean breakCircularity = configView.getAsBoolean(
-                    configKeyPrefix + "breakCircularity", false);
+            boolean breakCircularity = configView.getAsBoolean(configKeyPrefix + "breakCircularity", false);
 
             return new ExprPointcutSpec.Default(
                     adviceSpec, 

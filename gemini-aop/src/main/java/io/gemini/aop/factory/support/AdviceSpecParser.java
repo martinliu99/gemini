@@ -117,8 +117,10 @@ public interface AdviceSpecParser {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not parse AdviceSpec via '{}'. \n"
+                                + "  DeclaringType: {} \n"
                                 + "  Error reason: {} \n", 
                                 adviceSpecParser, 
+                                declaringType.getTypeName(),
                                 t.getMessage(), 
                                 t
                         );
@@ -143,8 +145,10 @@ public interface AdviceSpecParser {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not parse AdviceSpec via '{}'. \n"
+                                + "  ConfigKeyPrefix: {} \n"
                                 + "  Error reason: {} \n", 
                                 adviceSpecParser, 
+                                configKeyPrefix,
                                 t.getMessage(), 
                                 t
                         );
@@ -178,18 +182,17 @@ public interface AdviceSpecParser {
                 return doParse(factoryContext, declaringType);
             } catch (IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not parse AdviceSpec '{}'. \n"
+                    LOGGER.warn("Could not parse '{}'. \n"
                             + "  DeclaringType: {} \n"
                             + "  Error reason: {} \n", 
                             doGetAdviceSpecClass().getSimpleName(), 
                             declaringType.getTypeName(), 
-                            t.getMessage(), 
-                            t
+                            e.getMessage(), 
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -258,18 +261,17 @@ public interface AdviceSpecParser {
                 return (A) doParse(factoryContext, configKeyPrefix, (A) existingAdviceSpec);
             } catch (IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not parse AdviceSpec '{}'. \n"
+                    LOGGER.warn("Could not parse '{}'. \n"
                             + "  ConfigKeyPrefix: {} \n"
                             + "  Error reason: {} \n", 
                             doGetAdviceSpecClass().getSimpleName(), 
                             configKeyPrefix, 
-                            t.getMessage(), 
-                            t
+                            e.getMessage(), 
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -511,17 +513,19 @@ public interface AdviceSpecParser {
                 );
             } catch (IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not load AdviceSpec. \n"
+                    LOGGER.warn("Could not parse '{}'. \n"
                             + "  DeclaringType: {} \n"
-                            + "  AdviceMethod: {} \n",
+                            + "  AdviceMethod: {} \n"
+                            + "  Error reason: {} \n", 
+                            doGetAdviceSpecClass().getSimpleName(),
                             declaringType.getTypeName(), 
                             MethodUtils.getMethodSignature(adviceMethod),
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }
@@ -698,11 +702,13 @@ public interface AdviceSpecParser {
                                 + "  ConfigKeyPrefix: {} \n"
                                 + "  DeclaringType: {} \n"
                                 + "  AdviceMethod: {} \n"
-                                + "    {}: {} \n",
+                                + "    {}: {} \n"
+                                + "  Error reason: {} \n", 
                                 configKeyPrefix,
                                 declaringType.getTypeName(), 
                                 MethodUtils.getMethodSignature(adviceMethod),
-                                adviceKindKey, adviceKindValue
+                                adviceKindKey, adviceKindValue,
+                                e.getMessage()
                         );
 
                     throw new IllegalSpecException();

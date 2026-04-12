@@ -25,6 +25,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Set;
 
 import io.gemini.aop.factory.FactoryContext;
@@ -46,6 +50,8 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 public abstract class AdvisorConditionParser {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AdvisorConditionParser.class);
 
     private static final String CONDITIONAL_CLASSNAME_KEY_SUFFIX = "conditionalClassName";
 
@@ -69,6 +75,10 @@ public abstract class AdvisorConditionParser {
                 Class<? extends Annotation> annotationClass = (Class<? extends Annotation>) classLoader.loadClass(annotationClassName);
                 conditionalClasses.add(annotationClass);
             } catch (Throwable t) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load conditional annotation class '{}', error reason: {}", 
+                            conditionalClasses, t.getMessage() );
+
                 Throwables.throwIfRequired(t);
             }
         }
@@ -83,6 +93,10 @@ public abstract class AdvisorConditionParser {
 
                 conditionalAndConditions.put(conditionalClass, conditionClass);
             } catch (Throwable t) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Could not load condition class decalred by '{}', error reason: {}", 
+                            conditionalClasses, t.getMessage() );
+
                 Throwables.throwIfRequired(t);
             }
         }

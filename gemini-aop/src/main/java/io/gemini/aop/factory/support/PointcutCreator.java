@@ -177,7 +177,7 @@ public interface PointcutCreator {
                     return null;
             } catch (IllegalSpecException e) {
                 throw e;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with illegal Pointcut. \n"
                             + "  AdvisorSpec: {} \n"
@@ -185,11 +185,9 @@ public interface PointcutCreator {
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t.getMessage(), 
-                            t
+                            e.getMessage(), 
+                            e
                     );
-
-                Throwables.throwIfRequired(t);
             }
 
             return pointcut;
@@ -315,8 +313,7 @@ public interface PointcutCreator {
                 );
 
 
-            return new Pointcut.Default(
-                    pointcut.getTypeMatcher(), methodMatcher);
+            return new Pointcut.Default(pointcut.getTypeMatcher(), methodMatcher);
         }
     }
 }

@@ -127,7 +127,7 @@ public interface AdvisorCreator {
                 return doCreateAdvisor(advisorContext, (A) advisorSpec);
             } catch (IllegalSpecException e) {
                 return new Advisor.IllegalAdvisor(advisorSpec);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not create Advisor. \n"
                             + "  AdvisorSpec: {} \n"
@@ -135,10 +135,10 @@ public interface AdvisorCreator {
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
                             advisorContext.getTargetClassLoaderName(), 
-                            t.getMessage(), 
-                            t );
+                            e.getMessage(), 
+                            e 
+                    );
 
-                Throwables.throwIfRequired(t);
                 return null;
             }
         }

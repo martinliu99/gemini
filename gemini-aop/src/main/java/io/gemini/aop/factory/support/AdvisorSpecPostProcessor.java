@@ -201,15 +201,17 @@ public interface AdvisorSpecPostProcessor {
                         pointcutSpec);
             } catch (IllegalSpecException e) {
                 return null;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not load configured AdvisorSpec. \n"
-                            + "  configKeyPrefix: {} \n", 
+                            + "  configKeyPrefix: {} \n"
+                            + "  Error reason: {} \n", 
                             configKeyPrefix, 
-                            t
+                            e.getMessage(),
+                            e
                     );
 
-                Throwables.throwIfRequired(t);
+                Throwables.throwIfRequired(e);
             }
 
             return null;

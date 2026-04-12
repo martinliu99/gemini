@@ -37,9 +37,6 @@ public class AopActivator {
 
 //    private boolean launched = false;
 
-    /**
-     * 
-     */
     private static final Class<AopActivator> ACTIVATOR_CLASS = AopActivator.class;
 
 
@@ -77,13 +74,13 @@ public class AopActivator {
     }
 
     private static void wrap(Callable<Void> callable) {
-        System.out.println("Activating Gemini at " + currentDate() 
+        System.out.println("Activating AopActivator at " + currentDate() 
             + "(launched JVM at " + formatDate(ManagementFactory.getRuntimeMXBean().getStartTime()) + ")");
 
         try {
             callable.call();
         } catch (Throwable t) {
-            System.out.println("Could not activate Gemini at " + currentDate() + ". \n"
+            System.out.println("Could not activate AopActivator at " + currentDate() + ". \n"
                     + "  Error reason: " + t.getMessage());
             t.printStackTrace();
         }

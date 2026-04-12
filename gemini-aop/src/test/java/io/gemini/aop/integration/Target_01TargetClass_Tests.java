@@ -19,8 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -41,8 +39,10 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
-import io.gemini.api.aop.annotation.Advisor;
 import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
+import io.gemini.api.aop.annotation.EnableCircularityBreaker;
+import net.bytebuddy.asm.Advice;
+import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 /**
  *
@@ -57,11 +57,8 @@ public class Target_01TargetClass_Tests {
 
     @Test
     public void testJdkClass1() {
-        Object object = new Object();
+        String object = new String();
         object.toString();
-        List<String> list = new ArrayList<>();
-        list.add("");
-        list.add("");
 
         AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(JdkClass1_Aspect.JDKCLASS_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
@@ -70,7 +67,7 @@ public class Target_01TargetClass_Tests {
         assertThat(beforeAdviceMethodInvoker.getTargetLookup()).isNotNull();
         assertThat(beforeAdviceMethodInvoker.getTargetLookup().lookupModes() & Lookup.PRIVATE).isNotEqualTo(0);
 
-        assertThat(beforeAdviceMethodInvoker.getTargetClass()).isEqualTo(Object.class);
+        assertThat(beforeAdviceMethodInvoker.getTargetClass()).isEqualTo(String.class);
         assertThat(beforeAdviceMethodInvoker.getStaticPart()).isEqualTo(JdkClass1_Aspect.JDKCLASS_METHOD);
     }
 
@@ -78,7 +75,7 @@ public class Target_01TargetClass_Tests {
     public static class JdkClass1_Aspect {
 
         private static final String JDKCLASS_POINTCUT = 
-                "execution(public java.lang.String java.lang.Object.toString())";
+                "execution(public java.lang.String java.lang.String.toString())";
 
         private static final String JDKCLASS_BEFORE_ADVICE = JdkClass1_Aspect.class.getName() + ".jdkClass_before";
 
@@ -87,7 +84,7 @@ public class Target_01TargetClass_Tests {
         static {
             Method method = null;
             try {
-                method = Object.class.getDeclaredMethod("toString");
+                method = String.class.getDeclaredMethod("toString");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -96,9 +93,9 @@ public class Target_01TargetClass_Tests {
 
 
         @SuppressWarnings("rawtypes")
-        @Before(JDKCLASS_POINTCUT)
-        @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
         @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+        @EnableCircularityBreaker
+        @Before(JDKCLASS_POINTCUT)
         public void jdkClass_before(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(JDKCLASS_BEFORE_ADVICE, 
                     new AdviceMethod()
@@ -109,6 +106,26 @@ public class Target_01TargetClass_Tests {
         }
     }
 
+    @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+//    @ExprPointcut(pointcutExpression = JdkClass1_Aspect.JDKCLASS_POINTCUT)
+    @EnableCircularityBreaker
+    public static class TestAdvice1 {
+
+        @Advice.OnMethodEnter(inline = false, prependLineNumber = true)
+        public static void beforeInstanceMethod(
+                @Advice.This Object targetObject,
+                @Advice.AllArguments(readOnly = true, typing = Assigner.Typing.DYNAMIC) Object[] arguments
+        ) throws Throwable {
+//            System.out.println("before InstanceMethod: ");
+        }
+
+
+        @Advice.OnMethodExit(inline = false)
+        public static void afterInstanceMethod(
+                ) throws Throwable {
+//            System.out.println("after InstanceMethod");
+        }
+    }
 
     @Test
     public void testJdkClass2() {
@@ -148,9 +165,8 @@ public class Target_01TargetClass_Tests {
 
 
         @SuppressWarnings("rawtypes")
-        @Before(JDKCLASS_POINTCUT)
-        @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
         @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+        @Before(JDKCLASS_POINTCUT)
         public void jdkClass_before(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(JDKCLASS_BEFORE_ADVICE, 
                     new AdviceMethod()
@@ -160,6 +176,56 @@ public class Target_01TargetClass_Tests {
                         .withStaticPart(joinpoint.getStaticPart()) );
         }
     }
+
+//    @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
+//    @ExprPointcut(pointcutExpression = JdkClass2_Aspect.JDKCLASS_POINTCUT)
+    public static class TestAdvice {
+
+        private static final String JDKCLASS_BEFORE_ADVICE = TestAdvice.class.getName() + ".jdkClass_before";
+
+        @Advice.OnMethodEnter(inline = false, prependLineNumber = true)
+        public static void beforeInstanceMethod(
+                @Advice.This Object targetObject
+//                @Advice.AllArguments(readOnly = true, typing = Assigner.Typing.DYNAMIC) Object[] arguments
+        ) throws Throwable {
+            System.out.println("before InstanceMethod: " + targetObject);
+            ExecutionMemento.putAdviceMethodInvoker(JDKCLASS_BEFORE_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        );
+        }
+
+
+        @Advice.OnMethodExit(inline = false)
+        public static void afterInstanceMethod(
+                ) throws Throwable {
+            System.out.println("after InstanceMethod");
+            ExecutionMemento.putAdviceMethodInvoker(JDKCLASS_BEFORE_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        );
+        }
+    }
+
+//    @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
+//    @ExprPointcut(pointcutExpression = JdkClass2_Aspect.JDKCLASS_POINTCUT)
+//    public static class TestAdvice2 {
+//
+//        @Advice.OnMethodEnter(inline = false, prependLineNumber = true)
+//        public static void beforeInstanceMethod(
+//                @Advice.This Object targetObject
+////                @Advice.AllArguments(readOnly = true, typing = Assigner.Typing.DYNAMIC) Object[] arguments
+//        ) throws Throwable {
+//            System.out.println("before InstanceMethod2: " + targetObject);
+//        }
+//
+//
+//        @Advice.OnMethodExit(inline = false)
+//        public static void afterInstanceMethod(
+//                ) throws Throwable {
+//            System.out.println("after InstanceMethod2");
+//        }
+//    }
 
 
     @Test
@@ -316,7 +382,6 @@ public class Target_01TargetClass_Tests {
     public void testByteCode4x() {
         MimeType mimeType = new MimeType();
         mimeType.getBaseType();
-        System.out.println("MimeType classloader :" + mimeType.getClass().getClassLoader());
 
         AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ByteCode4x_Aspect.BYTECODE_4X_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
@@ -357,9 +422,8 @@ public class Target_01TargetClass_Tests {
          * @param joinpoint
          */
         @SuppressWarnings("rawtypes")
-        @Advisor(inheritClassLoaderMatcher = false, inheritTypeMatcher = false, perInstance = false)
-        @Before(BYTECODE_4X_POINTCUT)
         @ConditionalOnClassLoader(classLoaderExpression = "BootstrapClassLoader || AppClassLoader")
+        @Before(BYTECODE_4X_POINTCUT)
         public void byteCode4x_before(MutableJoinpoint joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(BYTECODE_4X_BEFORE_ADVICE, 
                     new AdviceMethod()

@@ -23,6 +23,7 @@
         <dependency>
             <groupId>io.gemini</groupId>
             <artifactId>gemini-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- Should not add other depenedencies, except for gemini-api -->
     </dependencies>

@@ -20,7 +20,7 @@
     <dependencies>
         <dependency>
             <groupId>io.gemini</groupId>
-            <artifactId>gemini-aop</artifactId>
+            <artifactId>gemini-api</artifactId>
             <scope>provided</scope>
         </dependency>
 

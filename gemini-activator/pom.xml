@@ -23,7 +23,6 @@
         <dependency>
             <groupId>io.gemini</groupId>
             <artifactId>gemini-api</artifactId>
-            <scope>provided</scope>
         </dependency>
         <!-- Should not add other depenedencies, except for gemini-api -->
     </dependencies>
@@ -66,6 +65,12 @@
                 <configuration>
                     <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
                     <minimizeJar>true</minimizeJar>
+                    <artifactSet>
+                        <includes>
+                            <!-- include required gemini jars -->
+                            <include>io.gemini:*</include>
+                        </includes>
+                    </artifactSet>
                 </configuration>
             </plugin>
 

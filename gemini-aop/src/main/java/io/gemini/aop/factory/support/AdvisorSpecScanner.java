@@ -545,7 +545,7 @@ public interface AdvisorSpecScanner {
 
                         int order = Order.LOWEST_PRECEDENCE;
                         if (orderAnnotation != null)
-                            order = orderAnnotation.getValue("order").resolve(Integer.class);
+                            order = orderAnnotation.getValue("value").resolve(Integer.class);
 
                         PointcutSpec pointcutSpec = aspectJPointcut.parse(factoryContext, aspectJAdviceSpec);
 

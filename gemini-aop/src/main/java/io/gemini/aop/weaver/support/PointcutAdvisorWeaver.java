@@ -63,16 +63,40 @@ import net.bytebuddy.implementation.MethodCall;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 /**
- * 
+ * Applies one or more {@link io.gemini.aop.Advisor.PointcutAdvisor} instances to a target method
+ * via ByteBuddy bytecode transformation.
+ * <p>
+ * Three concrete implementations handle different advice styles:
+ * <ul>
+ *   <li>{@link NativeMethodWeaver} – renames native methods to allow interception</li>
+ *   <li>{@link ManagedAdviceWeaver} – weaves POJO and AspectJ advice using framework-generated
+ *       {@code io.gemini.api.aop.Advice} classes and the {@link io.gemini.aop.weaver.BootstrapDispatcher}</li>
+ *   <li>{@link ByteBuddyAdviceWeaver} – weaves raw ByteBuddy {@code net.bytebuddy.asm.Advice} classes directly</li>
+ * </ul>
+ * The {@link Compound} implementation delegates to all registered weavers in order.
+ * </p>
+ *
+ * @author   martin.liu
  */
 public interface PointcutAdvisorWeaver {
 
     Logger LOGGER = LoggerFactory.getLogger(PointcutAdvisorWeaver.class);
 
 
+    /**
+     * Applies bytecode transformations for one or more advisors to the given type builder.
+     *
+     * @param builder   the ByteBuddy type builder to transform
+     * @param arguments optional additional arguments (e.g. loaded-type flag)
+     * @return the modified type builder, or {@code null} if no transformation was applied
+     */
     DynamicType.Builder<?> weave(DynamicType.Builder<?> builder, Object... arguments);
 
 
+    /**
+     * Delegates weaving to all registered {@link PointcutAdvisorWeaver} instances in order,
+     * merging their bytecode transformations into the target type builder.
+     */
     @NoScanning
     class Compound implements PointcutAdvisorWeaver {
 
@@ -112,7 +136,7 @@ public interface PointcutAdvisorWeaver {
                         builder = returning;
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled()) 
-                        LOGGER.warn("Could not weave method via '{}'. \n"
+                        LOGGER.warn("Could not weave target method via '{}'. \n"
                                 + "  TargetMethod: {}"
                                 + "  Error reason: {} \n", 
                                 advisorWeaver,
@@ -127,6 +151,10 @@ public interface PointcutAdvisorWeaver {
     }
 
 
+    /**
+     * Abstract base providing common weaving logic: target method holding, advisor filtering,
+     * and weaving exception handling.
+     */
     abstract class AbstractBase implements PointcutAdvisorWeaver, Ordered {
 
         private final AopWeaver aopWeaver;
@@ -220,6 +248,9 @@ public interface PointcutAdvisorWeaver {
     }
 
 
+    /**
+     * Thrown internally when a weaver has no candidate advisors and should be silently skipped.
+     */
     class IgnoredWeaverException extends AopException {
 
         public IgnoredWeaverException() {
@@ -230,6 +261,10 @@ public interface PointcutAdvisorWeaver {
     }
 
 
+    /**
+     * Handles native method interception by defining a renamed native method and replacing
+     * the original method body with a delegating implementation.
+     */
     class NativeMethodWeaver extends AbstractBase {
 
         public NativeMethodWeaver(AopWeaver aopWeaver, boolean loadedType, MethodDescription targetMethod, 
@@ -281,6 +316,12 @@ public interface PointcutAdvisorWeaver {
     }
 
 
+    /**
+     * Weaves POJO and AspectJ advice using the framework-generated {@code io.gemini.api.aop.Advice} classes
+     * and the {@link io.gemini.aop.weaver.BootstrapDispatcher} INDY callback mechanism.
+     * Implements {@link AopWeaver.WeavedCodeCallback} to create the {@link io.gemini.aop.weaver.Joinpoints.Descriptor}
+     * on first invocation and cache it for subsequent calls.
+     */
     class ManagedAdviceWeaver extends AbstractBase implements AopWeaver.WeavedCodeCallback {
 
         private static final Map<Class<?>, DynamicType.Loaded<?>> BEARKING_CIRCULARITY_ADVICES = new HashMap<>();
@@ -432,6 +473,10 @@ public interface PointcutAdvisorWeaver {
     }
 
 
+    /**
+     * Weaves raw ByteBuddy {@code net.bytebuddy.asm.Advice} classes directly onto the target method,
+     * using the INDY bootstrap mechanism to route callbacks to the correct {@code ByteBuddyAdviceWeaver}.
+     */
     class ByteBuddyAdviceWeaver extends AbstractBase implements AopWeaver.WeavedCodeCallback {
 
         private static final Map<Class<?>, DynamicType.Loaded<?>> BEARKING_CIRCULARITY_ADVICES = new HashMap<>();
@@ -543,7 +588,7 @@ public interface PointcutAdvisorWeaver {
                 ClassLoader targetClassLoader = targetLookup.lookupClass().getClassLoader();
                 ThreadContext.setContextClassLoader(targetClassLoader);   // set targetClassLoader
 
-                MethodHandle methodHandle = getMethodHandle((String) arguments[1], methodName, mothodType);
+                MethodHandle methodHandle = getMethodHandle(targetLookup, (String) arguments[1], methodName, mothodType);
                 if (methodHandle == null) {
                     return null;
                 }
@@ -554,16 +599,18 @@ public interface PointcutAdvisorWeaver {
             }
         }
 
-        private MethodHandle getMethodHandle(String adviceTypeName, String adviceMethodName, MethodType adviceMethodType) {
+        private MethodHandle getMethodHandle(Lookup targetLookup, String adviceTypeName, 
+                String adviceMethodName, MethodType adviceMethodType) {
             Class<?> byteBuddyAdvice = null;
             for (PointcutAdvisor advisor : getPointcutAdvisors()) {
                 if ( (byteBuddyAdvice = advisor.getAdviceClass()).getName().equals(adviceTypeName))
                     break;
             }
 
+            // use lookup of instrumented type to avoid LinkageError described in https://github.com/elastic/apm-agent-java/issues/1450
             try {
                 if (byteBuddyAdvice != null)
-                    return MethodHandles.lookup().findStatic(byteBuddyAdvice, adviceMethodName, adviceMethodType);
+                    return targetLookup.findStatic(byteBuddyAdvice, adviceMethodName, adviceMethodType);
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not find static advice method. \n"

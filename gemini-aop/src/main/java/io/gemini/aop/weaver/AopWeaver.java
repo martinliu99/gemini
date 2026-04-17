@@ -20,7 +20,6 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
@@ -53,14 +52,20 @@ import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType.Builder;
-import net.bytebuddy.dynamic.Nexus;
 import net.bytebuddy.dynamic.scaffold.MethodGraph;
-import net.bytebuddy.dynamic.scaffold.TypeWriter;
 import net.bytebuddy.matcher.BooleanMatcher;
-import net.bytebuddy.utility.AsmClassReader;
 import net.bytebuddy.utility.JavaModule;
-import net.bytebuddy.utility.OpenedClassReader;
 
+/**
+ * Defines the bytecode transformation contract for the Gemini AOP framework.
+ * <p>
+ * Implements ByteBuddy's {@link RawMatcher} to filter which types should be instrumented,
+ * and {@link Transformer} to apply advisor weavers to matched types.
+ * The inner {@link Creator} enum handles ByteBuddy agent installation.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @BootstrapClassConsumer
 public interface AopWeaver extends RawMatcher, Transformer, Closeable {
 
@@ -74,22 +79,60 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
             .getOnly();
 
 
+    /**
+     * Returns {@code true} if the given type should be instrumented by this weaver.
+     * Implements ByteBuddy's {@link RawMatcher} contract.
+     *
+     * @param targetType              the type being considered for instrumentation
+     * @param targetClassLoader       the class loader loading the type
+     * @param targetModule            the Java module of the type (may be {@code null})
+     * @param classBeingRedefined     the class being redefined, or {@code null} for new loads
+     * @param targetProtectionDomain  the protection domain of the type
+     * @return {@code true} if this type should be instrumented
+     */
     @Override
     boolean matches(TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule,
             Class<?> classBeingRedefined, ProtectionDomain targetProtectionDomain);
 
 
+    /**
+     * Applies bytecode transformations to the given type builder.
+     * Implements ByteBuddy's {@link Transformer} contract.
+     *
+     * @param builder                the ByteBuddy type builder to transform
+     * @param targetType             the type being transformed
+     * @param targetClassLoader      the class loader loading the type
+     * @param targetModule           the Java module of the type (may be {@code null})
+     * @param targetProtectionDomain the protection domain of the type
+     * @return the modified type builder
+     */
     @Override
     Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
             JavaModule targetModule, ProtectionDomain targetProtectionDomain);
 
 
+    /**
+     * Returns the {@link WeaverContext} holding weaver configuration.
+     *
+     * @return the weaver context
+     */
     WeaverContext getWeaverContext();
 
-
+    /**
+     * Registers a {@link WeavedCodeCallback} and returns its slot index.
+     * The slot index is embedded in the instrumented bytecode to route INDY callbacks.
+     *
+     * @param weavedCodeCallback the callback to register
+     * @return the slot index assigned to this callback
+     */
     int registerCallback(WeavedCodeCallback weavedCodeCallback);
 
 
+    /**
+     * Closes this weaver and releases any held resources.
+     *
+     * @throws IOException if an I/O error occurs during close
+     */
     @Override
     void close() throws IOException;
 
@@ -103,6 +146,15 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
         private static final Logger LOGGER = LoggerFactory.getLogger(AopWeaver.class);
 
 
+        /**
+         * Creates the {@link AopWeaver} by building the weaver instance and installing the
+         * ByteBuddy agent onto the given {@link Instrumentation}.
+         *
+         * @param instrumentation the JVM instrumentation API
+         * @param aopContext      the central AOP context
+         * @param advisorFactory  the advisor factory
+         * @return the installed {@link AopWeaver}
+         */
         public AopWeaver create(Instrumentation instrumentation, 
                 AopContext aopContext, AdvisorFactory advisorFactory) {
             Assert.notNull(instrumentation, "'instrumentation' must not be null.");
@@ -121,6 +173,15 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
             return aopWeaver;
         }
 
+        /**
+         * Creates the {@link DefaultAopWeaver} (or its diagnostic variant) and initializes
+         * the {@link BootstrapDispatcher} delegator.
+         *
+         * @param aopContext       the central AOP context
+         * @param advisorFactory   the advisor factory
+         * @param launcherMetrics  metrics collector for startup timing
+         * @return the created {@link DefaultAopWeaver}
+         */
         protected DefaultAopWeaver createAopWeaver(AopContext aopContext, 
                 AdvisorFactory advisorFactory, 
                 LauncherMetrics launcherMetrics) {
@@ -145,6 +206,15 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
             return aopWeaver;
         }
 
+        /**
+         * Installs the ByteBuddy agent builder with all configured strategies, listeners,
+         * and the {@link DefaultAopWeaver} as both type matcher and transformer.
+         *
+         * @param instrumentation the JVM instrumentation API
+         * @param aopContext      the central AOP context
+         * @param launcherMetrics metrics collector for startup timing
+         * @param aopWeaver       the weaver to install
+         */
         protected void installByteBuddy(Instrumentation instrumentation, 
                 AopContext aopContext, 
                 LauncherMetrics launcherMetrics,
@@ -172,20 +242,8 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
 
             };
 
-            System.getProperties().setProperty(OpenedClassReader.PROCESSOR_PROPERTY, 
-                    AsmClassReader.Factory.Default.CLASS_FILE_API_FIRST.toString());
-            System.getProperties().setProperty(Nexus.PROPERTY, Boolean.TRUE.toString());
 
-            // set bytebuddy setting to dump byte code
-            if (aopContext.isDumpByteCode()) {
-                String byteCodeDumpPath = aopContext.getByteCodeDumpPath();
-                File path = new File(byteCodeDumpPath + File.separator + "byte-buddy");
-                path.mkdirs();
-
-                System.getProperties().setProperty(TypeWriter.DUMP_PROPERTY, path.getAbsolutePath());
-            }
-
-
+            // configure AgentBuilder
             WeaverContext weaverContext = aopWeaver.getWeaverContext();
             new AgentBuilder.Default()
                 .with( new ByteBuddy()
@@ -233,10 +291,23 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
     }
 
 
+    /**
+     * Callback interface invoked from instrumented bytecode via {@code invokedynamic}, or
+     * {@code invokestatic}.
+     */
     interface WeavedCodeCallback {
 
-        Object callback(MethodHandles.Lookup targetLookup, 
-                String methodName, MethodType methodType, Object... arguments);
+        /**
+         * Invoked from instrumented bytecode via {@code invokedynamic} or {@code invokestatic}.
+         *
+         * @param targetLookup the lookup context of the instrumented class
+         * @param methodName   the bootstrap method name
+         * @param methodType   the method type of the call site
+         * @param arguments    additional bootstrap arguments (slot index, flags, etc.)
+         * @return a {@link java.lang.invoke.CallSite}, response object, or {@code null}
+         */
+        Object callback(MethodHandles.Lookup targetLookup, String methodName, 
+                MethodType methodType, Object... arguments);
 
     }
 }

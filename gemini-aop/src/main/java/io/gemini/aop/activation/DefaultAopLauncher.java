@@ -15,6 +15,7 @@
  */
 package io.gemini.aop.activation;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.util.Collections;
@@ -41,7 +42,29 @@ import io.gemini.core.config.ConfigViews;
 import io.gemini.core.logging.DeferredLoggerFactory;
 import io.gemini.core.logging.LoggingSystem;
 import io.gemini.core.util.StringUtils;
+import net.bytebuddy.dynamic.Nexus;
+import net.bytebuddy.dynamic.scaffold.TypeWriter;
+import net.bytebuddy.utility.AsmClassReader;
+import net.bytebuddy.utility.AsmClassWriter;
+import net.bytebuddy.utility.OpenedClassReader;
 
+/**
+ * Default implementation of {@link AopLauncher} that orchestrates the full AOP startup sequence.
+ * <p>
+ * Startup steps:
+ * <ol>
+ *   <li>Load AOP settings from internal and user-defined properties files</li>
+ *   <li>Initialize the logging system</li>
+ *   <li>Create {@link AopContext} (central configuration holder)</li>
+ *   <li>Configure bootstrap classes and {@link AopClassLoader}</li>
+ *   <li>Create {@link AdvisorFactory} (scans and parses all aspect applications)</li>
+ *   <li>Create {@link AopWeaver} and install ByteBuddy agent builder</li>
+ *   <li>Register a JVM shutdown hook to stop the framework cleanly</li>
+ * </ol>
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class DefaultAopLauncher implements AopLauncher {
 
     private static final Logger LOGGER = DeferredLoggerFactory.getLogger(DefaultAopLauncher.class);
@@ -114,12 +137,16 @@ public class DefaultAopLauncher implements AopLauncher {
             launcherMetrics.setLoggerCreationTime(loggerCreationTime);
 
 
-            // 4.configure ClassLoaders
+            // 4.configure ByteBuddy & ClassLoaders
+            configureByteBuddy(aopContext);
+
             configureClassLoader(instrumentation, 
                     builtinSettings, aopContext, launcherMetrics);
 
 
             // 5.create AdvisorFactory
+            System.getProperties().setProperty(OpenedClassReader.PROCESSOR_PROPERTY, "CLASS_FILE_API_FIRST");
+
             this.advisorFactory = AdvisorFactory.Creator.INSTANCE.create(aopContext);
 
 
@@ -161,6 +188,36 @@ public class DefaultAopLauncher implements AopLauncher {
         DeferredLoggerFactory.replayDeferredMessages(loggingLevel);
     }
 
+    /**
+     * Configures ByteBuddy settings as eagly as possible before any ByteBuddy API invocation.
+     * 
+     * @param aopContext
+     */
+    private void configureByteBuddy(AopContext aopContext) {
+        // enable Class-File API under JDK 24+.
+        // put this setting to system properties before {@code AsmClassReader}
+        // and {@code AsmClassWriter} class initialization to keep FACTORY field keeps in sysc
+        // to avoid byte code generation conflict.
+        System.getProperties().setProperty(OpenedClassReader.PROCESSOR_PROPERTY, "CLASS_FILE_API_FIRST");
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Configured ByteBuddy AsmClassReader as '{}', AsmClassWriter as '{}'.",
+                    AsmClassReader.Factory.Default.CLASS_FILE_API_FIRST,
+                    AsmClassWriter.Factory.Default.CLASS_FILE_API_FIRST
+            );
+
+        // disable Nexus
+        System.getProperties().setProperty(Nexus.PROPERTY, Boolean.TRUE.toString());
+
+        // set byte code dump path
+        if (aopContext.isDumpByteCode()) {
+            String byteCodeDumpPath = aopContext.getByteCodeDumpPath();
+            File path = new File(byteCodeDumpPath + File.separator + "byte-buddy");
+            path.mkdirs();
+
+            System.getProperties().setProperty(TypeWriter.DUMP_PROPERTY, path.getAbsolutePath());
+        }
+    }
+
     private void configureClassLoader(Instrumentation instrumentation, 
             Map<String, Object> builtinSettings, AopContext aopContext, LauncherMetrics launcherMetrics) {
         // 1.configure BootstrapClassLoader and AopClassLoader with bootstrap classes
@@ -187,6 +244,9 @@ public class DefaultAopLauncher implements AopLauncher {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void stop() {
         try {

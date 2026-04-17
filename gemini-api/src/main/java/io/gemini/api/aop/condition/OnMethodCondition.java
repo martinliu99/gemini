@@ -18,19 +18,21 @@
  */
 package io.gemini.api.aop.condition;
 
-import io.gemini.api.annotation.Initializer;
 import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Condition implementation for {@link io.gemini.api.aop.annotation.ConditionalOnMethod}.
+ * Evaluates whether the specified method expression is present in the target type.
+ * Throws {@link MissingElementException} if the method is absent.
+ *
+ * @author   martin.liu
  */
 public class OnMethodCondition implements ElementMatcher<MatchingContext> {
 
     private final String methodExpression;
 
 
-    @Initializer
     public OnMethodCondition(String methodExpression) {
         this.methodExpression = methodExpression;
     }

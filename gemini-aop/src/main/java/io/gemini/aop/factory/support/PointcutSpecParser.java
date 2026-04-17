@@ -42,22 +42,52 @@ import net.bytebuddy.description.annotation.AnnotationList;
 import net.bytebuddy.description.type.TypeDescription;
 
 /**
- *
+ * Parses {@link PointcutSpec} instances from a {@link AdviceSpec} or from configuration properties.
+ * <p>
+ * Three concrete parsers handle the three pointcut styles:
+ * <ul>
+ *   <li>{@link ForPojoPointcut} – reads the {@code @PojoPointcut} annotation to find the pointcut class</li>
+ *   <li>{@link ForExprPointcut} – reads the {@code @ExprPointcut} annotation for an AspectJ expression</li>
+ *   <li>{@link ForAspectJPointcut} – reads the AspectJ advice annotation value for the pointcut expression</li>
+ * </ul>
+ * The {@link Compound} implementation delegates to all registered parsers in order.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface PointcutSpecParser {
 
     Logger LOGGER = LoggerFactory.getLogger(PointcutSpecParser.class);
 
 
+    /**
+     * Parses a {@link PointcutSpec} from the given {@link AdviceSpec}.
+     * Returns {@code null} if this parser does not handle the advice spec type.
+     *
+     * @param factoryContext the factory context providing type pool and config
+     * @param adviceSpec     the advice spec to derive the pointcut spec from
+     * @return the parsed {@link PointcutSpec}, or {@code null}
+     */
     PointcutSpec parse(FactoryContext factoryContext, AdviceSpec adviceSpec);
 
+    /**
+     * Parses or updates a {@link PointcutSpec} from configuration properties under the given key prefix.
+     * Returns {@code null} if this parser does not handle the spec type or no config is found.
+     *
+     * @param factoryContext       the factory context providing config view and type pool
+     * @param configKeyPrefix      the configuration key prefix (e.g. {@code aop.advisorSpecs.myAdvisor.})
+     * @param adviceSpec           the advice spec associated with this pointcut
+     * @param existingAdvisorSpec  an existing advisor spec to update, or {@code null}
+     * @return the parsed or updated {@link PointcutSpec}, or {@code null}
+     */
     PointcutSpec parse(FactoryContext factoryContext, String configKeyPrefix, AdviceSpec adviceSpec, 
             PointcutAdvisorSpec existingAdvisorSpec);
 
 
+    /**
+     * Delegates to all registered {@link PointcutSpecParser} instances in order,
+     * returning the first non-null result.
+     */
     @NoScanning
     class Compound implements PointcutSpecParser {
 
@@ -134,6 +164,10 @@ public interface PointcutSpecParser {
     }
 
 
+    /**
+     * Abstract base providing common parsing logic: spec class filtering, error handling,
+     * and config-key-based parsing delegation.
+     */
     abstract class AbstractBase<A extends AdviceSpec, P extends PointcutSpec> implements PointcutSpecParser {
 
         protected abstract Class<? extends A> doGetAdviceSpecClass();
@@ -217,6 +251,10 @@ public interface PointcutSpecParser {
     }
 
 
+    /**
+     * Reads the {@link io.gemini.api.aop.annotation.PojoPointcut} annotation to extract
+     * the pointcut class reference.
+     */
     class ForPojoPointcut extends AbstractBase<AdviceSpec, PojoPointcutSpec> {
 
         /** 
@@ -268,11 +306,16 @@ public interface PointcutSpecParser {
         @Override
         protected PointcutSpec doParse(FactoryContext factoryContext, String configKeyPrefix, 
                 AdviceSpec adviceSpec, PointcutAdvisorSpec existingAdvisorSpec) {
+            // do NOT parse PojoPointcut from configuration properties.
             return null;
         }
     }
 
 
+    /**
+     * Reads the {@link io.gemini.api.aop.annotation.ExprPointcut} annotation to extract
+     * the pointcut expression string.
+     */
     class ForExprPointcut extends AbstractBase<AdviceSpec, ExprPointcutSpec> {
 
         /** 
@@ -341,6 +384,10 @@ public interface PointcutSpecParser {
     }
 
 
+    /**
+     * Reads the AspectJ advice annotation value to extract the pointcut expression,
+     * and builds an {@link io.gemini.aop.factory.support.PointcutSpec.AspectJPointcutSpec}.
+     */
     class ForAspectJPointcut extends AbstractBase<AspectJAdviceSpec, AspectJPointcutSpec> {
 
         /** 

@@ -50,6 +50,16 @@ import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.pool.TypePool;
 
 
+/**
+ * Core AspectJ {@link World} implementation backed by a ByteBuddy {@link TypePool}.
+ * <p>
+ * Bridges ByteBuddy's type model to AspectJ's type resolution system, enabling
+ * AspectJ pointcut expressions to be evaluated against ByteBuddy type descriptions
+ * without requiring actual class loading.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class BytebuddyWorld extends World implements TypeWorld {
 
     protected final static TypeDescription OBJECT_DESCRIPTION = TypeDescription.ForLoadedType.of(Object.class);
@@ -63,6 +73,13 @@ public class BytebuddyWorld extends World implements TypeWorld {
     private Map<TypeDefinition, TypeVariableReferenceType> typeVariablesInProgress = new ConcurrentHashMap<>();
 
 
+    /**
+     * Creates a new {@code BytebuddyWorld} backed by the given type pool.
+     *
+     * @param typePool          the ByteBuddy type pool used for type description and resolution
+     * @param placeholderHelper optional helper for resolving placeholder expressions in pointcut strings;
+     *                          may be {@code null}
+     */
     public BytebuddyWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
         this.setMessageHandler(new ExceptionBasedMessageHandler());
         setBehaveInJava5Way(true);
@@ -107,6 +124,13 @@ public class BytebuddyWorld extends World implements TypeWorld {
         return this;
     }
 
+    /**
+     * Resolves a ByteBuddy {@link TypeDescription} to an AspectJ {@link ResolvedType}
+     * by delegating to the AspectJ world's type resolution mechanism.
+     *
+     * @param typeDescription the type description to resolve
+     * @return the resolved type, or {@code null} if {@code typeDescription} is {@code null}
+     */
     @Override
     public ResolvedType resolve(TypeDescription typeDescription) {
         if (typeDescription == null)
@@ -123,6 +147,9 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected ReferenceTypeDelegate resolveDelegate(ReferenceType referenceType) {
         try {
@@ -270,6 +297,9 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
         return typePool.toString();
@@ -278,7 +308,13 @@ public class BytebuddyWorld extends World implements TypeWorld {
 
     public static class TyepResolutionDetector extends BytebuddyWorld {
 
-
+        /**
+         * Creates a {@code TyepResolutionDetector} world that tracks which type properties
+         * (superclass, interfaces) are accessed during pointcut matching.
+         *
+         * @param typePool          the ByteBuddy type pool
+         * @param placeholderHelper optional placeholder helper; may be {@code null}
+         */
         public TyepResolutionDetector(TypePool typePool, PlaceholderHelper placeholderHelper) {
             super(typePool, placeholderHelper);
         }

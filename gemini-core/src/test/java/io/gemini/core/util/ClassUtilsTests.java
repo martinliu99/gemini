@@ -30,7 +30,6 @@ import net.bytebuddy.description.type.TypeDescription;
  *
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class ClassUtilsTests {
 

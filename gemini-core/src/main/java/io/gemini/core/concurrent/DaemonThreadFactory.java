@@ -19,10 +19,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 
- * @author   martin.liu
- * @since    1.0
+ * A {@link ThreadFactory} that creates daemon threads named with a consistent prefix.
+ * <p>
+ * All threads created by this factory are daemon threads with normal priority,
+ * so they will not prevent JVM shutdown.
+ * </p>
  *
+ * @author   martin.liu
  */
 public class DaemonThreadFactory implements ThreadFactory {
 
@@ -33,6 +36,13 @@ public class DaemonThreadFactory implements ThreadFactory {
     private final String namePrefix;
 
 
+    /**
+     * Creates a factory whose threads belong to the current thread group (or the
+     * security manager's thread group) and are named
+     * {@code Gemini-<poolName>[Thread-N]}.
+     *
+     * @param poolName the logical name of the pool, embedded in every thread name
+     */
     public DaemonThreadFactory(String poolName) {
         SecurityManager s = System.getSecurityManager();
         group = (s != null) ? s.getThreadGroup() :
@@ -40,15 +50,36 @@ public class DaemonThreadFactory implements ThreadFactory {
         namePrefix = "Gemini-" + poolName + "[Thread-";
     }
 
+    /**
+     * Creates a factory whose threads belong to the given {@link ThreadGroup} and
+     * are named {@code Gemini-<poolName>[Thread-N]}.
+     *
+     * @param poolName    the logical name of the pool, embedded in every thread name
+     * @param threadGroup the thread group to assign to every created thread
+     */
     public DaemonThreadFactory(String poolName, ThreadGroup threadGroup) {
         group = threadGroup;
         namePrefix = "Gemini-" + poolName + "[Thread-";
     }
 
+    /**
+     * Returns the {@link ThreadGroup} that all threads created by this factory
+     * will belong to.
+     *
+     * @return the thread group; never {@code null}
+     */
     public ThreadGroup getThreadGroup() {
         return group;
     }
 
+    /**
+     * Creates a new daemon thread with normal priority that executes the given
+     * {@link Runnable}. The thread is named {@code Gemini-<poolName>[Thread-N]}
+     * where {@code N} is a monotonically increasing counter.
+     *
+     * @param r the runnable to execute in the new thread
+     * @return a new daemon thread ready to be started; never {@code null}
+     */
     public Thread newThread(Runnable r) {
         Thread t = new Thread(group,
                               r,

@@ -41,6 +41,17 @@ import io.gemini.aspectj.weaver.patterns.PatternParserV2;
 import net.bytebuddy.description.type.TypeDefinition;
 
 
+/**
+ * Parses AspectJ pointcut expressions into resolved and concretized {@link Pointcut} objects
+ * using the AOP framework {@link TypeWorld} for type resolution.
+ * <p>
+ * Supports a configurable subset of AspectJ pointcut primitives (execution, args, within,
+ * this, target, @annotation, etc.). The {@code if}, {@code cflow}, and {@code cflowbelow}
+ * primitives are not supported.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class PointcutParser {
 
     private TypeWorld typeWorld;
@@ -75,6 +86,11 @@ public class PointcutParser {
     }
 
 
+    /**
+     * Creates a {@code PointcutParser} that supports all default pointcut primitives.
+     *
+     * @param typeWorld the type world used for type resolution during parsing
+     */
     public PointcutParser(TypeWorld typeWorld) {
         this(typeWorld, getAllSupportedPointcutPrimitives());
     }
@@ -104,6 +120,15 @@ public class PointcutParser {
     }
 
 
+    /**
+     * Parses the given pointcut expression using the default anonymous scope
+     * (no declaring type, no formal parameters).
+     *
+     * @param pointcutExpression the AspectJ pointcut expression string
+     * @return the resolved and concretized {@link Pointcut}
+     * @throws UnsupportedPointcutPrimitiveException if the expression uses an unsupported primitive
+     * @throws IllegalArgumentException              if the expression is not well-formed
+     */
     public Pointcut parsePointcut(String pointcutExpression) {
         return parsePointcut(pointcutExpression, null, Collections.emptyMap());
     }

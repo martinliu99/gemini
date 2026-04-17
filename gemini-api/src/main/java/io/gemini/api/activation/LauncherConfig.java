@@ -20,33 +20,43 @@ import java.nio.file.Path;
 import java.util.Map;
 
 /**
- *
+ * Defines the runtime configuration supplied to {@link AopLauncher} during startup.
+ * <p>
+ * Provides paths, active profile, configuration file locations, and classpath URLs
+ * for both the launcher itself and each discovered aspect application.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface LauncherConfig {
 
+    /** Returns the timestamp (nanoseconds) when the launcher was activated. */
     long getLaunchedAt();
 
+    /** Returns the root directory of the unpacked AOP agent archive. */
     Path getLaunchPath();
 
+    /** Returns the parsed key=value launch arguments passed to the agent. */
     Map<String, String> getLaunchArgs();
 
-
+    /** Returns the active configuration profile name (e.g., {@code dev}), or empty string for default. */
     String getActiveProfile();
 
+    /** Returns {@code true} if the default (empty) profile is active. */
     boolean isDefaultProfile();
 
-
+    /** Returns the classpath-relative location of the built-in internal properties file. */
     String getInternalConfigLocation();
 
+    /** Returns the classpath-relative location of the user-defined properties file. */
     String getUserDefinedConfigLocation();
 
-
+    /** Returns the classpath URLs for the AOP launcher itself. */
     URL[] getLaunchClassPathURLs();
 
+    /** Returns {@code true} if the {@code /classes} and {@code /test-classes} folders should be scanned for aspects. */
     boolean isClassesFolderScanned();
 
+    /** Returns a map of aspect-application name to its classpath URLs. */
     Map<String /* AspectAppName */, URL[]> getAspectAppClassPathURLs();
 }

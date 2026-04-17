@@ -13,14 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
 package org.framework.demo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * Spring Boot entry point for the Gemini AOP demo application.
+ * <p>
+ * Starts the Spring Boot context and then invokes {@link DemoServiceRunner#main(String[])}
+ * to exercise the AOP-instrumented demo services via custom class loaders.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @SpringBootApplication
 public class DemoApplication {
 

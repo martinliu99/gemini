@@ -19,13 +19,35 @@ import java.lang.instrument.Instrumentation;
 
 import io.gemini.activation.AopActivator;
 
+/**
+ * Java agent entry point for the Gemini AOP framework.
+ * This class is specified as the {@code Premain-Class} and {@code Agent-Class} in the agent JAR manifest.
+ * It delegates all activation work to {@link AopActivator}.
+ *
+ * @author   martin.liu
+ */
 public class AopAgent {
 
-
+    /**
+     * Called by the JVM before the application's {@code main} method when the agent is loaded
+     * via the {@code -javaagent} command-line option.
+     *
+     * @param agentArgs       comma-separated key=value pairs passed after the agent jar path
+     * @param instrumentation the JVM instrumentation API instance
+     * @throws Exception if activation fails
+     */
     public static void premain(String agentArgs, Instrumentation instrumentation) throws Exception {
         AopActivator.activateAop(agentArgs, instrumentation);
     }
-    
+
+    /**
+     * Called when the agent is dynamically attached to a running JVM at runtime.
+     * TODO: not supported
+     *
+     * @param agentArgs       comma-separated key=value pairs
+     * @param instrumentation the JVM instrumentation API instance
+     * @throws Exception if activation fails
+     */
     public static void attach(String agentArgs, Instrumentation instrumentation) throws Exception {
         AopActivator.activateAop(agentArgs, instrumentation);
     }

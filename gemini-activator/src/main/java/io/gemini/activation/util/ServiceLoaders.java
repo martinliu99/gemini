@@ -21,13 +21,22 @@ import java.util.ServiceLoader;
 import java.util.Set;
 
 /**
- *
+ * Utility class for loading a single SPI service implementation via {@link java.util.ServiceLoader}.
+ * Throws {@link IllegalStateException} if zero or more than one implementation is found.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class ServiceLoaders {
 
+    /**
+     * Loads exactly one implementation of {@code serviceClass} from the given {@code classLoader}.
+     *
+     * @param <T>          the service type
+     * @param serviceClass the service interface or abstract class
+     * @param classLoader  the class loader to search for implementations
+     * @return the single service implementation
+     * @throws IllegalStateException if zero or more than one implementation is found
+     */
     public static <T> T loadClass(Class<T> serviceClass, ClassLoader classLoader) {
         Set<T> services = new LinkedHashSet<>();
         for (Iterator<T> it = ServiceLoader.load(serviceClass, classLoader).iterator(); it.hasNext(); ) {

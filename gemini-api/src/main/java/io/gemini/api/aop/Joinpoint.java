@@ -18,6 +18,18 @@ package io.gemini.api.aop;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.AccessibleObject;
 
+/**
+ * Represents the runtime context of a method, constructor or type initializer invocation 
+ * intercepted by the Gemini AOP framework.
+ * 
+ * <p>
+ * Provides access to the target object, its class, the intercepted method/constructor,
+ * and the invocation arguments. 
+ * Shares additional contextual key value pair across one method invocation.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface Joinpoint {
 
     /**
@@ -59,38 +71,89 @@ public interface Joinpoint {
     Object[] getArguments();
 
 
-    // TODO: per advice
+    /**
+     * Get attached additional context value for provided key.
+     * 
+     * @param key
+     * @return
+     */
     Object getInvocationContext(String key);
 
+    /**
+     * Attach additional contextual key value pair across one method invocation.
+     * 
+     * @param key
+     * @param value
+     */
     void setInvocationContext(String key, Object value);
 
 
+    /**
+     * The {@link MutableJoinpoint} sub-interface additionally exposes the 
+     * return value and thrown exception, and allows advice to override them. 
+     *
+     * @param <T>
+     * @param <E>
+     */
     interface MutableJoinpoint<T, E extends Throwable> extends Joinpoint {
 
-        T getReturning();
+        /**
+         * Get the return value of target method invocation and throw IllegalStateException 
+         * when called in {@link io.gemini.api.aop.Advice.Before} advice.
+         * 
+         * @return 
+         * @throws IllegalStateException
+         */
+        T getReturning() throws IllegalStateException;
 
-        E getThrowing();
-
+        /**
+         * Override the return value of target method invocation.
+         * 
+         * @param returning
+         */
         void setAdviceReturning(T returning);
 
+
+        /**
+         * Get the thrown exception of target method invocation and throw IllegalStateException 
+         * when called in {@link io.gemini.api.aop.Advice.Before} advice.
+         * 
+         * @return
+         * @throws IllegalStateException
+         */
+        E getThrowing() throws IllegalStateException;
+
+        /**
+         * Override the thrown exception of target method invocation.
+         *
+         * @param throwing
+         */
         void setAdviceThrowing(E throwing);
     }
 
 
+    /**
+     * The {@link ProceedingJoinpoint} sub-interface additionally exposes the proceed(..) 
+     * method to support {@link io.gemini.api.aop.Advice.Around} advice. 
+     * 
+     * TODO: not supported
+     * 
+     * @param <T>
+     * @param <E>
+     */
     interface ProceedingJoinpoint<T, E extends Throwable> extends Joinpoint {
 
         /**
-         * Proceeds to the next advice in the chain.
+         * Proceeds to the next advice in the chain or target method invocation.
          *
-         * <p>The implementation and the semantics of this method depends
-         * on the actual joinpoint type (see the children interfaces).
-         *
-         * @return see the children interfaces' proceed definition.
-         *
-         * @throws Throwable if the joinpoint throws an exception. */
+         * @return 
+         * @throws 
+         */
         T proceed() throws E;
 
         /**
+         * Proceeds to the next advice in the chain or target method invocation 
+         * with overrode arguments.
          * 
          * @param arguments
          * @return

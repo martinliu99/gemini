@@ -40,6 +40,15 @@ import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
 
 
+/**
+ * Log4j2-based {@link LoggingSystem} implementation for the AOP framework.
+ * <p>
+ * Initializes a named Log4j2 {@link LoggerContext} from a configuration file resolved
+ * via the AOP class loader, and applies log level overrides from the {@link ConfigView}.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class Log4j2LoggingSystem implements LoggingSystem {
 
     public static final String SIMPLE_INITIALIZATION_KEY = "aop.logger.simpleInitialization";

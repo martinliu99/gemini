@@ -34,6 +34,17 @@ import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.method.ParameterList;
 
 
+/**
+ * Internal AspectJ {@link org.aspectj.weaver.ResolvedMemberImpl} implementation backed by
+ * a ByteBuddy {@link net.bytebuddy.description.ByteCodeElement.Member} (method or field).
+ * <p>
+ * Bridges ByteBuddy's member model to AspectJ's resolved member system, providing
+ * annotation metadata, parameter annotation types, and annotation default values
+ * without requiring actual class loading.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 class InternalResolvedMember extends ResolvedMemberImpl {
 
     private static final ResolvedType[][] NO_PARAMETER_ANNOTATIONS = new ResolvedType[][] {};
@@ -46,6 +57,12 @@ class InternalResolvedMember extends ResolvedMemberImpl {
     private Map<ResolvedType, AnnotationDescription> annotationTypeMap;
 
 
+    /**
+     * Creates an {@code InternalResolvedMember} for a field.
+     *
+     * @param typeWorld        the ByteBuddy world used for type conversion
+     * @param fieldDescription the ByteBuddy field description to wrap
+     */
     public InternalResolvedMember(BytebuddyWorld typeWorld, FieldDescription fieldDescription) {
         super(
                 org.aspectj.weaver.Member.FIELD,
@@ -62,6 +79,12 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         this.methodDescription = null;
     }
 
+    /**
+     * Creates an {@code InternalResolvedMember} for a method or constructor.
+     *
+     * @param typeWorld         the ByteBuddy world used for type conversion
+     * @param methodDescription the ByteBuddy method description to wrap
+     */
     public InternalResolvedMember(BytebuddyWorld typeWorld, MethodDescription methodDescription) {
         super(
                 methodDescription.isConstructor() 
@@ -107,6 +130,9 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         return methodDescription == null ? false : methodDescription.isBridge();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean hasAnnotation(UnresolvedType ofType) {
         getAnnotationTypeMap();
@@ -114,6 +140,9 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         return super.hasAnnotation(ofType);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean hasAnnotations() {
         getAnnotationTypeMap();
@@ -121,6 +150,9 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         return this.annotationTypeMap.size() > 0;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedType[] getAnnotationTypes() {
         getAnnotationTypeMap();
@@ -128,6 +160,9 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         return super.getAnnotationTypes();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public AnnotationAJ getAnnotationOfType(UnresolvedType ofType) {
         getAnnotationTypeMap();
@@ -161,6 +196,9 @@ class InternalResolvedMember extends ResolvedMemberImpl {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getAnnotationDefaultValue() {
         if (methodDescription== null) return null;
@@ -169,6 +207,9 @@ class InternalResolvedMember extends ResolvedMemberImpl {
         return defaultValue == null ? null : defaultValue.toString();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedType[][] getParameterAnnotationTypes() {
         if (parameterAnnotationTypes != null) 

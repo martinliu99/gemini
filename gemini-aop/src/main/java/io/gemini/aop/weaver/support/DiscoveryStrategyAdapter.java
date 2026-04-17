@@ -25,6 +25,16 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.Throwables;
 import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy.DiscoveryStrategy;
 
+/**
+ * Wraps a ByteBuddy {@link DiscoveryStrategy} to notify a {@link Listener} when type
+ * redefinition scanning starts, and optionally disables redefinition entirely.
+ * <p>
+ * Also triggers a {@link System#gc()} before scanning to avoid
+ * {@code IllegalStateException: zip file closed} errors during class retransformation.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class DiscoveryStrategyAdapter implements DiscoveryStrategy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DiscoveryStrategyAdapter.class);
@@ -41,6 +51,13 @@ public class DiscoveryStrategyAdapter implements DiscoveryStrategy {
         this.disabled = disabled;
     }
 
+    /**
+     * Resolves the set of loaded classes to retransform. Notifies the {@link Listener} before
+     * scanning, triggers a GC to avoid zip-file errors, and returns an empty iterable if disabled.
+     *
+     * @param instrumentation the JVM instrumentation API
+     * @return the iterable of class batches to retransform
+     */
     @Override
     public Iterable<Iterable<Class<?>>> resolve(Instrumentation instrumentation) {
         if (listern != null) {
@@ -66,6 +83,10 @@ public class DiscoveryStrategyAdapter implements DiscoveryStrategy {
 
     public interface Listener {
 
+        /**
+         * Called when the discovery strategy is about to start scanning loaded classes.
+         * Implementations typically record the ByteBuddy installation time and log startup info.
+         */
         void onStart();
 
     }

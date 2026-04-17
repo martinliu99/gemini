@@ -15,6 +15,14 @@
  */
 package io.gemini.core.util;
 
+/**
+ * A simple immutable pair of two typed values.
+ *
+ * @param <L> the type of the left value
+ * @param <R> the type of the right value
+ *
+ * @author   martin.liu
+ */
 public class Pair<L, R> {
 
     private final L left;
@@ -22,21 +30,40 @@ public class Pair<L, R> {
     private final R right;
 
 
+    /**
+     * Constructs a {@code Pair} with the given left and right values.
+     *
+     * @param one the left value
+     * @param two the right value
+     */
     public Pair(L one, R two) {
         this.left = one;
         this.right = two;
     }
 
 
+    /**
+     * Returns the left value.
+     *
+     * @return the left value
+     */
     public L getLeft() {
         return left;
     }
 
+    /**
+     * Returns the right value.
+     *
+     * @return the right value
+     */
     public R getRight() {
         return right;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -47,6 +74,9 @@ public class Pair<L, R> {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
@@ -70,8 +100,11 @@ public class Pair<L, R> {
             return false;
         return true;
     }
-    
-    
+
+
+    /**
+     * {@inheritDoc}
+     */
     public String toString() {
         return (this.left == null ? "null" : left) + "-" + (this.right == null ? "null" : this.right);
     }

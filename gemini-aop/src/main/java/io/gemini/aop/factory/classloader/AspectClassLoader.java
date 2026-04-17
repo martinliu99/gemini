@@ -32,39 +32,19 @@ import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
 /**
+ * Specialized {@link ClassLoader} for loading aspect application classes and resources.
  * <p>
- * This specialized ClassLoader loads classes and resources via two CLassLoaders. 
- * <li>
- * One ClassLoader holds Aspect resources and delegates to {@code AopClassLoader} to 
- * load user-defined Advice, Pointcut, AdvisorSpec classes and AOP framework classes.
- * <li>
- * The other delegates to {@code ThreadContext} (runtime application ClassLoader) or explicitly defined
- * target ClassLoader to load target classes.
- * 
- * <p>
- * AspectClassLoader loads class from Aspect resources firstly. If not found, then delegates to target 
- * ClassLoader, and generally this loading class should be target class. 
- * If one class could be loaded by two ClassLoaders, and there might have class conflicting, 
- * targetTypeMatcher could be used to load class by target ClassLoader firstly.
- * 
- * <p>
- * Below figure demonstrates runtime relationship between ClassLoaders. 
- * 
- *                           Logical Parent CL           Actual Parent CL           Target CL
- * ----------------         -------------------          ---------------           -----------
- * | Bootstrap CL |  <----  | Ext/Platform CL |  <----   | Launcher CL |   <----   |  XXX CL |
- * ----------------         -------------------          ---------------           -----------
- *                                   ^                         ^                        ^
- *                                   | 1.JavaSE class          | 2.launcher-first       | 2.target-first 
- *                                   |                         |       class            |     class
- *                              ---------- --------------------|                   -------------
- *                              | Aop CL | <-------------------------------------- | Aspect CL |
- *                              ----------                        1.AOP class      -------------
- *
- *
+ * Loads classes from two sources:
+ * <ol>
+ *   <li>The aspect application's own classpath (via the parent {@link AopClassLoader})</li>
+ *   <li>The target application's class loader (obtained from {@link ThreadContext})</li>
+ * </ol>
+ * By default, aspect-side classes are loaded first; target-side classes are loaded as a fallback.
+ * The {@code targetFirstTypeMatcher} and {@code targetFirstResourceMatcher} can reverse this
+ * priority for specific type or resource names.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AspectClassLoader extends BaseClassLoader {
 
@@ -250,6 +230,10 @@ public class AspectClassLoader extends BaseClassLoader {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Enumeration<URL> getResources(String name) throws IOException {
         List<Enumeration<URL>> urlsList = new ArrayList<>();
         Enumeration<URL> urls = null;
@@ -301,7 +285,10 @@ public class AspectClassLoader extends BaseClassLoader {
                 + "-" + ClassLoaderUtils.getClassLoaderName(this.getTargetClassLoader());
     }
 
-    
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
         return getLoaderName();

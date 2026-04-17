@@ -33,13 +33,27 @@ import io.gemini.api.activation.AopLauncher;
 import io.gemini.api.activation.LauncherConfig;
 import io.gemini.api.classloader.AopClassLoader;
 
+/**
+ * Orchestrates the bootstrap sequence of the Gemini AOP framework.
+ * <p>
+ * Responsibilities include resolving the launch path from the agent JAR location,
+ * constructing a {@link DefaultAopClassLoader} with an isolated classpath, and
+ * loading the {@link AopLauncher} implementation via {@link java.util.ServiceLoader}.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class AopActivator {
-
-//    private boolean launched = false;
 
     private static final Class<AopActivator> ACTIVATOR_CLASS = AopActivator.class;
 
-
+    /**
+     * Activates the Gemini AOP framework using the agent JAR location as the launch path.
+     * Resolves {@link LauncherConfig} and {@link AopClassLoader} automatically.
+     *
+     * @param agentArgs       comma-separated key=value launch arguments
+     * @param instrumentation the JVM instrumentation API instance
+     */
     public static void activateAop(String agentArgs, Instrumentation instrumentation) {
         wrap( () -> {
             doActivateAop(agentArgs, instrumentation, null, null);
@@ -47,6 +61,15 @@ public class AopActivator {
         });
     }
 
+    /**
+     * Activates the AOP framework with explicitly provided {@link LauncherConfig} and {@link AopClassLoader}.
+     * Useful for programmatic or test-driven activation.
+     *
+     * @param agentArgs       comma-separated key=value launch arguments
+     * @param instrumentation the JVM instrumentation API instance
+     * @param launchConfig    pre-built launcher configuration, or {@code null} to auto-resolve
+     * @param aopClassLoader  pre-built AOP class loader, or {@code null} to auto-create
+     */
     public static void activateAop(String agentArgs, Instrumentation instrumentation, 
             LauncherConfig launchConfig, AopClassLoader aopClassLoader) {
         wrap( () -> {
@@ -55,7 +78,6 @@ public class AopActivator {
         });
     }
 
-    // TODO: launch at runtime or multiple time
     private static void doActivateAop(String agentArgs, Instrumentation instrumentation, 
             LauncherConfig launchConfig, AopClassLoader aopClassLoader) throws URISyntaxException, IOException {
         // initialize LaunchConfig

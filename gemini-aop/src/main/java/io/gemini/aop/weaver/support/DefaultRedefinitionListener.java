@@ -27,6 +27,12 @@ import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.agent.builder.AgentBuilder;
 
+/**
+ * ByteBuddy {@link AgentBuilder.RedefinitionStrategy.Listener} that logs batch progress
+ * and records the total count of redefined types in {@link io.gemini.aop.AopMetrics.LauncherMetrics}.
+ *
+ * @author   martin.liu
+ */
 public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStrategy.Listener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultRedefinitionListener.class);
@@ -44,6 +50,13 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
         launcherMetrics = aopMetrics.getLauncherMetrics();
     }
 
+    /**
+     * Called when a redefinition batch starts. Logs progress at INFO level when diagnostic mode is enabled.
+     *
+     * @param index the batch index
+     * @param batch the types in this batch
+     * @param types all types being redefined
+     */
     @Override
     public void onBatch(int index, List<Class<?>> batch, List<Class<?>> types) {
         if (this.startedAt == DEFAULT) {
@@ -56,6 +69,15 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
                     batch.size(), types.size(), index);
     }
 
+    /**
+     * Called when a redefinition batch fails. Logs the error and the affected types at WARN level.
+     *
+     * @param index     the batch index
+     * @param batch     the types in the failed batch
+     * @param throwable the error that occurred
+     * @param types     all types being redefined
+     * @return an empty iterable (no retry)
+     */
     @Override
     public Iterable<? extends List<Class<?>>> onError(int index, List<Class<?>> batch, Throwable throwable, List<Class<?>> types) {
         if (LOGGER.isWarnEnabled())
@@ -71,6 +93,14 @@ public class DefaultRedefinitionListener implements AgentBuilder.RedefinitionStr
         return Collections.emptyList();
     }
 
+    /**
+     * Called when all redefinition batches have completed. Logs the total count and time,
+     * and records the count in {@link io.gemini.aop.AopMetrics.LauncherMetrics}.
+     *
+     * @param amount   the number of batches processed
+     * @param types    all types that were redefined
+     * @param failures any per-batch failures
+     */
     @Override
     public void onComplete(int amount, List<Class<?>> types, Map<List<Class<?>>, Throwable> failures) {
         if (startedAt == DEFAULT)

@@ -21,6 +21,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Marks a constructor as the preferred initializer when an advice class has multiple constructors.
+ * The framework will use the annotated constructor when instantiating the advice object.
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.CONSTRUCTOR} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

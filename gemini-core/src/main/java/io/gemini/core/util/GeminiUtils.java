@@ -20,11 +20,23 @@ import java.util.regex.Pattern;
 import nonapi.io.github.classgraph.scanspec.AcceptReject;
 import nonapi.io.github.classgraph.utils.JarUtils;
 
+/**
+ * Utility class for identifying the Gemini AOP framework JARs on the classpath.
+ *
+ * @author   martin.liu
+ */
 public abstract class GeminiUtils {
 
     private static final Pattern GEMINI_JAR_PATTERN = AcceptReject.globToPattern("gemini*.jar", true);
 
 
+    /**
+     * Returns {@code true} if the given path is a Gemini AOP framework JAR
+     * (matches the {@code gemini*.jar} glob pattern).
+     *
+     * @param path the file path to check
+     * @return {@code true} if the path is a Gemini JAR
+     */
     public static boolean isGeminiJar(String path) {
         return GEMINI_JAR_PATTERN.matcher(JarUtils.leafName(path)).matches();
     }

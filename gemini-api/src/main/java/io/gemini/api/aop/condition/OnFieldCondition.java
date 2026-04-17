@@ -18,19 +18,21 @@
  */
 package io.gemini.api.aop.condition;
 
-import io.gemini.api.annotation.Initializer;
 import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Condition implementation for {@link io.gemini.api.aop.annotation.ConditionalOnField}.
+ * Evaluates whether the specified field expression is present in the target type.
+ * Throws {@link MissingElementException} if the field is absent.
+ *
+ * @author   martin.liu
  */
 public class OnFieldCondition implements ElementMatcher<MatchingContext> {
 
     private final String fieldExpression;
 
 
-    @Initializer
     public OnFieldCondition(String fieldExpression) {
         this.fieldExpression = fieldExpression;
     }

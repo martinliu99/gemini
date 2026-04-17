@@ -26,6 +26,16 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Demo runner that exercises the AOP-instrumented {@code DemoServiceImpl} via custom class loaders.
+ * <p>
+ * Creates multiple {@link RunnerClassLoader} and {@link RunnerClassLoader2} instances to simulate
+ * a multi-ClassLoader environment, verifying that Gemini correctly instruments classes loaded
+ * by different class loaders.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class DemoServiceRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoServiceRunner.class);

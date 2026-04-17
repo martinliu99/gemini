@@ -41,10 +41,14 @@ import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
 /**
- *
+ * Aggregates all {@link FactoryContext} instances, one per discovered aspect application.
+ * <p>
+ * Loads global factory settings (shared ClassLoader flag, conflict ClassLoader groups,
+ * enabled factory expressions) and creates a {@link FactoryContext} for each aspect app
+ * found in the launcher's {@code aspectapps/} directory.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 class FactoriesContext implements Closeable {
 
@@ -172,24 +176,49 @@ class FactoriesContext implements Closeable {
     }
 
 
+    /**
+     * Returns {@code true} if a single {@link io.gemini.aop.factory.classloader.AspectClassLoader}
+     * instance should be shared across multiple target class loaders when there is no conflict.
+     *
+     * @return {@code true} if aspect class loader sharing is enabled
+     */
     public boolean isShareAspectClassLoader() {
         return shareAspectClassLoader;
     }
 
+    /**
+     * Returns the list of conflict groups — sets of class loader names that may load the same classes
+     * and therefore must not share an {@link io.gemini.aop.factory.classloader.AspectClassLoader}.
+     *
+     * @return unmodifiable list of conflict class loader name sets
+     */
     public List<Set<String>> getConflictTargetClassLoaders() {
         return Collections.unmodifiableList( conflictTargetClassLoaders );
     }
 
+    /**
+     * Returns {@code true} if ASM frame computation should be performed automatically
+     * when generating advice bytecode.
+     *
+     * @return {@code true} if auto ASM computation is enabled
+     */
     public boolean isAutoComputeAsm() {
         return autoComputeAsm;
     }
 
-
+    /**
+     * Returns an unmodifiable view of the factory context map, keyed by aspect application name.
+     *
+     * @return map of factory name to {@link FactoryContext}
+     */
     public Map<String, FactoryContext> getFactoryContextMap() {
         return Collections.unmodifiableMap( this.factoryContextMap );
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void close() throws IOException {
         for (Closeable closeable : this.factoryContextMap.values()) {

@@ -20,6 +20,16 @@ import io.gemini.core.config.ConfigView;
 import io.gemini.core.logging.logback.LogbackLoggingSystem;
 import io.gemini.core.util.Assert;
 
+/**
+ * Abstraction for initializing the logging framework used by the Gemini AOP framework.
+ * <p>
+ * The default implementation uses Logback ({@link LogbackLoggingSystem}).
+ * A Log4j2 implementation is also available but currently commented out.
+ * Use {@link Builder} to construct an instance with the desired configuration.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface LoggingSystem {
 
     static final String CONTEXT_NAME = "Gemini";
@@ -32,6 +42,10 @@ public interface LoggingSystem {
     void initialize(ClassLoader currentClassLoader);
 
 
+    /**
+     * Fluent builder for constructing {@link LoggingSystem} instances.
+     * Currently always produces a {@link io.gemini.core.logging.logback.LogbackLoggingSystem}.
+     */
     class Builder {
 
         private String configLocation;
@@ -39,6 +53,12 @@ public interface LoggingSystem {
         private DiagnosticLevel diagnosticLevel;
 
 
+        /**
+         * Sets the path to the logging configuration file.
+         *
+         * @param configLocation the classpath location of the logging config file
+         * @return this builder
+         */
         public Builder configLocation(String configLocation) {
             Assert.hasText(configLocation, "'configLocation' must not be empty.");
             this.configLocation = configLocation;
@@ -46,6 +66,12 @@ public interface LoggingSystem {
             return this;
         }
 
+        /**
+         * Sets the {@link ConfigView} used to read logger settings.
+         *
+         * @param configView the config view
+         * @return this builder
+         */
         public Builder configView(ConfigView configView) {
             Assert.notNull(configView, "'configView' must not be null.");
             this.configView = configView;
@@ -53,12 +79,24 @@ public interface LoggingSystem {
             return this;
         }
 
+        /**
+         * Sets the diagnostic level for the logging system.
+         *
+         * @param diagnosticLevel the diagnostic level
+         * @return this builder
+         */
         public Builder diagnosticLevel(DiagnosticLevel diagnosticLevel) {
             this.diagnosticLevel = diagnosticLevel;
 
             return this;
         }
 
+        /**
+         * Builds and returns the configured {@link LoggingSystem}.
+         * Currently always returns a {@link io.gemini.core.logging.logback.LogbackLoggingSystem}.
+         *
+         * @return the constructed logging system
+         */
         public LoggingSystem build() {
 //            return new Log4j2(configLocation, configView, diagnosticLevel);
             return new LogbackLoggingSystem(configLocation, configView, diagnosticLevel);

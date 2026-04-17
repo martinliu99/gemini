@@ -42,11 +42,15 @@ import net.bytebuddy.jar.asm.commons.ClassRemapper;
 import net.bytebuddy.jar.asm.commons.SimpleRemapper;
 
 /**
- * 
- *
+ * Renames class references in bytecode using ASM's {@link ClassRemapper}.
+ * <p>
+ * Used by {@link BootstrapClassConfigurer} to relocate bootstrap provider classes
+ * from their compile-time package (e.g., {@code io.gemini.aop.weaver}) to the
+ * target package defined by {@code @BootstrapClassProvider.scopeType} (e.g., {@code java.lang}).
+ * Optionally removes specified inner class entries and annotation descriptors.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface ClassRenamer {
 
@@ -55,6 +59,10 @@ public interface ClassRenamer {
     byte[] map(String className, byte[] originByteCode) throws IllegalClassFormatException;
 
 
+    /**
+     * Default {@link ClassRenamer} implementation that uses ASM's {@link net.bytebuddy.jar.asm.commons.ClassRemapper}
+     * to rename class references in bytecode and optionally remove specified annotation descriptors.
+     */
     class Default implements ClassRenamer {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(ClassRenamer.class);
@@ -68,10 +76,25 @@ public interface ClassRenamer {
         private final String byteCodeDumpPath;
 
 
+        /**
+         * Constructs a {@code Default} renamer with the given name mapping.
+         *
+         * @param nameMapping      map from original class names to renamed class names
+         * @param dumpByteCode     whether to dump original and renamed bytecode to disk
+         * @param byteCodeDumpPath the directory path for bytecode dumps
+         */
         public Default(Map<String, String> nameMapping, boolean dumpByteCode, String byteCodeDumpPath) {
             this(nameMapping, null, dumpByteCode, byteCodeDumpPath);
         }
 
+        /**
+         * Constructs a {@code Default} renamer with the given name mapping and annotations to remove.
+         *
+         * @param nameMapping          map from original class names to renamed class names
+         * @param removedAnnotations   fully-qualified annotation names whose descriptors should be removed
+         * @param dumpByteCode         whether to dump original and renamed bytecode to disk
+         * @param byteCodeDumpPath     the directory path for bytecode dumps
+         */
         public Default(Map<String, String> nameMapping, Collection<String> removedAnnotations,
                 boolean dumpByteCode, String byteCodeDumpPath) {
             nameMapping = nameMapping == null ? Collections.emptyMap() : nameMapping;
@@ -158,10 +181,20 @@ public interface ClassRenamer {
         }
 
 
+        /**
+         * ASM {@link net.bytebuddy.jar.asm.ClassVisitor} that removes specified inner class
+         * entries and annotation descriptors from the class file.
+         */
         class AnnotationRemover extends ClassVisitor {
 
             private final Set<String> removedAnnotationDescriptors;
 
+        /**
+         * Constructs an {@code AnnotationRemover} that removes the given annotation descriptors.
+         *
+         * @param classVisitor                the downstream class visitor
+         * @param removedAnnotationDescriptors the set of annotation descriptors to remove
+         */
             public AnnotationRemover(ClassVisitor classVisitor, Set<String> removedAnnotationDescriptors) {
                 super(Opcodes.ASM9, classVisitor);
 

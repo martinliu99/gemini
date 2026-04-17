@@ -25,6 +25,16 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import io.gemini.core.DiagnosticLevel;
 import io.gemini.core.object.ObjectFactory.AbstractBase;
 
+/**
+ * Spring-based {@link ObjectFactory} implementation that uses a Spring
+ * {@link AnnotationConfigApplicationContext} to create and inject advice objects.
+ * <p>
+ * Subclasses must implement {@link #getBasePackages()} to specify the packages
+ * to scan for Spring-managed beans.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public abstract class AbstractSpringObjectFactory extends AbstractBase {
 
     private ConfigurableApplicationContext applicationContext;

@@ -30,6 +30,16 @@ import org.aspectj.weaver.ast.Var;
 import io.gemini.aspectj.weaver.PointcutParameter.ParamCategory;
 
 
+/**
+ * Internal AspectJ {@link Shadow} implementation used during pointcut matching.
+ * <p>
+ * Represents a method/constructor execution joinpoint in the AspectJ shadow model,
+ * providing access to {@code this}, {@code target}, argument, and annotation variables
+ * needed for parameter binding in AspectJ advice.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @SuppressWarnings("rawtypes")
 class InternalShadow extends Shadow {
 
@@ -49,6 +59,16 @@ class InternalShadow extends Shadow {
     private Map annotationVar = new HashMap();
 
 
+    /**
+     * Creates a new {@code InternalShadow} representing a joinpoint execution.
+     *
+     * @param world           the ByteBuddy world used for type resolution
+     * @param kind            the shadow kind (e.g., method execution, constructor execution)
+     * @param signature       the member signature at this joinpoint
+     * @param enclosingShadow the enclosing shadow, or {@code null} if top-level
+     * @param enclosingType   the type enclosing this joinpoint
+     * @param enclosingMember the member enclosing this joinpoint, or {@code null}
+     */
     public InternalShadow(BytebuddyWorld world, Kind kind, 
             Member signature, Shadow enclosingShadow, 
             ResolvedType enclosingType, ResolvedMember enclosingMember) {
@@ -61,6 +81,7 @@ class InternalShadow extends Shadow {
     /**
      * {@inheritDoc}
      */
+    @Override
     public World getIWorld() {
         return world;
     }
@@ -68,6 +89,7 @@ class InternalShadow extends Shadow {
     /**
      * {@inheritDoc}
      */
+    @Override
     public Var getThisVar() {
         if (thisVar == null && hasThis()) {
             thisVar = new InternalVar(getThisType().resolve(world), ParamCategory.THIS_VAR);
@@ -75,11 +97,10 @@ class InternalShadow extends Shadow {
         return thisVar;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.aspectj.weaver.Shadow#getTargetVar()
+    /**
+     * {@inheritDoc}
      */
+    @Override
     public Var getTargetVar() {
         if (targetVar == null && hasTarget()) {
             targetVar = new InternalVar(getThisType().resolve(world), ParamCategory.TARGET_VAR);
@@ -90,6 +111,7 @@ class InternalShadow extends Shadow {
     /**
      * {@inheritDoc}
      */
+    @Override
     public UnresolvedType getEnclosingType() {
         return this.enclosingType;
     }
@@ -97,6 +119,7 @@ class InternalShadow extends Shadow {
     /**
      * {@inheritDoc}
      */
+    @Override
     public Var getArgVar(int i) {
         if (argsVars == null) {
             this.argsVars = new Var[this.getArgCount()];
@@ -108,22 +131,42 @@ class InternalShadow extends Shadow {
         return i < argsVars.length ? argsVars[i] : null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Var getThisJoinPointVar() {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Var getThisJoinPointStaticPartVar() {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Var getThisEnclosingJoinPointStaticPartVar() {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Var getThisAspectInstanceVar(ResolvedType aspectType) {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @SuppressWarnings("unchecked")
     public Var getKindedAnnotationVar(UnresolvedType annotationType) {
         ResolvedType annType = annotationType.resolve(world);
@@ -139,6 +182,7 @@ class InternalShadow extends Shadow {
      * {@inheritDoc}
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Var getWithinAnnotationVar(UnresolvedType annotationType) {
         ResolvedType annType = annotationType.resolve(world);
         if (withinAnnotationVar.get(annType) == null) {
@@ -153,6 +197,7 @@ class InternalShadow extends Shadow {
      * {@inheritDoc}
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Var getWithinCodeAnnotationVar(UnresolvedType annotationType) {
         ResolvedType annType = annotationType.resolve(world);
         if (withinCodeAnnotationVar.get(annType) == null) {
@@ -163,9 +208,9 @@ class InternalShadow extends Shadow {
     }
 
     /**
-     * 
      * {@inheritDoc}
      */
+    @Override
     public Var getThisAnnotationVar(UnresolvedType annotationType) {
         if (atThisVar == null) {
             atThisVar = new InternalVar(annotationType.resolve(world), ParamCategory.AT_THIS_VAR);
@@ -174,9 +219,9 @@ class InternalShadow extends Shadow {
     }
 
     /**
-     * 
      * {@inheritDoc}
      */
+    @Override
     public Var getTargetAnnotationVar(UnresolvedType annotationType) {
         if (atTargetVar == null) {
             atTargetVar = new InternalVar(annotationType.resolve(world), ParamCategory.AT_TARGET_VAR);
@@ -184,10 +229,11 @@ class InternalShadow extends Shadow {
         return atTargetVar;
     }
 
+
     /**
-     * 
      * {@inheritDoc}
      */
+    @Override
     @SuppressWarnings("unchecked")
     public Var getArgAnnotationVar(int i, UnresolvedType annotationType) {
         ResolvedType annType = annotationType.resolve(world);
@@ -207,9 +253,9 @@ class InternalShadow extends Shadow {
     }
 
     /**
-     * 
      * {@inheritDoc}
      */
+    @Override
     public org.aspectj.weaver.Member getEnclosingCodeSignature() {
         // XXX this code is copied from BcelShadow with one minor change...
         if (getKind().isEnclosingKind()) {
@@ -226,9 +272,9 @@ class InternalShadow extends Shadow {
     }
 
     /**
-     * 
      * {@inheritDoc}
      */
+    @Override
     public ISourceLocation getSourceLocation() {
         return null;
     }

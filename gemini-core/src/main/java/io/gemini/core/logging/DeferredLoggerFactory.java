@@ -37,19 +37,16 @@ import org.slf4j.helpers.NOPLogger;
 import org.slf4j.spi.LocationAwareLogger;
 
 /**
- * Generally, this class is used in logging system startup phase to cache {@code DeferredMessage}, 
- * and later replay messages after initialized logging system. 
- * 
- * After initialization, all logger instances, generated before and after initialization, 
- * works like normal logger and records message in real-time.
+ * A logger factory that defers log messages during the Gemini AOP framework initialization phase
+ * and replays them once the logging system is fully configured.
+ * <p>
+ * During the deferred phase, all log messages are queued in memory. After
+ * {@link #replayDeferredMessages(Level)} is called, the queue is drained and each
+ * message is forwarded to the real SLF4J logger at the appropriate level.
+ * After replay, all loggers switch to real-time logging.
+ * </p>
  *
- * with DeferredLoggerFactory,
- * <li> in initializing phase, lose location information, e.g., class, method, file, line,
- * <li> might record disordered messages when working with spring boot {@code DeferredLog}.
- * 
- * This class is a enhanced {@code LocationAwareLogger} version of {@code org.slf4j.helpers.SubstituteLoggerFactory}.
- * 
- * @author martin.liu
+ * @author   martin.liu
  */
 public class DeferredLoggerFactory {
 
@@ -98,16 +95,28 @@ public class DeferredLoggerFactory {
     }
 
 
+    /**
+     * Returns a {@link DeferredLogger} for the given name, creating one if it doesn't exist.
+     *
+     * @param name the logger name
+     * @return the deferred logger instance
+     */
     public static DeferredLogger getLogger(String name) {
         return INSTANCE.getOrCreateLogger(name);
     }
 
+    /**
+     * Returns a {@link DeferredLogger} for the given class.
+     *
+     * @param clazz the class whose name is used as the logger name
+     * @return the deferred logger instance
+     */
     public static DeferredLogger getLogger(Class<?> clazz) {
         return INSTANCE.getOrCreateLogger(clazz.getName());
     }
 
     /**
-     * enable defer mode, and cache log messages
+     * Enables defer mode, and caches log messages
      * 
      */
     public static void enableDeferMode() {
@@ -115,7 +124,7 @@ public class DeferredLoggerFactory {
     }
 
     /**
-     * exit defer mode, and replay cache log messages with given log level.
+     * Exits defer mode, and replays cache log messages with given log level.
      * 
      * @param loggingLevel
      */
@@ -124,6 +133,12 @@ public class DeferredLoggerFactory {
     }
 
 
+    /**
+     * Returns or creates a {@link DeferredLogger} for the given name, using a weak reference cache.
+     *
+     * @param name the logger name
+     * @return the deferred logger
+     */
     private synchronized DeferredLogger getOrCreateLogger(String name) {
         WeakReference<DeferredLogger> loggerRef = loggers.get(name);
         if (loggerRef == null || loggerRef.get() == null) {
@@ -135,6 +150,9 @@ public class DeferredLoggerFactory {
         return loggerRef.get();
     }
 
+    /**
+     * Enables deferred mode on all existing loggers and sets the factory flag.
+     */
     private void enableDeferModeInternal() {
         if (enableDeferMode == true)
             return;
@@ -145,6 +163,11 @@ public class DeferredLoggerFactory {
         adjustDelayLoggers(enableDeferMode);
     }
 
+    /**
+     * Disables deferred mode, replays all queued messages at the given level, then clears state.
+     *
+     * @param loggingLevel the minimum level at which queued messages are replayed
+     */
     private void replayDeferredMessagesInternal(Level loggingLevel) {
         if (enableDeferMode == false)
             return;
@@ -161,6 +184,11 @@ public class DeferredLoggerFactory {
         clear();
     }
 
+    /**
+     * Switches all cached loggers between deferred and real-time mode.
+     *
+     * @param deferMode {@code true} to enable deferred mode, {@code false} to disable
+     */
     private void adjustDelayLoggers(boolean deferMode) {
         synchronized (this) {
             try {
@@ -182,6 +210,11 @@ public class DeferredLoggerFactory {
         }
     }
 
+    /**
+     * Drains the event queue and forwards each message to the real SLF4J logger.
+     *
+     * @param loggingLevel the minimum level to replay
+     */
     private void replayMessages(Level loggingLevel) {
         final LinkedBlockingQueue<DeferredMessage> queue = eventQueue;
         int queueSize = queue.size();
@@ -220,6 +253,13 @@ public class DeferredLoggerFactory {
         LoggerFactory.getLogger(DeferredLoggerFactory.class).info(sBuilder.toString());
     }
 
+    /**
+     * Formats a single {@link DeferredMessage} into the replay string builder.
+     *
+     * @param sBuilder      the string builder to append to
+     * @param dateFormatter the date formatter for timestamps
+     * @param message       the deferred message to format
+     */
     private void formatMessage(StringBuilder sBuilder, DateFormat dateFormatter, DeferredMessage message) {
         sBuilder.append(dateFormatter.format(message.getTimeStamp())).append(SPACE)
         .append(
@@ -238,6 +278,10 @@ public class DeferredLoggerFactory {
     }
 
 
+    /**
+     * SLF4J {@link Logger} implementation that queues log messages during the deferred phase
+     * and forwards them to the real logger once deferred mode is disabled.
+     */
     static class DeferredLogger implements Logger {
 
         // adjust logging location
@@ -265,57 +309,106 @@ public class DeferredLoggerFactory {
             return name;
         }
 
+        /**
+         * Switches this logger to deferred mode — log messages are queued instead of forwarded.
+         */
         void enableDeferMode() {
             this.delegate = null;
         }
 
+        /**
+         * Switches this logger to real-time mode — log messages are forwarded to the real SLF4J logger.
+         */
         void disableDeferMode() {
             Logger logger = LoggerFactory.getLogger(name);
             this.delegate = logger == null ? NOPLogger.NOP_LOGGER : logger;
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isTraceEnabled() {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isTraceEnabled();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isTraceEnabled(Marker marker) {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isTraceEnabled(marker);
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isDebugEnabled() {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isDebugEnabled();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isDebugEnabled(Marker marker) {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isDebugEnabled(marker);
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isInfoEnabled() {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isInfoEnabled();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isInfoEnabled(Marker marker) {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isInfoEnabled(marker);
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isWarnEnabled() {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isWarnEnabled();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isWarnEnabled(Marker marker) {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isWarnEnabled(marker);
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isErrorEnabled() {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isErrorEnabled();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isErrorEnabled(Marker marker) {
             return getDelegate() == null ? RECORD_ALL_EVENTS : getDelegate().isErrorEnabled(marker);
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(String msg) {
             if (isTraceEnabled()) {
@@ -330,6 +423,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(String format, Object arg) {
             if (isTraceEnabled()) {
@@ -344,6 +440,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(String format, Object arg1, Object arg2) {
             if (isTraceEnabled()) {
@@ -358,6 +457,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(String format, Object... arguments) {
             if (isTraceEnabled()) {
@@ -372,6 +474,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(String msg, Throwable t) {
             if (isTraceEnabled()) {
@@ -386,6 +491,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(Marker marker, String msg) {
             if (isTraceEnabled(marker)) {
@@ -400,6 +508,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(Marker marker, String format, Object arg) {
             if (isTraceEnabled(marker)) {
@@ -414,6 +525,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(Marker marker, String format, Object arg1, Object arg2) {
             if (isTraceEnabled(marker)) {
@@ -428,6 +542,9 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void trace(Marker marker, String format, Object... arguments) {
             if (isTraceEnabled(marker)) {
@@ -442,6 +559,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void trace(Marker marker, String msg, Throwable t) {
             if (isTraceEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -455,6 +576,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(String msg) {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
@@ -468,6 +593,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(String format, Object arg) {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
@@ -481,6 +610,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(String format, Object arg1, Object arg2) {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
@@ -494,6 +627,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(String format, Object... arguments) {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
@@ -507,6 +644,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(String msg, Throwable t) {
             if (isDebugEnabled()) {
                 Logger delegate = getDelegate();
@@ -520,6 +661,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(Marker marker, String msg) {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -533,6 +678,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(Marker marker, String format, Object arg) {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -546,6 +695,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(Marker marker, String format, Object arg1, Object arg2) {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -559,6 +712,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(Marker marker, String format, Object... arguments) {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -572,6 +729,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void debug(Marker marker, String msg, Throwable t) {
             if (isDebugEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -585,6 +746,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(String msg) {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
@@ -598,6 +763,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(String format, Object arg) {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
@@ -611,6 +780,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(String format, Object arg1, Object arg2) {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
@@ -624,6 +797,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(String format, Object... arguments) {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
@@ -637,6 +814,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(String msg, Throwable t) {
             if (isInfoEnabled()) {
                 Logger delegate = getDelegate();
@@ -650,6 +831,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(Marker marker, String msg) {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -663,6 +848,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(Marker marker, String format, Object arg) {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -676,6 +865,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(Marker marker, String format, Object arg1, Object arg2) {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -689,6 +882,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(Marker marker, String format, Object... arguments) {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -702,6 +899,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void info(Marker marker, String msg, Throwable t) {
             if (isInfoEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -715,6 +916,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(String msg) {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
@@ -728,6 +933,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(String format, Object arg) {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
@@ -741,6 +950,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(String format, Object arg1, Object arg2) {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
@@ -754,6 +967,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(String format, Object... arguments) {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
@@ -767,6 +984,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(String msg, Throwable t) {
             if (isWarnEnabled()) {
                 Logger delegate = getDelegate();
@@ -780,6 +1001,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(Marker marker, String msg) {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -793,6 +1018,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(Marker marker, String format, Object arg) {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -806,6 +1035,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(Marker marker, String format, Object arg1, Object arg2) {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -819,6 +1052,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(Marker marker, String format, Object... arguments) {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -832,6 +1069,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void warn(Marker marker, String msg, Throwable t) {
             if (isWarnEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -845,6 +1086,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(String msg) {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
@@ -858,6 +1103,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(String format, Object arg) {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
@@ -871,6 +1120,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(String format, Object arg1, Object arg2) {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
@@ -884,6 +1137,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(String format, Object... arguments) {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
@@ -897,6 +1154,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(String msg, Throwable t) {
             if (isErrorEnabled()) {
                 Logger delegate = getDelegate();
@@ -910,6 +1171,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(Marker marker, String msg) {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -923,6 +1188,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(Marker marker, String format, Object arg) {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -936,6 +1205,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(Marker marker, String format, Object arg1, Object arg2) {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -949,6 +1222,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(Marker marker, String format, Object... arguments) {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -962,6 +1239,10 @@ public class DeferredLoggerFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void error(Marker marker, String msg, Throwable t) {
             if (isErrorEnabled(marker)) {
                 Logger delegate = getDelegate();
@@ -997,6 +1278,9 @@ public class DeferredLoggerFactory {
             return delegate;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean equals(Object o) {
             if (this == o)
@@ -1014,6 +1298,9 @@ public class DeferredLoggerFactory {
     }
 
 
+    /**
+     * Holds log message replayed in future.
+     */
     static class DeferredMessage {
 
         String loggerName;

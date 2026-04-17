@@ -39,6 +39,7 @@ import io.gemini.aop.factory.AdvisorFactory;
 import io.gemini.aop.weaver.BootstrapDispatcher.Dispatcher;
 import io.gemini.aop.weaver.Joinpoints.Descriptor;
 import io.gemini.aop.weaver.support.PointcutAdvisorWeaver;
+import io.gemini.api.aop.AopException;
 import io.gemini.core.bootstrap.BootstrapClassConsumer;
 import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
@@ -56,11 +57,18 @@ import net.bytebuddy.dynamic.scaffold.inline.MethodNameTransformer;
 import net.bytebuddy.utility.JavaModule;
 
 /**
+ * Default implementation of {@link AopWeaver} that integrates with the ByteBuddy agent builder.
+ * <p>
+ * Implements {@link net.bytebuddy.agent.builder.AgentBuilder.RawMatcher} to filter which types
+ * should be instrumented, and {@link net.bytebuddy.agent.builder.AgentBuilder.Transformer} to
+ * apply {@link io.gemini.aop.weaver.support.PointcutAdvisorWeaver} instances to matched types.
+ * Results are cached per class loader and type name in {@link TargetTypeCache} for future advisor 
+ * lookups on re-transformation.
  * 
- *
+ * The inner {@link Diagnostic} subclass adds per-type diagnostic logging.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @BootstrapClassConsumer
 class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, BootstrapDispatcher.Delegator {
@@ -101,6 +109,15 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
         return aopContext;
     }
 
+    /**
+     * Creates and caches a {@link TargetTypeCache} for the given class loader and type name.
+     *
+     * @param targetClassLoader   the class loader loading the type
+     * @param targetTypeName      the fully-qualified type name
+     * @param loaded              {@code true} if the type is already loaded (retransformation)
+     * @param targetMethodAdvisors map of method to matched advisors
+     * @return the created or existing cache entry
+     */
     protected TargetTypeCache createTargetTypeCache(ClassLoader targetClassLoader, 
             String targetTypeName, boolean loaded,
             Map<? extends MethodDescription, List<? extends Advisor>> targetMethodAdvisors) {
@@ -117,6 +134,13 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
         ;
     }
 
+    /**
+     * Retrieves the cached {@link TargetTypeCache} for the given class loader and type name.
+     *
+     * @param targetClassLoader the class loader loading the type
+     * @param targetTypeName    the fully-qualified type name
+     * @return the cached entry, or {@code null} if not yet cached
+     */
     protected TargetTypeCache getTargetTypeCache(ClassLoader targetClassLoader, String targetTypeName) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(targetClassLoader);
         ConcurrentMap<String /* typeName */, TargetTypeCache> targetTypeCaches = this.classLoaderTypeCache.get(cacheKey);
@@ -221,6 +245,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
 
     /**
      * {@inheritDoc}
+     * Selects proper TypeStrategy based on class file format change.
      */
     @Override
     public Builder<?> builder(TypeDescription targetType, ByteBuddy byteBuddy, ClassFileLocator classFileLocator,
@@ -260,7 +285,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
         }
 
         // throw exception
-        return -1;
+        throw new AopException("Could not register WeavedCodeCallback.");
     }
 
 
@@ -280,18 +305,30 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
      * {@inheritDoc}
      */
     @Override
-    public Object callback(Lookup targetLookup, String methodName, MethodType methodType, Object... args) {
+    public Object callback(Lookup targetLookup, String methodName, MethodType methodType, Object... arguments) {
         ClassLoader existingClassLoader = ThreadContext.getContextClassLoader();
         try {
-            Class<?> targetClass = targetLookup.lookupClass();
-            ClassLoader targetClassLoader = targetClass.getClassLoader();
+            Class<?> targetType = targetLookup.lookupClass();
+            ClassLoader targetClassLoader = targetType.getClassLoader();
             ThreadContext.setContextClassLoader(targetClassLoader);   // set targetClassLoader
 
             try {
-                int callbaclSlot = (int) args[0];
-                return weavedCodeCallbacks.get(callbaclSlot).callback(targetLookup, methodName, methodType, args);
+                int callbaclSlot = (int) arguments[0];
+                return weavedCodeCallbacks.get(callbaclSlot).callback(targetLookup, methodName, methodType, arguments);
             } catch(Exception e) {
-                LOGGER.warn("Could not find advisorWeaver for '{}'.", targetClass);
+                if (LOGGER.isWarnEnabled()) 
+                    LOGGER.warn("Could not weave target type. \n"
+                            + "  TargetClassLoader: {}"
+                            + "  TargetType: {}"
+                            + "  CallbaclArgument: {}"
+                            + "  Error reason: {} \n",
+                            targetClassLoader,
+                            targetType,
+                            arguments,
+                            e.getMessage(),
+                            e
+                    );
+
                 return null;
             }
         } finally {
@@ -309,6 +346,11 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
     }
 
 
+    /**
+     * Caches per-type weaving state for a given class loader and type name.
+     * Holds the map of method signatures to {@link PointcutAdvisorWeaver} instances
+     * and tracks whether the type has already been transformed.
+     */
     class TargetTypeCache {
 
         private final AopContext aopContext;
@@ -391,6 +433,12 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
     }
 
 
+    /**
+     * Extends {@link DefaultAopWeaver} to add per-type diagnostic logging for
+     * {@link #matches} and {@link #transform} calls, and uses
+     * {@link io.gemini.aop.weaver.Joinpoints.MutableJoinpointDispatcher.Diagnostic}
+     * for enhanced joinpoint dispatch logging.
+     */
     @BootstrapClassConsumer
     static class Diagnostic extends DefaultAopWeaver {
 
@@ -402,6 +450,9 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean matches(TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule,
                 Class<?> classBeingRedefined, ProtectionDomain targetProtectionDomain) {
@@ -416,6 +467,9 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
                 JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
@@ -428,6 +482,9 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public <T, E extends Throwable> Dispatcher<T, E> createDispacther(Object descriptor, 
                 Object targetObject, Object[] arguments) {

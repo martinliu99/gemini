@@ -63,7 +63,7 @@ import net.bytebuddy.utility.JavaModule;
  * since this package name belongs to 'java.base' module. 
  * 
  * <p>
- * To resolve this package name conflict, AOP framework,
+ * To resolve this package name conflict, the Gemini AOP framework,
  * <ol>
  * <li>place 'bootstrap' classes under 'io.gemini' package at compilation time.
  * <li>scan 'bootstrap' classes, rename package name defined by {@code @BootstrapClassProvider.scopeType},
@@ -74,7 +74,6 @@ import net.bytebuddy.utility.JavaModule;
  * 
  * 
  * @author   martin.liu
- * @since	 1.0
  */
 public class BootstrapClassConfigurer {
 
@@ -89,6 +88,14 @@ public class BootstrapClassConfigurer {
     private final String byteCodeDumpPath;
 
 
+    /**
+     * Constructs a new {@code BootstrapClassConfigurer}.
+     *
+     * @param instrumentation  the JVM instrumentation instance used for module redefinition
+     * @param diagnosticLevel  controls the verbosity of diagnostic logging
+     * @param dumpByteCode     whether to dump original and renamed bytecode to disk
+     * @param byteCodeDumpPath the directory path where bytecode dumps are written
+     */
     public BootstrapClassConfigurer(Instrumentation instrumentation, DiagnosticLevel diagnosticLevel, 
             boolean dumpByteCode, String byteCodeDumpPath) {
         Assert.notNull(instrumentation, "'instrumentation' must not be null.");
@@ -102,12 +109,14 @@ public class BootstrapClassConfigurer {
 
 
     /**
-     * scan 'bootstrap' classes, rename package name defined by {@code @BootstrapClassProvider.scopeType},
-     * and inject renamed classes into bootstrap ClassLoader when launching.
-     * 
-     * @param sourceClassLoader
-     * @param classScanner
-     * @return
+     * Scans bootstrap provider classes, renames their package to the one defined by
+     * {@code @BootstrapClassProvider.scopeType}, and injects the renamed bytecode into
+     * the bootstrap class loader.
+     *
+     * @param sourceClassLoader the class loader used to locate provider class bytecode
+     * @param classScanner      the scanner used to discover {@code @BootstrapClassProvider}-annotated classes
+     * @return a map from original class name to renamed class name
+     * @throws io.gemini.api.aop.AopException if scanning or injection fails
      */
     public Map<String, String> configureProviderClasses(ClassLoader sourceClassLoader, ClassScanner classScanner) {
         long startedAt = System.nanoTime();
@@ -242,11 +251,14 @@ public class BootstrapClassConfigurer {
 
 
     /**
-     * transform classes annotated with {@code @BootstrapClassConsumer}, and rename referred 'bootstrap' classes.
-     * 
-     * @param aopClassLoader
-     * @param classScanner
-     * @param nameMapping
+     * Transforms classes annotated with {@code @BootstrapClassConsumer} by renaming all
+     * references to bootstrap provider classes from their compile-time names to the
+     * injected names, and registers the transformed bytecode with the given class loader.
+     *
+     * @param aopClassLoader the AOP class loader to register the transformed classes with
+     * @param classScanner   the scanner used to discover {@code @BootstrapClassConsumer}-annotated classes
+     * @param nameMapping    the mapping from original class names to renamed class names
+     * @throws io.gemini.api.aop.AopException if loading or transforming a consumer class fails
      */
     public void configureConsumerClasses(AopClassLoader aopClassLoader, ClassScanner classScanner, Map<String, String> nameMapping) {
         long startedAt = System.nanoTime();
@@ -311,6 +323,10 @@ public class BootstrapClassConfigurer {
     }
 
 
+    /**
+     * Holds a candidate bootstrap class annotated with {@code @BootstrapClassProvider}.
+     * Stores the scope type, source and destination class names, and the raw bytecode.
+     */
     static class ProviderClass {
 
         private final Class<?> scopeType;
@@ -320,6 +336,15 @@ public class BootstrapClassConfigurer {
         private final byte[] byteCode;
 
 
+        /**
+         * Constructs a {@code ProviderClass} by loading the bytecode for the given class name
+         * and computing the destination class name from the scope type's package.
+         *
+         * @param sourceClassLoader the class loader used to read the class bytecode
+         * @param scopeType         the scope type whose package defines the destination package
+         * @param srcClassName      the fully-qualified source class name
+         * @throws IOException if the class bytecode cannot be read
+         */
         public ProviderClass(ClassLoader sourceClassLoader, Class<?> scopeType, String srcClassName) throws IOException {
             this.scopeType = scopeType;
 
@@ -339,18 +364,38 @@ public class BootstrapClassConfigurer {
         }
 
 
+        /**
+         * Returns the scope type that defines the destination package for this provider class.
+         *
+         * @return the scope type
+         */
         public Class<?> getScopeType() {
             return scopeType;
         }
 
+        /**
+         * Returns the fully-qualified source class name (compile-time name).
+         *
+         * @return the source class name
+         */
         public String getSrcClassName() {
             return srcClassName;
         }
 
+        /**
+         * Returns the fully-qualified destination class name (runtime name after renaming).
+         *
+         * @return the destination class name
+         */
         public String getDestClassName() {
             return destClassName;
         }
 
+        /**
+         * Returns the raw bytecode of the source class.
+         *
+         * @return the class bytecode
+         */
         public byte[] getByteCode() {
             return byteCode;
         }

@@ -24,8 +24,23 @@ import org.aspectj.weaver.World;
 import net.bytebuddy.description.type.TypeDescription;
 
 
+/**
+ * Provides AspectJ {@link ReferenceType} implementations that lazily delegate to
+ * a resolved type from the Gemini AOP framework {@link TypeWorld}.
+ * <p>
+ * {@link Facade} wraps an already-resolved {@link ReferenceType}.
+ * {@link LazyFacade} defers resolution until the delegate is first accessed,
+ * avoiding eager class loading during type scanning.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface ReferenceTypes {
 
+    /**
+     * Abstract base providing common logic: delegated reference type resolving,
+     * instance equality testing.
+     */
     abstract class WithDelegation extends ReferenceType {
 
         private ReferenceType delegateReferenceType;
@@ -74,11 +89,17 @@ public interface ReferenceTypes {
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public int hashCode() {
             return this.hashCode();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean equals(Object other) {
             if (other instanceof ResolvedType) {
@@ -98,11 +119,16 @@ public interface ReferenceTypes {
     }
 
 
+    /**
+     * Wraps an already-resolved {@link ReferenceType}.
+     */
     class Facade extends WithDelegation {
 
         /**
-         * @param signature
-         * @param world
+         * Creates a {@code Facade} that immediately delegates to the given {@link ReferenceType}.
+         *
+         * @param referenceType the already-resolved reference type to wrap
+         * @param world         the AspectJ world
          */
         public Facade(ReferenceType referenceType, World world) {
             super(referenceType.getSignature(), world);
@@ -112,6 +138,9 @@ public interface ReferenceTypes {
     }
 
 
+    /**
+     * Defers resolution until the delegate is first accessed, avoiding eager class loading during type scanning.
+     */
     class LazyFacade extends WithDelegation {
 
         private final String typeName;
@@ -119,6 +148,12 @@ public interface ReferenceTypes {
         private final TypeWorld typeWorld;
 
 
+        /**
+         * Creates a {@code LazyFacade} that resolves the type by name on first access.
+         *
+         * @param typeName  the fully-qualified type name to resolve lazily
+         * @param typeWorld the type world used for lazy resolution
+         */
         public LazyFacade(String typeName, TypeWorld typeWorld) {
             super(UnresolvedType.forName(typeName).getSignature(), typeWorld.getWorld());
 
@@ -128,8 +163,10 @@ public interface ReferenceTypes {
         }
 
         /**
-         * @param signature
-         * @param typeWorld
+         * Creates a {@code LazyFacade} that resolves the type from a {@link TypeDescription} on first access.
+         *
+         * @param typeDescription the ByteBuddy type description to resolve lazily
+         * @param typeWorld       the type world used for lazy resolution
          */
         public LazyFacade(TypeDescription typeDescription, TypeWorld typeWorld) {
             super(typeDescription.getDescriptor(), typeWorld.getWorld());

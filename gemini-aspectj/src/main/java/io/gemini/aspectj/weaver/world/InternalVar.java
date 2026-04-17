@@ -23,7 +23,13 @@ import io.gemini.aspectj.weaver.PointcutParameter;
 
 
 /**
- * A variable at a bytebuddy shadow, used by the residual tests.
+ * A variable at a ByteBuddy shadow, used by the AspectJ residual tests during pointcut matching.
+ * <p>
+ * Implements {@link PointcutParameter} to carry the parameter category and optional
+ * argument index needed for parameter binding in AspectJ advice.
+ * </p>
+ *
+ * @author   martin.liu
  */
 class InternalVar extends Var implements PointcutParameter {
 
@@ -31,10 +37,23 @@ class InternalVar extends Var implements PointcutParameter {
     private final int argsIndex;
 
 
+    /**
+     * Creates an {@code InternalVar} with no argument index ({@link PointcutParameter#INVALID_ARGS_INDEX}).
+     *
+     * @param type          the resolved type of this variable
+     * @param paramCategory the parameter category indicating the variable's role
+     */
     public InternalVar(ResolvedType type, ParamCategory paramCategory) {
         this(type, paramCategory, INVALID_ARGS_INDEX);
     }
 
+    /**
+     * Creates an {@code InternalVar} with an explicit argument index.
+     *
+     * @param type          the resolved type of this variable
+     * @param paramCategory the parameter category indicating the variable's role
+     * @param argsIndex     the index of this variable in the method's argument list
+     */
     public InternalVar(ResolvedType type, ParamCategory paramCategory, int argsIndex) {
         super(type);
 
@@ -45,6 +64,7 @@ class InternalVar extends Var implements PointcutParameter {
     /**
      * {@inheritDoc}
      */
+    @Override
     public ParamCategory getParamCategory() {
         return paramCategory;
     }
@@ -52,6 +72,7 @@ class InternalVar extends Var implements PointcutParameter {
     /**
      * {@inheritDoc}
      */
+    @Override
     public int getArgsIndex() {
         return argsIndex;
     }

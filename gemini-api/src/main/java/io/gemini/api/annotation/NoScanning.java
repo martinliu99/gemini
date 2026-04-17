@@ -27,7 +27,6 @@ import java.lang.annotation.Target;
  * Exclude annotated Class from class scanning.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.RUNTIME)

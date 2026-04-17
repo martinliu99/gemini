@@ -31,10 +31,19 @@ import io.gemini.core.util.IOUtils;
 import io.gemini.core.util.OrderedProperties;
 
 /**
- *
+ * Factory utility for creating and loading {@link ConfigView} instances from properties files
+ * and launch arguments.
+ * <p>
+ * Supports two creation modes:
+ * <ul>
+ *   <li>Standalone: from launch args, built-in settings, and properties files</li>
+ *   <li>Hierarchical: from a parent {@link ConfigView} with additional properties files</li>
+ * </ul>
+ * Also provides {@link #getDiagnosticLevel(ConfigView)} to read the configured
+ * {@link io.gemini.core.DiagnosticLevel} from a config view.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class ConfigViews {
 
@@ -45,6 +54,17 @@ public class ConfigViews {
     private static final String DIAGNOSTIC_LEVEL_KEY = "aop.launcher.diagnosticStrategy";
 
 
+    /**
+     * Creates a standalone {@link ConfigView} from launch arguments, built-in settings,
+     * and properties files loaded from the given class loader.
+     *
+     * @param launchArgs                   key-value pairs from the AOP launcher command line
+     * @param builtinSettings              immutable built-in settings (cannot be overridden)
+     * @param classLoader                  the class loader used to load properties files
+     * @param internalConfigLocation       classpath location of the internal properties file, or {@code null}
+     * @param userDefinedConfigLocations   map of user-defined properties file locations to source names
+     * @return the constructed config view
+     */
     public static ConfigView createConfigView(Map<String, String> launchArgs, Map<String, Object> builtinSettings,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
         if (LOGGER.isDebugEnabled())
@@ -105,6 +125,16 @@ public class ConfigViews {
         return configView;
     }
 
+    /**
+     * Creates a hierarchical {@link ConfigView} with the given parent and additional properties files.
+     *
+     * @param parentConfigView             the parent config view to fall back to
+     * @param conversionService            the conversion service to use
+     * @param classLoader                  the class loader used to load properties files
+     * @param internalConfigLocation       classpath location of the internal properties file, or {@code null}
+     * @param userDefinedConfigLocations   map of user-defined properties file locations to source names
+     * @return the constructed config view
+     */
     public static ConfigView createConfigView(ConfigView parentConfigView, ConversionService conversionService,
             ClassLoader classLoader, String internalConfigLocation, Map<String, String> userDefinedConfigLocations) {
         ConfigView.Builder builder = new ConfigView.Builder();
@@ -177,6 +207,14 @@ public class ConfigViews {
     }
 
 
+    /**
+     * Reads the {@code aop.launcher.diagnosticStrategy} key from the given config view
+     * and returns the corresponding {@link DiagnosticLevel}.
+     * Returns {@link DiagnosticLevel#DISABLED} if the key is absent or the value is invalid.
+     *
+     * @param configView the config view to read from
+     * @return the configured diagnostic level
+     */
     public static DiagnosticLevel getDiagnosticLevel(ConfigView configView) {
         if (configView.containsKey(DIAGNOSTIC_LEVEL_KEY)) {
             String level = configView.getAsString(DIAGNOSTIC_LEVEL_KEY).toUpperCase();

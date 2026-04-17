@@ -22,10 +22,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * Specifies the ordering priority of an advisor, or condition.
+ * Lower values have higher priority. Use {@link #HIGHEST_PRECEDENCE} and
+ * {@link #LOWEST_PRECEDENCE} for the extreme ends of the ordering range.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)

@@ -25,15 +25,24 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaConstant;
 
 /**
- *
+ * Provides the {@link net.bytebuddy.asm.Advice.BootstrapArgumentResolver} for ByteBuddy
+ * {@code @Advice} classes that use the {@link io.gemini.aop.weaver.BootstrapDispatcher} callback.
+ * <p>
+ * Passes the callback slot index and the advice class name as bootstrap method arguments,
+ * allowing the dispatcher to route the call to the correct {@link io.gemini.aop.weaver.AopWeaver.WeavedCodeCallback}.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class DefaultBootstrapArgumentResolverFactory implements BootstrapArgumentResolver.Factory {
 
     private final Object callbackCode;
 
+    /**
+     * Creates a new factory with the given callback slot code.
+     *
+     * @param callbackCode the slot index or identifier used to route the INDY callback
+     */
     public DefaultBootstrapArgumentResolverFactory(Object callbackCode) {
         this.callbackCode = callbackCode;
     }

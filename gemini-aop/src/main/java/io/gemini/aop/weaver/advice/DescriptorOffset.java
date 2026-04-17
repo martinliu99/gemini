@@ -42,8 +42,15 @@ import net.bytebuddy.implementation.bytecode.member.MethodInvocation;
 import net.bytebuddy.utility.JavaConstant;
 
 /**
- * byte code version lower than JDK7 does not support invoke dynamic instruction
-
+ * ByteBuddy {@link OffsetMapping.Factory} that injects the {@link io.gemini.aop.weaver.Joinpoints.Descriptor}
+ * (or a {@link java.lang.invoke.CallSite} wrapping it) into framework advice methods.
+ * <p>
+ * For JDK 7+ targets, uses {@code invokedynamic} ({@link ForDynamicInvocation}) for efficient
+ * call-site caching. For JDK 6 targets, falls back to a regular static method invocation
+ * ({@link ForRegularInvocation}).
+ * </p>
+ *
+ * @author   martin.liu
  */
 public interface DescriptorOffset {
 
@@ -69,6 +76,10 @@ public interface DescriptorOffset {
     }
 
 
+    /**
+     * Abstract base for {@link net.bytebuddy.asm.Advice.OffsetMapping.Factory} implementations
+     * that inject the joinpoint descriptor into advice methods.
+     */
     abstract class AbstractBase implements OffsetMapping.Factory<Descriptor> {
 
         protected static final Generic OBJECT_TYPE = TypeDefinition.Sort.describe(Object.class);
@@ -127,6 +138,10 @@ public interface DescriptorOffset {
     }
 
 
+    /**
+     * Uses a regular static method invocation (for JDK 6 targets) to inject the
+     * {@link io.gemini.aop.weaver.Joinpoints.Descriptor} into the advice method.
+     */
     class ForRegularInvocation extends AbstractBase {
 
         /**
@@ -161,6 +176,10 @@ public interface DescriptorOffset {
     }
 
 
+    /**
+     * Uses {@code invokedynamic} (for JDK 7+ targets) to inject the
+     * {@link io.gemini.aop.weaver.Joinpoints.Descriptor} via a cached {@link java.lang.invoke.CallSite}.
+     */
     class ForDynamicInvocation extends AbstractBase {
 
         public ForDynamicInvocation(MethodDescription targetMethod, Object... arguments) {

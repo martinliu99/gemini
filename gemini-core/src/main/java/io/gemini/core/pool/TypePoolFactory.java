@@ -34,19 +34,63 @@ import net.bytebuddy.pool.TypePool.Default.ReaderMode;
 import net.bytebuddy.pool.TypePool.Resolution;
 import net.bytebuddy.utility.JavaModule;
 
+/**
+ * Factory for ByteBuddy {@link TypePool} instances used during class scanning and bytecode transformation.
+ * <p>
+ * Implements both {@link PoolStrategy} and {@link DescriptionStrategy} so it can be plugged directly
+ * into ByteBuddy's {@link net.bytebuddy.agent.builder.AgentBuilder}.
+ * Maintains a per-class-loader cache of {@link TypePool} instances and an explicit pool for
+ * types that have already been described during transformation.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface TypePoolFactory {
 
+    /**
+     * Returns the {@link DescriptionStrategy} for use with ByteBuddy's AgentBuilder.
+     *
+     * @return the description strategy
+     */
     DescriptionStrategy getDescriptionStrategy();
 
+    /**
+     * Returns the {@link PoolStrategy} for use with ByteBuddy's AgentBuilder.
+     *
+     * @return the pool strategy
+     */
     PoolStrategy getPoolStrategy();
 
+    /**
+     * Returns the {@link LocationStrategy} used to locate class files.
+     *
+     * @return the location strategy
+     */
     LocationStrategy getLocationStrategy();
 
+    /**
+     * Creates or retrieves a cached {@link TypePool} for the given class loader and module.
+     *
+     * @param classLoader the class loader to create a pool for
+     * @param javaModule  the Java module (may be {@code null})
+     * @return the type pool
+     */
     TypePool createTypePool(ClassLoader classLoader, JavaModule javaModule);
 
+    /**
+     * Removes and returns the cached type resolution for the given type name.
+     *
+     * @param typeName the fully-qualified type name
+     * @return the removed resolution, or {@code null} if not cached
+     */
     Resolution removeTypeResolution(String typeName);
 
 
+    /**
+     * Default implementation of {@link TypePoolFactory} that caches one {@link TypePool}
+     * per class loader and implements both {@link PoolStrategy} and {@link DescriptionStrategy}
+     * for direct use with ByteBuddy's {@link net.bytebuddy.agent.builder.AgentBuilder}.
+     */
     class Default implements PoolStrategy, DescriptionStrategy, TypePoolFactory {
 
         private final LocationStrategy locationStrategy;
@@ -55,10 +99,18 @@ public interface TypePoolFactory {
         private final TypePools.Explicit explicitTypePool;
 
 
+        /**
+         * Constructs a {@code Default} factory with the default weak class-file location strategy.
+         */
         public Default() {
             this(null);
         }
 
+        /**
+         * Constructs a {@code Default} factory with the given location strategy.
+         *
+         * @param locationStrategy the strategy for locating class files (may be {@code null} for default)
+         */
         public Default(LocationStrategy locationStrategy) {
             this.locationStrategy = locationStrategy == null ? LocationStrategy.ForClassLoader.WEAK : locationStrategy;
             this.types = new ConcurrentReferenceHashMap<>();
@@ -220,8 +272,18 @@ public interface TypePoolFactory {
         }
 
 
+        /**
+         * Extends {@link TypePoolFactory.Default} to wrap type resolutions in
+         * {@link io.gemini.core.pool.TypePools.DelegatedResolution} instances that track
+         * which type properties are accessed during pointcut matching.
+         */
         public static class TyepResolutionDetector extends TypePoolFactory.Default {
 
+            /**
+             * Constructs a {@code TyepResolutionDetector} with the given location strategy.
+             *
+             * @param locationStrategy the strategy for locating class files
+             */
             public TyepResolutionDetector(LocationStrategy locationStrategy) {
                 super(locationStrategy);
             }

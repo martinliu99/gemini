@@ -30,22 +30,39 @@ import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.pool.TypePool.Resolution;
 
 /**
- *
+ * Internal collection of ByteBuddy {@link TypePool} implementations used by the Gemini AOP framework.
+ * <p>
+ * Key inner classes:
+ * <ul>
+ *   <li>{@link Default} – extends {@link TypePool.Default} and exposes the cache provider for sharing</li>
+ *   <li>{@link Explicit} – a simple map-backed pool for types that have already been described</li>
+ *   <li>{@link TyepResolutionDetector} – wraps resolutions to track which type properties were accessed</li>
+ *   <li>{@link DelegatedResolution} – a lazy resolution that delegates to a supplier</li>
+ *   <li>{@link DelegatedTypeDescription} – a type description that defers full resolution until needed</li>
+ * </ul>
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 interface TypePools {
 
     /**
-     * This TypePool extends {@code TypePool.Default} and expose cache provider.
-     *
+     * This TypePool extends {@code TypePool.Default} and exposes the cache provider
+     * so it can be shared between the AgentBuilder transformer and the pointcut matcher.
      */
     class Default extends TypePool.Default {
 
         private final String poolName;
 
 
+        /**
+         * Constructs a {@code Default} type pool without a parent pool.
+         *
+         * @param poolName         a human-readable name for this pool
+         * @param cacheProvider    the cache provider for resolved types
+         * @param classFileLocator the locator for class files
+         * @param readerMode       the ASM reader mode
+         */
         public Default(String poolName, 
                 CacheProvider cacheProvider, 
                 ClassFileLocator classFileLocator, 
@@ -55,6 +72,15 @@ interface TypePools {
             this.poolName = poolName;
         }
 
+        /**
+         * Constructs a {@code Default} type pool with a parent pool for fallback resolution.
+         *
+         * @param poolName         a human-readable name for this pool
+         * @param cacheProvider    the cache provider for resolved types
+         * @param classFileLocator the locator for class files
+         * @param readerMode       the ASM reader mode
+         * @param parentPool       the parent pool to delegate to when a type is not found
+         */
         public Default(String poolName, 
                 CacheProvider cacheProvider, 
                 ClassFileLocator classFileLocator, 
@@ -66,15 +92,21 @@ interface TypePools {
         }
 
 
+        /**
+         * Returns the pool name.
+         *
+         * @return the pool name
+         */
         protected String getPoolName() {
             return poolName;
         }
 
 
         /**
-         * expose cache provider to reuse type between AgentBuilder transformer and Pointcut matcher
-         * 
-         * @return
+         * Exposes the cache provider to allow sharing cached types between the
+         * AgentBuilder transformer and the pointcut matcher.
+         *
+         * @return the cache provider
          */
         public CacheProvider getCacheProvider() {
             return this.cacheProvider;
@@ -88,21 +120,41 @@ interface TypePools {
     }
 
 
+    /**
+     * An in-memory {@link TypePool} backed by a {@link java.util.concurrent.ConcurrentMap}.
+     * Used to cache type resolutions that have already been computed during bytecode transformation,
+     * so they can be reused by the pointcut matcher without re-reading the class file.
+     */
     class Explicit implements TypePool {
 
         private final ConcurrentMap<String, Resolution> resolutions;
 
 
+        /**
+         * Constructs an empty {@code Explicit} type pool.
+         */
         public Explicit() {
             this.resolutions = new ConcurrentHashMap<>();
         }
 
+        /**
+         * Adds a type resolution to this pool.
+         *
+         * @param typeName   the fully-qualified type name
+         * @param resolution the resolution to cache
+         */
         public void addTypeResolution(String typeName, Resolution resolution) {
             if (StringUtils.hasText(typeName) == false || resolution == null) return;
 
             this.resolutions.put(typeName, resolution);
         }
 
+        /**
+         * Removes and returns the cached resolution for the given type name.
+         *
+         * @param typeName the fully-qualified type name
+         * @return the removed resolution, or {@code null} if not cached
+         */
         public Resolution removeTypeResolution(String typeName) {
             if (StringUtils.hasText(typeName) == false) return null;
 
@@ -129,11 +181,25 @@ interface TypePools {
     }
 
 
+    /**
+     * Extends {@link TypePools.Default} to wrap each type resolution in a
+     * {@link DelegatedResolution} that tracks which type properties were accessed
+     * (for type resolution performance analysis).
+     */
     class TyepResolutionDetector extends TypePools.Default {
 
         private final boolean lazyResolution;
 
 
+        /**
+         * Constructs a {@code TyepResolutionDetector} without a parent pool.
+         *
+         * @param poolName         a human-readable name for this pool
+         * @param cacheProvider    the cache provider for resolved types
+         * @param classFileLocator the locator for class files
+         * @param readerMode       the ASM reader mode
+         * @param lazyResolution   whether to resolve types lazily
+         */
         public TyepResolutionDetector(String poolName, 
                 CacheProvider cacheProvider,
                 ClassFileLocator classFileLocator, 
@@ -142,6 +208,16 @@ interface TypePools {
             this(poolName, cacheProvider, classFileLocator, readerMode, lazyResolution, TypePool.Empty.INSTANCE);
         }
 
+        /**
+         * Constructs a {@code TyepResolutionDetector} with a parent pool.
+         *
+         * @param poolName         a human-readable name for this pool
+         * @param cacheProvider    the cache provider for resolved types
+         * @param classFileLocator the locator for class files
+         * @param readerMode       the ASM reader mode
+         * @param lazyResolution   whether to resolve types lazily
+         * @param parentPool       the parent pool to delegate to when a type is not found
+         */
         public TyepResolutionDetector(String poolName, 
                 CacheProvider cacheProvider,
                 ClassFileLocator classFileLocator, 
@@ -193,7 +269,7 @@ interface TypePools {
 
 
     /**
-     * A delegated resolution holds resolution supplier and {@code DelegatedTypeDescription}.
+     * A delegated resolution that holds a resolution supplier and a {@link DelegatedTypeDescription}.
      */
     class DelegatedResolution implements Resolution {
 
@@ -201,10 +277,23 @@ interface TypePools {
         private final DelegatedTypeDescription delegatedTypeDescription;
 
 
+        /**
+         * Constructs a {@code DelegatedResolution} with a default {@link DelegatedTypeDescription}.
+         *
+         * @param name             the type name
+         * @param delegateSupplier the supplier that provides the actual resolution
+         */
         protected DelegatedResolution(String name, Supplier<Resolution> delegateSupplier) {
             this(name, delegateSupplier, new DelegatedTypeDescription(name, delegateSupplier));
         }
 
+        /**
+         * Constructs a {@code DelegatedResolution} with a custom {@link DelegatedTypeDescription}.
+         *
+         * @param name                     the type name
+         * @param delegateSupplier         the supplier that provides the actual resolution
+         * @param delegatedTypeDescription the type description to return from {@link #resolve()}
+         */
         protected DelegatedResolution(String name, Supplier<Resolution> delegateSupplier, DelegatedTypeDescription delegatedTypeDescription) {
             this.delegateSupplier = delegateSupplier;
             this.delegatedTypeDescription = delegatedTypeDescription;
@@ -227,7 +316,8 @@ interface TypePools {
 
 
     /**
-     * A description of a type that delegates to another type resolution supplier once a property that is not the name is resolved.
+     * A type description that delegates to another resolution supplier once a property
+     * other than the type name is accessed.
      */
     class DelegatedTypeDescription extends TypeDescription.AbstractBase.OfSimpleType.WithDelegation {
 
@@ -235,6 +325,12 @@ interface TypePools {
         private final Supplier<Resolution> delegateSupplier;
 
 
+        /**
+         * Constructs a {@code DelegatedTypeDescription} for the given type name.
+         *
+         * @param name             the type name
+         * @param delegateSupplier the supplier that provides the actual resolution
+         */
         protected DelegatedTypeDescription(String name, Supplier<Resolution> delegateSupplier) {
             this.name = name;
             this.delegateSupplier = delegateSupplier;
@@ -268,12 +364,19 @@ interface TypePools {
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String toString() {
             return name;
         }
 
 
+        /**
+         * Extends {@link DelegatedTypeDescription} to implement {@link TypeResolutionInspector},
+         * recording whether superclass or interface information was accessed during matching.
+         */
         static class TyepResolutionDetector extends DelegatedTypeDescription implements TypeResolutionInspector {
 
             private ResolutionLevel resolutionLevel = ResolutionLevel.NO_RESOLUTION;
@@ -310,6 +413,9 @@ interface TypePools {
             }
 
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             protected TypeDescription delegate() {
                 this.setResolutionLevel(ResolutionLevel.TYPE_RESOLUTION);

@@ -31,7 +31,6 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  *
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class Target_11TargetVisibility_Tests {
 

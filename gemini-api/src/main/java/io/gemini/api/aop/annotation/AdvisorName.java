@@ -22,15 +22,23 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * Assigns a unique name to an advisor, overriding the default class-name-based name.
+ * 
+ * <p>
+ * Can be placed on an advice class or an AspectJ advice method.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface AdvisorName {
 
+    /**
+     * unique advisor name
+     * 
+     * @return
+     */
     String value();
 }

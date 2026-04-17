@@ -28,6 +28,15 @@ import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnClassLoaderCondition;
 
 
+/**
+ * Activates an advisor only when the target class loader matches the specified criteria.
+ * <p>
+ * Useful for restricting advice to specific class loader scopes, such as the bootstrap
+ * class loader (for JDK core class instrumentation) or a named custom class loader.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -35,11 +44,23 @@ import io.gemini.api.aop.condition.OnClassLoaderCondition;
 @Order(0)
 public @interface ConditionalOnClassLoader {
 
+    /** 
+     * Expression matching the class loader class name. 
+     */
     String classLoaderExpression() default "";
 
+    /** 
+     * If {@code true}, activates only for the bootstrap class loader.
+     */
     boolean isBootstrapClassLoader() default false;
 
+    /** 
+     * If {@code true}, activates only for the ext/platform class loader. 
+     */
     boolean isExtClassLoader() default false;
 
+    /** 
+     * If {@code true}, activates only for the application class loader. 
+     */
     boolean isAppClassLoader() default false;
 }

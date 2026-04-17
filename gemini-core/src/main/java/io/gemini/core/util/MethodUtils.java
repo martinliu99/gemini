@@ -22,12 +22,22 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.CompoundList;
 
+/**
+ * Utility class for working with ByteBuddy {@link MethodDescription} objects.
+ * <p>
+ * Provides helpers to retrieve all method descriptions (including type initializers),
+ * get human-readable method names, and safely compute generic method signatures.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public abstract class MethodUtils {
 
     /**
-     * Gets all MethodDescriptions including type initializer.
-     * @param typeDescription
-     * @return
+     * Returns all method descriptions for the given type, including the type initializer ({@code <clinit>}).
+     *
+     * @param typeDescription the type to inspect
+     * @return list of all method descriptions including the type initializer
      */
     public static List<MethodDescription.InDefinedShape> getAllMethodDescriptions(TypeDescription typeDescription) {
         Assert.notNull(typeDescription, "'typeDescription' must not be null.");
@@ -43,10 +53,11 @@ public abstract class MethodUtils {
     }
 
     /**
-     * Gets method name with method type.
-     * 
-     * @param methodDescription
-     * @return
+     * Returns a human-readable method name for the given method description.
+     * Returns {@code "<clinit>"} for type initializers and {@code "<init>"} for constructors.
+     *
+     * @param methodDescription the method description (may be {@code null})
+     * @return the method name, or an empty string if {@code null}
      */
     public static String getMethodName(MethodDescription methodDescription) {
         if (methodDescription == null) return "";
@@ -56,6 +67,14 @@ public abstract class MethodUtils {
                 : (methodDescription.isConstructor() ? MethodDescription.CONSTRUCTOR_INTERNAL_NAME : methodDescription.getName());
     }
 
+    /**
+     * Returns the generic signature string for the given method description.
+     * Falls back to the non-generic signature or a simple {@code "ClassName.methodName(...)"} string
+     * if the generic signature cannot be computed.
+     *
+     * @param methodDescription the method description (may be {@code null})
+     * @return the method signature string, or an empty string if {@code null}
+     */
     public static String getMethodSignature(MethodDescription methodDescription) {
         if (methodDescription == null)
             return "";

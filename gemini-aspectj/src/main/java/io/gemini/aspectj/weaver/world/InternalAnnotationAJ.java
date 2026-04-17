@@ -39,6 +39,15 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.MethodList;
 
 
+/**
+ * Internal AspectJ {@link AbstractAnnotationAJ} implementation backed by a ByteBuddy
+ * {@link AnnotationDescription}.
+ * <p>
+ * Provides annotation attribute access and string representation for AspectJ pointcut matching.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 class InternalAnnotationAJ extends AbstractAnnotationAJ {
 
     private final AnnotationDescription annotationDescription;
@@ -65,6 +74,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean isRuntimeVisible() {
         return isRuntimeVisible;
     }
@@ -72,6 +82,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
     /**
      * {@inheritDoc}
      */
+    @Override
     public String stringify() {
         StringBuilder builder = new StringBuilder()
                 .append("@").append(type.getClassName());
@@ -90,6 +101,10 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
         return builder.toString();
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String toString() {
         StringBuilder builder = new StringBuilder()
                 .append("Annot[").append(getTypeSignature()).append(" ")
@@ -112,6 +127,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean hasNamedValue(String name) {
         return nameValuePair.containsKey(name);
     }
@@ -119,6 +135,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean hasNameValuePair(String name, String value) {
         AnnotationValue<?, ?> annotationValue = nameValuePair.get(name);
         return annotationValue != null && annotationValue.resolve().toString().equals(value);
@@ -127,6 +144,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
     /**
      * {@inheritDoc}
      */
+    @Override
     public Set<String> getTargets() {
         if (!type.equals(UnresolvedType.AT_TARGET))
             return Collections.emptySet();

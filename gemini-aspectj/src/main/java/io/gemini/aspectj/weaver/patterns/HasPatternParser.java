@@ -34,18 +34,34 @@ import org.aspectj.weaver.patterns.WildTypePattern;
 
 
 /**
- *
+ * An AspectJ {@link PatternParser} extension that overrides type and signature pattern
+ * parsing to perform static <em>existence</em> checks rather than runtime matching.
+ * <p>
+ * Instead of returning patterns that match at weave time, the produced patterns resolve
+ * immediately during binding and return {@code true} from {@code matchesStatically} only
+ * when the referenced type, field, or method actually exists in the world.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class HasPatternParser extends PatternParser {
 
 
+    /**
+     * Creates a new {@code HasPatternParser} for the given expression.
+     *
+     * @param expression the AspectJ pattern expression to parse
+     */
     public HasPatternParser(String expression) {
         super(expression);
     }
 
+    /**
+     * Parses a single type pattern, wrapping any {@link WildTypePattern} in a
+     * {@link HasTypePattern} that performs static existence checking.
+     *
+     * {@inheritDoc}
+     */
     @Override
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
@@ -56,6 +72,12 @@ public class HasPatternParser extends PatternParser {
     }
 
 
+    /**
+     * Parses a field signature pattern, wrapping it in a {@link HasSignaturePattern}
+     * that checks for the existence of a matching field.
+     *
+     * {@inheritDoc}
+     */
     @Override
     public SignaturePattern parseFieldSignaturePattern() {
         return new HasSignaturePattern( 
@@ -63,6 +85,12 @@ public class HasPatternParser extends PatternParser {
     }
 
 
+    /**
+     * Parses a method or constructor signature pattern, wrapping it in a
+     * {@link HasSignaturePattern} that checks for the existence of a matching method or constructor.
+     *
+     * {@inheritDoc}
+     */
     @Override
     public SignaturePattern parseMethodOrConstructorSignaturePattern() {
         return new HasSignaturePattern( 
@@ -70,10 +98,21 @@ public class HasPatternParser extends PatternParser {
     }
 
 
+    /**
+     * A {@link WildTypePattern} that resolves immediately during binding and records
+     * whether the named type actually exists in the world. {@link #matchesStatically}
+     * returns the cached existence flag rather than performing a runtime type check.
+     */
     private static class HasTypePattern extends WildTypePattern {
 
         private boolean existType = false;
 
+        /**
+         * Creates a {@code HasTypePattern} by copying all attributes from the given
+         * {@link WildTypePattern}.
+         *
+         * @param typePattern the source wild-type pattern to copy
+         */
         public HasTypePattern(WildTypePattern typePattern) {
             super(Arrays.asList(typePattern.getNamePatterns()),
                     typePattern.isIncludeSubtypes(), 
@@ -86,6 +125,13 @@ public class HasPatternParser extends PatternParser {
                     typePattern.getLowerBound() );
         }
 
+        /**
+         * Resolves the pattern against the given scope. If the result is an
+         * {@link ExactTypePattern}, checks whether the type exists in the world and
+         * returns a {@link BooleanTypePattern} carrying that result.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public TypePattern resolveBindings(IScope scope, Bindings bindings, boolean allowBinding, boolean requireExactType) {
             TypePattern typePattern = super.resolveBindings(scope, bindings, allowBinding, requireExactType);
@@ -99,6 +145,12 @@ public class HasPatternParser extends PatternParser {
             return new BooleanTypePattern(exactTypePattern, existType);
         }
 
+        /**
+         * Re-wraps the parameterized result in a new {@code HasTypePattern} so that
+         * existence-check semantics are preserved after generic substitution.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public TypePattern parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
             TypePattern typePattern = super.parameterizeWith(typeVariableMap, w);
@@ -108,6 +160,12 @@ public class HasPatternParser extends PatternParser {
             return new HasTypePattern( (WildTypePattern) typePattern);
         }
 
+        /**
+         * Returns {@code true} if the type named by this pattern was found in the world
+         * during {@link #resolveBindings}.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public boolean matchesStatically(ResolvedType type) {
             return existType;
@@ -115,14 +173,22 @@ public class HasPatternParser extends PatternParser {
     }
 
 
+    /**
+     * An {@link ExactTypePattern} whose {@link #matchesStatically} result is fixed at
+     * construction time to the boolean value determined during binding resolution.
+     * This avoids any further type-system lookup at match time.
+     */
     private static class BooleanTypePattern extends ExactTypePattern {
 
         private final boolean existType;
 
         /**
-         * @param names
-         * @param includeSubtypes
-         * @param dim
+         * Creates a {@code BooleanTypePattern} that copies the exact type, subtype flag,
+         * varargs flag, and type parameters from the given pattern, and fixes the static
+         * match result to {@code existType}.
+         *
+         * @param exactTypePattern the resolved exact type pattern to copy attributes from
+         * @param existType        {@code true} if the type was found in the world
          */
         public BooleanTypePattern(ExactTypePattern exactTypePattern, boolean existType) {
             super(exactTypePattern.getExactType(),
@@ -133,6 +199,11 @@ public class HasPatternParser extends PatternParser {
             this.existType = existType;
         }
 
+        /**
+         * Returns the pre-computed existence flag regardless of the supplied type.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public boolean matchesStatically(ResolvedType type) {
             return existType;
@@ -140,12 +211,25 @@ public class HasPatternParser extends PatternParser {
     }
 
 
+    /**
+     * A {@link SignaturePattern} that resolves immediately during binding and records
+     * whether a matching field or method actually exists on the declaring type.
+     * {@link #matches} returns the cached existence flag rather than re-evaluating
+     * the pattern at weave time.
+     */
     private class HasSignaturePattern extends SignaturePattern {
 
         private final boolean matchField;
         private boolean existSignature = false;
 
 
+        /**
+         * Creates a {@code HasSignaturePattern} by copying all attributes from the given
+         * {@link SignaturePattern}.
+         *
+         * @param signaturePattern the source signature pattern to copy
+         * @param matchField       {@code true} to check fields; {@code false} to check methods/constructors
+         */
         public HasSignaturePattern(SignaturePattern signaturePattern, boolean matchField) {
             super(signaturePattern.getKind(), 
                     signaturePattern.getModifiers(), 
@@ -159,12 +243,25 @@ public class HasPatternParser extends PatternParser {
             this.matchField = matchField;
         }
 
+        /**
+         * Re-wraps the parameterized result in a new {@code HasSignaturePattern} so that
+         * existence-check semantics are preserved after generic substitution.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public SignaturePattern parameterizeWith(Map<String, UnresolvedType> typeVariableMap, World w) {
             return new HasSignaturePattern(
                     super.parameterizeWith(typeVariableMap, w), matchField );
         }
 
+        /**
+         * Resolves the pattern against the given scope. If the declaring type is exact and
+         * present in the world, iterates its fields or methods to determine whether a
+         * matching member exists, caching the result in {@code existSignature}.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public SignaturePattern resolveBindings(IScope scope, Bindings bindings) {
             SignaturePattern signaturePattern = super.resolveBindings(scope, bindings);
@@ -187,6 +284,11 @@ public class HasPatternParser extends PatternParser {
             return signaturePattern;
         }
 
+        /**
+         * Returns the pre-computed existence flag regardless of the supplied member.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public boolean matches(Member member, World world, boolean b) {
             return existSignature;

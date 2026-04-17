@@ -21,8 +21,21 @@ import java.util.Map.Entry;
 
 import io.gemini.core.util.OrderedProperties;
 
+/**
+ * Utility class for converting between typed maps and {@code Map<String, Object>},
+ * and for converting {@link OrderedProperties} to a map.
+ *
+ * @author   martin.liu
+ */
 public abstract class Converters {
 
+    /**
+     * Converts a typed {@code Map<String, T>} to a {@code Map<String, Object>}.
+     *
+     * @param source the source map (may be {@code null})
+     * @param <T>    the value type
+     * @return a new map with the same entries, or {@code null} if {@code source} is {@code null}
+     */
     public static <T> Map<String, Object> to(Map<String, T> source) {
         if (source == null)
             return null;
@@ -34,6 +47,12 @@ public abstract class Converters {
         return dest;
     }
 
+    /**
+     * Converts an {@link OrderedProperties} instance to a {@code Map<String, Object>}.
+     *
+     * @param source the properties to convert (may be {@code null})
+     * @return a new map with the same entries, or {@code null} if {@code source} is {@code null}
+     */
     public static Map<String, Object> to(OrderedProperties source) {
         if (source == null)
             return null;

@@ -48,16 +48,52 @@ import io.gemini.core.util.Throwables;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterDescription;
 
+/**
+ * Factory interface for loading and instantiating {@link io.gemini.api.aop.Advice} classes
+ * from {@link AdvisorSpec} descriptors.
+ * <p>
+ * Three concrete implementations handle the three advice styles:
+ * <ul>
+ *   <li>{@link PojoAdviceCreator} – loads POJO {@link io.gemini.api.aop.Advice} implementations</li>
+ *   <li>{@link AspectJAdviceCreator} – generates and loads adapter classes for AspectJ advice methods</li>
+ *   <li>{@link ByteBuddyAdviceCreator} – loads raw ByteBuddy {@code @Advice} classes</li>
+ * </ul>
+ * The {@link Compound} implementation delegates to all registered creators in order.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface AdviceCreator {
 
     Logger LOGGER = LoggerFactory.getLogger(AdviceCreator.class);
 
 
+    /**
+     * Loads and returns the {@link io.gemini.api.aop.Advice} class described by the given
+     * {@link AdvisorSpec}, or {@code null} if this creator does not handle the spec type.
+     *
+     * @param advisorContext the advisor context for the target class loader
+     * @param advisorSpec    the advisor spec describing the advice to load
+     * @return the loaded advice class, or {@code null}
+     */
     Class<? extends Advice> loadClass(AdvisorContext advisorContext, AdvisorSpec advisorSpec);
 
+    /**
+     * Creates and returns a new instance of the given advice class, or {@code null} if this
+     * creator does not handle the spec type.
+     *
+     * @param advisorContext the advisor context for the target class loader
+     * @param advisorSpec    the advisor spec describing the advice
+     * @param adviceClass    the advice class to instantiate
+     * @return a new advice instance, or {@code null}
+     */
     Advice createInstance(AdvisorContext advisorContext, AdvisorSpec advisorSpec, Class<? extends Advice> adviceClass);
 
 
+    /**
+     * Delegates to all registered {@link AdviceCreator} instances in order,
+     * and returns the first non-null result.
+     */
     @NoScanning
     class Compound implements AdviceCreator {
 
@@ -105,6 +141,7 @@ public interface AdviceCreator {
             }
             return null;
         }
+
         /**
          * {@inheritDoc}
          */
@@ -141,6 +178,10 @@ public interface AdviceCreator {
     }
 
 
+    /**
+     * Abstract base providing common logic for loading and instantiating advice classes:
+     * spec class filtering, class loading, validity checking, and instance creation.
+     */
     abstract class AbstractBase<A extends AdviceSpec> implements AdviceCreator {
 
         protected abstract Class<? extends AdviceSpec> doGetAdviceSpecClass();
@@ -272,6 +313,11 @@ public interface AdviceCreator {
     }
 
 
+    /**
+     * Loads and instantiates POJO {@link io.gemini.api.aop.Advice} implementations
+     * (classes implementing {@link io.gemini.api.aop.Advice.Before}, {@link io.gemini.api.aop.Advice.After},
+     * or {@link io.gemini.api.aop.Advice.Around}).
+     */
     class PojoAdviceCreator extends AbstractBase<PojoAdviceSpec> {
 
         /**
@@ -300,6 +346,10 @@ public interface AdviceCreator {
     }
 
 
+    /**
+     * Generates and loads a concrete {@link io.gemini.api.aop.Advice} adapter class
+     * for an AspectJ advice method using {@link AdviceClassGenerator}.
+     */
 //    @NoScanning
     class AspectJAdviceCreator extends AbstractBase<AspectJAdviceSpec> {
 
@@ -400,6 +450,10 @@ public interface AdviceCreator {
     }
 
 
+    /**
+     * Alternative AspectJ advice creator that uses {@link MethodHandle}-based adapters
+     * instead of bytecode generation. Currently disabled ({@code @NoScanning}).
+     */
     @NoScanning
     class AspectJAdviceCreator2 extends AbstractBase<AspectJAdviceSpec> {
 
@@ -460,6 +514,10 @@ public interface AdviceCreator {
         }
 
 
+        /**
+         * Abstract base for {@link MethodHandle}-based AspectJ advice adapters.
+         * Holds the AspectJ aspect instance and provides argument extraction from the joinpoint.
+         */
         static abstract class AbstractAdapter extends Advice.AbstractBase {
 
             private final AspectJAdviceSpec adviceSpec;
@@ -551,6 +609,10 @@ public interface AdviceCreator {
         }
 
 
+        /**
+         * {@link io.gemini.api.aop.Advice.Before} adapter that invokes the AspectJ before-advice
+         * method via a cached {@link MethodHandle}.
+         */
         static class BeforeAdviceAdapter extends AbstractAdapter implements Advice.Before<Object, Throwable> {
 
             private final MethodHandle beforeAdviceMethod;
@@ -573,6 +635,10 @@ public interface AdviceCreator {
         }
 
 
+        /**
+         * {@link io.gemini.api.aop.Advice.After} adapter that invokes the AspectJ after-advice
+         * method via a cached {@link MethodHandle}.
+         */
         static class AfterAdviceAdapter extends AbstractAdapter implements Advice.After<Object, Throwable> {
 
             private final MethodHandle afterAdviceMethod;
@@ -596,6 +662,9 @@ public interface AdviceCreator {
     }
 
 
+    /**
+     * Loads raw ByteBuddy {@code @Advice} classes directly without any wrapping.
+     */
     class ByteBuddyAdviceCreator extends AbstractBase<ByteBuddyAdviceSpec> {
 
         /**

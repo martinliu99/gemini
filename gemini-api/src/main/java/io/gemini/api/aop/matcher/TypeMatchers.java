@@ -31,18 +31,34 @@ import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Factory utility providing custom ByteBuddy {@link ElementMatcher} implementations
+ * for matching {@link TypeDescription} by their type hierarchy (superclasses and interfaces).
+ *
+ * @author   martin.liu
  */
 public class TypeMatchers {
 
+    /**
+     * Abstract base matcher that holds an expression object used for matching and string representation.
+     * Extends {@link net.bytebuddy.matcher.ElementMatcher.Junction.ForNonNullValues} to skip null targets.
+     */
     abstract static class AbstractMatcher extends ElementMatcher.Junction.ForNonNullValues<TypeDescription> {
 
+        /** The expression describing the match criteria. */
         protected Object expression;
 
+        /**
+         * Creates a new matcher with the given expression.
+         *
+         * @param expression the match expression (e.g. type names or patterns)
+         */
         protected AbstractMatcher(Object expression) {
             this.expression = expression;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String toString() {
             return expression.toString();
@@ -50,6 +66,16 @@ public class TypeMatchers {
     }
 
 
+    /**
+     * Returns a matcher that matches types whose type hierarchy (superclasses and interfaces)
+     * includes all of the specified type names.
+     * <p>
+     * The target type itself is excluded from the check — only its ancestors are considered.
+     * </p>
+     *
+     * @param superTypes one or more fully qualified type names that must appear in the hierarchy
+     * @return an {@link ElementMatcher.Junction} that matches types extended from all given super types
+     */
     public static ElementMatcher.Junction<TypeDescription> isExtendedFrom(final String... superTypes) {
         return new AbstractMatcher(superTypes) {
             @Override
@@ -59,6 +85,17 @@ public class TypeMatchers {
         };
     }
 
+    /**
+     * Checks whether the given type's hierarchy contains all of the specified super type names.
+     * <p>
+     * Performs a breadth-first traversal over superclasses and interfaces. The target type itself
+     * is not counted — it is excluded from the match set before traversal begins.
+     * </p>
+     *
+     * @param targetType     the type whose hierarchy is traversed
+     * @param superTypeNames the collection of fully qualified type names that must all be present
+     * @return {@code true} if every name in {@code superTypeNames} is found in the hierarchy
+     */
     private static boolean superTypeCheck(TypeDescription targetType, Collection<String> superTypeNames) {
         final Set<String> superTypeNameSet = new HashSet<>(superTypeNames);
         if (superTypeNameSet.contains(targetType.getTypeName())) {

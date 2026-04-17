@@ -26,7 +26,6 @@ import io.gemini.core.DiagnosticLevel;
  *
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class ObjectFactoryTests {
 

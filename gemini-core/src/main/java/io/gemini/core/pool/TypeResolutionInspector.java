@@ -19,22 +19,40 @@
 package io.gemini.core.pool;
 
 /**
- * This class collects TypeDescription resolution information that is used to analyze
- * Pointcut matching performance impact.
- *
+ * Tracks the level of type resolution performed during pointcut matching.
+ * <p>
+ * Used by {@link io.gemini.core.pool.TypePools.DelegatedTypeDescription.TyepResolutionDetector}
+ * to record whether a type description required full resolution (loading superclass/interface
+ * information) during advisor fast-match or method-match phases.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface TypeResolutionInspector {
 
+    /**
+     * Resets the recorded resolution level to {@link ResolutionLevel#NO_RESOLUTION}.
+     */
     void resetInspection();
 
+    /**
+     * Returns the current resolution level recorded during matching.
+     *
+     * @return the resolution level
+     */
     ResolutionLevel getResolutionLevel();
 
+    /**
+     * Updates the resolution level if the given level is higher than the current one.
+     *
+     * @param resolutionLevel the resolution level to set
+     */
     void setResolutionLevel(ResolutionLevel resolutionLevel);
 
 
+    /**
+     * Enumeration of type resolution levels, ordered from least to most expensive.
+     */
     static enum ResolutionLevel {
 
         NO_RESOLUTION,

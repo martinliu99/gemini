@@ -23,7 +23,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * 
+ * Utility class providing access to the JVM's built-in class loaders and their identifiers.
+ * <p>
+ * Exposes the bootstrap (null), ext/platform, and application class loaders, along with
+ * helper methods to identify which tier a given class loader belongs to.
+ * </p>
+ *
+ * @author   martin.liu
  */
 public abstract class ClassLoaders {
 
@@ -53,26 +59,52 @@ public abstract class ClassLoaders {
     }
 
 
+    /**
+     * Returns {@code true} if the given class loader is the bootstrap class loader ({@code null}).
+     *
+     * @param classLoader the class loader to test
+     * @return {@code true} if {@code classLoader == null}
+     */
     public static boolean isBootstrapClassLoader(ClassLoader classLoader) {
         return classLoader == null;
     }
 
+    /**
+     * Returns {@code true} if the given class loader is the ext/platform class loader.
+     *
+     * @param classLoader the class loader to test
+     * @return {@code true} if it is the ext/platform class loader
+     */
     public static boolean isExtClassLoader(ClassLoader classLoader) {
         return classLoader == EXT_CLASSLOADER;
     }
 
+    /**
+     * Returns {@code true} if the given class loader is the application (system) class loader.
+     *
+     * @param classLoader the class loader to test
+     * @return {@code true} if it is the application class loader
+     */
     public static boolean isAppClassLoader(ClassLoader classLoader) {
         return classLoader == APP_CLASSLOADER;
     }
 
+    /** Returns the ext/platform class loader (the parent of the application class loader). */
     public static ClassLoader getExtClassLoader() {
         return EXT_CLASSLOADER;
     }
 
+    /** Returns the application (system) class loader. */
     public static ClassLoader getAppClassLoader() {
         return APP_CLASSLOADER;
     }
 
+    /**
+     * Returns an unmodifiable set containing the bootstrap ({@code null}), ext, and app class loaders.
+     * Used to identify "built-in" class loaders that should share a single {@link io.gemini.aop.factory.classloader.AspectClassLoader}.
+     *
+     * @return unmodifiable set of built-in class loaders
+     */
     public static Set<ClassLoader> getBuiltinClassLoaders() {
         return BUILTIN_CLASSLOADERS;
     }

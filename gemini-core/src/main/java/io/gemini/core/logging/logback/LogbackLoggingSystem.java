@@ -46,6 +46,15 @@ import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
 
 
+/**
+ * Logback-based {@link LoggingSystem} implementation for the AOP framework.
+ * <p>
+ * Initializes a named Logback {@link LoggerContext} from a configuration file resolved
+ * via the AOP class loader, and applies log level overrides from the {@link ConfigView}.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class LogbackLoggingSystem implements LoggingSystem {
 
     private static final org.slf4j.Logger LOGGER = DeferredLoggerFactory.getLogger(LogbackLoggingSystem.class);
@@ -60,6 +69,13 @@ public class LogbackLoggingSystem implements LoggingSystem {
     private final boolean debugLogback;
 
 
+    /**
+     * Constructs a {@code LogbackLoggingSystem} with the given configuration.
+     *
+     * @param configLocation  the classpath location of the Logback config file, or {@code null} to use defaults
+     * @param configView      the config view used to read logger settings
+     * @param diagnosticLevel the diagnostic level controlling verbosity
+     */
     public LogbackLoggingSystem(String configLocation, ConfigView configView, DiagnosticLevel diagnosticLevel) {
         this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
 

@@ -21,21 +21,35 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * 
+ * An {@link Enumeration} that chains multiple {@link Enumeration} instances together.
+ * <p>
+ * Used by {@link io.gemini.aop.factory.classloader.AspectClassLoader} to merge resource
+ * enumerations from multiple class loaders into a single sequence.
+ * </p>
  *
+ * @param <E> the element type
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class CompoundEnumeration<E> implements Enumeration<E> {
 
     private final Iterator<Enumeration<E>> iterator;
     private Enumeration<E> currentEnum;
 
+    /**
+     * Constructs a {@code CompoundEnumeration} from the given collection of enumerations.
+     *
+     * @param enums the enumerations to chain together
+     */
     public CompoundEnumeration(Collection<Enumeration<E>> enums) {
         this.iterator = enums.iterator();
     }
 
+    /**
+     * Returns {@code true} if any of the chained enumerations has more elements.
+     *
+     * @return {@code true} if more elements are available
+     */
     public boolean hasMoreElements() {
         return next();
     }
@@ -50,6 +64,13 @@ public class CompoundEnumeration<E> implements Enumeration<E> {
             return false;
     }
 
+    /**
+     * Returns the next element from the current enumeration, advancing to the next
+     * enumeration in the chain if necessary.
+     *
+     * @return the next element
+     * @throws NoSuchElementException if no more elements are available
+     */
     public E nextElement() {
         if (!next()) {
             throw new NoSuchElementException();

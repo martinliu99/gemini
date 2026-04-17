@@ -27,11 +27,15 @@ import net.bytebuddy.matcher.StringMatcher;
 
 
 /**
- * 
- * refer to {@code org.aspectj.weaver.loadtime.ClassLoaderWeavingAdaptor}
+ * Parses simple name-pattern expressions (supporting {@code *} wildcards and
+ * {@code ..} package separators) into ByteBuddy {@link ElementMatcher}&lt;String&gt; instances.
+ * <p>
+ * Inspired by {@code org.aspectj.weaver.loadtime.ClassLoaderWeavingAdaptor}.
+ * Expressions that contain spaces, {@code @}, or {@code +} characters — which would
+ * require full AspectJ parsing — are not supported and return {@code null}.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 enum NameMatcherParser {
 
@@ -40,6 +44,15 @@ enum NameMatcherParser {
 
     private final String STAR = "*";
 
+    /**
+     * Parses a collection of name-pattern expressions and combines them into a single
+     * disjunctive {@link ElementMatcher}. Returns {@link ElementMatchers#none()} if the
+     * collection is empty. Expressions that cannot be parsed are silently skipped.
+     *
+     * @param expressions the collection of name-pattern expressions
+     * @return a disjunctive matcher over all successfully parsed expressions;
+     *         {@link ElementMatchers#none()} if the collection is empty
+     */
     public ElementMatcher<String> parseMatcher(Collection<String> expressions) {
         if (CollectionUtils.isEmpty(expressions))
             return ElementMatchers.none();
@@ -54,6 +67,26 @@ enum NameMatcherParser {
         return new ElementMatcher.Junction.Disjunction<>(matchers);
     }
 
+    /**
+     * Parses a single name-pattern expression into a {@link ElementMatcher}&lt;String&gt;.
+     * <p>
+     * Supported patterns:
+     * <ul>
+     *   <li>{@code *} — matches any string ({@link ElementMatchers#any()})</li>
+     *   <li>{@code com.example.*} — prefix match (starts-with)</li>
+     *   <li>{@code *.Foo} — suffix match (ends-with)</li>
+     *   <li>{@code *Foo*} — contains match</li>
+     *   <li>{@code com.example.Foo} — exact match</li>
+     * </ul>
+     * Returns {@link ElementMatchers#none()} for blank input, and {@code null} for
+     * expressions containing spaces, {@code @}, {@code +}, {@code ..}, or mid-string {@code *}
+     * that cannot be reduced to a simple string operation.
+     * </p>
+     *
+     * @param expression the name-pattern expression to parse; may be blank
+     * @return a {@link ElementMatcher} for the expression, or {@code null} if the expression
+     *         is too complex for simple string matching
+     */
     public ElementMatcher<String> parseMatcher(String expression) {
         if (StringUtils.hasText(expression) == false)
             return ElementMatchers.none();

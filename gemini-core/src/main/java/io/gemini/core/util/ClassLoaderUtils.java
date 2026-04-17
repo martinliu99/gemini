@@ -25,27 +25,64 @@ import java.util.List;
 
 import io.gemini.api.classloader.ClassLoaders;
 
+/**
+ * Utility class for class loader identification and validation.
+ * <p>
+ * Provides helpers to mask {@code null} (bootstrap) class loaders with a sentinel object,
+ * retrieve human-readable class loader names and IDs, and validate class loader classpath
+ * entries for known JDK issues (e.g., INDEX.LIST conflicts).
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public abstract class ClassLoaderUtils {
 
     private static final ClassLoader BOOTSTRAP_CLASSLOADER = new BootstrapClassLoader();
 
 
+    /**
+     * Returns a sentinel non-null object representing the bootstrap class loader ({@code null}).
+     * Used as a map key where {@code null} keys are not allowed.
+     *
+     * @param classLoader the class loader to mask
+     * @return the original class loader, or the bootstrap sentinel if {@code null}
+     */
     public static ClassLoader maskNull(ClassLoader classLoader) {
         return classLoader == null ? BOOTSTRAP_CLASSLOADER : classLoader;
     }
 
+    /**
+     * Returns a human-readable name for the given class loader.
+     * Returns {@code "BootstrapClassLoader"} for {@code null} or the bootstrap sentinel.
+     *
+     * @param classLoader the class loader
+     * @return the class loader's class name, or {@code "BootstrapClassLoader"}
+     */
     public static String getClassLoaderName(ClassLoader classLoader) {
         return classLoader == null || classLoader == BOOTSTRAP_CLASSLOADER 
                 ? ClassLoaders.BOOTSTRAP_CLASSLOADER_NAME : classLoader.getClass().getName();
     }
 
+    /**
+     * Returns a unique identity string for the given class loader, including its identity hash code.
+     * Returns {@code "BootstrapClassLoader"} for {@code null} or the bootstrap sentinel.
+     *
+     * @param classLoader the class loader
+     * @return a string of the form {@code "ClassName@hexHash"}, or {@code "BootstrapClassLoader"}
+     */
     public static String getClassLoaderId(ClassLoader classLoader) {
         return classLoader == null || classLoader == BOOTSTRAP_CLASSLOADER
                 ? ClassLoaders.BOOTSTRAP_CLASSLOADER_NAME 
                 : ( classLoader.getClass().getName() + "@" + ObjectUtils.getIdentityHexString(classLoader) );
     }
 
-
+    /**
+     * Validates the given class loader's classpath for known JDK issues.
+     * Logs a warning if any JAR contains an {@code INDEX.LIST} file, which can cause
+     * {@link ClassLoader#getResources(String)} to return incorrect results.
+     *
+     * @param classLoader the class loader to validate (may be {@code null})
+     */
     public static void validate(ClassLoader classLoader) {
         if (classLoader == null)
             return;
@@ -61,6 +98,11 @@ public abstract class ClassLoaderUtils {
         } catch (IOException e) { /* ignored */ }
     }
 
+    /**
+     * Returns the list of all classpath entries from the JVM system property {@code java.class.path}.
+     *
+     * @return list of classpath entry strings
+     */
     public static List<String> getClassPaths() {
         String classpathStr = System.getProperty("java.class.path");
         classpathStr = classpathStr.replace('\\', '/');

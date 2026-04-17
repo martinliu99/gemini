@@ -24,15 +24,28 @@ import net.bytebuddy.asm.Advice;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 /**
- * 
- *
+ * Framework ByteBuddy {@code @Advice} class for instance constructors.
+ * <p>
+ * Intercepts constructor invocations, passes arguments to before-advice, and
+ * passes the newly created {@code this} reference to after-advice.
+ * Note: exception catching in constructor exit advice is not supported by ByteBuddy.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @BootstrapClassConsumer
 public class InstanceConstructorAdvice {
 
+    /**
+     * Executed before the constructor body.
+     * Creates a {@link Dispatcher}, invokes before-advice (which may modify arguments),
+     * and throws if advice sets a throw value.
+     *
+     * @param descriptor  the cached joinpoint descriptor (injected via INDY)
+     * @param arguments   the constructor arguments (may be replaced by advice)
+     * @param dispatcher  thread-local dispatcher (injected via {@code @Advice.Local})
+     * @throws Throwable if before-advice throws or sets a throw value
+     */
     @Advice.OnMethodEnter(inline = true, prependLineNumber = true)
     public static void beforeConstructor(
             @DescriptorOffset.Descriptor Object descriptor,
@@ -57,6 +70,15 @@ public class InstanceConstructorAdvice {
     }
 
 
+    /**
+     * Executed after the constructor body completes.
+     * Passes the newly created {@code this} reference to after-advice as the "returning" value.
+     * Exception catching is not supported for constructors in ByteBuddy.
+     *
+     * @param targetObject the newly constructed instance ({@code this})
+     * @param dispatcher   the dispatcher created in {@link #beforeConstructor}
+     * @throws Throwable if after-advice sets a throw value
+     */
     // refer to https://github.com/raphw/byte-buddy/issues/375
     // Advice.Thrown and try-catch is not allowed for constructor at this time
     @Advice.OnMethodExit(/* onThrowable = Throwable.class */ inline = true)

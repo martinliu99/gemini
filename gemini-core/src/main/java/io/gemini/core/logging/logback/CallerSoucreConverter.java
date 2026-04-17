@@ -22,12 +22,23 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Context;
 import io.gemini.core.logging.LoggingSystem;
 
+/**
+ * Logback {@link ClassicConverter} that renders the caller source location
+ * (file name and line number) or an abbreviated logger name, depending on the
+ * {@code aop.logger.includeLocation} configuration property.
+ *
+ * @author   martin.liu
+ */
 public class CallerSoucreConverter extends ClassicConverter {
 
     private boolean includeLocation = true;
     private final Abbreviator nameAbbreviator = new TargetLengthBasedClassNameAbbreviator(10);
 
 
+    /**
+     * Reads the {@code aop.logger.includeLocation} property from the Logback context
+     * and sets the {@code includeLocation} flag accordingly.
+     */
     @Override
     public void start() {
         Context context = getContext();
@@ -39,6 +50,14 @@ public class CallerSoucreConverter extends ClassicConverter {
         super.start();
     }
 
+    /**
+     * Returns the caller source string for the given logging event.
+     * If {@code includeLocation} is {@code true}, returns {@code "FileName:lineNumber"};
+     * otherwise returns an abbreviated logger name.
+     *
+     * @param event the logging event
+     * @return the formatted caller source string
+     */
     @Override
     public String convert(ILoggingEvent event) {
         if (this.includeLocation) {

@@ -17,6 +17,12 @@ package io.gemini.aop.factory.support;
 
 import io.gemini.api.aop.AopException;
 
+/**
+ * Thrown when an advisor specification (e.g., a pointcut expression or advice class definition)
+ * is invalid and cannot be used to create a functional advisor.
+ *
+ * @author   martin.liu
+ */
 public class IllegalSpecException extends AopException {
 
     private static final long serialVersionUID = -6688678161574533296L;

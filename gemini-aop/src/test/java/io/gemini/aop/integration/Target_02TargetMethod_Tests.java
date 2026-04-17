@@ -38,7 +38,6 @@ import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
  *
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class Target_02TargetMethod_Tests {
 

@@ -26,7 +26,7 @@ import io.gemini.api.classloader.ClassLoaders;
 
 /**
  * <p>
- * This specialized ClassLoader is used by {@code AopActivator} to load AOP framework and depended classes 
+ * This specialized ClassLoader is used by {@code AopActivator} to load the AOP framework and depended classes 
  * such as log4j2, aspectjweaver, bytebuddy, etc.
  * </p>
  *  
@@ -50,13 +50,14 @@ import io.gemini.api.classloader.ClassLoaders;
  * 
  * <p>
  * This ClassLoader supports below hook interfaces to customized class loading process.
- * <li> {@code LauncherFirstFilter} filters classes an resources will be loaded from Launcher CL firstly
- * <li> {@code TypeFilter} filter class and resource name
- * <li> {@code TypeFinder} finds class byte code and resource
+ * <ul>
+ *   <li> {@code LauncherFirstFilter} filters classes an resources will be loaded from Launcher CL firstly
+ *   <li> {@code TypeFilter} filter class and resource name
+ *   <li> {@code TypeFinder} finds class byte code and resource
+ * </ul>
  * 
  *
  * @author   martin.liu
- * @since    1.0
  */
 public class DefaultAopClassLoader extends AopClassLoader {
 
@@ -109,10 +110,18 @@ public class DefaultAopClassLoader extends AopClassLoader {
         this.typeFinders = new TypeFinder.FinderChain();
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public URL[] getUrls() {
         return this.urls;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void addLauncherFirstFilter(LauncherFirstFilter launcherFirstFilter) {
         if (launcherFirstFilter == null) 
             return;
@@ -120,6 +129,10 @@ public class DefaultAopClassLoader extends AopClassLoader {
         this.launcherFirstFilters.addFilter(launcherFirstFilter);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void addTypeFilter(TypeFilter typeilter) {
         if (typeilter == null)
             return;
@@ -127,6 +140,10 @@ public class DefaultAopClassLoader extends AopClassLoader {
         this.typeFilters.addFilter(typeilter);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void addTypeFinder(TypeFinder typeFinder) {
         if (typeFinder == null)
             return;
@@ -181,6 +198,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
     /**
      * {@inheritDoc}
      */
+    @Override
     public URL getResource(String name) {
         if (name == null || "".equals(name.trim()))
             throw new IllegalArgumentException("Resource name must not be empty.");
@@ -212,6 +230,7 @@ public class DefaultAopClassLoader extends AopClassLoader {
     /**
      * {@inheritDoc}
      */
+    @Override
     public Enumeration<URL> getResources(String name) throws IOException {
         // 1.if delegation loading is required, try to load from actual Launcher ClassLoader.
         if (this.launcherFirstFilters.isLauncherFirstResource(name) == true) {
@@ -233,11 +252,19 @@ public class DefaultAopClassLoader extends AopClassLoader {
     }
 
 
+    /**
+     * Default {@link LauncherFirstFilter} that checks class/resource names against
+     * the built-in launcher-first prefixes ({@code io.gemini.api.activation.} and
+     * {@code io.gemini.api.classloader.}).
+     */
     enum Default implements LauncherFirstFilter {
 
         INSTANCE;
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean isLauncherFirstClass(String name) {
             for (String classPrefix : BUILTIN_LAUNCHER_FIRST_CLASS_PREFIXES) {
@@ -248,6 +275,9 @@ public class DefaultAopClassLoader extends AopClassLoader {
             return false;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean isLauncherFirstResource(String name) {
             for (String resourcePrefix : BUILTIN_LAUNCHER_FIRST_RESOURCE_PREFIXES) {

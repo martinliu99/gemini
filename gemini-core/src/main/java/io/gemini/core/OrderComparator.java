@@ -22,11 +22,21 @@ import java.util.List;
 
 import io.gemini.api.annotation.Order;
 
+/**
+ * Comparator that orders objects by their {@link Ordered#getOrder()} value or
+ * by the {@link io.gemini.api.annotation.Order} annotation on their class.
+ * Objects without an explicit order are placed last ({@link io.gemini.api.annotation.Order#LOWEST_PRECEDENCE}).
+ *
+ * @author   martin.liu
+ */
 public enum OrderComparator implements Comparator<Object> {
 
     INSTANCE;
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int compare( Object o1,  Object o2) {
         return doCompare(o1, o2);
@@ -57,18 +67,36 @@ public enum OrderComparator implements Comparator<Object> {
         return orderAnnotation != null ? orderAnnotation.value() : Order.LOWEST_PRECEDENCE;
     }
 
+    /**
+     * Sorts the given list in-place by ascending order value.
+     * Has no effect if the list contains fewer than two elements.
+     *
+     * @param list the list to sort; must not be {@code null}
+     */
     public static void sort(List<?> list) {
         if (list.size() > 1) {
             Collections.sort(list, INSTANCE);
         }
     }
 
+    /**
+     * Sorts the given array in-place by ascending order value.
+     * Has no effect if the array contains fewer than two elements.
+     *
+     * @param array the array to sort; must not be {@code null}
+     */
     public static void sort(Object[] array) {
         if (array.length > 1) {
             Arrays.sort(array, INSTANCE);
         }
     }
 
+    /**
+     * Sorts the given value if it is an {@code Object[]} array or a {@link List}.
+     * Has no effect for any other type.
+     *
+     * @param value the value to sort; may be {@code null} (no-op)
+     */
     public static void sortIfNecessary(Object value) {
         if (value instanceof Object[]) {
             sort( (Object[]) value);

@@ -18,19 +18,21 @@
  */
 package io.gemini.api.aop.condition;
 
-import io.gemini.api.annotation.Initializer;
 import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Condition implementation for {@link io.gemini.api.aop.annotation.ConditionalOnConstructor}.
+ * Evaluates whether the specified constructor expression is present in the target type.
+ * Throws {@link MissingElementException} if the constructor is absent.
+ *
+ * @author   martin.liu
  */
 public class OnConstructorCondition implements ElementMatcher<MatchingContext> {
 
     private final String constructorExpression;
 
 
-    @Initializer
     public OnConstructorCondition(String constructorExpression) {
         this.constructorExpression = constructorExpression;
     }

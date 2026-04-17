@@ -15,6 +15,13 @@
  */
 package org.framework.demo.api;
 
+/**
+ * Generic demo response object wrapping a status code, message, and typed data payload.
+ *
+ * @param <T> the type of the response data
+ *
+ * @author   martin.liu
+ */
 public class Response<T> {
 
     private String code;

@@ -17,6 +17,16 @@ package io.gemini.aspects.support;
 
 import io.gemini.core.object.ClassScanner;
 
+/**
+ * Placeholder Spring-based {@link io.gemini.core.object.ObjectFactory} implementation
+ * for the AOP framework aspects module.
+ * <p>
+ * Currently a stub; the actual Spring integration is provided by
+ * {@code AbstractSpringObjectFactory} in the toolkit module.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class DefaultSpringObjectFactory {
 //extends AbstractSpringObjectFactory {
 

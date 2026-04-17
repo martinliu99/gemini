@@ -22,7 +22,11 @@ import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Condition implementation for {@link io.gemini.api.aop.annotation.ConditionalOnClassLoader}.
+ * Evaluates whether the target class loader matches the specified criteria
+ * (bootstrap, ext, app, or a named expression).
+ *
+ * @author   martin.liu
  */
 public class OnClassLoaderCondition implements ElementMatcher<MatchingContext> {
 

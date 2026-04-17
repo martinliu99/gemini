@@ -41,12 +41,38 @@ import org.aspectj.weaver.patterns.WildTypePattern;
 import io.gemini.aspectj.weaver.ReferenceTypes;
 import net.bytebuddy.pool.TypePool.Resolution.NoSuchTypeException;
 
+/**
+ * Extended AspectJ {@link PatternParser} that overrides type and pointcut pattern parsing
+ * to integrate with Gemini's {@link ReferenceTypes} lazy resolution mechanism.
+ * <p>
+ * Key overrides:
+ * <ul>
+ *   <li>{@link WildTypePatternV2} – wraps resolved {@link ExactTypePattern} in a
+ *       {@link ReferenceTypes.Facade} to defer class loading</li>
+ *   <li>{@link KindedPointcutV2} – optimizes {@code fastMatch} to avoid expensive
+ *       type hierarchy traversal and handles {@link NoSuchTypeException} gracefully</li>
+ * </ul>
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class PatternParserV2 extends PatternParser {
 
+    /**
+     * Creates a new {@code PatternParserV2} for the given expression.
+     *
+     * @param expression the AspectJ pattern expression to parse
+     */
     public PatternParserV2(String expression) {
         super(expression);
     }
 
+    /**
+     * Parses a single type pattern, wrapping any {@link WildTypePattern} in a
+     * {@link WildTypePatternV2} that integrates with Gemini's lazy type resolution.
+     *
+     * {@inheritDoc}
+     */
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
         if (typePattern instanceof WildTypePattern == false)
@@ -55,6 +81,12 @@ public class PatternParserV2 extends PatternParser {
         return new WildTypePatternV2( (WildTypePattern) typePattern);
     }
 
+    /**
+     * Parses a single pointcut, wrapping any {@link KindedPointcut} in a
+     * {@link KindedPointcutV2} that optimizes fast-match and handles missing types gracefully.
+     *
+     * {@inheritDoc}
+     */
     public Pointcut parseSinglePointcut() {
         Pointcut pointcut = super.parseSinglePointcut();
         if (pointcut instanceof KindedPointcut == false)
@@ -64,19 +96,19 @@ public class PatternParserV2 extends PatternParser {
     }
 
 
+    /**
+     * A {@link WildTypePattern} variant that wraps the resolved {@link ExactTypePattern}
+     * in a {@link ReferenceTypes.Facade}, deferring actual class loading until the type's
+     * delegate is first accessed. Also overrides {@code matchesExactly} to strip anonymous
+     * and nested flags via {@link TopTypeFacade} before delegating to the super implementation.
+     */
     private static class WildTypePatternV2 extends WildTypePattern {
 
-
         /**
-         * @param names
-         * @param includeSubtypes
-         * @param dim
-         * @param endPos
-         * @param isVarArg
-         * @param typeParams
-         * @param upperBound
-         * @param additionalInterfaceBounds
-         * @param lowerBound
+         * Creates a {@code WildTypePatternV2} by copying all attributes from the given
+         * {@link WildTypePattern}.
+         *
+         * @param typePattern the source wild-type pattern to copy
          */
         public WildTypePatternV2(WildTypePattern typePattern) {
             super(Arrays.asList(typePattern.getNamePatterns()), 
@@ -90,6 +122,9 @@ public class PatternParserV2 extends PatternParser {
                     typePattern.getLowerBound() );
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public TypePattern resolveBindings(IScope scope, Bindings bindings, boolean allowBinding, boolean requireExactType) {
             TypePattern typePattern = super.resolveBindings(scope, bindings, allowBinding, requireExactType);
@@ -108,6 +143,9 @@ public class PatternParserV2 extends PatternParser {
                     exactTypePattern.getTypeParameters());
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public TypePattern parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
             TypePattern typePattern = super.parameterizeWith(typeVariableMap, w);
@@ -117,6 +155,9 @@ public class PatternParserV2 extends PatternParser {
             return new WildTypePatternV2( (WildTypePattern) typePattern);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected boolean matchesExactly(ResolvedType type, ResolvedType annotatedType) {
             if (type instanceof ReferenceType == false)
@@ -129,21 +170,37 @@ public class PatternParserV2 extends PatternParser {
     }
 
 
+    /**
+     * A {@link ReferenceTypes.Facade} that overrides {@link #isAnonymous()} and
+     * {@link #isNested()} to always return {@code false}, ensuring that AspectJ's
+     * {@code matchesExactly} logic treats the type as a plain top-level class.
+     */
     private static class TopTypeFacade extends ReferenceTypes.Facade {
 
         /**
-         * @param referenceType
-         * @param world
+         * Creates a {@code TopTypeFacade} that wraps the given reference type and
+         * always reports {@code isAnonymous() == false} and {@code isNested() == false},
+         * preventing AspectJ from skipping top-level type matching.
+         *
+         * @param referenceType the reference type to wrap
+         * @param world         the AspectJ world (may be {@code null} when the type already
+         *                      carries its own world reference)
          */
         public TopTypeFacade(ReferenceType referenceType, World world) {
             super(referenceType, world);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean isAnonymous() {
             return false;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean isNested() {
             return false;
@@ -151,8 +208,20 @@ public class PatternParserV2 extends PatternParser {
     }
 
 
+    /**
+     * An optimized {@link KindedPointcut} that short-circuits {@code fastMatch} for
+     * exact declaring-type patterns (avoiding expensive supertype traversal) and
+     * silently returns {@link FuzzyBoolean#NO} when a {@link NoSuchTypeException} is
+     * thrown during type-argument or supertype lookup.
+     */
     private static class KindedPointcutV2 extends KindedPointcut {
 
+        /**
+         * Creates a {@code KindedPointcutV2} by copying the kind and signature from
+         * the given {@link KindedPointcut}.
+         *
+         * @param kindedPointcut the source pointcut to copy
+         */
         public KindedPointcutV2(KindedPointcut kindedPointcut) {
             super(kindedPointcut.getKind(), kindedPointcut.getSignature());
         }
@@ -161,6 +230,9 @@ public class PatternParserV2 extends PatternParser {
             super(kind, signature);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public FuzzyBoolean fastMatch(FastMatchInfo info) {
             Kind infoKind = info.getKind();
@@ -195,6 +267,9 @@ public class PatternParserV2 extends PatternParser {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected FuzzyBoolean matchInternal(Shadow shadow) {
             if (shadow.getKind() != getKind()) {
@@ -216,6 +291,9 @@ public class PatternParserV2 extends PatternParser {
             return FuzzyBoolean.YES;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Pointcut concretize1(ResolvedType inAspect, ResolvedType declaringType, IntMap bindings) {
             Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature(), bindings.getEnclosingAdvice());
@@ -223,6 +301,9 @@ public class PatternParserV2 extends PatternParser {
             return pointcut;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Pointcut parameterizeWith(Map<String,UnresolvedType> typeVariableMap, World w) {
             Pointcut pointcut = new KindedPointcutV2(this.getKind(), this.getSignature().parameterizeWith(typeVariableMap, w), null);

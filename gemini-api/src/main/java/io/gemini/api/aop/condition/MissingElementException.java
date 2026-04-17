@@ -17,6 +17,16 @@ package io.gemini.api.aop.condition;
 
 import io.gemini.api.aop.AopException;
 
+/**
+ * Thrown by condition implementations when a required type, method, field, or constructor
+ * is absent from the target class loader's classpath.
+ * <p>
+ * Catching this exception allows the framework to gracefully skip an advisor rather than
+ * propagating a hard failure.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class MissingElementException extends AopException {
 
     private static final long serialVersionUID = 1516631892910967778L;

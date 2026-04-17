@@ -25,15 +25,28 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 
 /**
- * 
- *
+ * Framework ByteBuddy {@code @Advice} class for static methods.
+ * <p>
+ * Intercepts static method invocations, passes arguments to before-advice (which may
+ * modify them), and propagates after-advice return/throw overrides.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @BootstrapClassConsumer
 public class ClassMethodAdvice {
 
+    /**
+     * Executed before the static method body.
+     * Creates a {@link Dispatcher}, invokes before-advice (which may modify arguments),
+     * and returns {@code true} to skip the method body if advice has set a return or throw value.
+     *
+     * @param descriptor  the cached joinpoint descriptor (injected via INDY)
+     * @param arguments   the method arguments (may be replaced by advice)
+     * @param dispatcher  thread-local dispatcher (injected via {@code @Advice.Local})
+     * @return {@code true} to skip the method body, {@code false} to proceed normally
+     * @throws Throwable if before-advice throws
+     */
     @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
     public static boolean beforeStaticMethod(
             @DescriptorOffset.Descriptor Object descriptor,
@@ -56,6 +69,15 @@ public class ClassMethodAdvice {
     }
 
 
+    /**
+     * Executed after the static method body (or after being skipped).
+     * Invokes after-advice and propagates any advice-set return or throw value.
+     *
+     * @param returning   the actual return value of the method
+     * @param throwing    the exception thrown by the method, or {@code null}
+     * @param dispatcher  the dispatcher created in {@link #beforeStaticMethod}
+     * @throws Throwable if after-advice throws or if advice sets a throw value
+     */
     @Advice.OnMethodExit(onThrowable = Throwable.class, inline = true)
     public static void afterStaticMethod(
             @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,

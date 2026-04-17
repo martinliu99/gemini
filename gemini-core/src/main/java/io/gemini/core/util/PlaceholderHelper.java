@@ -30,27 +30,74 @@ import ch.qos.logback.core.subst.NodeToStringTransformer;
 import io.gemini.core.config.ConfigView;
 
 
+/**
+ * Resolves {@code ${key}} placeholders in strings using a backing {@link ConfigView} or value map.
+ * <p>
+ * Two factory methods are provided:
+ * <ul>
+ *   <li>{@link #create(Map)} – backed by a string value map</li>
+ *   <li>{@link #create(ConfigView)} – backed by a {@link ConfigView}</li>
+ * </ul>
+ * The {@link Builder} provides a more configurable construction path with custom prefix,
+ * suffix, escape character, and default value delimiter.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface PlaceholderHelper {
 
+    /**
+     * Resolves all {@code ${key}} placeholders in the given string.
+     *
+     * @param placeholder the string containing placeholders
+     * @return the string with all placeholders replaced
+     */
     String replace(String placeholder);
 
 
+    /**
+     * A no-op placeholder resolver that always returns {@code null}.
+     * Used as a fallback when no real resolver is available.
+     */
     interface PlaceholderResolver {
 
+        /**
+         * Returns the value for the given key, or {@code null} if not found.
+         *
+         * @param key the configuration key
+         * @return the value, or {@code null}
+         */
         String getValue(String key);
 
     }
 
 
+    /**
+     * Creates a {@link PlaceholderHelper} backed by the given value map.
+     *
+     * @param valueMap the map of key-value pairs for placeholder resolution
+     * @param <T>      the value type
+     * @return the placeholder helper
+     */
     static <T> PlaceholderHelper create(Map<String, T> valueMap) {
         return new Default( new Default.WithMap(valueMap) );
     }
 
+    /**
+     * Creates a {@link PlaceholderHelper} backed by the given {@link ConfigView}.
+     *
+     * @param configView the config view for placeholder resolution
+     * @return the placeholder helper
+     */
     static PlaceholderHelper create(ConfigView configView) {
         return new Default( new Default.WithConfigView(configView) );
     }
 
 
+    /**
+     * Default {@link PlaceholderHelper} implementation backed by Logback's
+     * {@link ch.qos.logback.core.subst.NodeToStringTransformer} for {@code ${key}} resolution.
+     */
     class Default implements PlaceholderHelper {
 
         private final PropertyContainer propertyContainer;
@@ -60,6 +107,9 @@ public interface PlaceholderHelper {
             this.propertyContainer = propertyContainer;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String replace(String placeholder) {
             try {
@@ -205,11 +255,18 @@ public interface PlaceholderHelper {
                     return this.lookup(null, key);
                 }
 
+                /**
+                 * {@inheritDoc}
+                 */
                 @Override
                 public String lookup(LogEvent event, String key) {
                     return placeholderResolver.getValue(key);
                 }
 
+                /**
+                 * {@inheritDoc}
+                 */
+                @Override
                 public LookupResult evaluate(LogEvent event, String key) {
                     final String value = lookup(event, key);
 
@@ -224,16 +281,27 @@ public interface PlaceholderHelper {
             Assert.notNull(configView, "'configView' must not be null.");
 
             StrSubstitutor strSubstitutor = new StrSubstitutor(new StrLookup() {
+
+                /**
+                 * {@inheritDoc}
+                 */
                 @Override
                 public String lookup(String key) {
                     return this.lookup(null, key);
                 }
 
+                /**
+                 * {@inheritDoc}
+                 */
                 @Override
                 public String lookup(LogEvent event, String key) {
                     return configView.getAsString(key, null);
                 }
 
+                /**
+                 * {@inheritDoc}
+                 */
+                @Override
                 public LookupResult evaluate(LogEvent event, String key) {
                     final String value = lookup(event, key);
 
@@ -255,6 +323,9 @@ public interface PlaceholderHelper {
 
             return new PlaceholderHelper() {
 
+                /**
+                 * {@inheritDoc}
+                 */
                 @Override
                 public String replace(String placeholder) {
                     return strSubstitutor.replace(placeholder);
@@ -270,11 +341,18 @@ public interface PlaceholderHelper {
                 this.value = value;
             }
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public String value() {
                 return value;
             }
 
+            /**
+             * {@inheritDoc}
+             */
+            @Override
             public boolean isLookupEvaluationAllowedInValue() {
                 // evaluate variables in return value
                 return true;

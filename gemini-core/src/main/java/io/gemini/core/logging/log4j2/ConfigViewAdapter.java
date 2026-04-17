@@ -33,11 +33,15 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.StringUtils;
 
 /**
- * This class adapts {@code ConfigSource} to {@code PropertySource} to load log4j2 settings.
- *
+ * Adapts the {@link ConfigView} to Log4j2's {@link PropertySource} and
+ * {@link ConfigSource} interfaces, allowing AOP configuration properties to be
+ * used as Log4j2 system properties.
+ * <p>
+ * When debug mode is active, overrides log level and location settings to enable
+ * verbose Log4j2 output.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class ConfigViewAdapter implements PropertySource, ConfigSource {
 
@@ -63,6 +67,12 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
         DEBUG_SETTINGS.put(LoggingSystem.LOGGER_INCLUDE_LOCATION_KEY, "true");
     }
 
+    /**
+     * Constructs a {@code ConfigViewAdapter} wrapping the given config view.
+     *
+     * @param configView the config view to adapt
+     * @param debug      whether debug mode is active (overrides log level and location settings)
+     */
     public ConfigViewAdapter(ConfigView configView, boolean debug) {
         Assert.notNull(configView, "'configView' must not be null.");
         this.configView = configView;
@@ -84,6 +94,11 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
             this.keys.addAll(DEBUG_SETTINGS.keySet());
     }
 
+    /**
+     * Returns the priority of this property source (higher values take precedence).
+     *
+     * @return the priority value
+     */
     @Override
     public int getPriority() {
         return DEFAULT_PRIORITY;
@@ -98,6 +113,11 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
         return keys;
     }
 
+    /**
+     * Returns all logger-related property names (those starting with {@code aop.logger.}).
+     *
+     * @return collection of logger property names
+     */
     public Collection<String> getLoggerPropertyNames() {
         return keys.stream()
                 .filter( e -> 

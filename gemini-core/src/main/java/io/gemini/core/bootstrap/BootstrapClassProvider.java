@@ -23,21 +23,20 @@ import java.lang.annotation.Target;
 
 /**
  * {@code BootstrapClassProvider} is a mark annotation, and annotated classes 
- * will be injected into bootstrap ClassLoader by the AOP framework.
+ * will be injected into bootstrap ClassLoader by the Gemini AOP framework.
  * 
  * 
  * @author   martin.liu
- * @since    1.0
  */
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.CLASS)
 public @interface BootstrapClassProvider {
 
     /**
-     * define destination package to place annotated class, and type scope to fetch 
-     * private Lookup under JDK 9+
-     * 
-     * @return
+     * Defines the destination package for the annotated class and provides the type scope
+     * used to obtain a private {@link java.lang.invoke.MethodHandles.Lookup} under JDK 9+.
+     *
+     * @return the scope type whose package is used as the destination package
      */
     Class<?> scopeType();
 

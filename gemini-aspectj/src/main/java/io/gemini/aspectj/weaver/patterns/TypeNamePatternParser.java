@@ -31,30 +31,51 @@ import io.gemini.core.util.ReflectionUtils;
 import io.gemini.core.util.Throwables;
 import net.bytebuddy.matcher.ElementMatcher;
 
+
 /**
- * 
- *
+ * An AspectJ {@link PatternParser} extension that overrides single-type-pattern parsing
+ * to produce {@link WildTypeNamePattern} instances.
+ * <p>
+ * {@link WildTypeNamePattern} uses a fast {@link net.bytebuddy.matcher.StringMatcher}-based
+ * name check (via {@link NameMatcherParser}) instead of the full AspectJ type-hierarchy
+ * traversal, making type-name matching significantly cheaper during pointcut evaluation.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class TypeNamePatternParser extends PatternParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TypeNamePatternParser.class);
 
     /**
-     * @param expression
+     * Creates a new {@code TypeNamePatternParser} for the given expression.
+     *
+     * @param expression the type name pattern expression to parse
      */
     public TypeNamePatternParser(String expression) {
         super(expression);
     }
 
+    /**
+     * Parses a single type pattern, wrapping any {@link WildTypePattern} in a
+     * {@link WildTypeNamePattern} that uses a fast string-based name matcher.
+     *
+     * {@inheritDoc}
+     */
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
         return typePattern instanceof WildTypePattern ? new WildTypeNamePattern( (WildTypePattern) typePattern) : typePattern;
     }
 
 
+    /**
+     * A {@link WildTypePattern} variant that replaces the default AspectJ static-match
+     * logic with a fast string-based name check built from {@link NameMatcherParser}.
+     * <p>
+     * Falls back to the reflectively-obtained {@code matchesExactlyByName} method handle
+     * when the expression cannot be reduced to a simple string matcher.
+     * </p>
+     */
     static class WildTypeNamePattern extends WildTypePattern {
 
         private static final MethodHandle MATCHES_EXACTLY_BY_NAME_METHOD_HANDLE;
@@ -77,6 +98,13 @@ public class TypeNamePatternParser extends PatternParser {
         }
 
 
+        /**
+         * Creates a {@code WildTypeNamePattern} by copying all attributes from the given
+         * {@link WildTypePattern} and pre-building a {@link net.bytebuddy.matcher.StringMatcher}
+         * from the pattern's string representation.
+         *
+         * @param typePattern the source wild-type pattern to copy
+         */
         public WildTypeNamePattern(WildTypePattern typePattern) {
             super(Arrays.asList(typePattern.getNamePatterns()), 
                     typePattern.isIncludeSubtypes(), 
@@ -91,6 +119,13 @@ public class TypeNamePatternParser extends PatternParser {
             nameMatcher = NameMatcherParser.INSTANCE.parseMatcher( this.toString() );
         }
 
+        /**
+         * Returns {@code true} if the given type's name matches this pattern.
+         * Uses the pre-built string matcher when available; otherwise falls back to
+         * the reflective {@code matchesExactlyByName} method handle.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public boolean matchesStatically(ResolvedType type) {
             String typeName = type.getName();

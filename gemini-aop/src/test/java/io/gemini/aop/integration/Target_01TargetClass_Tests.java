@@ -48,7 +48,6 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
  *
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class Target_01TargetClass_Tests {
 

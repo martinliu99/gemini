@@ -19,7 +19,6 @@ package io.gemini.aop.integration;
  *
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class Advice_02ExceptionHandling_Tests {
 

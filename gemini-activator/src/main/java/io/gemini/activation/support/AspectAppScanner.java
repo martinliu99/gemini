@@ -36,16 +36,30 @@ import java.util.stream.Stream;
 import io.gemini.activation.util.FileUtils;
 
 /**
- *
+ * Defines the contract for scanning aspect application directories and collecting their classpath URLs.
+ * <p>
+ * An aspect application is a self-contained directory under {@code aspectapps/} that bundles
+ * aspect classes, configuration, and library JARs. Implementations discover these directories
+ * and return a map of aspect-app name to classpath URL arrays.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface AspectAppScanner {
 
+    /**
+     * Scans and returns classpath URLs grouped by aspect application name.
+     *
+     * @return map of aspect-app name to its classpath URLs
+     * @throws IOException if an I/O error occurs during scanning
+     */
     Map<String /* AspectAppName */, URL[]> scanClassPathURLs() throws IOException;
 
 
+    /**
+     * Default {@link AspectAppScanner} that scans sub directories under {@code aspectapps/},
+     * collecting {@code conf/}, {@code aspects/}, and {@code lib/} entries for each app.
+     */
     public class Default implements AspectAppScanner {
 
         private final Path aspectAppsPath;
@@ -59,6 +73,9 @@ public interface AspectAppScanner {
                 this.aspectAppsPath = aspectAppsPath;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
             if (aspectAppsPath == null)
@@ -99,6 +116,10 @@ public interface AspectAppScanner {
     }
 
 
+    /**
+     * {@link AspectAppScanner} that discovers aspect apps from the JVM classpath
+     * by looking for {@code /classes} and {@code /test-classes} folders.
+     */
     public class ClassesFolder implements AspectAppScanner {
 
         private final Set<String> scannedClassFolders;
@@ -110,6 +131,9 @@ public interface AspectAppScanner {
             this.scannedClassFolders.add("/test-classes");
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
 //          // retrieve folder from classpath
@@ -142,6 +166,9 @@ public interface AspectAppScanner {
     }
 
 
+    /**
+     * Composite {@link AspectAppScanner} that delegates to multiple scanners and merges results.
+     */
     public class Compound implements AspectAppScanner {
 
         private final AspectAppScanner[] aspectAppScanners;
@@ -155,6 +182,9 @@ public interface AspectAppScanner {
             return new Compound(aspectAppScanners);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
             Map<String, URL[]> classPathURLs = new LinkedHashMap<>();

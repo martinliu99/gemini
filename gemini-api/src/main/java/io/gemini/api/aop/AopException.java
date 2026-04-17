@@ -17,6 +17,12 @@ package io.gemini.api.aop;
 
 import io.gemini.api.BaseException;
 
+/**
+ * Runtime exception thrown when an AOP operation fails.
+ * Wraps lower-level exceptions that occur during bytecode transformation or advice execution.
+ *
+ * @author   martin.liu
+ */
 public class AopException extends BaseException {
 
     private static final long serialVersionUID = 1580062864289647476L;

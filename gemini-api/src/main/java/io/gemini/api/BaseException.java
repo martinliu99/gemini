@@ -16,6 +16,11 @@
 package io.gemini.api;
 
 
+/**
+ * Base unchecked exception for all framework exceptions.
+ * Subclasses should provide domain-specific error semantics.
+ *
+ */
 public abstract class BaseException extends RuntimeException {
 
     private static final long serialVersionUID = -3742997966151551674L;

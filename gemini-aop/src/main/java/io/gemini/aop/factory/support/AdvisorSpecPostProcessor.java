@@ -40,19 +40,39 @@ import io.gemini.core.util.Throwables;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- *
+ * Post-processes the map of scanned {@link AdvisorSpec} instances after initial scanning.
+ * <p>
+ * Implementations can add, modify, or remove advisor specs. The {@link Compound} implementation
+ * delegates to all registered post-processors in order. 
+ * 
+ * Built-in implementations:
+ * <ul>
+ *   <li>{@link ParsingConfigViewAdvisorSpec} – adds or overrides advisor specs from configuration properties</li>
+ *   <li>{@link FilteringEnabledAdvisorSpec} – removes advisor specs not matching the enabled-advisor filter</li>
+ * </ul>
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface AdvisorSpecPostProcessor {
 
     Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecPostProcessor.class);
 
 
+    /**
+     * Post-processes the given map of scanned {@link AdvisorSpec} instances.
+     * Implementations may add, modify, or remove entries.
+     *
+     * @param factoryContext the factory context providing config and type information
+     * @param advisorSpecMap the mutable map of advisor name to {@link AdvisorSpec}
+     * @return the (possibly modified) advisor spec map
+     */
     Map<String, AdvisorSpec> postProcess(FactoryContext factoryContext, Map<String, AdvisorSpec> advisorSpecMap);
 
 
+    /**
+     * Delegates to all registered {@link AdvisorSpecPostProcessor} instances in order.
+     */
     @NoScanning
     class Compound implements AdvisorSpecPostProcessor {
 
@@ -115,6 +135,10 @@ public interface AdvisorSpecPostProcessor {
     }
 
 
+    /**
+     * Adds or overrides advisor specs from configuration properties
+     * (keys matching {@code aop.advisorSpecs.<prefix>.advisorName}).
+     */
     class ParsingConfigViewAdvisorSpec implements AdvisorSpecPostProcessor, Ordered {
 
         private static final String ADVISOR_NAME_CONFIG_KEY_SUFFIX = "advisorName";
@@ -133,8 +157,10 @@ public interface AdvisorSpecPostProcessor {
         }
 
         /**
-         * @param factoryContext
-         * @return
+         * Scans the config view for all advisor spec key prefixes under {@code aop.advisorSpecs.}.
+         *
+         * @param factoryContext the factory context providing the config view
+         * @return the set of discovered config key prefixes
          */
         private Set<String> findConfiguredAdvisorSpecPrefix(FactoryContext factoryContext) {
             Set<String> configuredAdvisorSpecPrefixes = new LinkedHashSet<>();
@@ -227,6 +253,10 @@ public interface AdvisorSpecPostProcessor {
     }
 
 
+    /**
+     * Removes advisor specs whose names do not match the enabled-advisor filter
+     * configured via {@code aop.factory.enabledAdvisorExpressions}.
+     */
     class FilteringEnabledAdvisorSpec implements AdvisorSpecPostProcessor, Ordered {
 
         /**

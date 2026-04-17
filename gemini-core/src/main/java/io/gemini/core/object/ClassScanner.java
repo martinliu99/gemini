@@ -42,25 +42,59 @@ import nonapi.io.github.classgraph.scanspec.AcceptReject;
 import nonapi.io.github.classgraph.utils.JarUtils;
 
 /**
- * This class scans ClassLoaders to collect type metadata.
- * 
+ * Scans the classpath to collect type metadata for the Gemini AOP framework.
+ * <p>
+ * Uses ClassGraph to discover all classes implementing a given interface or carrying
+ * a given annotation. Results are filtered by classpath element URL to scope discovery
+ * to a specific aspect application or the core AOP classpath.
+ * The {@link Builder} provides a fluent API for configuring scan parameters.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface ClassScanner {
 
     static int NO_WORK_THREAD = 0;
 
+    /**
+     * Returns all class names that implement the given type (interface or class).
+     *
+     * @param typeName the fully-qualified type name to search for implementors
+     * @return list of fully-qualified class names
+     */
     List<String> getClassNamesImplementing(String typeName);
 
+    /**
+     * Returns all {@link ClassInfo} objects for classes that implement the given type.
+     *
+     * @param typeName the fully-qualified type name to search for implementors
+     * @return the matching class info list
+     */
     ClassInfoList getClassesImplementing(String typeName);
 
+    /**
+     * Returns all class names annotated with the given annotation.
+     *
+     * @param annotationName the fully-qualified annotation class name
+     * @return list of fully-qualified class names
+     */
     List<String> getClassNamesWithAnnotation(String annotationName);
 
+    /**
+     * Returns all {@link ClassInfo} objects for classes annotated with the given annotation.
+     *
+     * @param annotationName the fully-qualified annotation class name
+     * @return the matching class info list
+     */
     ClassInfoList getClassesWithAnnotation(String annotationName);
 
 
+    /**
+     * Default {@link ClassScanner} implementation backed by ClassGraph.
+     * Scans the classpath at construction time and caches all discovered class metadata.
+     * Results are filtered by classpath element URL to scope discovery to a specific
+     * aspect application or the core AOP classpath.
+     */
     class Default implements ClassScanner {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(ClassScanner.class);
@@ -292,6 +326,9 @@ public interface ClassScanner {
         }
 
 
+        /**
+         * Accepts all classpath elements without filtering.
+         */
         static class AllClasspathElementFilter implements ClasspathElementFilter {
 
             @Override
@@ -300,6 +337,10 @@ public interface ClassScanner {
             }
         }
 
+        /**
+         * Filters classpath elements by matching against accepted JAR name patterns
+         * and known automatic package root suffixes.
+         */
         static class DefaultClasspathElementFilter implements ClasspathElementFilter {
 
             private final Set<Pattern> acceptJarPatterns;
@@ -326,6 +367,9 @@ public interface ClassScanner {
         }
 
 
+        /**
+         * Filters out classes annotated with {@link io.gemini.api.annotation.NoScanning}.
+         */
         static enum NoScanningClassInfoFilter implements ClassInfoFilter {
 
             INSTANCE
@@ -345,6 +389,9 @@ public interface ClassScanner {
             }
         }
 
+        /**
+         * Filters classes to only those whose classpath element URL is in the allowed set.
+         */
         static class DefaultClassInfoFilter implements ClassInfoFilter {
 
             private Collection<URL> classpathElementURLs;
@@ -376,6 +423,10 @@ public interface ClassScanner {
     }
 
 
+    /**
+     * A {@link ClassInfoFilter} that accepts only concrete, instantiable classes
+     * (non-interface, non-abstract, non-annotation, non-enum, and top-level or static nested).
+     */
     public static class InstantiableClassInfoFilter implements ClassInfoFilter {
 
         /**
@@ -392,6 +443,11 @@ public interface ClassScanner {
     }
 
 
+    /**
+     * Fluent builder for constructing {@link ClassScanner} instances.
+     * Supports configuring class loaders, classpath overrides, JAR patterns,
+     * package filters, and classpath element URL filters.
+     */
     public class Builder {
 
         private boolean enableVerbose = false;
@@ -420,18 +476,36 @@ public interface ClassScanner {
         }
 
 
+        /**
+         * Enables or disables verbose ClassGraph output.
+         *
+         * @param enableVerbose {@code true} to enable verbose output
+         * @return this builder
+         */
         public Builder enableVerbose(boolean enableVerbose) {
             this.enableVerbose = enableVerbose;
 
             return this;
         }
 
+        /**
+         * Sets the diagnostic level for scan logging.
+         *
+         * @param diagnosticLevel the diagnostic level
+         * @return this builder
+         */
         public Builder diagnosticLevel(DiagnosticLevel diagnosticLevel) {
             this.diagnosticLevel = diagnosticLevel;
 
             return this;
         }
 
+        /**
+         * Adds class loaders to scan (varargs).
+         *
+         * @param classLoaders the class loaders to add
+         * @return this builder
+         */
         public Builder scannedClassLoaders(ClassLoader... classLoaders) {
             if (classLoaders != null)
                 this.scannedClassLoaders.addAll( Arrays.asList(classLoaders) );
@@ -439,6 +513,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Adds class loaders to scan (collection).
+         *
+         * @param classLoaders the class loaders to add
+         * @return this builder
+         */
         public Builder scannedClassLoaders(Collection<ClassLoader> classLoaders) {
             if (classLoaders != null)
                 this.scannedClassLoaders.addAll( classLoaders );
@@ -446,6 +526,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Overrides the classpath with the given URLs (varargs).
+         *
+         * @param overrideClasspaths the classpath URLs to use instead of class loader classpaths
+         * @return this builder
+         */
         public Builder overrideClasspaths(URL... overrideClasspaths) {
             if (overrideClasspaths != null)
                 this.overrideClasspaths.addAll( Arrays.asList(overrideClasspaths) );
@@ -453,6 +539,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Overrides the classpath with the given URLs (collection).
+         *
+         * @param overrideClasspaths the classpath URLs to use
+         * @return this builder
+         */
         public Builder overrideClasspaths(Collection<URL> overrideClasspaths) {
             if (overrideClasspaths != null)
                 this.overrideClasspaths.addAll( overrideClasspaths );
@@ -460,6 +552,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Adds JAR name glob patterns to accept during scanning (varargs).
+         *
+         * @param acceptJarPatterns glob patterns for JAR names to include
+         * @return this builder
+         */
         public Builder acceptJarPatterns(String... acceptJarPatterns) {
             if (acceptJarPatterns != null) {
                 this.acceptJarPatterns.addAll( Arrays.asList(acceptJarPatterns) );
@@ -468,6 +566,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Adds JAR name glob patterns to accept during scanning (collection).
+         *
+         * @param acceptJarPatterns glob patterns for JAR names to include
+         * @return this builder
+         */
         public Builder acceptJarPatterns(Collection<String> acceptJarPatterns) {
             if (acceptJarPatterns != null) {
                 this.acceptJarPatterns.addAll( acceptJarPatterns );
@@ -476,6 +580,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Adds package names to accept during scanning (varargs).
+         *
+         * @param acceptPackages package names to include (use {@code "*"} for all)
+         * @return this builder
+         */
         public Builder acceptPackages(String... acceptPackages) {
             if (acceptPackages != null) {
                 this.acceptPackages.addAll( Arrays.asList(acceptPackages) );
@@ -484,6 +594,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Adds package names to accept during scanning (collection).
+         *
+         * @param acceptPackages package names to include
+         * @return this builder
+         */
         public Builder acceptPackages(Collection<String> acceptPackages) {
             if (acceptPackages != null) {
                 this.acceptPackages.addAll(acceptPackages);
@@ -492,18 +608,36 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Sets the number of parallel worker threads for scanning.
+         *
+         * @param workThreads the number of worker threads (0 for single-threaded)
+         * @return this builder
+         */
         public Builder workThreads(int workThreads) {
             this.workThreads = workThreads;
 
             return this;
         }
 
+        /**
+         * Reuses an existing {@link ClassScanner}'s scan results with new classpath element URL filters.
+         *
+         * @param classScanner the existing scanner to reuse
+         * @return this builder
+         */
         public Builder classScanner(ClassScanner classScanner) {
             this.classScanner = classScanner;
 
             return this;
         }
 
+        /**
+         * Adds classpath element URLs to filter results to (varargs).
+         *
+         * @param classpathElementUrls the URLs to include in results
+         * @return this builder
+         */
         public Builder filteredClasspathElementUrls(URL... classpathElementUrls) {
             if (classpathElementUrls != null) {
                 this.filteredClasspathElementUrls.addAll( Arrays.asList(classpathElementUrls) );
@@ -512,6 +646,12 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Adds classpath element URLs to filter results to (collection).
+         *
+         * @param classpathElementUrls the URLs to include in results
+         * @return this builder
+         */
         public Builder filteredClasspathElementUrls(Collection<URL> classpathElementUrls) {
             if (classpathElementUrls != null) {
                 this.filteredClasspathElementUrls.addAll( classpathElementUrls );
@@ -520,6 +660,13 @@ public interface ClassScanner {
             return this;
         }
 
+        /**
+         * Builds and returns the configured {@link ClassScanner}.
+         * If a {@code classScanner} was set, creates a filtered view of it;
+         * otherwise performs a full classpath scan.
+         *
+         * @return the constructed class scanner
+         */
         public ClassScanner build() {
             return this.classScanner == null
                     ? new Default(enableVerbose, diagnosticLevel,

@@ -37,14 +37,38 @@ import io.gemini.core.util.Assert;
 import io.gemini.core.util.Throwables;
 import net.bytebuddy.matcher.ElementMatcher;
 
+/**
+ * Factory interface for creating {@link io.gemini.aop.Advisor} instances from
+ * {@link AdvisorSpec} descriptors.
+ * <p>
+ * The {@link Compound} implementation delegates to all registered creators in order.
+ * {@link ForPointcutAdvisor} handles {@link AdvisorSpec.PointcutAdvisorSpec} by
+ * creating a {@link DefaultPointcutAdvisor} that lazily loads the advice class and
+ * creates advice instances on demand.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface AdvisorCreator {
 
     Logger LOGGER = LoggerFactory.getLogger(AdvisorCreator.class);
 
 
+    /**
+     * Creates and returns an {@link io.gemini.aop.Advisor} from the given {@link AdvisorSpec},
+     * or {@code null} if this creator does not handle the spec type.
+     *
+     * @param advisorContext the advisor context for the target class loader
+     * @param advisorSpec    the advisor spec to create an advisor from
+     * @return the created {@link io.gemini.aop.Advisor}, or {@code null}
+     */
     Advisor create(AdvisorContext advisorContext, AdvisorSpec advisorSpec);
 
 
+    /**
+     * Delegates to all registered {@link AdvisorCreator} instances in order,
+     * and returns the first non-null result.
+     */
     @NoScanning
     class Compound implements AdvisorCreator {
 
@@ -87,6 +111,10 @@ public interface AdvisorCreator {
     }
 
 
+    /**
+     * Abstract base providing common advisor creation logic: spec class filtering,
+     * condition validation, and error handling.
+     */
     abstract class AbstractBase<A extends AdvisorSpec> implements AdvisorCreator {
 
         private final AdviceCreator adviceCreator;
@@ -227,6 +255,10 @@ public interface AdvisorCreator {
     }
 
 
+    /**
+     * Creates a {@link DefaultPointcutAdvisor} from a {@link PointcutAdvisorSpec},
+     * building the pointcut and wiring the advice creator.
+     */
     class ForPointcutAdvisor extends AbstractBase<PointcutAdvisorSpec> {
 
         public ForPointcutAdvisor(FactoryContext factoryContext) {
@@ -259,6 +291,10 @@ public interface AdvisorCreator {
     }
 
 
+    /**
+     * Default {@link io.gemini.aop.Advisor.PointcutAdvisor} implementation that lazily loads
+     * the advice class and creates advice instances on demand via the {@link AdviceCreator}.
+     */
     class DefaultPointcutAdvisor extends PointcutAdvisor.AbstractBase {
 
         private final AdvisorContext advisorContext;

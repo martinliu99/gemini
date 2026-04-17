@@ -16,12 +16,24 @@
 package io.gemini.core;
 
 /**
- *
+ * Defines an ordering contract for the Gemin AOP framework components.
+ * <p>
+ * Components with lower order values have higher priority.
+ * Use {@link io.gemini.api.annotation.Order} to specify the order value.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface Ordered {
 
+    /**
+     * Returns the order value of this component. Lower values indicate higher priority.
+     * <p>
+     * Use {@link io.gemini.api.annotation.Order#HIGHEST_PRECEDENCE} for the highest
+     * priority and {@link io.gemini.api.annotation.Order#LOWEST_PRECEDENCE} for the lowest.
+     * </p>
+     *
+     * @return the order value; lower means higher priority
+     */
     int getOrder();
 }

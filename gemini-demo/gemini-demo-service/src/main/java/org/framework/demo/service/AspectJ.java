@@ -15,6 +15,13 @@
  */
 package org.framework.demo.service;
 
+/**
+ * Marker annotation used in the demo service to mark methods that should be intercepted
+ * by the AspectJ-style aspect ({@link Sample01_DemoServiceAspectJAspect}).
+ * Demonstrates how Gemini supports {@code @annotation()} pointcut designators.
+ *
+ * @author   martin.liu
+ */
 public @interface AspectJ {
 
 }

@@ -27,16 +27,29 @@ import java.util.stream.Collectors;
 import io.gemini.activation.util.FileUtils;
 
 /**
- *
+ * Defines the contract for scanning the Gemini AOP launcher directory and collecting its classpath URLs.
+ * <p>
+ * The launcher directory typically contains a {@code conf/} folder and a {@code lib/} folder
+ * with the core AOP framework JARs and their dependencies.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface LauncherScanner {
 
+    /**
+     * Scans the launcher directory and returns the resolved classpath URLs.
+     *
+     * @return array of URLs representing the launcher classpath
+     * @throws IOException if an I/O error occurs during scanning
+     */
     URL[] scanClassPathURLs() throws IOException;
 
 
+    /**
+     * Default {@link LauncherScanner} implementation that scans the {@code conf/} and
+     * {@code lib/} subdirectories of the launcher path.
+     */
     class Default implements LauncherScanner {
 
         private final Path launchPath;
@@ -48,6 +61,9 @@ public interface LauncherScanner {
             this.launchFile = launchFile;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public URL[] scanClassPathURLs() throws IOException {
             List<Path> launchClassPaths = new ArrayList<>();

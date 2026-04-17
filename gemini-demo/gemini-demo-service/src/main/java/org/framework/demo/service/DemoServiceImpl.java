@@ -24,6 +24,15 @@ import org.framework.demo.api.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Demo implementation of {@link DemoService} that serves as the target for AOP instrumentation.
+ * <p>
+ * This class is intentionally simple so that the effect of advice weaving can be clearly observed
+ * in the demo output.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class DemoServiceImpl implements DemoService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoServiceImpl.class);

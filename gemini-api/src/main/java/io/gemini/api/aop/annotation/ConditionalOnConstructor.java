@@ -28,6 +28,11 @@ import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnConstructorCondition;
 
 
+/**
+ * Activates an advisor only when the specified constructor is present in the target type.
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -35,5 +40,10 @@ import io.gemini.api.aop.condition.OnConstructorCondition;
 @Order(110)
 public @interface ConditionalOnConstructor {
 
+    /**
+     * The constructor expression that must be present in the target type.
+     *
+     * @return the constructor expression
+     */
     String constructorExpression();
 }

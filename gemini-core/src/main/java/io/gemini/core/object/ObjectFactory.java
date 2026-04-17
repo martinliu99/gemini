@@ -47,46 +47,130 @@ import io.gemini.core.util.StringUtils;
 import io.gemini.core.util.Throwables;
 
 /**
- * 
- *
+ * Factory interface for creating and managing object instances within the Gemini AOP framework.
+ * <p>
+ * Supports class loading, instantiation (with or without arguments), and discovery of all
+ * concrete implementations of a given interface or base class via {@link ClassScanner}.
+ * The {@link Simple} implementation performs lightweight dependency injection using
+ * standard injection annotations ({@code @Inject}, {@code @Resource}, {@code @Autowired}).
+ * Use {@link Builder} to construct instances.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface ObjectFactory extends Closeable {
 
+    /**
+     * Starts the object factory, performing any required initialization.
+     */
     void start();
 
+    /**
+     * Registers an existing singleton object under the given name.
+     *
+     * @param objectName     the name to register the object under
+     * @param existingObject the singleton object to register
+     */
     void registerSingleton(String objectName, Object existingObject);
 
 
+    /**
+     * Loads the class with the given name using this factory's class loader.
+     *
+     * @param className the fully-qualified class name
+     * @param <T>       the expected type
+     * @return the loaded class
+     * @throws ObjectsException if the class cannot be loaded
+     */
     <T> Class<T> loadClass(String className) throws ObjectsException;
 
+    /**
+     * Returns {@code true} if the given class can be instantiated by this factory
+     * (i.e., it is a concrete, top-level or static nested class).
+     *
+     * @param clazz the class to check
+     * @param <T>   the class type
+     * @return {@code true} if instantiatable
+     */
     <T> boolean isInstantiatable(Class<T> clazz);
 
 
+    /**
+     * Creates an instance of the given class, optionally passing the given arguments
+     * to a matching constructor.
+     *
+     * @param clazz     the class to instantiate
+     * @param arguments optional constructor arguments (alternating name/value pairs)
+     * @param <T>       the instance type
+     * @return the created instance
+     * @throws ObjectsException if instantiation fails
+     */
     <T> T createObject(Class<T> clazz, Object... arguments) throws ObjectsException;
 
+    /**
+     * Creates an instance of the given class using the given named arguments map.
+     *
+     * @param clazz     the class to instantiate
+     * @param arguments a map of parameter names to argument values
+     * @param <T>       the instance type
+     * @return the created instance
+     * @throws ObjectsException if instantiation fails
+     */
     <T> T createObject(Class<T> clazz, Map<String, Object> arguments) throws ObjectsException;
 
+    /**
+     * Creates instances of all concrete classes implementing the given base class,
+     * as discovered by the class scanner.
+     *
+     * @param clazz            the base class or interface
+     * @param ignoredException whether to silently skip classes that fail to instantiate
+     * @param arguments        optional constructor arguments
+     * @param <T>              the base type
+     * @return list of created instances
+     * @throws ObjectsException if instantiation fails and {@code ignoredException} is {@code false}
+     */
     <T> List<T> createObjectsImplementing(Class<T> clazz, boolean ignoredException, Object... arguments) throws ObjectsException;
 
 
+    /**
+     * Closes this factory and releases any held resources.
+     *
+     * @throws IOException if an I/O error occurs during close
+     */
     void close() throws IOException;
 
 
+    /**
+     * Exception thrown when an object cannot be created or loaded by the factory.
+     */
     public class ObjectsException extends BaseException {
 
         private static final long serialVersionUID = 7286124443140436785L;
 
+        /**
+         * Constructs an {@code ObjectsException} with the given message.
+         *
+         * @param message the detail message
+         */
         public ObjectsException(String message) {
             super(message);
         }
 
+        /**
+         * Constructs an {@code ObjectsException} wrapping the given cause.
+         *
+         * @param t the cause
+         */
         public ObjectsException(Throwable t) {
             super(t);
         }
 
+        /**
+         * Constructs an {@code ObjectsException} with the given message and cause.
+         *
+         * @param message the detail message
+         * @param t       the cause
+         */
         public ObjectsException(String message, Throwable t) {
             super(message, t);
         }
@@ -94,7 +178,8 @@ public interface ObjectFactory extends Closeable {
 
 
     /**
-     * 
+     * Abstract base implementation providing class loading, instantiation, and
+     * bulk creation of objects implementing a given interface.
      */
     abstract class AbstractBase implements ObjectFactory {
 
@@ -106,6 +191,13 @@ public interface ObjectFactory extends Closeable {
         private final ClassScanner classScanner;
 
 
+        /**
+         * Constructs an {@code AbstractBase} with the given dependencies.
+         *
+         * @param diagnosticLevel the diagnostic level for logging
+         * @param classLoader     the class loader used to load classes
+         * @param classScanner    the scanner used to discover implementing classes
+         */
         protected AbstractBase(DiagnosticLevel diagnosticLevel,
                 ClassLoader classLoader, ClassScanner classScanner) {
             Assert.notNull(classLoader, "'diagnosticLevel' must not be null");
@@ -118,14 +210,29 @@ public interface ObjectFactory extends Closeable {
             this.classScanner = classScanner;
         }
 
+        /**
+         * Returns the diagnostic level.
+         *
+         * @return the diagnostic level
+         */
         protected DiagnosticLevel getDiagnosticLevel() {
             return diagnosticLevel;
         }
 
+        /**
+         * Returns the class loader used by this factory.
+         *
+         * @return the class loader
+         */
         protected ClassLoader getClassLoader() {
             return this.classLoader;
         }
 
+        /**
+         * Returns the class scanner used by this factory.
+         *
+         * @return the class scanner
+         */
         protected ClassScanner getClassScanner() {
             return classScanner;
         }
@@ -176,7 +283,7 @@ public interface ObjectFactory extends Closeable {
 
 
             // 2.find constructor and instantiate instance with arguments
-            return doCreateObject(clazz, CollectionUtils.of(String.class, arguments));
+            return createObjectInternal(clazz, CollectionUtils.of(String.class, arguments));
         }
 
         /**
@@ -188,7 +295,7 @@ public interface ObjectFactory extends Closeable {
             Assert.isTrue(isInstantiatable(clazz), "clazz '" + clazz + "' must be top-level or nested, concrete class.");
 
             // find constructor and instantiate instance with arguments
-            return doCreateObject(clazz, arguments);
+            return createObjectInternal(clazz, arguments);
         }
 
         protected <T> T doInstantiateObject(Class<T> clazz, Constructor<T> constructor, Object[] arguments) 
@@ -207,7 +314,7 @@ public interface ObjectFactory extends Closeable {
         protected abstract <T> T doCreateObject(Class<T> clazz) throws ObjectsException;
 
         @SuppressWarnings("unchecked")
-        private <T> T doCreateObject(Class<T> clazz, Map<String, Object> arguments) {
+        private <T> T createObjectInternal(Class<T> clazz, Map<String, Object> arguments) {
             // find constructor with @Initializer
             Constructor<T> candidateConstructor = null;
             Constructor<T>[] constructors = (Constructor<T>[])  clazz.getDeclaredConstructors();
@@ -275,7 +382,7 @@ public interface ObjectFactory extends Closeable {
                 try {
                     objects.add(args.size() == 0
                             ? doCreateObject(canidateType)
-                            : doCreateObject(canidateType, args)
+                            : createObjectInternal(canidateType, args)
                     );
                 } catch (ObjectsException e) {
                     if (ignoredException == false)
@@ -294,8 +401,12 @@ public interface ObjectFactory extends Closeable {
     }
 
 
+    /**
+     * Lightweight {@link ObjectFactory} implementation that performs simple constructor-based
+     * and setter/field injection using standard injection annotations.
+     * Registered singletons are resolved by name and type during injection.
+     */
     class Simple extends AbstractBase {
-
         private static final Set<String> INJECTION_ANNOTATION;
 
         private ConcurrentMap<String, Object> objectMap;
@@ -315,15 +426,24 @@ public interface ObjectFactory extends Closeable {
             this.objectMap = new ConcurrentHashMap<>();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void start() {
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void registerSingleton(String objectName, Object existingObject) {
             this.objectMap.put(objectName, existingObject);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         @SuppressWarnings("unchecked")
         protected <T> T doCreateObject(Class<T> clazz) throws ObjectsException {
@@ -468,6 +588,11 @@ public interface ObjectFactory extends Closeable {
     }
 
 
+    /**
+     * Fluent builder for constructing {@link ObjectFactory} instances.
+     * Discovers and instantiates the first concrete {@link ObjectFactory} implementation
+     * found on the classpath; falls back to {@link Simple} if none is found.
+     */
     class Builder {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(Builder.class);
@@ -478,12 +603,24 @@ public interface ObjectFactory extends Closeable {
         private ClassScanner classScanner;
 
 
+        /**
+         * Sets the diagnostic level.
+         *
+         * @param diagnosticLevel the diagnostic level
+         * @return this builder
+         */
         public Builder diagnosticLevel(DiagnosticLevel diagnosticLevel) {
             this.diagnosticLevel = diagnosticLevel;
 
             return this;
         }
 
+        /**
+         * Sets the class scanner used to discover {@link ObjectFactory} implementations.
+         *
+         * @param classScanner the class scanner
+         * @return this builder
+         */
         public Builder classScanner(ClassScanner classScanner) {
             Assert.notNull(classScanner, "'classScanner' must not be null.");
             this.classScanner = classScanner;
@@ -491,6 +628,12 @@ public interface ObjectFactory extends Closeable {
             return this;
         }
 
+        /**
+         * Sets the class loader used to load classes.
+         *
+         * @param classLoader the class loader
+         * @return this builder
+         */
         public Builder classLoader(ClassLoader classLoader) {
             Assert.notNull(classLoader, "'classLoader' must not be null.");
             this.classLoader = classLoader;
@@ -498,6 +641,15 @@ public interface ObjectFactory extends Closeable {
             return this;
         }
 
+        /**
+         * Builds and returns an {@link ObjectFactory}.
+         * If {@code simple} is {@code true}, returns a {@link Simple} factory.
+         * Otherwise, discovers and instantiates the first concrete {@link ObjectFactory}
+         * implementation found on the classpath, falling back to {@link Simple}.
+         *
+         * @param simple whether to always use the {@link Simple} implementation
+         * @return the constructed object factory
+         */
         public ObjectFactory build(boolean simple) {
             if (simple)
                 return new Simple(diagnosticLevel, classLoader, classScanner);

@@ -25,11 +25,15 @@ import net.bytebuddy.utility.StreamDrainer;
 
 
 /**
- * TypePool looks up types imported by aspect class, firstly in current Target 
- * ClassLoader, then in AspectClassLoader.
+ * A ByteBuddy {@link TypePool} scoped to an aspect application.
+ * <p>
+ * Resolves type descriptions by first consulting the target class loader's type pool,
+ * then falling back to the aspect class loader's own classpath. The
+ * {@link #describeAspectType(String)} method bypasses the target class loader lookup
+ * and resolves only from the aspect class loader's classpath.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AspectTypePool extends TypePool.Default {
 
@@ -94,6 +98,10 @@ public class AspectTypePool extends TypePool.Default {
     }
 
 
+    /**
+     * {@link ClassFileLocator} that reads class bytecode from the aspect class loader's
+     * own classpath via {@link AspectClassLoader#getAspectResourceAsStream(String)}.
+     */
     static class AspectClassFileLocator implements ClassFileLocator {
 
         private final AspectClassLoader aspectClassLoader;

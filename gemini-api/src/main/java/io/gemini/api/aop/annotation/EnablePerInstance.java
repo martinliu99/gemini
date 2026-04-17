@@ -22,10 +22,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * Enables per-instance advice creation for the annotated advice class.
+ * <p>
+ * By default, the AOP framework creates a single shared advice instance per advisor.
+ * When this annotation is present, a new advice instance is created for each
+ * target object instance, allowing instance-level state to be maintained in the advice.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)

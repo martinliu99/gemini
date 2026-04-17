@@ -65,10 +65,21 @@ import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.JavaConstant;
 
 /**
- *
+ * Generates bytecode that wraps ByteBudyy framework advice methods with circularity-breaking guards.
+ * <p>
+ * Two wrapping strategies are provided:
+ * <ul>
+ *   <li>{@link #wrapMethodImplementation(Class)} – rewrites the advice method body to check
+ *       {@link BootstrapDispatcher#isDispatchable()} before executing, preventing re-entrant
+ *       dispatch when the advice itself triggers the same instrumented joinpoint.</li>
+ *   <li>{@link #wrapMethodCall(Class)} – replaces the advice method body with an INDY call
+ *       that checks dispatchability before delegating to the original advice logic.</li>
+ *   <li>{@link #postProcessTargetMethod(int)} – patches the callback slot constant in the
+ *       target method's INDY instruction after the advice class has been generated.</li>
+ * </ul>
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @BootstrapClassConsumer
 public enum CircularityBreakerCodeGenerator {
@@ -115,6 +126,14 @@ public enum CircularityBreakerCodeGenerator {
     }
 
 
+    /**
+     * Wraps the advice method implementation with a dispatchability guard.
+     * The generated class checks {@link BootstrapDispatcher#isDispatchable()} at entry
+     * and disables/re-enables dispatch around the original method body.
+     *
+     * @param adviceClass the original framework advice class to wrap
+     * @return a loaded dynamic type containing the wrapped advice class
+     */
     public DynamicType.Loaded<?> wrapMethodImplementation(Class<?> adviceClass) {
         return new ByteBuddy()
                 .redefine(adviceClass)
@@ -133,6 +152,14 @@ public enum CircularityBreakerCodeGenerator {
     }
 
 
+    /**
+     * Wraps the advice method call with a dispatchability guard using an INDY-based delegation.
+     * The generated class replaces the method body with an INDY call that checks
+     * {@link BootstrapDispatcher#isDispatchable()} before invoking the original advice logic.
+     *
+     * @param adviceClass the original ByteBuddy advice class to wrap
+     * @return a loaded dynamic type containing the wrapped advice class
+     */
     public DynamicType.Loaded<?> wrapMethodCall(Class<?> adviceClass) {
         return new ByteBuddy()
                 .redefine(adviceClass)
@@ -169,11 +196,24 @@ public enum CircularityBreakerCodeGenerator {
     }
 
 
+    /**
+     * Returns a {@link MethodVisitorWrapper} that patches the callback slot constant
+     * in the target method's INDY instruction to the given {@code callbackSlot} value.
+     * Called after the advice class has been generated to bind the correct slot index.
+     *
+     * @param callbackSlot the callback slot index assigned to this advisor weaver
+     * @return a method visitor wrapper that patches the INDY bootstrap argument
+     */
     public MethodVisitorWrapper postProcessTargetMethod(int callbackSlot) {
         return new TargetMethodWrapper(callbackSlot);
     }
 
 
+    /**
+     * {@link MethodVisitorWrapper} that rewrites the advice method body to check
+     * {@link io.gemini.aop.weaver.BootstrapDispatcher#isDispatchable()} and
+     * disable/re-enable dispatch around the original method body.
+     */
     static enum MethodImplementationWrapper implements MethodVisitorWrapper {
 
         INSTANCE;
@@ -191,6 +231,10 @@ public enum CircularityBreakerCodeGenerator {
         }
 
 
+        /**
+         * ASM {@link MethodVisitor} that inserts dispatchability guard code at the
+         * beginning of the advice method and re-enables dispatch before each return.
+         */
         static class MethodImplementationVisitor extends MethodVisitor {
 
             private final MethodDescription instrumentedMethod;
@@ -248,6 +292,9 @@ public enum CircularityBreakerCodeGenerator {
                 );
             }
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public void visitInsn(int opcode) {
                 if (opcode >= IRETURN && opcode <= RETURN) {
@@ -295,6 +342,9 @@ public enum CircularityBreakerCodeGenerator {
         }
 
 
+        /**
+         * Holds local variable metadata for re-emission in {@code visitEnd}.
+         */
         static class LocalVariableHolder {
 
             public final String name;
@@ -314,6 +364,10 @@ public enum CircularityBreakerCodeGenerator {
     }
 
 
+    /**
+     * {@link MethodVisitorWrapper} that replaces the advice method body with an INDY call
+     * that checks dispatchability before delegating to the original advice logic.
+     */
     static enum MethodCallWrapper implements MethodVisitorWrapper {
 
         INSTANCE;
@@ -331,6 +385,10 @@ public enum CircularityBreakerCodeGenerator {
         }
 
 
+        /**
+         * ASM {@link MethodVisitor} that replaces the method body with a dispatchability
+         * check followed by an INDY call to the original advice logic.
+         */
         static class MethodCallVisitor extends MethodVisitor {
 
             private static final String ON_METHOD_ENTER_DESCRIPTOR = TypeDescription.ForLoadedType.of(OnMethodEnter.class).getDescriptor();
@@ -418,39 +476,6 @@ public enum CircularityBreakerCodeGenerator {
                 )
                 .apply(methodVisitor, null);
 
-                // invoke advice method via method handle
-//                MethodInvocation.invoke(GET_CREATEOR).apply(methodVisitor, null);
-//                
-//                MethodInvocation.lookup().apply(methodVisitor, null);
-//                methodVisitor.visitLdcInsn(adviceMethod.getName());
-//                JavaConstant.MethodType.of(adviceMethod).toStackManipulation().apply(methodVisitor, null);
-    //
-//                methodVisitor.visitInsn(Opcodes.ICONST_3);
-//                methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
-    //
-//                methodVisitor.visitInsn(Opcodes.DUP);
-//                methodVisitor.visitInsn(Opcodes.ICONST_0);
-//                methodVisitor.visitLdcInsn("io.gemini.aop.test.AopTestActivator");
-//                methodVisitor.visitInsn(Opcodes.AASTORE);
-    //
-//                methodVisitor.visitInsn(Opcodes.DUP);
-//                methodVisitor.visitInsn(Opcodes.ICONST_1);
-//                methodVisitor.visitLdcInsn("public void io.gemini.aop.test.AopTestActivator.testPlanExecutionFinished(org.junit.platform.launcher.TestPlan)");
-//                methodVisitor.visitInsn(Opcodes.AASTORE);
-    //
-//                methodVisitor.visitInsn(Opcodes.DUP);
-//                methodVisitor.visitInsn(Opcodes.ICONST_2);
-//                methodVisitor.visitLdcInsn(adviceMethod.getDeclaringType().getTypeName());
-//                methodVisitor.visitInsn(Opcodes.AASTORE);
-    //
-    //
-//                MethodInvocation.invoke(CREATE_ADVICE_METHOD_HANDLE).apply(methodVisitor, null);
-    //
-//                MethodVariableAccess.allArgumentsOf(adviceMethod).apply(methodVisitor, null);
-    //
-//                new HandleInvocation( JavaConstant.MethodType.of(adviceMethod) ) 
-//                .apply(methodVisitor, null);
-
                 methodVisitor.visitJumpInsn(GOTO, finallyStart);
 
                 // exit try block
@@ -493,17 +518,19 @@ public enum CircularityBreakerCodeGenerator {
                 DefaultValue.of(instrumentedMethod.getReturnType()).apply(methodVisitor, null);
                 MethodReturn.of(instrumentedMethod.getReturnType()).apply(methodVisitor, null);
 
-
                 methodVisitor.visitTryCatchBlock(tryStart, tryEnd, handlerStart, null);
 
                 methodVisitor.visitMaxs(0, 0);
-
                 methodVisitor.visitEnd();
             }
 
         }
 
 
+        /**
+         * ASM {@link AnnotationVisitor} that forces {@code inline = true} on
+         * {@code @OnMethodEnter} and {@code @OnMethodExit} annotations.
+         */
         static class AnnotationAttributeModifier extends AnnotationVisitor {
 
             public AnnotationAttributeModifier(AnnotationVisitor annotationVisitor) {
@@ -530,6 +557,10 @@ public enum CircularityBreakerCodeGenerator {
     }
 
 
+    /**
+     * {@link MethodVisitorWrapper} that patches the callback slot constant in the
+     * target method's INDY instruction after the advice class has been generated.
+     */
     static class TargetMethodWrapper implements MethodVisitorWrapper {
 
         private final int callbackSlot;
@@ -552,6 +583,10 @@ public enum CircularityBreakerCodeGenerator {
         }
 
 
+        /**
+         * ASM {@link MethodVisitor} that patches the callback slot constant in the
+         * INDY bootstrap arguments of the target method.
+         */
         static class TargetMethodVisitor extends MethodVisitor {
 
             private final int callbackSlot;

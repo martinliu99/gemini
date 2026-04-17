@@ -28,6 +28,15 @@ import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnTypeCondition;
 
 
+/**
+ * Activates an advisor only when the specified type is present in the target class loader's classpath.
+ * <p>
+ * This allows advisors to be conditionally applied based on the presence of optional dependencies,
+ * preventing {@link ClassNotFoundException} in environments where those types are absent.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -35,5 +44,10 @@ import io.gemini.api.aop.condition.OnTypeCondition;
 @Order(100)
 public @interface ConditionalOnType {
 
+    /**
+     * The fully-qualified type name (or expression) that must be present in the target class loader.
+     *
+     * @return the type expression
+     */
     String typeExpression();
 }

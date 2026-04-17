@@ -60,6 +60,23 @@ import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
 
+/**
+ * Per-aspect-application context holding all resources needed to create advisors for a single
+ * aspect application (AspectApp).
+ * <p>
+ * Each {@code FactoryContext} owns:
+ * <ul>
+ *   <li>An {@link AspectClassLoader} with the aspect app's classpath</li>
+ *   <li>A {@link io.gemini.core.object.ClassScanner} scoped to the aspect app's classes</li>
+ *   <li>An {@link io.gemini.core.object.ObjectFactory} for instantiating advice objects</li>
+ *   <li>A {@link ConfigView} merging internal, user-defined, and parent settings</li>
+ *   <li>A {@link io.gemini.aop.factory.classloader.AspectTypePool} and {@link io.gemini.aspectj.weaver.TypeWorld} for type resolution</li>
+ *   <li>A cache of {@link AdvisorContext} instances keyed by target class loader</li>
+ * </ul>
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class FactoryContext implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FactoryContext.class);
@@ -114,6 +131,16 @@ public class FactoryContext implements Closeable {
     private ConcurrentMap<ClassLoader, AdvisorContext> advisorContextMap;
 
 
+    /**
+     * Creates a new {@link FactoryContext} for the given aspect application.
+     * Initializes the class loader, class scanner, object factory, config view,
+     * type pool, type world, and conditional class mappings.
+     *
+     * @param aopContext           the central AOP context
+     * @param factoriesContext     the parent factories context
+     * @param factoryName          the name of this aspect application
+     * @param factoryResourceURLs  the classpath URLs for this aspect application
+     */
     public FactoryContext(AopContext aopContext, 
             FactoriesContext factoriesContext,
             String factoryName, URL[] factoryResourceURLs) {
@@ -170,8 +197,17 @@ public class FactoryContext implements Closeable {
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, factoryName);
     }
 
+    /**
+     * Creates and returns the {@link ConfigView} for this factory context by loading
+     * internal and user-defined properties files from the aspect class loader.
+     *
+     * @param aopContext    the central AOP context providing the parent config view
+     * @param classLoader   the aspect class loader used to locate config files
+     * @param objectFactory the object factory used to discover custom converters
+     * @return merged {@link ConfigView} for this aspect application
+     */
     @SuppressWarnings("rawtypes")
-    protected ConfigView createConfigView(AopContext aopContext, AspectClassLoader classLoader, 
+    private ConfigView createConfigView(AopContext aopContext, AspectClassLoader classLoader, 
             ObjectFactory objectFactory) {
         Map<String, String> userDefinedConfigs = new LinkedHashMap<>();
 
@@ -205,10 +241,26 @@ public class FactoryContext implements Closeable {
         return configView;
     }
 
+    /**
+     * Returns the user-defined configuration file location for this aspect application,
+     * taking the active profile into account (e.g. {@code factory.properties} or
+     * {@code factory-prod.properties}).
+     *
+     * @param aopContext the central AOP context providing the active profile
+     * @return the relative path to the user-defined config file
+     */
     private String getUserDefinedConfigLocation(AopContext aopContext) {
         return "factory" + (aopContext.isDefaultProfile() ? "" : "-" + aopContext.getActiveProfile()) + ".properties";
     }
 
+    /**
+     * Loads and applies all factory-level settings from the given {@link ConfigView}:
+     * target-first type/resource matchers, factory class loader filter, enabled-advisor filter,
+     * shared class loader flag, and conflict class loader groups.
+     *
+     * @param factoriesContext the parent factories context providing global defaults
+     * @param configView       the merged config view for this aspect application
+     */
     private void loadSettings(FactoriesContext factoriesContext, ConfigView configView) {
         {
             Set<String> targetFirstTypeExpressions = configView.getAsStringSet(FACTORY_TARGET_FIRST_TYPE_EXPRESSIONS, Collections.emptySet());
@@ -283,6 +335,13 @@ public class FactoryContext implements Closeable {
         }
     }
 
+    /**
+     * Creates a {@link ClassScanner} scoped to the combined classpath of the AOP class loader
+     * and this aspect application's own resource URLs.
+     *
+     * @param aopContext the central AOP context providing the base class scanner and class loader
+     * @return a new {@link ClassScanner} filtered to the relevant classpath entries
+     */
     private ClassScanner createClassScanner(AopContext aopContext) {
         ClassScanner aopClassScanner = aopContext.getClassScanner();
         Assert.notNull(aopClassScanner, "'classScanner' must not be null.");
@@ -299,6 +358,14 @@ public class FactoryContext implements Closeable {
                 .build();
     }
 
+    /**
+     * Creates an {@link ObjectFactory} backed by the given class loader and class scanner,
+     * and pre-registers the {@link AopContext} and the factory itself as named singletons.
+     *
+     * @param classLoader  the aspect class loader used to load advice classes
+     * @param classScanner the class scanner used to discover advice implementations
+     * @return a configured {@link ObjectFactory}
+     */
     private ObjectFactory createObjectFactory(AspectClassLoader classLoader, ClassScanner classScanner) {
         ObjectFactory objectFactory = new ObjectFactory.Builder()
                 .diagnosticLevel(aopContext.getDiagnosticLevel())
@@ -313,66 +380,151 @@ public class FactoryContext implements Closeable {
     }
 
 
+    /**
+     * Returns the name of this aspect application factory.
+     *
+     * @return the factory name
+     */
     public String getFactoryName() {
         return factoryName;
     }
 
+    /**
+     * Returns the central {@link AopContext}.
+     *
+     * @return the AOP context
+     */
     public AopContext getAopContext() {
         return aopContext;
     }
 
+    /**
+     * Returns the parent {@link FactoriesContext} that owns this factory context.
+     *
+     * @return the factories context
+     */
     public FactoriesContext getFactoriesContext() {
         return factoriesContext;
     }
 
+    /**
+     * Returns the {@link AspectClassLoader} for this aspect application.
+     *
+     * @return the aspect class loader
+     */
     public AspectClassLoader getClassLoader() {
         return this.classLoader;
     }
 
 
+    /**
+     * Returns the merged {@link ConfigView} for this aspect application.
+     *
+     * @return the config view
+     */
     public ConfigView getConfigView() {
         return configView;
     }
 
+    /**
+     * Returns the placeholder helper for resolving {@code ${key}} expressions.
+     *
+     * @return the placeholder helper
+     */
     public PlaceholderHelper getPlaceholderHelper() {
         return placeholderHelper;
     }
 
 
+    /**
+     * Returns {@code true} if the given target class loader is accepted by the
+     * factory's class loader filter expression.
+     *
+     * @param targetClassLoader the class loader to test
+     * @return {@code true} if this factory should create advisors for the given class loader
+     */
     public boolean acceptTargetClassLoader(ClassLoader targetClassLoader) {
         return factoryClassLoaderMatcher.matches(targetClassLoader);
     }
 
+    /**
+     * Returns {@code true} if the given advisor name matches the enabled-advisor filter.
+     *
+     * @param advisorName the advisor name to test
+     * @return {@code true} if this advisor should be included
+     */
     public boolean isEnabledAdvisor(String advisorName) {
         return this.enabledAdvisorMatcher.matches(advisorName);
     }
 
+    /**
+     * Returns the {@link ClassScanner} scoped to this aspect application's classpath.
+     *
+     * @return the class scanner
+     */
     public ClassScanner getClassScanner() {
         return this.classScanner;
     }
 
+    /**
+     * Returns the {@link ObjectFactory} for instantiating advice objects.
+     *
+     * @return the object factory
+     */
     public ObjectFactory getObjectFactory() {
         return objectFactory;
     }
 
+    /**
+     * Returns the {@link AspectTypePool} for resolving aspect-side type descriptions.
+     *
+     * @return the aspect type pool
+     */
     public AspectTypePool getTypePool() {
         return typePool;
     }
 
+    /**
+     * Returns the {@link TypeWorld} for AspectJ pointcut expression evaluation.
+     *
+     * @return the type world
+     */
     public TypeWorld getTypeWorld() {
         return typeWorld;
     }
 
 
+    /**
+     * Returns an unmodifiable map of conditional annotation class to its condition implementation class.
+     *
+     * @return map of conditional annotation to condition class
+     */
     public Map<Class<? extends Annotation>, Class<?>> getConditionalAndConditionClasses() {
         return Collections.unmodifiableMap( conditionalAndConditionClasses );
     }
 
 
+    /**
+     * Returns or creates a cached {@link AdvisorContext} for the given target class loader.
+     * Uses a shared {@link AspectClassLoader} when safe to do so (no class loading conflicts).
+     *
+     * @param targetClassLoader the target class loader
+     * @param targetJavaModule  the target Java module (may be {@code null})
+     * @return the advisor context for the given class loader
+     */
     public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule) {
         return createAdvisorContext(targetClassLoader, targetJavaModule, false);
     }
 
+    /**
+     * Returns or creates a cached {@link AdvisorContext} for the given target class loader,
+     * optionally in validation mode.
+     *
+     * @param targetClassLoader the target class loader
+     * @param targetJavaModule  the target Java module (may be {@code null})
+     * @param validateContext   if {@code true}, eagerly validates advisor specs at startup
+     * @return the advisor context for the given class loader
+     */
     public AdvisorContext createAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
             boolean validateContext) {
         ClassLoader cacheKey = ClassLoaderUtils.maskNull(targetClassLoader);
@@ -386,6 +538,13 @@ public class FactoryContext implements Closeable {
         );
     }
 
+    /**
+     * Determines whether a shared {@link AspectClassLoader} can be reused for the given
+     * target class loader, based on conflict group configuration and existing cached contexts.
+     *
+     * @param targetClassLoader the target class loader to evaluate
+     * @return {@code true} if the shared aspect class loader can be reused
+     */
     private boolean isUseSharedAspectClassLoader(ClassLoader targetClassLoader) {
         // 1.use existing AspectClassLoader
         if (advisorContextMap.containsKey(targetClassLoader) == true)
@@ -429,6 +588,17 @@ public class FactoryContext implements Closeable {
         return true;
     }
 
+    /**
+     * Creates a new {@link AdvisorContext} for the given target class loader.
+     * In shared mode, reuses the factory's own {@link AspectClassLoader} and {@link ObjectFactory};
+     * otherwise creates a fresh pair.
+     *
+     * @param targetClassLoader the target class loader
+     * @param targetJavaModule  the target Java module
+     * @param validateContext   if {@code true}, enables validation mode
+     * @param sharedMode        if {@code true}, reuses the factory's class loader
+     * @return a new {@link AdvisorContext}
+     */
     protected AdvisorContext doCreateAdvisorContext(ClassLoader targetClassLoader, JavaModule targetJavaModule, 
             boolean validateContext, boolean sharedMode) {
         // create AspectClassLoader & objectFactory per ClassLoader
@@ -454,6 +624,10 @@ public class FactoryContext implements Closeable {
                 validateContext);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Hash code is based on {@link #factoryName} only.</p>
+     */
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -462,6 +636,10 @@ public class FactoryContext implements Closeable {
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Equality is based on {@link #factoryName} only.</p>
+     */
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
@@ -479,11 +657,19 @@ public class FactoryContext implements Closeable {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Returns the factory name.</p>
+     */
     @Override
     public String toString() {
         return factoryName;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Closes all cached {@link AdvisorContext} instances, the object factory, and the type pool.</p>
+     */
     @Override
     public void close() throws IOException {
         for (Closeable closeable : this.advisorContextMap.values()) {

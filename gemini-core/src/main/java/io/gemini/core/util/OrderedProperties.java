@@ -47,18 +47,32 @@ public class OrderedProperties extends Properties {
     protected Set<Object> keys = new LinkedHashSet<>();
 
 
+    /**
+     * Constructs an empty {@code OrderedProperties}.
+     */
     public OrderedProperties() { super(); }
 
+    /**
+     * Constructs an {@code OrderedProperties} with the given default properties.
+     *
+     * @param defaultProps the default properties
+     */
     public OrderedProperties(OrderedProperties defaultProps) {
         super(defaultProps); // super.defaults = defaultProps;
         this.orderedDefaults = defaultProps;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized Enumeration<?> propertyNames() {
         return keys();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Set<String> stringPropertyNames() {
         Set<String> allKeys = new LinkedHashSet<>();
@@ -70,40 +84,64 @@ public class OrderedProperties extends Properties {
         return allKeys;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Enumeration<Object> keys() {
         return Collections.enumeration(this.keys);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Set<Object> keySet() {
         return Collections.unmodifiableSet(this.keys);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized Object put(Object key, Object value) {
         keys.add(key);
         return super.put(key, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized Object remove(Object key) {
         keys.remove(key);
         return super.remove(key);
     }
 
+    /**
+     * @param values
+     */
     @Override
     public synchronized void putAll(Map<?, ?> values) {
         keys.addAll(values.keySet());
         super.putAll(values);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void clear() {
         keys.clear();
         super.clear();
     }
 
+    /**
+     * Loads properties from the given input stream using UTF-8 encoding.
+     *
+     * @param inStream the input stream to load from (may be {@code null})
+     * @throws IOException if an I/O error occurs
+     */
     public synchronized void load(InputStream inStream) throws IOException {
         if (inStream == null)
             return;

@@ -42,36 +42,98 @@ import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.matcher.ElementMatchers;
 
 /**
- * 
+ * Service interface for converting objects between types.
+ * <p>
+ * Maintains a registry of {@link Converter} instances keyed by source/target type pairs.
+ * Built-in converters handle common {@code String} to primitive/wrapper/collection conversions.
+ * Custom converters can be registered via {@link #addConverter}.
+ * </p>
+ *
+ * @author   martin.liu
  */
 public interface ConversionService {
 
+    /**
+     * Registers a converter, inferring source and target types from its generic type arguments.
+     *
+     * @param converter the converter to register
+     */
     void addConverter(Converter<?, ?> converter);
 
+    /**
+     * Registers a converter for the given explicit source and target types.
+     *
+     * @param sourceType the source type
+     * @param targetType the target type
+     * @param converter  the converter to register
+     */
     void addConverter(Class<?> sourceType, Class<?> targetType, Converter<?, ?> converter);
 
+    /**
+     * Converts the given source object to the specified target type.
+     *
+     * @param source     the object to convert
+     * @param targetType the target Java class
+     * @param <T>        the target type
+     * @return the converted value, or {@code null} if {@code source} is {@code null}
+     */
     <T> T convert(Object source, Class<T> targetType);
 
+    /**
+     * Converts the given source object to the specified generic target type.
+     *
+     * @param source     the object to convert
+     * @param targetType the ByteBuddy generic target type
+     * @param <T>        the target type
+     * @return the converted value, or {@code null} if {@code source} is {@code null}
+     */
     <T> T convert(Object source, Generic targetType);
 
-
+    /**
+     * Converts the given source object using the specified converter.
+     *
+     * @param source    the object to convert
+     * @param converter the converter to apply
+     * @param <T>       the target type
+     * @return the converted value, or {@code null} if {@code source} is {@code null}
+     */
     <T> T convert(Object source, Converter<?, ?> converter);
 
 
+    /**
+     * Creates a default {@link ConversionService} with built-in converters.
+     *
+     * @return a new default conversion service
+     */
     static ConversionService createConversionService() {
         return createConversionService(null);
     }
 
+    /**
+     * Creates a {@link ConversionService} with built-in converters plus the given custom converters.
+     *
+     * @param converters additional converters to register (may be {@code null})
+     * @return a new conversion service
+     */
     static ConversionService createConversionService(List<Converter<?, ?>> converters) {
         return new Default(converters);
     }
 
 
+    /**
+     * Default {@link ConversionService} implementation backed by a map of registered converters.
+     */
     class Default implements ConversionService {
 
         private final Map<ConverterCacheKey, Converter<?, ?>> converterMap;
 
 
+        /**
+         * Constructs a {@code Default} conversion service with the given custom converters
+         * in addition to the built-in converters.
+         *
+         * @param converters additional converters to register (may be {@code null})
+         */
         Default(List<Converter<?, ?>> converters) {
             this.converterMap = new LinkedHashMap<>();
             if (converters != null) {
@@ -213,20 +275,39 @@ public interface ConversionService {
         }
 
 
+        /**
+         * Cache key for looking up a converter by source and target type pair.
+         */
         static class ConverterCacheKey {
 
             private final Generic sourceTpe;
             private final Generic targetTpe;
 
+            /**
+             * Constructs a cache key for the given source and target types.
+             *
+             * @param sourceTpe the source type
+             * @param targetTpe the target type
+             */
             ConverterCacheKey(Generic sourceTpe, Generic targetTpe) {
                 this.sourceTpe = sourceTpe;
                 this.targetTpe = targetTpe;
             }
 
+            /**
+             * Returns the source type of this cache key.
+             *
+             * @return the source type
+             */
             public Generic getSourceTpe() {
                 return sourceTpe;
             }
 
+            /**
+             * Returns the target type of this cache key.
+             *
+             * @return the target type
+             */
             public Generic getTargetTpe() {
                 return targetTpe;
             }
@@ -240,6 +321,9 @@ public interface ConversionService {
                 return result;
             }
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public boolean equals(Object obj) {
                 if (this == obj)

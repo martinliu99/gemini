@@ -61,6 +61,18 @@ import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.matcher.ElementMatchers;
 
 
+/**
+ * AspectJ {@link ReferenceTypeDelegate} implementation backed by a ByteBuddy {@link TypeDescription}.
+ * <p>
+ * Bridges ByteBuddy's type model to AspectJ's type resolution system, providing
+ * type metadata (annotations, interfaces, superclass, fields, methods, pointcuts)
+ * without requiring actual class loading.
+ * The inner {@link TyepResolutionDetector} subclass additionally tracks which
+ * type properties (superclass/interfaces) were accessed during pointcut matching.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     private final BytebuddyWorld typeWorld;
@@ -84,6 +96,13 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     private ResolvedPointcutDefinition[] pointcuts;
 
 
+    /**
+     * Creates a new delegate backed by the given ByteBuddy type description.
+     *
+     * @param typeWorld       the ByteBuddy world used for type resolution
+     * @param typeDescription the ByteBuddy type description providing type metadata
+     * @param resolvedTypeX   the AspectJ reference type this delegate belongs to
+     */
     public InternalReferenceTypeDelegate(BytebuddyWorld typeWorld, 
             TypeDescription typeDescription, ReferenceType resolvedTypeX) {
         this.typeWorld = typeWorld;
@@ -93,46 +112,75 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
 
+    /**
+     * Returns the ByteBuddy {@link TypeDescription} backing this delegate.
+     *
+     * @return the type description; never {@code null}
+     */
     protected TypeDescription getTypeDescription() {
         return typeDescription;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ReferenceType getResolvedTypeX() {
         return this.resolvedTypeX;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isAspect() {
         return this.typeDescription.getDeclaredAnnotations().isAnnotationPresent(Aspect.class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isAnnotationStyleAspect() {
         return this.isAspect();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isInterface() {
         return this.typeDescription.isInterface();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isEnum() {
         return this.typeDescription.isEnum();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isAnnotation() {
         return this.typeDescription.isAnnotation();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getRetentionPolicy() {
         RetentionPolicy retentionPolicy = getRetentionPolicyInternal();
         return retentionPolicy == null ? null : retentionPolicy.name();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isAnnotationWithRuntimeRetention() {
         if (!isAnnotation()) {
@@ -151,6 +199,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return annotationDescription.getRetention();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public AnnotationAJ[] getAnnotations() {
         if (annotationAJs != null)
@@ -166,11 +217,20 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return this.annotationAJs = annotationAJs;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedType[] getAnnotationTypes() {
         return getAnnotationTypeMap().keySet().toArray( new ResolvedType[0] );
     }
 
+    /**
+     * Returns a lazily-built map from each declared annotation's resolved type to its
+     * {@link AnnotationDescription}, preserving declaration order.
+     *
+     * @return the annotation type map; never {@code null}
+     */
     protected Map<ResolvedType, AnnotationDescription> getAnnotationTypeMap() {
         if (annotationTypeMap != null)
             return annotationTypeMap;
@@ -186,11 +246,17 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return this.annotationTypeMap = annotationTypeMap;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean hasAnnotations() {
         return typeDescription.getDeclaredAnnotations().size() > 0;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean hasAnnotation(UnresolvedType type) {
         for (Entry<ResolvedType, AnnotationDescription> entry : getAnnotationTypeMap().entrySet()) {
@@ -202,32 +268,50 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isClass() {
         return !this.typeDescription.isInterface() && !this.typeDescription.isPrimitive() && !this.typeDescription.isArray();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isGeneric() {
         return this.typeDescription.getTypeVariables().size() > 0;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isAnonymous() {
         return this.typeDescription.isAnonymousType();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isNested() {
         return this.typeDescription.isMemberType();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getModifiers() {
         return this.typeDescription.getModifiers();
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedType[] getDeclaredInterfaces() {
         if (interfaces != null)
@@ -237,6 +321,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return this.interfaces = typeWorld.convertType(genericInterfaces);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedType getSuperclass() {
         // Superclass of object is null
@@ -253,6 +340,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getDeclaredGenericSignature() {
         if (this.genericSignature == null) {
@@ -261,6 +351,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return genericSignature;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public TypeVariable[] getTypeVariables() {
         if (this.typeVariables != null) 
@@ -295,6 +388,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedMember[] getDeclaredFields() {
         if (fields != null) 
@@ -311,6 +407,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
 
     // TODO: advice methods
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedMember[] getDeclaredMethods() {
         if (methods != null) 
@@ -325,6 +424,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return this.methods = resolvedMethods;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedMember[] getDeclaredPointcuts() {
         if (pointcuts != null) {
@@ -415,23 +517,35 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ResolvedType getOuterClass() {
          return typeWorld.resolve(typeDescription.getEnclosingType()); 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isCacheable() {
         return true;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PerClause getPerClause() {
         // no per clause...
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public Collection getDeclares() {
@@ -439,6 +553,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return Collections.EMPTY_SET;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public Collection getTypeMungers() {
@@ -446,6 +563,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return Collections.EMPTY_SET;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public Collection getPrivilegedAccesses() {
@@ -453,68 +573,110 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return Collections.EMPTY_SET;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public WeaverStateInfo getWeaverState() {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean doesNotExposeShadowMungers() {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getSourcefilename() {
         // crappy guess..
         return resolvedTypeX.getName() + ".class";
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ISourceContext getSourceContext() {
         return SourceContextImpl.UNKNOWN_SOURCE_CONTEXT;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean copySourceContext() {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getCompilerVersion() {
         return WeaverVersionInfo.getCurrentWeaverMajorVersion();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void ensureConsistent() {
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isWeavable() {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean hasBeenWoven() {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isExposedToWeaver() {
         // reflection based types are never exposed to the weaver
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean canAnnotationTargetType() {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public AnnotationTargetKind[] getAnnotationTargetKinds() {
         return null;
     }
 
 
+    /**
+     * Internal value object that captures the metadata of a method annotated with
+     * {@link org.aspectj.lang.annotation.Pointcut}, including its expression, parameter
+     * types, and argument names. Used during the three-phase pointcut resolution in
+     * {@link #getDeclaredPointcuts()}.
+     */
     private static class PointcutMethod {
 
         private final MethodDescription methodDescription;
@@ -524,6 +686,21 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         private TypeDescription[] parameterTypes;
 
 
+        /**
+         * Creates a {@code PointcutMethod} from the given method and its
+         * {@code @Pointcut} annotation descriptor.
+         * <p>
+         * The pointcut expression is read from the annotation's {@code value} attribute
+         * and optionally processed through {@code placeholderHelper} for property
+         * substitution. Argument names are read from the annotation's {@code argNames}
+         * attribute.
+         * </p>
+         *
+         * @param methodDescription     the method carrying the {@code @Pointcut} annotation
+         * @param placeholderHelper     optional helper for resolving placeholders in the
+         *                              expression; may be {@code null}
+         * @param annotationDescription the {@code @Pointcut} annotation descriptor
+         */
         public PointcutMethod(MethodDescription methodDescription, PlaceholderHelper placeholderHelper, AnnotationDescription annotationDescription) {
             this.methodDescription = methodDescription;
 
@@ -546,22 +723,37 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         }
 
         /**
-         * The declared name of the pointcut.
+         * Returns the declared name of the pointcut (i.e., the method name).
+         *
+         * @return the pointcut name; never {@code null}
          */
         public String getPointcutName() {
             return methodDescription.getName();
         }
 
+        /**
+         * Returns the underlying ByteBuddy {@link MethodDescription} for this pointcut method.
+         *
+         * @return the method description; never {@code null}
+         */
         public MethodDescription getMethodDescription() {
             return methodDescription;
         }
 
+        /**
+         * Returns the modifier flags of the pointcut method.
+         *
+         * @return the modifiers as a bitmask (see {@link java.lang.reflect.Modifier})
+         */
         public int getModifiers() {
             return methodDescription.getModifiers();
         }
 
         /**
-         * The pointcut parameter types.
+         * Returns the erased parameter types of the pointcut method, lazily computed
+         * from the underlying {@link MethodDescription}.
+         *
+         * @return an array of {@link TypeDescription} for each parameter; never {@code null}
          */
         public TypeDescription[] getParameterTypes() {
             if (parameterTypes != null)
@@ -573,25 +765,33 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
                 ajParamTypes[i] = baseParamTypes.get(i).getType().asErasure();
             }
             return (parameterTypes = ajParamTypes);
-
         }
 
         /**
-         * The pointcut parameter names. Returns an array of empty strings
-         * of length getParameterTypes().length if parameter names are not
-         * available at runtime.
+         * Returns the argument names declared in the {@code @Pointcut} annotation's
+         * {@code argNames} attribute. Returns an empty array if none were specified.
+         *
+         * @return the argument name array; never {@code null}
          */
         public String[] getArgNames() {
             return argNames;
         }
 
         /**
-         * The pointcut expression associated with this pointcut.
+         * Returns the pointcut expression string, after any placeholder substitution.
+         *
+         * @return the pointcut expression; never {@code null}
          */
         public String getPointcutExpression() {
             return pointcutExpression;
         }
 
+        /**
+         * Returns a human-readable representation of this pointcut method in the form
+         * {@code name(Type arg, ...) : expression}.
+         *
+         * @return the string representation
+         */
         public String toString() {
             StringBuffer sb = new StringBuffer();
             sb.append(getPointcutName());
@@ -612,12 +812,31 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
 
+    /**
+     * A {@link InternalReferenceTypeDelegate} variant that additionally marks the
+     * underlying {@link TypeDescription} with a {@link ResolutionLevel#SUPER_TYPE_RESOLUTION}
+     * flag whenever superclass or interface metadata is accessed during pointcut matching.
+     * This allows callers to detect which types required deep resolution.
+     */
     static class TyepResolutionDetector extends InternalReferenceTypeDelegate {
 
+        /**
+         * Creates a {@code TyepResolutionDetector} delegate that additionally marks the
+         * type's resolution level when superclass or interface information is accessed.
+         *
+         * @param typeWorld       the ByteBuddy world
+         * @param typeDescription the ByteBuddy type description
+         * @param resolvedTypeX   the AspectJ reference type this delegate belongs to
+         */
         public TyepResolutionDetector(BytebuddyWorld typeWorld, TypeDescription typeDescription, ReferenceType resolvedTypeX) {
             super(typeWorld, typeDescription, resolvedTypeX);
         }
 
+        /**
+         * Marks the type as requiring super-type resolution, then delegates to the parent.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public ResolvedType[] getDeclaredInterfaces() {
             this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
@@ -625,6 +844,12 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             return super.getDeclaredInterfaces();
         }
 
+        /**
+         * Delegates to the parent and, if a non-null superclass is returned, marks the
+         * type as requiring super-type resolution.
+         *
+         * {@inheritDoc}
+         */
         @Override
         public ResolvedType getSuperclass() {
             ResolvedType superClass = super.getSuperclass();

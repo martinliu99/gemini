@@ -32,7 +32,6 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * 
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class Advice_06AspectJParamBinding_Tests {
 

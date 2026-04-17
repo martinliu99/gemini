@@ -37,6 +37,15 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.utility.JavaModule;
 
 
+/**
+ * Aggregates multiple {@link DefaultAdvisorFactory} instances, one per discovered aspect application.
+ * <p>
+ * When {@link #getAdvisors(TypeDescription, ClassLoader, JavaModule)} is called, it queries all
+ * child factories and merges their advisor lists per method, preserving insertion order.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 class CompoundAdvisorFactory implements AdvisorFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CompoundAdvisorFactory.class);
@@ -68,6 +77,15 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             );
     }
 
+    /**
+     * Creates a {@link DefaultAdvisorFactory} (or its diagnostic variant) for each
+     * aspect application found in the {@link FactoriesContext}.
+     *
+     * @param aopContext       the central AOP context
+     * @param factoriesContext the aggregated factories context
+     * @param factoryContextMap map of factory name to {@link FactoryContext}
+     * @return ordered map of {@link FactoryContext} to its {@link DefaultAdvisorFactory}
+     */
     private Map<FactoryContext, DefaultAdvisorFactory> createAdvisorFactoryMap(AopContext aopContext, 
             FactoriesContext factoriesContext,
             Map<String, FactoryContext> factoryContextMap) {
@@ -87,6 +105,10 @@ class CompoundAdvisorFactory implements AdvisorFactory {
     }
 
 
+    /**
+     * {@inheritDoc}
+     * <p>Returns a map of aspect-app name to the number of advisor specifications it contributed.</p>
+     */
     @Override
     public Map<String, Integer> getAdvisorSpecNum() {
         return this.advisorFactoryMap.values().stream()
@@ -96,6 +118,11 @@ class CompoundAdvisorFactory implements AdvisorFactory {
     }
 
 
+    /**
+     * {@inheritDoc}
+     * <p>Queries all child {@link DefaultAdvisorFactory} instances and merges their
+     * per-method advisor lists, preserving insertion order.</p>
+     */
     @Override
     public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
             TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
@@ -118,6 +145,10 @@ class CompoundAdvisorFactory implements AdvisorFactory {
                 ? Collections.emptyMap() : new LinkedHashMap<MethodDescription, List<? extends Advisor>>(targetMethodAdvisorMap);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Closes all child factories and the {@link FactoriesContext}.</p>
+     */
     @Override
     public void close() throws IOException {
         for (Closeable closeable : advisorFactoryMap.values()) {

@@ -28,6 +28,11 @@ import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnMethodCondition;
 
 
+/**
+ * Activates an advisor only when the specified method is present in the target type.
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -35,5 +40,10 @@ import io.gemini.api.aop.condition.OnMethodCondition;
 @Order(120)
 public @interface ConditionalOnMethod {
 
+    /**
+     * The method expression that must be present in the target type.
+     *
+     * @return the method expression
+     */
     String methodExpression();
 }

@@ -18,11 +18,30 @@ package io.gemini.aop;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Enumerates the supported advice kinds in the Gemini AOP framework.
+ * <p>
+ * Three advice style families are supported, each with their own enum:
+ * <ul>
+ *   <li>{@link PojoAdviceKind} – plain Java advice with before/after/around semantics</li>
+ *   <li>{@link AspectJAdviceKind} – AspectJ-annotation-based advice (@Before, @After, @Around, etc.)</li>
+ *   <li>{@link ByteBuddyAdviceKind} – low-level ByteBuddy @Advice.OnMethodEnter / @Advice.OnMethodExit</li>
+ * </ul>
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface AdviceKind {
 
+    /** 
+     * Marker interface for advice kinds that are managed by the Gemini AOP framework lifecycle. 
+     */
     interface Managed {}
 
 
+    /** 
+     * POJO-style advice kinds: before, after, before+after, and around. 
+     */
     enum PojoAdviceKind implements AdviceKind, Managed {
 
         BEFORE(true, false, false), 
@@ -36,6 +55,14 @@ public interface AdviceKind {
         private final boolean around;
 
 
+        /**
+         * Parses the combination of before/after/around flags into the corresponding enum constant.
+         *
+         * @param beforeAdvice {@code true} if before advice is present
+         * @param afterAdvice  {@code true} if after advice is present
+         * @param aroundAdvice {@code true} if around advice is present
+         * @return the matching {@link PojoAdviceKind}
+         */
         public static PojoAdviceKind parse(boolean beforeAdvice, boolean afterAdvice, boolean aroundAdvice) {
             if (aroundAdvice)
                 return AROUND;
@@ -67,6 +94,9 @@ public interface AdviceKind {
     }
 
 
+    /** 
+     * AspectJ annotation-based advice kinds: @Before, @After, @AfterReturning, @AfterThrowing, @Around. 
+     */
     enum AspectJAdviceKind implements AdviceKind, Managed {
 
         BEFORE(true, false, false, false, false),
@@ -93,6 +123,14 @@ public interface AdviceKind {
         private final boolean around;
 
 
+        /**
+         * Parses a string value (e.g., {@code "BEFORE"}, {@code "AFTERRETURNING"}) into the
+         * corresponding enum constant, ignoring underscores and case.
+         *
+         * @param value the string to parse
+         * @return the matching {@link AspectJAdviceKind}
+         * @throws IllegalArgumentException if the value is not recognized
+         */
         public static AspectJAdviceKind parse(String value) {
             value = value == null ? "" : value.trim().toUpperCase();
             AspectJAdviceKind kind = VALUE_MAP.get(value);
@@ -134,6 +172,9 @@ public interface AdviceKind {
     }
 
 
+    /** 
+     * ByteBuddy low-level advice kinds: OnMethodEnter, OnMethodExit, or both. 
+     */
     enum ByteBuddyAdviceKind implements AdviceKind {
 
         ON_METHOD_ENTER(true, false),
@@ -145,6 +186,13 @@ public interface AdviceKind {
         private final boolean onMethodEnter;
         private final boolean onMethodExit;
 
+        /**
+         * Parses the combination of enter/exit flags into the corresponding enum constant.
+         *
+         * @param onMethodEnter {@code true} if {@code @Advice.OnMethodEnter} is present
+         * @param onMethodExit  {@code true} if {@code @Advice.OnMethodExit} is present
+         * @return the matching {@link ByteBuddyAdviceKind}
+         */
         public static ByteBuddyAdviceKind parse(boolean onMethodEnter, boolean onMethodExit) {
             if (onMethodEnter && onMethodExit)
                 return ON_METHOD_ENTER_EXIT;

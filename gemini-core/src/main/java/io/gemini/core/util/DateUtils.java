@@ -18,8 +18,18 @@ package io.gemini.core.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * Utility class providing a formatted current timestamp string.
+ *
+ * @author   martin.liu
+ */
 public abstract class DateUtils {
 
+    /**
+     * Returns the current date and time formatted as {@code "yyyy-MM-dd HH:mm:ss,SSS"}.
+     *
+     * @return the formatted timestamp string
+     */
     public static String now() {
         SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
         Date date = new Date(System.currentTimeMillis());

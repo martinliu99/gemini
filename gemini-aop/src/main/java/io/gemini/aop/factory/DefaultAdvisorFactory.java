@@ -56,11 +56,21 @@ import net.bytebuddy.dynamic.scaffold.MethodGraph;
 import net.bytebuddy.utility.JavaModule;
 
 /**
+ * Default implementation of {@link AdvisorFactory} for a single aspect application.
+ * <p>
+ * Scans and parses all {@link AdvisorSpec} instances from the aspect application, then
+ * creates and caches {@link io.gemini.aop.Advisor} instances per target class loader.
  * 
- *
+ * Advisor matching is performed in two phases:
+ * <ol>
+ *   <li>Fast type-level matching via {@link io.gemini.api.aop.Pointcut#getTypeMatcher()}</li>
+ *   <li>Method-level matching via {@link io.gemini.api.aop.Pointcut#getMethodMatcher()}</li>
+ * </ol>
+ * Inner classes {@link Diagnostic} and {@link TyepResolutionDetector} extend this class
+ * to add performance metrics collection and type-resolution tracking respectively.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 class DefaultAdvisorFactory implements AdvisorFactory {
 
@@ -87,6 +97,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("^Creating DefaultAdvisorFactory '{}'", factoryName);
 
+
         // 1.resolve AdvisorRepository
         this.advisorSpecs = new AdvisorSpecScanner.Compound(factoryContext).scan(factoryContext);
         this.advisorCreator = new AdvisorCreator.Compound(factoryContext);
@@ -103,8 +114,13 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     (System.nanoTime() - startedAt) / 1e9, factoryName);
     }
 
+    /**
+     * Validates all advisor specs at startup by attempting to create advisors against the
+     * factory's own class loader. Removes any specs that produce {@link Advisor.IllegalAdvisor} due to
+     * possible pointcut expression syntax error.
+     */
     private void validateAdvisorCreation() {
-        this.createAdvisors(factoryContext.createAdvisorContext(factoryContext.getClassLoader(), null, true), factoryContext.getClassLoader())
+        this.doCreateAdvisors(factoryContext.getClassLoader(), null, true)
         .stream()
         .filter( a -> {
             if (a instanceof Advisor.IllegalAdvisor == false)
@@ -118,10 +134,20 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         .collect( Collectors.toList() );
     }
 
+    /**
+     * Returns the central {@link AopContext} for this factory.
+     *
+     * @return the AOP context
+     */
     protected AopContext getAopContext() {
         return aopContext;
     }
 
+    /**
+     * Returns the {@link FactoryContext} for this aspect application.
+     *
+     * @return the factory context
+     */
     protected FactoryContext getFactoryContext() {
         return factoryContext;
     }
@@ -145,7 +171,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         // 1.get advisors per ClassLoader
         List<? extends Advisor> candidateAdvisors = this.advisorPerClassLoaderMap.computeIfAbsent(
                 ClassLoaderUtils.maskNull(targetClassLoader), 
-                key ->  doCreateAdvisors( targetClassLoader, targetModule )
+                key ->  doCreateAdvisors( targetClassLoader, targetModule, false )
         );
         if (CollectionUtils.isEmpty(candidateAdvisors))
             return Collections.emptyMap();
@@ -179,11 +205,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
     }
 
-    protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, JavaModule targetJavaModule) {
-        return createAdvisors(factoryContext.createAdvisorContext(targetClassLoader, targetJavaModule), targetClassLoader);
-    }
-
-    protected List<? extends Advisor> createAdvisors(AdvisorContext advisorContext, ClassLoader targetClassLoader) {
+    /**
+     * Creates advisors for all specs using the given {@link AdvisorContext}, executing tasks
+     * in parallel if the global task executor is configured for parallel mode.
+     *
+     * @param advisorContext    the per-class-loader advisor context
+     * @param targetClassLoader the target class loader (used for thread context)
+     * @return list of successfully created advisors
+     */
+    protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, 
+            JavaModule targetJavaModule, boolean validCreation) {
         long startedAt = System.nanoTime();
 
         String factoryName = factoryContext.getFactoryName();
@@ -194,6 +225,10 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     advisorCreator
             );
 
+
+        AdvisorContext advisorContext = validCreation 
+                ? factoryContext.createAdvisorContext(targetClassLoader, null, true)
+                : factoryContext.createAdvisorContext(targetClassLoader, targetJavaModule);
 
         AopContext aopContext = factoryContext.getAopContext();
         List<Advisor> advisors = aopContext.getGlobalTaskExecutor().executeTasks(
@@ -232,6 +267,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
 
+    /**
+     * Performs fast type-level matching: filters the candidate advisor list to those whose
+     * {@link Pointcut#getTypeMatcher()} matches the given target type.
+     *
+     * @param targetType        the type being loaded
+     * @param targetClassLoader the class loader loading the type
+     * @param targetModule      the Java module of the type
+     * @param advisors          the full candidate advisor list
+     * @return advisors whose type matcher matched
+     */
     protected List<Advisor.PointcutAdvisor> doFastMatchAdvisors(TypeDescription targetType, 
             ClassLoader targetClassLoader, JavaModule targetModule, 
             List<? extends Advisor> advisors) {
@@ -248,6 +293,13 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         return matchedAdvisors;
     }
 
+    /**
+     * Tests a single advisor's type matcher against the target type.
+     *
+     * @param targetType the type being loaded
+     * @param advisor    the advisor to test
+     * @return the advisor cast to {@link Advisor.PointcutAdvisor} if matched, or {@code null}
+     */
     protected Advisor.PointcutAdvisor doFastMatchAdvisor(TypeDescription targetType, Advisor advisor) {
         try {
             if (advisor instanceof Advisor.PointcutAdvisor == false)
@@ -270,6 +322,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
     }
 
+    /**
+     * Performs method-level matching: for each method in the target type, tests all
+     * type-matched advisors and builds the method-to-advisor map.
+     *
+     * @param targetType        the type being instrumented
+     * @param targetClassLoader the class loader loading the type
+     * @param targetModule      the Java module of the type
+     * @param pointcutAdvisors  advisors that passed the fast type-level match
+     * @return map of method to matched advisors
+     */
     protected Map<MethodDescription, List<? extends Advisor>> doMatchAdvisors(
             TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
             List<Advisor.PointcutAdvisor> pointcutAdvisors) {
@@ -313,6 +375,16 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
 
+    /**
+     * Tests a single advisor's method matcher against the target method.
+     *
+     * @param targetType        the declaring type
+     * @param targetClassLoader the class loader
+     * @param targetModule      the Java module
+     * @param targetMethod      the method to test
+     * @param pointcutAdvisor   the advisor to test
+     * @return {@code true} if the advisor's method matcher matched
+     */
     protected boolean doMatchAdvisor(TypeDescription targetType, 
             ClassLoader targetClassLoader, JavaModule targetModule, 
             InDefinedShape targetMethod, Advisor.PointcutAdvisor pointcutAdvisor) {
@@ -341,12 +413,20 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
 
+    /**
+     * {@inheritDoc}
+     * <p>Closes the underlying {@link FactoryContext}.</p>
+     */
     @Override
     public void close() throws IOException {
         this.factoryContext.close();
     }
 
 
+    /**
+     * Extends {@link DefaultAdvisorFactory} to collect per-type weaving metrics
+     * (advisor creation time, fast-match time, method-match time, transformation time).
+     */
     static class Diagnostic extends DefaultAdvisorFactory {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(Diagnostic.class);
@@ -362,11 +442,19 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
 
+        /**
+         * Returns the {@link AopMetrics} instance for recording per-type timing.
+         *
+         * @return the AOP metrics
+         */
         protected AopMetrics getAopMetrics() {
             return aopMetrics;
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
                 TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
@@ -408,19 +496,28 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             return advisorMap;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, JavaModule targetJavaModule) {
+        protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, 
+                JavaModule targetJavaModule, boolean validCreation) {
             long startedAt = System.nanoTime();
             List<? extends Advisor> advisors = Collections.emptyList();
 
             try {
-                return (advisors = super.doCreateAdvisors(targetClassLoader, targetJavaModule));
+                return (advisors = super.doCreateAdvisors(targetClassLoader, targetJavaModule, validCreation));
             } finally {
-                AopMetrics.currentTypeMetrics().incrAdvisorCreationCount(advisors.size());
-                AopMetrics.currentTypeMetrics().incrAdvisorCreationTime(System.nanoTime() - startedAt);
+                if (validCreation == false) {
+                    AopMetrics.currentTypeMetrics().incrAdvisorCreationCount(advisors.size());
+                    AopMetrics.currentTypeMetrics().incrAdvisorCreationTime(System.nanoTime() - startedAt);
+                }
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected List<Advisor.PointcutAdvisor> doFastMatchAdvisors(
                 TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
@@ -439,6 +536,9 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected Map<MethodDescription, List<? extends Advisor>> doMatchAdvisors(
                 TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule, 
@@ -459,6 +559,11 @@ class DefaultAdvisorFactory implements AdvisorFactory {
     }
 
 
+    /**
+     * Extends {@link Diagnostic} to track which advisors triggered type resolution
+     * (i.e., required loading of additional type information) during fast-match and method-match phases.
+     * Resolution levels are recorded per advisor and reported in the startup metrics summary.
+     */
     static class TyepResolutionDetector extends Diagnostic {
 
         private final ConcurrentMap<String, ConcurrentMap<String, ResolutionLevel>> typeAdvisorTypeResolutionLevels;
@@ -471,6 +576,13 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         }
 
 
+        /**
+         * Returns the type resolution level map for the given target type,
+         * creating it if it doesn't exist yet.
+         *
+         * @param targetType the type being matched
+         * @return the per-advisor resolution level map
+         */
         protected ConcurrentMap<String, ResolutionLevel> getAdvisorTypeResolutionLevels(TypeDescription targetType) {
             return typeAdvisorTypeResolutionLevels.computeIfAbsent(
                     targetType.getTypeName(), 
@@ -478,11 +590,21 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             );
         }
 
+        /**
+         * Removes and returns the type resolution level map for the given target type.
+         * Called after all advisors have been matched to free memory.
+         *
+         * @param targetType the type that was matched
+         * @return the removed resolution level map, or {@code null} if absent
+         */
         protected ConcurrentMap<String, ResolutionLevel> removeAdvisorTypeResolutionLevels(TypeDescription targetType) {
             return typeAdvisorTypeResolutionLevels.remove(targetType.getTypeName());
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Map<? extends MethodDescription, List<? extends Advisor>> getAdvisors(
                 TypeDescription targetType, ClassLoader targetClassLoader, JavaModule targetModule) {
@@ -495,6 +617,9 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected Advisor.PointcutAdvisor doFastMatchAdvisor(TypeDescription targetType, Advisor advisor) {
             // match pointcut of advisor and record type resolution info
@@ -521,6 +646,9 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected boolean doMatchAdvisor(TypeDescription targetType, 
                 ClassLoader targetClassLoader, JavaModule targetModule, 

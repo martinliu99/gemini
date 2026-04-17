@@ -19,10 +19,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 /**
- *
+ * Base {@link URLClassLoader} for the Gemini AOP framework class loader hierarchy.
+ * Registers itself as parallel-capable for improved concurrent class loading performance.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public abstract class BaseClassLoader extends URLClassLoader {
 

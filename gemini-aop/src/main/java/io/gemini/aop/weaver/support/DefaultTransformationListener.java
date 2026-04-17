@@ -24,6 +24,16 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.utility.JavaModule;
 
+/**
+ * ByteBuddy {@link Listener} that logs type transformation events and releases cached
+ * type resolution data after each type is processed.
+ * <p>
+ * The inner {@link Diagnostic} subclass adds verbose discovery, ignore, and completion
+ * logging for types matching the configured diagnostic type expressions.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public class DefaultTransformationListener extends Listener.Adapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultTransformationListener.class);
@@ -42,6 +52,10 @@ public class DefaultTransformationListener extends Listener.Adapter {
     }
 
 
+    /**
+     * {@inheritDoc}
+     * <p>Logs the transformation event at INFO level.</p>
+     */
     @Override
     public void onTransformation(TypeDescription targetType, ClassLoader targetClassLoader, 
             JavaModule targetModule, boolean loaded, DynamicType dynamicType) {
@@ -51,6 +65,10 @@ public class DefaultTransformationListener extends Listener.Adapter {
             );
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Logs the transformation error at WARN level.</p>
+     */
     @Override
     public void onError(String targetTypeName,  ClassLoader targetClassLoader, 
             JavaModule targetModule, boolean loaded, Throwable throwable) {
@@ -62,6 +80,10 @@ public class DefaultTransformationListener extends Listener.Adapter {
             );
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Releases the cached type resolution entry for the completed type.</p>
+     */
     @Override
     public void onComplete(String targetTypeName, ClassLoader targetClassLoader, 
             JavaModule targetJavaModule, boolean loaded) {
@@ -79,6 +101,9 @@ public class DefaultTransformationListener extends Listener.Adapter {
             super(aopContext);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onDiscovery(String targetTypeName,  ClassLoader targetClassLoader, 
                 JavaModule targetModule, boolean loaded) {
@@ -88,6 +113,9 @@ public class DefaultTransformationListener extends Listener.Adapter {
                 );
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onIgnored(TypeDescription targetType, ClassLoader targetClassLoader, 
                 JavaModule targetModule, boolean loaded) {
@@ -98,6 +126,9 @@ public class DefaultTransformationListener extends Listener.Adapter {
                 );
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onComplete(String targetTypeName, ClassLoader targetClassLoader, 
                 JavaModule targetModule, boolean loaded) {

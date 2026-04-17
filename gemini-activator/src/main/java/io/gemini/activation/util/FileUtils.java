@@ -24,15 +24,21 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- *
+ * Utility class for converting file system {@link Path} objects to {@link URL} arrays.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class FileUtils {
 
 
-    public static Map<String, URL[]> toURL( Map<Path, List<Path>> pathResources) throws MalformedURLException {
+    /**
+     * Convert the map of List<Path> to the map of URL[].
+     * 
+     * @param pathResources
+     * @return
+     * @throws MalformedURLException
+     */
+    public static Map<String, URL[]> toURL(Map<Path, List<Path>> pathResources) throws MalformedURLException {
         Map<String, URL[]> result = new LinkedHashMap<>(pathResources.size());
         for (Entry<Path, List<Path>> entry : pathResources.entrySet()) {
             result.put(entry.getKey().getFileName().toString(), toURL(entry.getValue()));
@@ -42,6 +48,8 @@ public class FileUtils {
     }
 
     /**
+     * Convert the list of Path resources to their URL array.
+     * 
      * @param resources
      * @return
      * @throws MalformedURLException 

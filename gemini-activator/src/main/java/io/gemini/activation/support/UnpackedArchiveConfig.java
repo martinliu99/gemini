@@ -27,10 +27,14 @@ import java.util.StringTokenizer;
 import io.gemini.api.activation.LauncherConfig;
 
 /**
- *
+ * {@link LauncherConfig} implementation backed by an unpacked (directory-based) agent archive.
+ * <p>
+ * Resolves the active profile, internal and user-defined configuration locations, launcher
+ * classpath URLs, and aspect-application classpath URLs from the file system layout under
+ * {@code launchPath}.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class UnpackedArchiveConfig implements LauncherConfig {
 
@@ -112,45 +116,83 @@ public class UnpackedArchiveConfig implements LauncherConfig {
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public long getLaunchedAt() {
         return launchedAt;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Path getLaunchPath() {
         return launchPath;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Map<String, String> getLaunchArgs() {
         return launchArgs;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String getActiveProfile() {
         return activeProfile;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isDefaultProfile() {
         return AOP_LAUNCH_ACTIVEPROFILE_DEFAULT.equals(activeProfile);
     }
 
 
-    public String getInternalConfigLocation() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+   public String getInternalConfigLocation() {
         return AOP_INTERNAL_PROPERTIES;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String getUserDefinedConfigLocation() {
         return "aop" + (this.isDefaultProfile() ? "" : "-" + this.getActiveProfile()) + ".properties";
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public URL[] getLaunchClassPathURLs() {
         return this.launchResourceURLs;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isClassesFolderScanned() {
         return scanClassesFolder;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Map<String, URL[]> getAspectAppClassPathURLs() {
         return this.aspectAppResourceURLs;

@@ -26,15 +26,27 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 
 /**
- * 
- *
+ * Framework ByteBuddy {@code @Advice} class for static class initializers ({@code <clinit>}).
+ * <p>
+ * Intercepts class initialization, invokes before-advice, and optionally skips the
+ * initializer body if advice sets a return or throw value.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @BootstrapClassConsumer
 public class ClassInitializerAdvice {
 
+    /**
+     * Executed before the class initializer body.
+     * Creates a {@link Dispatcher}, invokes before-advice, and returns {@code true}
+     * to skip the initializer if advice has already set a return or throw value.
+     *
+     * @param descriptor  the cached joinpoint descriptor (injected via INDY)
+     * @param dispatcher  thread-local dispatcher (injected via {@code @Advice.Local})
+     * @return {@code true} to skip the initializer body, {@code false} to proceed normally
+     * @throws Throwable if before-advice throws
+     */
     @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
     public static boolean beforeInitializer(
             @DescriptorOffset.Descriptor Object descriptor,
@@ -53,6 +65,15 @@ public class ClassInitializerAdvice {
     }
 
 
+    /**
+     * Executed after the class initializer body (or after being skipped).
+     * Invokes after-advice and propagates any advice-set return or throw value.
+     *
+     * @param returning   the return value (always {@code null} for initializers)
+     * @param throwing    the exception thrown by the initializer, or {@code null}
+     * @param dispatcher  the dispatcher created in {@link #beforeInitializer}
+     * @throws Throwable if after-advice throws or if advice sets a throw value
+     */
     @Advice.OnMethodExit(onThrowable = Throwable.class, inline = true)
     public static void afterInitializer(
             @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,

@@ -42,11 +42,19 @@ import net.bytebuddy.matcher.ElementMatchers;
 
 
 /**
- * 
- *
+ * Holds weaver-specific configuration derived from {@link AopContext} settings.
+ * <p>
+ * Manages:
+ * <ul>
+ *   <li>Whether weaving is enabled ({@code aop.weaver.enableWeaver})</li>
+ *   <li>ClassLoader acceptance rules (which class loaders are eligible for instrumentation)</li>
+ *   <li>Framework Byte Buddy advice classes for each joinpoint type (class initializer, static method,
+ *       constructor, instance method)</li>
+ *   <li>ByteBuddy redefinition strategy and native method prefix</li>
+ * </ul>
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class WeaverContext {
 
@@ -93,6 +101,12 @@ public class WeaverContext {
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME);
     }
 
+    /**
+     * Loads all weaver settings from the {@link AopContext} configuration view,
+     * including class loader matchers, advice class overrides, and redefinition strategy.
+     *
+     * @param aopContext the central AOP context providing configuration
+     */
     private void loadSettings(AopContext aopContext) {
         ConfigView configView = aopContext.getConfigView();
 
@@ -184,20 +198,44 @@ public class WeaverContext {
     }
 
 
+    /**
+     * Returns the central {@link AopContext}.
+     *
+     * @return the AOP context
+     */
     public AopContext getAopContext() {
         return aopContext;
     }
 
 
+    /**
+     * Returns whether the weaver is enabled. When {@code false}, no types will be instrumented.
+     *
+     * @return {@code true} if weaving is enabled
+     */
     public boolean isEnableWeaver() {
         return enableWeaver;
     }
 
+    /**
+     * Returns {@code true} if the given target class loader is eligible for instrumentation.
+     * {@link BaseClassLoader} instances are always excluded.
+     *
+     * @param targetClassLoader the class loader to test
+     * @return {@code true} if this class loader should be instrumented
+     */
     public boolean acceptTargetClassLoader(ClassLoader targetClassLoader) {
         return targetClassLoader instanceof BaseClassLoader 
                 ? false : classLoaderMatcher.matches(targetClassLoader);
     }
 
+    /**
+     * Returns the framework {@code @Advice} class to use for the given target method,
+     * selecting among class initializer, static method, constructor, and instance method advice.
+     *
+     * @param targetMethod the method being instrumented
+     * @return the framework advice class to apply
+     */
     public Class<?> getFrameworkAdviceClass(MethodDescription targetMethod) {
         if (targetMethod.isStatic()) {
             if (targetMethod.isTypeInitializer()) {
@@ -214,10 +252,20 @@ public class WeaverContext {
         }
     }
 
+    /**
+     * Returns the ByteBuddy {@link RedefinitionStrategy} used when retransforming already-loaded types.
+     *
+     * @return the redefinition strategy
+     */
     public RedefinitionStrategy getRedefinitionStrategy() {
         return redefinitionStrategy;
     }
 
+    /**
+     * Returns the prefix prepended to native method names when they are renamed to allow interception.
+     *
+     * @return the native method prefix string
+     */
     public String getNativeMethodPrefix() {
         return nativeMethodPrefix;
     }

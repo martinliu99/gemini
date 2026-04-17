@@ -30,10 +30,15 @@ import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
 /**
- *
+ * Factory for creating ByteBuddy {@link net.bytebuddy.matcher.ElementMatcher} instances
+ * from string expressions for class loaders, type names, and resource names.
+ * <p>
+ * Delegates expression parsing to {@link io.gemini.aspectj.weaver.ExprParser} and
+ * combines multiple expressions into a disjunction. Invalid expressions are logged
+ * and skipped rather than causing a hard failure.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public enum ElementMatcherFactory {
 
@@ -45,12 +50,36 @@ public enum ElementMatcherFactory {
     private static final String STAR = "*";
 
 
+    /**
+     * Creates a conjunctive/disjunctive {@link ElementMatcher.Junction} for {@link ClassLoader}
+     * by parsing each expression in the given collection.
+     * <p>
+     * Expressions are combined with a logical OR. If the collection is empty or all expressions
+     * fail to parse, {@code defaultMatcher} is returned.
+     * </p>
+     *
+     * @param ruleName               the rule name used in warning log messages for unparsable expressions
+     * @param classLoaderExpressions the collection of class loader match expressions
+     * @param defaultMatcher         the fallback matcher when no valid expressions are found
+     * @return a disjunctive matcher over the parsed expressions, or {@code defaultMatcher}
+     */
     public ElementMatcher.Junction<ClassLoader> createClassLoaderMatcher(String ruleName, 
             Collection<String> classLoaderExpressions, ElementMatcher.Junction<ClassLoader> defaultMatcher) {
         return createElementMatcher(ruleName, classLoaderExpressions, 
                 ExprParser.INSTANCE::parseClassLoaderExpr, defaultMatcher);
     }
 
+    /**
+     * Creates an {@link ElementMatcher} for {@link ClassLoader} by parsing a single expression.
+     * <p>
+     * Returns {@code defaultMatcher} if the expression is blank.
+     * </p>
+     *
+     * @param ruleName              the rule name used in warning log messages for unparsable expressions
+     * @param classLoaderExpression the class loader match expression; may be blank
+     * @param defaultMatcher        the fallback matcher when the expression is blank
+     * @return a matcher for the parsed expression, or {@code defaultMatcher} if the expression is blank
+     */
     public ElementMatcher<ClassLoader> createClassLoaderMatcher(String ruleName, 
             String classLoaderExpression, ElementMatcher.Junction<ClassLoader> defaultMatcher) {
         return StringUtils.hasText(classLoaderExpression)
@@ -59,12 +88,36 @@ public enum ElementMatcherFactory {
                 : defaultMatcher;
     }
 
+    /**
+     * Creates a disjunctive {@link ElementMatcher.Junction} for type names
+     * by parsing each expression in the given collection.
+     * <p>
+     * Expressions are combined with a logical OR. If the collection is empty or all expressions
+     * fail to parse, {@code defaultMatcher} is returned.
+     * </p>
+     *
+     * @param ruleName            the rule name used in warning log messages for unparsable expressions
+     * @param typeNameExpressions the collection of type name match expressions
+     * @param defaultMatcher      the fallback matcher when no valid expressions are found
+     * @return a disjunctive matcher over the parsed expressions, or {@code defaultMatcher}
+     */
     public ElementMatcher.Junction<String> createTypeNameMatcher(String ruleName, 
             Collection<String> typeNameExpressions, ElementMatcher.Junction<String> defaultMatcher) {
         return createElementMatcher(ruleName, typeNameExpressions, 
                 ExprParser.INSTANCE::parseTypeNameExpr, defaultMatcher);
     }
 
+    /**
+     * Creates an {@link ElementMatcher} for type names by parsing a single expression.
+     * <p>
+     * Returns {@code defaultMatcher} if the expression is blank.
+     * </p>
+     *
+     * @param ruleName          the rule name used in warning log messages for unparsable expressions
+     * @param typeNameExpression the type name match expression; may be blank
+     * @param defaultMatcher    the fallback matcher when the expression is blank
+     * @return a matcher for the parsed expression, or {@code defaultMatcher} if the expression is blank
+     */
     public ElementMatcher<String> createTypeNameMatcher(String ruleName, 
             String typeNameExpression, ElementMatcher.Junction<String> defaultMatcher) {
         return StringUtils.hasText(typeNameExpression) 
@@ -73,12 +126,36 @@ public enum ElementMatcherFactory {
                 : defaultMatcher;
     }
 
+    /**
+     * Creates a disjunctive {@link ElementMatcher.Junction} for resource names
+     * by parsing each expression in the given collection.
+     * <p>
+     * Expressions are combined with a logical OR. If the collection is empty or all expressions
+     * fail to parse, {@code defaultMatcher} is returned.
+     * </p>
+     *
+     * @param ruleName                the rule name used in warning log messages for unparsable expressions
+     * @param resourceNameExpressions the collection of resource name match expressions
+     * @param defaultMatcher          the fallback matcher when no valid expressions are found
+     * @return a disjunctive matcher over the parsed expressions, or {@code defaultMatcher}
+     */
     public ElementMatcher.Junction<String> createResourceNameMatcher(String ruleName, 
             Collection<String> resourceNameExpressions, ElementMatcher.Junction<String> defaultMatcher) {
         return createElementMatcher(ruleName, resourceNameExpressions, 
                 ExprParser.INSTANCE::parseResourceNameExpr, defaultMatcher);
     }
 
+    /**
+     * Creates an {@link ElementMatcher} for resource names by parsing a single expression.
+     * <p>
+     * Returns {@code defaultMatcher} if the expression is blank.
+     * </p>
+     *
+     * @param ruleName              the rule name used in warning log messages for unparsable expressions
+     * @param resourceNameExpression the resource name match expression; may be blank
+     * @param defaultMatcher        the fallback matcher when the expression is blank
+     * @return a matcher for the parsed expression, or {@code defaultMatcher} if the expression is blank
+     */
     public ElementMatcher<String> createResourceNameMatcher(String ruleName, 
             String resourceNameExpression, ElementMatcher.Junction<String> defaultMatcher) {
         return StringUtils.hasText(resourceNameExpression) 

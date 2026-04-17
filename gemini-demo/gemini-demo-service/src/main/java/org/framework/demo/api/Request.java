@@ -17,6 +17,11 @@ package org.framework.demo.api;
 
 import java.util.List;
 
+/**
+ * Demo request object carrying a list of string inputs to the demo service.
+ *
+ * @author   martin.liu
+ */
 public class Request {
 
     private List<String> input;

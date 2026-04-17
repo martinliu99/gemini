@@ -33,16 +33,57 @@ import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.matcher.ElementMatcher;
 
+/**
+ * Describes the pointcut specification for a {@link AdvisorSpec.PointcutAdvisorSpec}.
+ * <p>
+ * Validates that the advice method's parameterized returning and throwing types are
+ * compatible with the target method's actual return and exception types for the matched
+ * target type.
+ * 
+ * Sub-interfaces cover the three pointcut styles:
+ * <ul>
+ *   <li>{@link PojoPointcutSpec} – references a {@link io.gemini.api.aop.Pointcut} class</li>
+ *   <li>{@link ExprPointcutSpec} – holds an AspectJ expression string</li>
+ *   <li>{@link AspectJPointcutSpec} – extends ExprPointcutSpec with parameter binding metadata</li>
+ * </ul>
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface PointcutSpec extends ElementMatcher<MethodDescription> {
 
     boolean DEFAULT_BREAK_CIRCULARITY = false;
 
 
+    /**
+     * Returns whether this pointcut should break advice circularity.
+     * <p>
+     * When {@code true}, the framework skips re-entering this advice if the advised method
+     * is invoked recursively within the same advice execution, preventing infinite loops
+     * caused by self-invocation.
+     * </p>
+     *
+     * @return {@code true} if circularity breaking is enabled; defaults to {@link #DEFAULT_BREAK_CIRCULARITY}
+     */
     boolean isBreakCircularity();
 
+    /**
+     * Returns the {@link ElementMatcher} used to match target methods against this pointcut's
+     * advice method signature constraints (e.g. returning type and throwing type compatibility).
+     * <p>
+     * By default, implementations return {@code this} since {@link PointcutSpec} itself
+     * extends {@link ElementMatcher}.
+     * </p>
+     *
+     * @return the method matcher for this pointcut spec
+     */
     ElementMatcher<MethodDescription> getAdviceMethodMatcher();
 
 
+    /**
+     * Abstract base providing returning/throwing type compatibility validation
+     * against the target method's actual return and exception types.
+     */
     abstract class AbstractBase implements PointcutSpec {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(PointcutSpec.class);
@@ -243,11 +284,23 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
     }
 
 
+    /** 
+     * Pointcut spec that references a {@link io.gemini.api.aop.Pointcut} class. 
+     */
     interface PojoPointcutSpec extends PointcutSpec {
 
+        /**
+         * Returns the {@link io.gemini.api.aop.Pointcut} implementation class that provides
+         * the type and method matchers for this pointcut.
+         *
+         * @return the pointcut class, never {@code null}
+         */
         Class<? extends Pointcut> getPointcutClass();
 
 
+        /**
+         * Default {@link PojoPointcutSpec} implementation holding the pointcut class reference.
+         */
         class Default extends AbstractBase implements PojoPointcutSpec {
 
             private final Class<? extends Pointcut> pointcutClass;
@@ -272,11 +325,22 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
     }
 
 
+    /** 
+     * Pointcut spec that holds an AspectJ expression string. 
+     */
     interface ExprPointcutSpec extends PointcutSpec {
 
+        /**
+         * Returns the AspectJ pointcut expression string used to match target types and methods.
+         *
+         * @return the pointcut expression, never empty
+         */
         String getPointcutExpression();
 
 
+        /**
+         * Default {@link ExprPointcutSpec} implementation holding the pointcut expression string.
+         */
         class Default extends AbstractBase implements ExprPointcutSpec {
 
             private final String pointcutExpression;
@@ -301,15 +365,40 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
     }
 
 
+    /** 
+     * AspectJ pointcut spec that extends {@link ExprPointcutSpec} with parameter binding metadata. 
+     */
     interface AspectJPointcutSpec extends ExprPointcutSpec {
 
+        /**
+         * Returns the {@link TypeDescription} of the AspectJ advice class that declares this pointcut.
+         *
+         * @return the advice type description, never {@code null}
+         */
         TypeDescription getAdviceType();
 
+        /**
+         * Returns a map of pointcut parameter names to their generic types, used for
+         * binding matched join-point values (e.g.{@code argNames}, {@code returning}, {@code throwing}) to
+         * advice method parameters.
+         *
+         * @return map of parameter name to generic type
+         */
         Map<String, Generic> getPointcutParameterTypes();
 
+        /**
+         * Returns the {@link PointcutParameterMatcher} responsible for validating and binding
+         * pointcut parameter values to the advice method's parameter list.
+         *
+         * @return the pointcut parameter matcher, never {@code null}
+         */
         PointcutParameterMatcher getPointcutParameterMatcher();
 
 
+        /**
+         * Default {@link AspectJPointcutSpec} implementation that additionally validates
+         * advice returning/throwing parameter types against the target method.
+         */
         class Default extends ExprPointcutSpec.Default implements AspectJPointcutSpec {
 
             public Default(AspectJAdviceSpec adviceSpec, boolean breakCircularity, 
@@ -349,6 +438,7 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
             /**
              * {@inheritDoc}
              */
+            @Override
             public boolean matches(MethodDescription targetMethod) {
                 if (super.matches(targetMethod) == false)
                     return false;

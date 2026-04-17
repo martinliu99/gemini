@@ -50,10 +50,15 @@ import io.gemini.core.util.SingleEnumeration;
 import net.bytebuddy.agent.ByteBuddyAgent;
 
 /**
- * This class activates AOP framework before executing test cases.
+ * Activates the Gemini AOP framework before JUnit 5 test execution.
+ * <p>
+ * Registered as a JUnit 5 {@link org.junit.platform.launcher.LauncherDiscoveryListener}
+ * and {@link org.junit.platform.launcher.TestExecutionListener} via the ServiceLoader mechanism.
+ * On first test discovery, installs the ByteBuddy agent, builds the launcher configuration
+ * from the test classpath, and calls {@link AopActivator#activateAop}.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AopTestActivator implements LauncherDiscoveryListener, TestExecutionListener {
 
@@ -65,6 +70,9 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
     private static boolean LAUNCHED = false;
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void launcherDiscoveryStarted(LauncherDiscoveryRequest request) {
         // launch AopLauncher and load all advisors
@@ -214,10 +222,16 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void testPlanExecutionFinished(TestPlan testPlan) {
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void executionFinished(TestIdentifier testIdentifier, TestExecutionResult testExecutionResult) {
         ExecutionMemento.clearMemento();

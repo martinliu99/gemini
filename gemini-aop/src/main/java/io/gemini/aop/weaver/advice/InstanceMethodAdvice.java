@@ -25,15 +25,29 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 
 /**
- * 
- *
+ * Framework ByteBuddy {@code @Advice} class for instance methods.
+ * <p>
+ * Intercepts instance method invocations, passes the target object and arguments to
+ * before-advice (which may modify them), and propagates after-advice return/throw overrides.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @BootstrapClassConsumer
 public class InstanceMethodAdvice {
 
+    /**
+     * Executed before the instance method body.
+     * Creates a {@link Dispatcher}, invokes before-advice (which may modify arguments),
+     * and returns {@code true} to skip the method body if advice has set a return or throw value.
+     *
+     * @param descriptor    the cached joinpoint descriptor (injected via INDY)
+     * @param targetObject  the target instance ({@code this})
+     * @param arguments     the method arguments (may be replaced by advice)
+     * @param dispatcher    thread-local dispatcher (injected via {@code @Advice.Local})
+     * @return {@code true} to skip the method body, {@code false} to proceed normally
+     * @throws Throwable if before-advice throws
+     */
     @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
     public static boolean beforeMethod(
             @DescriptorOffset.Descriptor Object descriptor,
@@ -57,6 +71,15 @@ public class InstanceMethodAdvice {
     }
 
 
+    /**
+     * Executed after the instance method body (or after being skipped).
+     * Invokes after-advice and propagates any advice-set return or throw value.
+     *
+     * @param returning   the actual return value of the method
+     * @param throwing    the exception thrown by the method, or {@code null}
+     * @param dispatcher  the dispatcher created in {@link #beforeMethod}
+     * @throws Throwable if after-advice throws or if advice sets a throw value
+     */
     @Advice.OnMethodExit(onThrowable = Throwable.class, inline = true)
     public static void afterMethod(
             @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,

@@ -22,10 +22,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * Enables circularity breaking for the annotated advisor.
+ * <p>
+ * When an advice method itself triggers the same joinpoint (e.g., by calling the same
+ * instrumented method), a stack overflow can occur. Enabling this annotation causes
+ * the Gemini AOP framework to detect and break such circular invocations by skipping the advice on
+ * re-entrant calls.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)

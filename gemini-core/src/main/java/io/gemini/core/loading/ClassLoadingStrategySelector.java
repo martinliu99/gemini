@@ -22,21 +22,33 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy.ForUnsafeInjection;
 
 /**
- * 
+ * Selects the appropriate ByteBuddy {@link ClassLoadingStrategy} based on JVM capabilities.
+ * <p>
+ * Uses {@link ClassInjector.UsingLookup} when available (JDK 9+), falling back to
+ * {@link ClassLoadingStrategy.ForUnsafeInjection} on older JVMs.
+ * </p>
+ *
+ * @author   martin.liu
  */
 public interface ClassLoadingStrategySelector {
 
+    /**
+     * Selects the appropriate {@link ClassLoadingStrategy} for the given scope type.
+     *
+     * @param scopeType the type whose class loader and module are used for injection
+     * @return the selected class loading strategy
+     */
     ClassLoadingStrategy<? super ClassLoader> select(Class<?> scopeType);
 
 
+    /**
+     * Default singleton implementation of {@link ClassLoadingStrategySelector}.
+     */
     enum Default implements ClassLoadingStrategySelector {
 
         SINGLETON;
 
 
-        /**
-         * 
-         */
         private static final ForUnsafeInjection FOR_UNSAFE_INJECTION = new ClassLoadingStrategy.ForUnsafeInjection();
 
 
@@ -54,10 +66,16 @@ public interface ClassLoadingStrategySelector {
         }
 
 
+        /**
+         * A {@link ClassLoadingStrategy.UsingLookup} subclass used when
+         * {@link ClassInjector.UsingLookup} is available (JDK 9+).
+         */
         static class WithLookup extends ClassLoadingStrategy.UsingLookup {
 
             /**
-             * @param classInjector
+             * Constructs a {@code WithLookup} strategy using the given class injector.
+             *
+             * @param classInjector the lookup-based class injector
              */
             protected WithLookup(ClassInjector classInjector) {
                 super(classInjector);

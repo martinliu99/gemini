@@ -34,10 +34,15 @@ import org.slf4j.LoggerFactory;
 import io.gemini.core.DiagnosticLevel;
 
 /**
- *
+ * Executes tasks sequentially or in parallel using a cached thread pool.
+ * <p>
+ * When parallel mode is enabled, tasks are split into batches and submitted to an
+ * {@link java.util.concurrent.ExecutorService}. An optional {@code executionWrapper}
+ * function can be used to set thread-local state (e.g., context class loader) around
+ * each batch execution.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface TaskExecutor {
 
@@ -46,30 +51,60 @@ public interface TaskExecutor {
 
 
     /**
-     * 
-     * @return
+     * Returns {@code true} if this executor is configured to run tasks in parallel.
+     *
+     * @return {@code true} for parallel mode, {@code false} for sequential mode
      */
     boolean isParallel();
 
     /**
-     * Executes task sequentially or in parallel
-     * 
-     * @param <T>
-     * @param <R>
-     * @param tasks
-     * @param taskExecutor
-     * @param parallel
-     * @param batchCount
-     * @return
+     * Executes the given tasks either sequentially or in parallel, depending on the
+     * {@code parallel} flag and the executor's own parallel setting.
+     * <p>
+     * Tasks are split into at most {@code batchCount} batches. Each batch is submitted
+     * to the internal thread pool. The optional {@code executionWrapper} can be used to
+     * set thread-local state (e.g., context class loader) around each batch.
+     * </p>
+     *
+     * @param <T>              the input task element type
+     * @param <R>              the result type produced by {@code taskExecutor}
+     * @param tasks            the collection of task inputs to process
+     * @param taskExecutor     function applied to each task element to produce a result
+     * @param parallel         whether to attempt parallel execution
+     * @param batchCount       maximum number of parallel batches to split tasks into
+     * @param executionWrapper optional wrapper applied around each batch's sequential
+     *                         execution; may be {@code null}
+     * @return a list of non-null results in encounter order; never {@code null}
      */
     <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
             boolean parallel, int batchCount, Function<Supplier<Collection<R>>, Collection<R>> executionWrapper);
 
+    /**
+     * Executes the given tasks using this executor's default parallel setting and
+     * batch count, with no execution wrapper.
+     *
+     * @param <T>          the input task element type
+     * @param <R>          the result type
+     * @param tasks        the collection of task inputs to process
+     * @param taskExecutor function applied to each task element
+     * @return a list of non-null results; never {@code null}
+     */
     default <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor) {
         return executeTasks(tasks, taskExecutor, 
                 isParallel(), DEFAULT_BATCH_COUNT, null);
     }
 
+    /**
+     * Executes the given tasks using this executor's default parallel setting and
+     * batch count, wrapping each batch with the supplied {@code executionWrapper}.
+     *
+     * @param <T>              the input task element type
+     * @param <R>              the result type
+     * @param tasks            the collection of task inputs to process
+     * @param taskExecutor     function applied to each task element
+     * @param executionWrapper wrapper applied around each batch's sequential execution
+     * @return a list of non-null results; never {@code null}
+     */
     default <T, R> List<R> executeTasks(Collection<T> tasks, Function<T, R> taskExecutor, 
             Function<Supplier<Collection<R>>, Collection<R>> executionWrapper) {
         return executeTasks(tasks, taskExecutor, 
@@ -78,15 +113,33 @@ public interface TaskExecutor {
 
 
     /**
-     * 
+     * Shuts down the underlying thread pool, waiting up to 5 seconds for in-flight
+     * tasks to complete. Has no effect if the executor is in sequential mode or has
+     * already been shut down.
      */
     void shutdown();
 
 
+    /**
+     * Creates a parallel {@link TaskExecutor} with no task timeout.
+     *
+     * @param diagnosticLevel controls diagnostic logging verbosity
+     * @param executorName    a human-readable name used in log messages and thread names
+     * @return a new {@link TaskExecutor} in parallel mode
+     */
     public static TaskExecutor create(DiagnosticLevel diagnosticLevel, String executorName) {
         return new Default(diagnosticLevel, executorName, true, DEFAULT_TIMEOUT_MS);
     }
 
+    /**
+     * Creates a {@link TaskExecutor} with explicit parallel and timeout settings.
+     *
+     * @param diagnosticLevel controls diagnostic logging verbosity
+     * @param executorName    a human-readable name used in log messages and thread names
+     * @param parallel        {@code true} to enable parallel execution
+     * @param taskTimeoutMs   per-task timeout in milliseconds; {@code 0} means no timeout
+     * @return a new {@link TaskExecutor}
+     */
     public static TaskExecutor create(DiagnosticLevel diagnosticLevel, String executorName, boolean parallel, int taskTimeoutMs) {
         return new Default(diagnosticLevel, executorName, parallel, taskTimeoutMs);
     }
@@ -238,6 +291,7 @@ public interface TaskExecutor {
         /**
          * {@inheritDoc}
          */
+        @Override
         public void shutdown() {
             if (inParallel == false || terminated == true)
                 return;

@@ -30,11 +30,14 @@ import net.bytebuddy.description.type.TypeDescription;
 
 
 /**
- * TypeWorld resolves types imported by aspect class, firstly in current Target 
- * ClassLoader, then in AspectClassLoader.
+ * An AspectJ {@link TypeWorld} scoped to an aspect application.
+ * <p>
+ * Resolves types by first consulting the target class loader's type world,
+ * then falling back to the aspect class loader's own classpath. Primitive types
+ * and the aspect class itself are always resolved from the aspect classpath.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AspectTypeWorld extends BytebuddyWorld {
 

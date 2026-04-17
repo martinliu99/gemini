@@ -54,6 +54,19 @@ import net.bytebuddy.jar.asm.Label;
 import net.bytebuddy.jar.asm.MethodVisitor;
 import net.bytebuddy.jar.asm.Opcodes;
 
+/**
+ * Bytecode generator that produces a concrete {@link io.gemini.api.aop.Advice} class
+ * wrapping an AspectJ advice method.
+ * <p>
+ * The generated class holds a reference to the AspectJ aspect instance and implements
+ * the appropriate {@link io.gemini.api.aop.Advice.Before}, {@link io.gemini.api.aop.Advice.After},
+ * or {@link io.gemini.api.aop.Advice.Around} interface. The advice method body is generated
+ * via ASM to extract pointcut-bound parameters from the {@link io.gemini.api.aop.Joinpoint.MutableJoinpoint}
+ * and forward them to the original AspectJ method.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 enum AdviceClassGenerator {
 
     INSTANCE
@@ -167,6 +180,11 @@ enum AdviceClassGenerator {
     }
 
 
+    /**
+     * ByteBuddy {@link Implementation} and {@link ByteCodeAppender} that generates the body
+     * of the advice method in the dynamically created advice class.
+     * Extracts pointcut-bound parameters from the joinpoint and invokes the original AspectJ method.
+     */
     static class AspectJAdviceMethodImplementation implements Implementation, ByteCodeAppender {
 
         private static final TypeDescription OBJECT = TypeDescription.ForLoadedType.of(Object.class);
@@ -193,16 +211,25 @@ enum AdviceClassGenerator {
             this.adviceSpec = adviceSpec;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public InstrumentedType prepare(InstrumentedType instrumentedType) {
             return instrumentedType;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public ByteCodeAppender appender(Target implementationTarget) {
             return this;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Size apply(MethodVisitor methodVisitor, Context implementationContext, 
                 MethodDescription instrumentedMethod) {

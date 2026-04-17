@@ -49,6 +49,17 @@ import net.bytebuddy.description.annotation.AnnotationList;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
+/**
+ * Parses {@link io.gemini.api.aop.annotation.Conditional} annotations from advisor class/method
+ * annotations or from configuration properties, and assembles them into a composite
+ * {@link net.bytebuddy.matcher.ElementMatcher}&lt;{@link io.gemini.api.aop.MatchingContext}&gt;.
+ * <p>
+ * Also provides {@link #loadConditionalAndConditionClasses} to discover all
+ * {@code @Conditional}-annotated annotation types in the aspect application classpath.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public abstract class AdvisorConditionParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdvisorConditionParser.class);
@@ -56,6 +67,19 @@ public abstract class AdvisorConditionParser {
     private static final String CONDITIONAL_CLASSNAME_KEY_SUFFIX = "conditionalClassName";
 
 
+    /**
+     * Scans the classpath for all annotation types annotated with {@link Conditional},
+     * loads them via the given {@code classLoader}, and returns a map from each
+     * conditional annotation class to its associated {@link io.gemini.api.aop.Condition} class.
+     * <p>
+     * The returned map is ordered by {@link io.gemini.core.OrderComparator} priority.
+     * </p>
+     *
+     * @param classScanner the scanner used to discover {@code @Conditional}-annotated annotation types
+     * @param classLoader  the class loader used to load discovered annotation classes
+     * @return an ordered map of conditional annotation class → condition class pairs;
+     *         never {@code null}, may be empty
+     */
     @SuppressWarnings("unchecked")
     public static Map<Class<? extends Annotation>, Class<?>> loadConditionalAndConditionClasses(
             ClassScanner classScanner, ClassLoader classLoader) {
@@ -105,6 +129,22 @@ public abstract class AdvisorConditionParser {
     }
 
 
+    /**
+     * Parses {@link Conditional}-related annotations from the given {@code annotationList}
+     * and assembles them into a composite {@link ElementMatcher} over {@link MatchingContext}.
+     * <p>
+     * For each conditional annotation found on the element, the corresponding
+     * {@link io.gemini.api.aop.Condition} instance is created via the {@link ObjectFactory}
+     * and combined using a logical AND conjunction.
+     * </p>
+     *
+     * @param factoryContext the factory context providing class loader, object factory,
+     *                       and the pre-loaded conditional/condition class map
+     * @param annotationList the annotations present on the advisor class or method
+     * @return a conjunctive {@link ElementMatcher} representing all applicable conditions,
+     *         or {@code null} if no conditional annotations are present
+     * @throws AopException if a condition class cannot be instantiated or configured
+     */
     @SuppressWarnings("unchecked")
     public static ElementMatcher<MatchingContext> parseAdvisorCondition(FactoryContext factoryContext, 
             AnnotationList annotationList) throws AopException {
@@ -162,6 +202,24 @@ public abstract class AdvisorConditionParser {
         return conditionalAndConditions;
     }
 
+    /**
+     * Parses condition configuration from the given config key prefix and assembles
+     * the matching conditions into a composite {@link ElementMatcher} over {@link MatchingContext}.
+     * <p>
+     * Looks up all condition entries under {@code configKeyPrefix + "conditions."}, resolves
+     * the conditional annotation class name from each entry, and instantiates the corresponding
+     * {@link io.gemini.api.aop.Condition} with attribute values read from the config.
+     * Supports both the generic {@link Conditional} and any registered {@code ConditionalOnXxx}
+     * annotation types. All resolved conditions are combined using a logical AND conjunction.
+     * </p>
+     *
+     * @param factoryContext the factory context providing class loader, object factory,
+     *                       config view, and the pre-loaded conditional/condition class map
+     * @param configKeyPrefix the configuration key prefix under which condition entries are defined
+     * @return a conjunctive {@link ElementMatcher} representing all configured conditions,
+     *         or {@code null} if no condition entries are found under the given prefix
+     * @throws AopException if a condition class cannot be loaded, instantiated, or configured
+     */
     @SuppressWarnings("unchecked")
     public static ElementMatcher<MatchingContext> parseAdvisorCondition(FactoryContext factoryContext, 
             String configKeyPrefix) throws AopException  {

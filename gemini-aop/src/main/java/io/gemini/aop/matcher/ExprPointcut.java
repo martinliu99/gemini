@@ -43,32 +43,87 @@ import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- *
+ * An AspectJ-expression-based {@link io.gemini.api.aop.Pointcut} used by the 
+ * {@link io.gemini.aop.factory.AdvisorFactory} to match types and methods.
+ * <p>
+ * The {@link AspectJExprPointcut} implementation parses the expression via
+ * {@link io.gemini.aspectj.weaver.ExprParser} and evaluates it against ByteBuddy
+ * {@link net.bytebuddy.description.type.TypeDescription} and
+ * {@link net.bytebuddy.description.method.MethodDescription} instances.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher<MethodDescription> {
 
+    /**
+     * Returns the raw AspectJ pointcut expression string that this pointcut was built from.
+     *
+     * @return the pointcut expression; never {@code null}
+     */
     String getPointcutExpression();
 
 
+    /**
+     * Returns an {@link ElementMatcher} that tests whether a given {@link TypeDescription}
+     * is a candidate for this pointcut (fast-match / type-level filter).
+     *
+     * @return a type-level matcher; never {@code null}
+     */
     @Override
     ElementMatcher<TypeDescription> getTypeMatcher();
 
+    /**
+     * Returns an {@link ElementMatcher} that tests whether a given {@link MethodDescription}
+     * is matched by this pointcut.
+     *
+     * @return a method-level matcher; never {@code null}
+     */
     @Override
     ElementMatcher<MethodDescription> getMethodMatcher();
 
 
+    /**
+     * Tests whether the given method is matched by this pointcut using the default
+     * {@link PointcutParameterMatcher.True} (no parameter binding validation).
+     *
+     * @param targetMethod the method to test
+     * @return {@code true} if the pointcut matches the method
+     */
     boolean matches(MethodDescription targetMethod);
 
+    /**
+     * Tests whether the given method is matched by this pointcut, additionally validating
+     * pointcut parameter bindings via the supplied {@code pointcutParameterMatcher}.
+     *
+     * @param targetMethod              the method to test
+     * @param pointcutParameterMatcher  strategy for validating parameter bindings after expression matching
+     * @return {@code true} if the pointcut matches the method and the parameter matcher approves
+     */
     boolean matches(MethodDescription targetMethod, PointcutParameterMatcher pointcutParameterMatcher);
 
 
+    /**
+     * A strategy for matching pointcut parameters against a target method's parameter types.
+     * Used by {@link AspectJExprPointcut} to validate parameter binding after expression matching.
+     */
     interface PointcutParameterMatcher {
 
+        /**
+         * Tests whether the parameter bindings resolved from the pointcut expression are
+         * compatible with the parameter types of the given {@code targetMethod}.
+         *
+         * @param targetMethod        the method whose parameters are to be validated
+         * @param pointcutParameters  the named pointcut parameters resolved during expression matching
+         * @return {@code true} if the parameter bindings are acceptable
+         */
         boolean match(MethodDescription targetMethod, List<NamedPointcutParameter> pointcutParameters);
 
+
+        /**
+         * A no-op {@link PointcutParameterMatcher} that always returns {@code true},
+         * used when no parameter binding validation is required.
+         */
         enum True implements PointcutParameterMatcher {
 
             INSTANCE;
@@ -84,6 +139,11 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
     }
 
 
+    /**
+     * AspectJ-expression-based implementation of {@link ExprPointcut}.
+     * Parses the expression via {@link io.gemini.aspectj.weaver.ExprParser} and evaluates it
+     * against ByteBuddy type and method descriptions using the AspectJ shadow model.
+     */
     class AspectJExprPointcut implements ExprPointcut {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(AspectJExprPointcut.class);
@@ -120,18 +180,22 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
 
 
         /**
-         * Create a new AspectJExprPointcut with the given settings.
+         * Creates a new {@link AspectJExprPointcut} with no declaration type and no pointcut parameters.
+         *
+         * @param typeWorld          the type world used for type resolution and shadow creation
+         * @param pointcutExpression the AspectJ pointcut expression to parse
          */
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression) {
             this(typeWorld, pointcutExpression, null, Collections.emptyMap());
         }
 
         /**
-         * Create a new AspectJExprPointcut with the given settings.
-         * 
-         * @param pointcutDeclarationType the declaration type for the pointcut
-         * @param pointcutParameterNames the parameter names for the pointcut
-         * @param pointcutParameterTypes the parameter types for the pointcut
+         * Creates a new {@link AspectJExprPointcut} with an explicit declaration type and parameter map.
+         *
+         * @param typeWorld               the type world used for type resolution and shadow creation
+         * @param pointcutExpression      the AspectJ pointcut expression to parse
+         * @param pointcutDeclarationType the type in which the pointcut is declared; may be {@code null}
+         * @param pointcutParametes       a map of parameter name to generic type for pointcut parameter binding
          */
         public AspectJExprPointcut(TypeWorld typeWorld, String pointcutExpression,
                 TypeDescription pointcutDeclarationType, Map<String, Generic> pointcutParametes) {
@@ -148,7 +212,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
 
 
         /**
-         * Return this pointcut's expression.
+         * Returns the raw AspectJ pointcut expression string.
+         *
+         * @return the pointcut expression; never {@code null}
          */
         public String getPointcutExpression() {
             return this.pointcutExpression;
@@ -169,6 +235,12 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             return this;
         }
 
+        /**
+         * Tests whether the given type is a candidate for this pointcut using AspectJ fast-match.
+         *
+         * @param targetType the type to test
+         * @return {@code true} if the pointcut may match methods on this type
+         */
         public boolean matches(TypeDescription targetType) {
             try {
                 FastMatchInfo info = new FastMatchInfo(typeWorld.resolve(targetType), null, typeWorld.getWorld());
@@ -255,6 +327,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean equals(Object other) {
             if (this == other) {
@@ -269,6 +344,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
                     ObjectUtils.equals(this.pointcutParameters, otherPc.pointcutParameters);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public int hashCode() {
             int hashCode = ObjectUtils.hashCode(this.getPointcutExpression());
@@ -277,6 +355,9 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
             return hashCode;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();

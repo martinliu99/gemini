@@ -26,6 +26,16 @@ import io.gemini.aop.AopContext;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 
+/**
+ * Built-in AspectJ-style aspect that hooks into the application startup lifecycle.
+ * <p>
+ * Intercepts the application startup joinpoint (configured via
+ * {@code aop.factory.applicationStartupPointcut}) and notifies {@link AopContext#getAopMetrics()}
+ * so that post-startup weaving metrics can be collected and logged.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @Aspect
 public class ApplicationStartupAspect {
 

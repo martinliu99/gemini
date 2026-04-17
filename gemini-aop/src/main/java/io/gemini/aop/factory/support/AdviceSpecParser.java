@@ -78,16 +78,51 @@ import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.dynamic.DynamicType;
 
+/**
+ * Parses {@link AdviceSpec} instances from a {@link TypeDescription} or from configuration properties.
+ * <p>
+ * Three concrete parsers handle the three advice styles:
+ * <ul>
+ *   <li>{@link PojoAdviceParser} – detects POJO {@link io.gemini.api.aop.Advice.Before}/{@link io.gemini.api.aop.Advice.After}/{@link io.gemini.api.aop.Advice.Around} implementations</li>
+ *   <li>{@link AspectJAdviceParser} – detects {@code @Aspect}-annotated classes with AspectJ advice annotations</li>
+ *   <li>{@link ByteBuddyAdviceParser} – detects classes with ByteBuddy {@code @Advice.OnMethodEnter}/{@code @Advice.OnMethodExit}</li>
+ * </ul>
+ * The {@link Compound} implementation delegates to all registered parsers in order.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface AdviceSpecParser {
 
     Logger LOGGER = LoggerFactory.getLogger(AdviceSpecParser.class);
 
 
+    /**
+     * Parses all {@link AdviceSpec} instances from the given declaring type.
+     * Returns an empty collection if this parser does not recognize the type.
+     *
+     * @param factoryContext the factory context providing type pool
+     * @param declaringType  the type to inspect for advice methods or class-level markers
+     * @return a collection of parsed {@link AdviceSpec} instances, never {@code null}
+     */
     Collection<? extends AdviceSpec> parse(FactoryContext factoryContext, TypeDescription declaringType);
 
+    /**
+     * Parses or updates an {@link AdviceSpec} from configuration properties under the given key prefix.
+     * Returns {@code null} if this parser does not handle the spec type or no config is found.
+     *
+     * @param factoryContext    the factory context providing config view and type pool
+     * @param configKeyPrefix   the configuration key prefix (e.g. {@code aop.advisorSpecs.myAdvisor.})
+     * @param existingAdviceSpec an existing spec to update, or {@code null} to create a new one
+     * @return the parsed or updated {@link AdviceSpec}, or {@code null}
+     */
     AdviceSpec parse(FactoryContext factoryContext, String configKeyPrefix, AdviceSpec existingAdviceSpec);
 
 
+    /**
+     * Organizes all registered {@link AdviceSpecParser} instances in order,
+     * and returns the first non-null result.
+     */
     @NoScanning
     class Compound implements AdviceSpecParser {
 
@@ -162,6 +197,10 @@ public interface AdviceSpecParser {
     }
 
 
+    /**
+     * Abstract base providing common parsing logic: spec class filtering, error handling,
+     * and config-key-based parsing delegation.
+     */
     abstract class AbstractBase<A extends AdviceSpec> implements AdviceSpecParser {
 
         private static final String ADVICE_CLASS_NAME_CONFIG_KEY_SUFFIX = "adviceClassName";
@@ -288,6 +327,11 @@ public interface AdviceSpecParser {
     }
 
 
+    /**
+     * Parses POJO advice specs by detecting classes that implement
+     * {@link io.gemini.api.aop.Advice.Before}, {@link io.gemini.api.aop.Advice.After},
+     * or {@link io.gemini.api.aop.Advice.Around}.
+     */
     class PojoAdviceParser extends AbstractBase<PojoAdviceSpec> {
 
         /**
@@ -387,6 +431,11 @@ public interface AdviceSpecParser {
     }
 
 
+    /**
+     * Parses AspectJ advice specs from {@code @Aspect}-annotated classes,
+     * discovering advice methods annotated with {@code @Before}, {@code @After},
+     * {@code @AfterReturning}, {@code @AfterThrowing}, or {@code @Around}.
+     */
     class AspectJAdviceParser extends AbstractBase<AspectJAdviceSpec> {
 
         private static final List<Class<? extends Annotation>> ADVICE_ANNOTATIONS = Arrays.asList(
@@ -615,6 +664,11 @@ public interface AdviceSpecParser {
         }
 
 
+        /**
+         * Default {@link AspectJAdviceSpec} implementation that parses the AspectJ advice annotation,
+         * resolves pointcut parameter bindings, and generates the unloaded advice class via
+         * {@link AdviceClassGenerator}.
+         */
         static class Default extends AdviceSpec.AbstractBase implements AspectJAdviceSpec {
 
             private static final TypeDescription JOINPOINT_TYPE = TypeDescription.ForLoadedType.of(Joinpoint.class);
@@ -1091,7 +1145,7 @@ public interface AdviceSpecParser {
 
                 Generic returnType = targetMethod.getReturnType();
                 voidReturning = returnType.represents(void.class);
-//                getUnloadedAdviceClass();
+
                 return true;
             }
 
@@ -1123,6 +1177,10 @@ public interface AdviceSpecParser {
     }
 
 
+    /**
+     * Parses ByteBuddy advice specs from classes annotated with
+     * {@link net.bytebuddy.asm.Advice.OnMethodEnter} or {@link net.bytebuddy.asm.Advice.OnMethodExit}.
+     */
     class ByteBuddyAdviceParser extends AbstractBase<ByteBuddyAdviceSpec> {
 
         /**

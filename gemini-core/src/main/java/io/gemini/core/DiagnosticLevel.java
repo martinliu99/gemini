@@ -16,9 +16,14 @@
 package io.gemini.core;
 
 /**
- * 
- * @author egale.martin
+ * Controls the verbosity of the Gemini AOP framework diagnostic output.
+ * <ul>
+ *   <li>{@link #DISABLED} – no diagnostic output (production default)</li>
+ *   <li>{@link #SIMPLE} – startup timing breakdown and weaving summary</li>
+ *   <li>{@link #DEBUG} – full debug output including per-type matching details</li>
+ * </ul>
  *
+ * @author   martin.liu
  */
 public enum DiagnosticLevel {
 
@@ -35,10 +40,22 @@ public enum DiagnosticLevel {
         this.enableDebug = enableDebug;
     }
 
+    /**
+     * Returns {@code true} if simple diagnostic output (startup timing and weaving
+     * summary) is enabled for this level.
+     *
+     * @return {@code true} for {@link #SIMPLE} and {@link #DEBUG}; {@code false} for {@link #DISABLED}
+     */
     public boolean isSimpleEnabled() {
         return enableSimple;
     }
 
+    /**
+     * Returns {@code true} if full debug diagnostic output (per-type matching details)
+     * is enabled for this level.
+     *
+     * @return {@code true} only for {@link #DEBUG}; {@code false} otherwise
+     */
     public boolean isDebugEnabled() {
         return enableDebug;
     }

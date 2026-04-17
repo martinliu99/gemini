@@ -29,6 +29,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Utility class for Java reflection operations used throughout the AOP framework.
+ * <p>
+ * Provides helpers to:
+ * <ul>
+ *   <li>Find a no-arg constructor on a class</li>
+ *   <li>Make constructors, methods, and fields accessible</li>
+ *   <li>Enumerate annotation attribute methods (excluding built-in {@link java.lang.annotation.Annotation} methods)</li>
+ *   <li>Read all attribute values from an annotation instance</li>
+ * </ul>
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public abstract class ReflectionUtils {
 
     private static Set<String> BUILTIN_METHOD_NAMES;
@@ -42,6 +56,13 @@ public abstract class ReflectionUtils {
     }
 
 
+    /**
+     * Returns the no-arg constructor of the given type, or {@code null} if none exists
+     * or the type is an interface or abstract class.
+     *
+     * @param type the class to inspect (may be {@code null})
+     * @return the no-arg constructor, or {@code null}
+     */
     public static Constructor<?> getDefaultConstructor(Class<?> type) {
         if (type == null) 
             return null;
@@ -57,6 +78,12 @@ public abstract class ReflectionUtils {
         return null;
     }
  
+    /**
+     * Makes the given constructor or method accessible if it is not already public.
+     *
+     * @param clazz      the declaring class
+     * @param executable the constructor or method to make accessible
+     */
     public static void makeAccessible(Class<?> clazz, Executable executable) {
         if ((!Modifier.isPublic(executable.getModifiers()) ||
                 !Modifier.isPublic(clazz.getModifiers())) && !executable.isAccessible()) {
@@ -64,6 +91,12 @@ public abstract class ReflectionUtils {
         }
     }
 
+    /**
+     * Makes the given field accessible if it is not already public or is final.
+     *
+     * @param clazz the declaring class
+     * @param field the field to make accessible
+     */
     public static void makeAccessible(Class<?> clazz, Field field) {
         if ((!Modifier.isPublic(field.getModifiers()) ||
                 !Modifier.isPublic(clazz.getModifiers()) ||
@@ -73,6 +106,13 @@ public abstract class ReflectionUtils {
     }
 
 
+    /**
+     * Returns all attribute methods of the given annotation class, excluding built-in
+     * {@link java.lang.annotation.Annotation} methods ({@code equals}, {@code hashCode}, etc.).
+     *
+     * @param annotationClass the annotation class to inspect
+     * @return list of attribute methods
+     */
     public static List<Method> getAttributeMethods(Class<? extends Annotation> annotationClass) {
         Assert.notNull(annotationClass, "'annotationClass' must not be null.");
 
@@ -92,6 +132,15 @@ public abstract class ReflectionUtils {
         return attributeMethods;
     }
 
+    /**
+     * Reads all attribute values from the given annotation instance.
+     *
+     * @param annotation the annotation to read
+     * @return a map from attribute name to attribute value
+     * @throws IllegalAccessException    if an attribute method is inaccessible
+     * @throws IllegalArgumentException  if an attribute method cannot be invoked
+     * @throws InvocationTargetException if an attribute method throws an exception
+     */
     public static Map<String, Object> getAttributeValues(Annotation annotation) 
             throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         Assert.notNull(annotation, "'annotation' must not be null.");

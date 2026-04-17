@@ -49,11 +49,23 @@ import net.bytebuddy.matcher.ElementMatchers;
 
 
 /**
- * 
- *
+ * Central context object for the Gemini AOP framework, created once per launcher lifecycle.
+ * <p>
+ * Holds all shared infrastructure components required during class scanning, advisor creation,
+ * and bytecode transformation:
+ * <ul>
+ *   <li>{@link LauncherConfig} – launch paths, profiles, and classpath URLs</li>
+ *   <li>{@link AopClassLoader} – isolated class loader for AOP framework classes</li>
+ *   <li>{@link ConfigView} – merged view of internal and user-defined properties</li>
+ *   <li>{@link ClassScanner} – scans the classpath for aspect and advice classes</li>
+ *   <li>{@link ObjectFactory} – creates and injects advice instances</li>
+ *   <li>{@link TypePoolFactory} / {@link TypeWorldFactory} – ByteBuddy and AspectJ type resolution</li>
+ *   <li>{@link TaskExecutor} – optional parallel task execution</li>
+ *   <li>{@link AopMetrics} – collects startup and weaving performance metrics</li>
+ * </ul>
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AopContext implements Closeable {
 
@@ -251,90 +263,165 @@ public class AopContext implements Closeable {
         return launcherConfig;
     }
 
+    /** 
+     * Returns the AOP-isolated class loader that loads framework and aspect classes. 
+     */
     public AopClassLoader getAopClassLoader() {
         return this.aopClassLoader;
     }
 
+    /** 
+     * Returns the configured diagnostic level (DISABLED, SIMPLE, or DEBUG). 
+     */
     public DiagnosticLevel getDiagnosticLevel() {
         return diagnosticLevel;
     }
 
+    /**
+     * Returns {@code true} if the given type name matches the configured diagnostic type expressions.
+     * Used to enable verbose per-type logging during weaving.
+     *
+     * @param typeName the fully-qualified type name to check
+     * @return {@code true} if diagnostic logging is enabled for this type
+     */
     public boolean isDiagnosticType(String typeName) {
         return DiagnosticLevel.DISABLED != diagnosticLevel && diagnosticTypeMatcher.matches(typeName);
     }
 
+    /**
+     * Removes the cached diagnostic match result for the given type name.
+     * Called after a type has been fully processed to free memory.
+     *
+     * @param typeName the type name to evict from the cache
+     * @return the previously cached value, or {@code null} if absent
+     */
     public Boolean removeCachedDiagnosticType(String typeName) {
         return diagnosticTypeCache.remove(typeName);
     }
 
+    /**
+     * Returns {@code true} if type resolution detection is enabled.
+     * When enabled, the framework tracks which advisors successfully matched each type.
+     *
+     * @return {@code true} if type resolution detection is active
+     */
     public boolean isDetectTypeResolution() {
         return detectTypeResolution || DiagnosticLevel.DISABLED == diagnosticLevel;
     }
 
-
+    /** 
+     * Returns the active configuration profile name (empty string for the default profile). 
+     */
     public String getActiveProfile() {
         return launcherConfig.getActiveProfile();
     }
 
+    /** 
+     * Returns {@code true} if the default (empty) profile is active. 
+     */
     public boolean isDefaultProfile() {
         return launcherConfig.isDefaultProfile();
     }
 
-
+    /** 
+     * Returns the merged configuration view combining internal and user-defined properties. 
+     */
     public ConfigView getConfigView() {
         return configView;
     }
 
+    /** 
+     * Returns the placeholder helper for resolving {@code ${key}} expressions in configuration values. 
+     */
     public PlaceholderHelper getPlaceholderHelper() {
         return placeholderHelper;
     }
 
+    /** 
+     * Returns the metrics collector for startup and weaving performance data. 
+     */
     public AopMetrics getAopMetrics() {
         return aopMetrics;
     }
 
+    /** 
+     * Returns the class scanner used to discover aspect and advice classes on the classpath. 
+     */
     public ClassScanner getClassScanner() {
         return classScanner;
     }
 
+    /** 
+     * Returns the object factory used to instantiate and inject advice objects. 
+     */
     public ObjectFactory getObjectFactory() {
         return objectFactory;
     }
 
+    /** 
+     * Returns the ByteBuddy type pool factory for resolving type descriptions during weaving. 
+     */
     public TypePoolFactory getTypePoolFactory() {
         return typePoolFactory;
     }
 
+    /** 
+     * Returns the AspectJ type world factory for pointcut expression evaluation. 
+     */
     public TypeWorldFactory getTypeWorldFactory() {
         return typeWorldFactory;
     }
 
+    /** 
+     * Returns the optional parallel task executor for concurrent class scanning and advisor creation. 
+     */
     public TaskExecutor getGlobalTaskExecutor() {
         return globalTaskExecutor;
     }
 
+    /** 
+     * Returns {@code true} if the {@code /classes} and {@code /test-classes} folders are scanned for aspects. 
+     */
     public boolean isClassesFolderScanned() {
         return launcherConfig.isClassesFolderScanned();
     }
 
+    /** 
+     * Returns {@code true} if instrumented bytecode should be dumped to disk for inspection. 
+     */
     public boolean isDumpByteCode() {
         return dumpByteCode;
     }
 
+    /** 
+     * Returns the directory path where instrumented bytecode dumps are written. 
+     */
     public String getByteCodeDumpPath() {
         return byteCodeDumpPath;
     }
 
+    /**
+     * Returns the bootstrap class name mapping used to relocate classes injected into the bootstrap class loader.
+     *
+     * @return map of original class name to relocated class name, or {@code null} if not configured
+     */
     @SuppressWarnings("unchecked")
     public Map<String, String> getBootstrapClassNameMapping() {
         return (Map<String, String>) this.builtinSettings.get(BOOTSTRAP_CLASS_NAME_MAPPING_KEY);
     }
 
+    /** 
+     * Returns the map of aspect application names to their classpath URL arrays. 
+     */
     public Map<String, URL[]> getAspectAppResourceMap() {
         return this.launcherConfig.getAspectAppClassPathURLs();
     }
 
-
+    /**
+     * Shuts down the global task executor and releases all held resources.
+     *
+     * {@inheritDoc}
+     */
     @Override
     public void close() throws IOException {
         this.globalTaskExecutor.shutdown();

@@ -22,21 +22,51 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Utility class for collection and array null/empty checks and merging operations.
+ *
+ * @author   martin.liu
+ */
 public abstract class CollectionUtils {
 
+    /**
+     * Returns {@code true} if the given collection is {@code null} or empty.
+     *
+     * @param collection the collection to check
+     * @return {@code true} if {@code null} or empty
+     */
     public static boolean isEmpty(Collection<?> collection) {
         return (collection == null || collection.isEmpty());
     }
-    
+
+    /**
+     * Returns {@code true} if the given varargs array is {@code null} or has length 0.
+     *
+     * @param collection the array to check
+     * @return {@code true} if {@code null} or empty
+     */
     public static boolean isEmpty(Object... collection) {
         return (collection == null || collection.length == 0);
     }
-    
+
+    /**
+     * Returns {@code true} if the given map is {@code null} or empty.
+     *
+     * @param map the map to check
+     * @return {@code true} if {@code null} or empty
+     */
     public static boolean isEmpty(Map<?, ?> map) {
         return (map == null || map.isEmpty());
     }
 
-
+    /**
+     * Merges two lists into a new list, treating {@code null} inputs as empty lists.
+     *
+     * @param <T>   the element type
+     * @param list1 the first list (may be {@code null})
+     * @param list2 the second list (may be {@code null})
+     * @return a new list containing all elements from both lists
+     */
     public static <T> List<T> merge(List<? extends T> list1, List<? extends T> list2) {
         list1 = list1 == null ? Collections.emptyList() : list1;
         list2 = list2 == null ? Collections.emptyList() : list2;
@@ -49,6 +79,16 @@ public abstract class CollectionUtils {
     }
 
 
+    /**
+     * Creates a {@code Map<K, Object>} from alternating key-value pairs.
+     * Keys must be instances of {@code keyClass}.
+     *
+     * @param keyClass  the expected type of the keys
+     * @param arguments alternating key-value pairs (must have even length)
+     * @param <K>       the key type
+     * @return a map built from the given pairs, or an empty map if {@code arguments} is empty
+     * @throws IllegalArgumentException if the argument count is odd or a key has the wrong type
+     */
     @SuppressWarnings("unchecked")
     public static <K> Map<K, Object> of(Class<?> keyClass, Object... arguments) {
         Assert.notNull(keyClass, "'keyClass' must not be null.");

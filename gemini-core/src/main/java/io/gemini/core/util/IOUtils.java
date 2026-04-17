@@ -31,9 +31,13 @@ import java.net.URLConnection;
 import java.net.URLStreamHandler;
 
 /**
- * 
- * @author martin.liu
+ * Utility class for I/O stream operations used throughout the Gemini AOP framework.
+ * <p>
+ * Provides helpers for copying streams, reading byte arrays, saving files, and
+ * creating in-memory {@link URL} instances backed by byte arrays.
+ * </p>
  *
+ * @author   martin.liu
  */
 public abstract class IOUtils {
 
@@ -41,6 +45,14 @@ public abstract class IOUtils {
 
     public static final int DEFAULT_BUFFER_SIZE = 8192;
 
+    /**
+     * Copies all bytes from the given input stream to the output stream using a default buffer.
+     *
+     * @param inputStream  the source stream
+     * @param outputStream the destination stream
+     * @return the number of bytes copied
+     * @throws IOException if an I/O error occurs
+     */
     public static long copy(final InputStream inputStream, final OutputStream outputStream) throws IOException {
         Assert.notNull(inputStream, "'inputStream' must not be null.");
         Assert.notNull(outputStream, "'outputStream' must not be null.");
@@ -48,6 +60,15 @@ public abstract class IOUtils {
         return copy(inputStream, outputStream, new byte[DEFAULT_BUFFER_SIZE]);
     }
 
+    /**
+     * Copies all bytes from the given input stream to the output stream using the given buffer.
+     *
+     * @param inputStream  the source stream
+     * @param outputStream the destination stream
+     * @param buffer       the byte buffer to use
+     * @return the number of bytes copied
+     * @throws IOException if an I/O error occurs
+     */
     public static long copy(final InputStream inputStream, final OutputStream outputStream, final byte[] buffer) throws IOException {
         Assert.notNull(inputStream, "'inputStream' must not be null.");
         Assert.notNull(outputStream, "'outputStream' must not be null.");
@@ -67,6 +88,14 @@ public abstract class IOUtils {
     }
 
 
+    /**
+     * Copies all characters from the given reader to the writer using a default buffer.
+     *
+     * @param input  the source reader
+     * @param output the destination writer
+     * @return the number of characters copied
+     * @throws IOException if an I/O error occurs
+     */
     public static long copy(final Reader input, final Writer output) throws IOException {
         Assert.notNull(input, "'input' must not be null.");
         Assert.notNull(output, "'output' must not be null.");
@@ -74,6 +103,15 @@ public abstract class IOUtils {
         return doCopy(input, output, new char[DEFAULT_BUFFER_SIZE]);
     }
 
+    /**
+     * Copies all characters from the given reader to the writer using the given buffer.
+     *
+     * @param input  the source reader
+     * @param output the destination writer
+     * @param buffer the char buffer to use
+     * @return the number of characters copied
+     * @throws IOException if an I/O error occurs
+     */
     public static long copy(final Reader input, final Writer output, final char[] buffer) throws IOException {
         Assert.notNull(input, "'input' must not be null.");
         Assert.notNull(output, "'output' must not be null.");
@@ -92,6 +130,13 @@ public abstract class IOUtils {
         return count;
     }
 
+    /**
+     * Reads all bytes from the given input stream and returns them as a string.
+     *
+     * @param inputStream the source stream
+     * @return the stream content as a string
+     * @throws IOException if an I/O error occurs
+     */
     public static String toString(final InputStream inputStream) throws IOException {
         Assert.notNull(inputStream, "'inputStream' must not be null.");
 
@@ -101,6 +146,13 @@ public abstract class IOUtils {
         return outputStream.toString();
     }
 
+    /**
+     * Reads all characters from the given reader and returns them as a string.
+     *
+     * @param input the source reader
+     * @return the reader content as a string
+     * @throws IOException if an I/O error occurs
+     */
     public static String toString(final Reader input) throws IOException {
         Assert.notNull(input, "'input' must not be null.");
 
@@ -110,6 +162,13 @@ public abstract class IOUtils {
         return output.toString();
     }
 
+    /**
+     * Reads all bytes from the given input stream and returns them as a byte array.
+     *
+     * @param inputStream the source stream
+     * @return the stream content as a byte array
+     * @throws IOException if an I/O error occurs
+     */
     public static byte[] toByteArray(final InputStream inputStream) throws IOException {
         Assert.notNull(inputStream, "'inputStream' must not be null.");
 
@@ -119,6 +178,11 @@ public abstract class IOUtils {
         return outputStream.toByteArray();
     }
 
+    /**
+     * Closes the given input stream quietly, ignoring any {@link IOException}.
+     *
+     * @param inStream the stream to close (may be {@code null})
+     */
     public static void closeQuietly(InputStream inStream) {
         try {
             if (inStream != null)
@@ -126,6 +190,11 @@ public abstract class IOUtils {
         } catch (IOException ignored) { /**/ }
     }
 
+    /**
+     * Closes the given output stream quietly, ignoring any {@link IOException}.
+     *
+     * @param outStream the stream to close (may be {@code null})
+     */
     public static void closeQuietly(OutputStream outStream) {
         try {
             if (outStream != null)
@@ -133,6 +202,13 @@ public abstract class IOUtils {
         } catch (IOException ignored) { /**/ }
     }
 
+    /**
+     * Writes the given byte array to the specified file path, creating parent directories as needed.
+     *
+     * @param sourceBytes the bytes to write
+     * @param targetFile  the target file path
+     * @throws IOException if an I/O error occurs
+     */
     public static void saveToFile(byte[] sourceBytes, String targetFile) throws IOException {
         File file = new File(targetFile);
         file.getParentFile().mkdir();
@@ -145,21 +221,31 @@ public abstract class IOUtils {
     }
 
     /**
-     * 
-     * @param path
-     * @param bytes
-     * @return
-     * @throws MalformedURLException
+     * Creates an in-memory {@link URL} backed by the given byte array.
+     * The URL uses the {@code "byteArray"} protocol and the given path as the host.
+     *
+     * @param path  the path used as the URL host
+     * @param bytes the byte array to serve as the URL content
+     * @return the in-memory URL
+     * @throws MalformedURLException if the URL cannot be constructed
      */
     public static URL toURL(String path, byte[] bytes) throws MalformedURLException {
         return new URL("byteArray", path, -1, "", new ByteArrayURLStreamHandler(bytes));
     }
 
 
+    /**
+     * A {@link URLStreamHandler} that serves content from an in-memory byte array.
+     */
     static class ByteArrayURLStreamHandler extends URLStreamHandler {
 
         private final byte[] byteCode;
 
+        /**
+         * Constructs a {@code ByteArrayURLStreamHandler} with the given byte array.
+         *
+         * @param byteCode the byte array to serve
+         */
         public ByteArrayURLStreamHandler(byte[] byteCode) {
             this.byteCode = byteCode;
         }
@@ -174,12 +260,18 @@ public abstract class IOUtils {
         
     }
 
+    /**
+     * A {@link URLConnection} that reads from an in-memory {@link InputStream}.
+     */
     static class ByteArrayURLConnection extends URLConnection {
 
         private final InputStream inputStream;
 
         /**
-         * @param url
+         * Constructs a {@code ByteArrayURLConnection} for the given URL and input stream.
+         *
+         * @param url         the URL this connection is for
+         * @param inputStream the input stream to read from
          */
         protected ByteArrayURLConnection(URL url, InputStream inputStream) {
             super(url);
@@ -187,13 +279,18 @@ public abstract class IOUtils {
         }
 
         /**
-         * {@inheritDoc}
+         * Marks this connection as connected.
          */
         @Override
         public void connect() {
             this.connected  = true;
         }
 
+        /**
+         * Returns the input stream for reading the byte array content.
+         *
+         * @return the input stream
+         */
         public InputStream getInputStream() {
             connect(); 
             return inputStream;

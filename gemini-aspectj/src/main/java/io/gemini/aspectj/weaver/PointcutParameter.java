@@ -17,16 +17,41 @@ package io.gemini.aspectj.weaver;
 
 import net.bytebuddy.description.type.TypeDescription.Generic;
 
+/**
+ * Describes a single parameter in an AspectJ pointcut binding.
+ * <p>
+ * Each parameter has a category ({@link ParamCategory}) indicating its role
+ * (e.g., joinpoint, returning value, args binding), an optional argument index,
+ * and — for named parameters — a name and generic type.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface PointcutParameter {
 
     int INVALID_ARGS_INDEX = -1;
 
 
+    /**
+     * Returns the category of this pointcut parameter, indicating its role
+     * (e.g., joinpoint, args binding, annotation variable).
+     *
+     * @return the parameter category; never {@code null}
+     */
     ParamCategory getParamCategory();
 
+    /**
+     * Returns the index of this parameter in the method's argument list,
+     * or {@link #INVALID_ARGS_INDEX} if not applicable.
+     *
+     * @return the argument index, or {@code -1} if not an args-bound parameter
+     */
     int getArgsIndex();
 
 
+    /**
+     * Enumerates parameter categories.
+     */
     enum ParamCategory {
 
         JOINPOINT_PARAM,
@@ -52,17 +77,30 @@ public interface PointcutParameter {
     }
 
 
+    /**
+     * Describes a named {@code PointcutParameter} with parameter type.
+     */
     interface NamedPointcutParameter extends PointcutParameter {
 
         /**
-         * The name of this parameter
+         * Returns the name of this parameter as declared in the pointcut expression.
+         *
+         * @return the parameter name; never {@code null}
          */
         String getParamName();
 
+        /**
+         * Returns the generic type of this parameter.
+         *
+         * @return the parameter's generic type; never {@code null}
+         */
         Generic getParamType();
     }
 
 
+    /**
+     * Default implementation of {@code NamedPointcutParameter}.
+     */
     class Default implements NamedPointcutParameter {
 
         private final String paramName;
@@ -70,6 +108,13 @@ public interface PointcutParameter {
         private final ParamCategory paramCategory;
         private final int argsIndex;
 
+        /**
+         * Creates a {@code Default} parameter with no args index (set to {@link #INVALID_ARGS_INDEX}).
+         *
+         * @param paramName     the parameter name
+         * @param paramType     the parameter's generic type
+         * @param paramCategory the parameter category
+         */
         public Default(String paramName, Generic paramType, 
                 ParamCategory paramCategory) {
             this.paramName = paramName;
@@ -78,6 +123,14 @@ public interface PointcutParameter {
             this.argsIndex = INVALID_ARGS_INDEX;
         }
 
+        /**
+         * Creates a {@code Default} parameter by copying the category and args index
+         * from an existing {@link PointcutParameter}.
+         *
+         * @param paramName          the parameter name
+         * @param paramType          the parameter's generic type
+         * @param pointcutParameter  the source parameter to copy category and args index from
+         */
         public Default(String paramName, Generic paramType,
                 PointcutParameter pointcutParameter) {
             this.paramName = paramName;

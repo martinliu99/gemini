@@ -29,11 +29,14 @@ import net.bytebuddy.pool.TypePool;
 import net.bytebuddy.utility.JavaModule;
 
 /**
- * 
- *
+ * Per-target-ClassLoader context for advisor creation within a single aspect application.
+ * <p>
+ * Holds the {@link AspectClassLoader}, {@link ObjectFactory}, {@link TypePool}, and
+ * {@link TypeWorld} scoped to a specific target class loader, along with a
+ * {@link MatchingContext} for evaluating {@code @Conditional} annotations.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AdvisorContext implements Closeable {
 
@@ -84,54 +87,91 @@ public class AdvisorContext implements Closeable {
     }
 
 
+    /** 
+     * Returns the parent {@link FactoryContext} that owns this advisor context. 
+     */
     public FactoryContext getFactoryContext() {
         return factoryContext;
     }
 
+    /** 
+     * Returns the human-readable name of the target class loader. 
+     */
     public String getTargetClassLoaderName() {
         return targetClassLoaderName;
     }
 
+    /** 
+     * Returns the Java module of the target class loader, or {@code null} if not applicable. 
+     */
     public JavaModule getTargetJavaModule() {
         return targetJavaModule;
     }
 
-
+    /** 
+     * Returns the {@link AspectClassLoader} used to load aspect and advice classes. 
+     */
     public ClassLoader getClassLoader() {
         return classLoader;
     }
 
+    /** 
+     * Returns the object factory for instantiating advice objects within this context. 
+     */
     public ObjectFactory getObjectFactory() {
         return objectFactory;
     }
 
+    /** 
+     * Returns the ByteBuddy type pool for resolving aspect-side type descriptions. 
+     */
     public TypePool getTypePool() {
         return typePool;
     }
 
+    /** 
+     * Returns the AspectJ type world for pointcut expression evaluation. 
+     */
     public TypeWorld getTypeWorld() {
         return typeWorld;
     }
 
-
+    /** 
+     * Returns the placeholder helper for resolving {@code ${key}} expressions in pointcut expressions. 
+     */
     public PlaceholderHelper getPlaceholderHelper() {
         return placeholderHelper;
     }
 
-
+    /** 
+     * Returns the matching context used to evaluate {@code @Conditional} annotations. 
+     */
     public MatchingContext getMatchingContext() {
         return matchingContext;
     }
 
+    /**
+     * Returns {@code true} if the target class loader is accepted by the factory's class loader filter.
+     *
+     * @return {@code true} if this context's class loader is a valid target
+     */
     public boolean acceptTargetClassloader() {
         return factoryContext.acceptTargetClassLoader(classLoader.getTargetClassLoader());
     }
 
+    /**
+     * Returns {@code true} if this context is in validation mode (used during startup to eagerly
+     * detect invalid advisor specifications).
+     *
+     * @return {@code true} if validation mode is active
+     */
     public boolean isValidateContext() {
         return validateContext;
     }
 
-
+    /** 
+     * Returns {@code true} if ASM frame computation should be performed automatically. 
+     */
     public boolean isAutoComputeAsm() {
         return autoComputeAsm;
     }
@@ -149,6 +189,11 @@ public class AdvisorContext implements Closeable {
     }
 
 
+    /**
+     * Default {@link MatchingContext} implementation backed by the aspect class loader's
+     * target type pool and type world. Evaluates class loader identity and structural
+     * presence checks for {@code @Conditional} annotations.
+     */
     static class DefultMatchingContext implements MatchingContext {
 
         private final AspectClassLoader classLoader;

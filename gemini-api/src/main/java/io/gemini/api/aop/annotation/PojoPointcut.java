@@ -24,13 +24,29 @@ import java.lang.annotation.Target;
 import io.gemini.api.aop.Pointcut;
 
 
+/**
+ * Associates a POJO-style {@link io.gemini.api.aop.Pointcut} implementation with an advice class.
+ * <p>
+ * The referenced {@code pointcutClass} must implement {@link io.gemini.api.aop.Pointcut} and
+ * provide ByteBuddy {@link net.bytebuddy.matcher.ElementMatcher} instances for type and method matching.
+ * </p>
+ *
+ * <pre>{@code
+ * @PojoPointcut(pointcutClass = MyPointcut.class)
+ * public class MyAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> { ... }
+ * }</pre>
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface PojoPointcut {
 
     /**
-     * @return the pointcutClass where to bind the advice
+     * The {@link io.gemini.api.aop.Pointcut} implementation class that defines type and method matchers.
+     *
+     * @return the pointcut class
      */
     Class<? extends Pointcut> pointcutClass();
 

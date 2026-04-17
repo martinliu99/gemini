@@ -50,19 +50,34 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- *
+ * Scans aspect application classpaths for {@link AdvisorSpec} instances.
+ * <p>
+ * The {@link Compound} implementation delegates to all registered scanners in order,
+ * deduplicates by advisor name, and then runs all {@link AdvisorSpecPostProcessor} instances.
+ * Concrete scanners ({@link ForAtPojoPointcut}, {@link ForAtExprPointcut}, {@link ForAspectJPointcutAdvisor})
+ * discover advice classes annotated with {@code @PojoPointcut}, {@code @ExprPointcut}, or {@code @Aspect}.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public interface AdvisorSpecScanner {
 
     Logger LOGGER = LoggerFactory.getLogger(AdvisorSpecScanner.class);
 
 
+    /**
+     * Scans the aspect application classpath and returns all discovered {@link AdvisorSpec} instances.
+     *
+     * @param factoryContext the factory context providing class scanner, type pool, and config
+     * @return a collection of discovered {@link AdvisorSpec} instances, never {@code null}
+     */
     Collection<? extends AdvisorSpec> scan(FactoryContext factoryContext);
 
 
+    /**
+     * Delegates to all registered {@link AdvisorSpecScanner} instances in order,
+     * deduplicates by advisor name, and runs all {@link AdvisorSpecPostProcessor} instances.
+     */
     @NoScanning
     class Compound implements AdvisorSpecScanner {
 
@@ -166,6 +181,10 @@ public interface AdvisorSpecScanner {
     }
 
 
+    /**
+     * Abstract base providing common scanning logic: class info filtering, spec parsing,
+     * condition parsing, and advice/pointcut spec parsing delegation.
+     */
     abstract class AbstractBase extends ClassScanner.InstantiableClassInfoFilter 
             implements AdvisorSpecScanner {
 
@@ -212,6 +231,9 @@ public interface AdvisorSpecScanner {
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Collection<AdvisorSpec> scan(FactoryContext factoryContext) {
             Assert.notNull(factoryContext, "'factoryContext' must not be null");
@@ -327,6 +349,10 @@ public interface AdvisorSpecScanner {
     }
 
 
+    /**
+     * Scans for advice classes annotated with {@link io.gemini.api.aop.annotation.PojoPointcut}
+     * and builds {@link AdvisorSpec.PointcutAdvisorSpec} instances with POJO-style pointcuts.
+     */
     public class ForAtPojoPointcut extends AbstractBase {
 
         private final AdviceSpecParser adviceSpecParser;
@@ -340,6 +366,9 @@ public interface AdvisorSpecScanner {
             this.pojoPointcutParser = new PointcutSpecParser.ForPojoPointcut();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected List<AdvisorSpec> doScanAdvisorSpecs(FactoryContext factoryContext) {
             List<ClassInfo> atPojoPointcutClasses = factoryContext.getClassScanner()
@@ -371,6 +400,10 @@ public interface AdvisorSpecScanner {
     }
 
 
+    /**
+     * Scans for advice classes annotated with {@link io.gemini.api.aop.annotation.ExprPointcut}
+     * and builds {@link AdvisorSpec.PointcutAdvisorSpec} instances with expression-based pointcuts.
+     */
     public class ForAtExprPointcut extends AbstractBase {
 
         private final AdviceSpecParser adviceSpecParser;
@@ -384,6 +417,9 @@ public interface AdvisorSpecScanner {
             this.exprPointcutParser = new PointcutSpecParser.ForExprPointcut();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected List<AdvisorSpec> doScanAdvisorSpecs(FactoryContext factoryContext) {
             List<ClassInfo> atExprPointcutClasses = factoryContext.getClassScanner()
@@ -415,6 +451,10 @@ public interface AdvisorSpecScanner {
     }
 
 
+    /**
+     * Scans for {@code @Aspect}-annotated classes and builds one
+     * {@link AdvisorSpec.PointcutAdvisorSpec} per advice method found.
+     */
     public class ForAspectJPointcutAdvisor extends AbstractBase {
 
         private final AdviceSpecParser adviceSpecParser;

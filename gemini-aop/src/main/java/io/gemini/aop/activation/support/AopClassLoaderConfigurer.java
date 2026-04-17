@@ -36,11 +36,16 @@ import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
 /**
- * 
- *
+ * Configures the {@link AopClassLoader} with launcher-first class/resource filters
+ * and bootstrap class rename guards after the bootstrap class injection phase.
+ * <p>
+ * Reads {@code aop.aopClassLoader.*} configuration properties to determine which
+ * classes and resources should be loaded from the launcher class loader first,
+ * and installs a {@link AopClassLoader.TypeFilter} that throws an {@link io.gemini.api.aop.AopException}
+ * if a bootstrap-renamed class is accessed without the rename having been applied.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class AopClassLoaderConfigurer {
 
@@ -64,6 +69,13 @@ public class AopClassLoaderConfigurer {
     }
 
 
+    /**
+     * Configures the {@link AopClassLoader} with launcher-first filters and bootstrap class guards.
+     *
+     * @param aopClassLoader the AOP class loader to configure
+     * @param classScanner   the class scanner (unused, kept for API compatibility)
+     * @param nameMapping    map of original bootstrap class name to renamed class name
+     */
     public void configure(AopClassLoader aopClassLoader, ClassScanner classScanner, Map<String, String> nameMapping) {
         long startedAt = System.nanoTime();
         if (LOGGER.isDebugEnabled()) {
@@ -98,6 +110,14 @@ public class AopClassLoaderConfigurer {
         }
     }
 
+    /**
+     * Installs a {@link AopClassLoader.LauncherFirstFilter} that delegates class/resource loading
+     * to the launcher class loader for configured type and resource name expressions.
+     *
+     * @param aopClassLoader                the AOP class loader to configure
+     * @param launcherFirstTypeExpressions  set to collect the configured type expressions
+     * @param launcherFirstResourceExpressions set to collect the configured resource expressions
+     */
     private void configureLauncherFirstFilter(AopClassLoader aopClassLoader, 
             Set<String> launcherFirstTypeExpressions, Set<String> launcherFirstResourceExpressions) {
         // 1.collect launcher-first type expressions
@@ -140,6 +160,13 @@ public class AopClassLoaderConfigurer {
     }
 
 
+    /**
+     * Installs a {@link AopClassLoader.TypeFilter} that throws {@link io.gemini.api.aop.AopException}
+     * if any bootstrap-renamed class is accessed via the AOP class loader without renaming.
+     *
+     * @param aopClassLoader the AOP class loader to configure
+     * @param nameMapping    map of original bootstrap class name to renamed class name
+     */
     private void configureBoostrapClassFilter(AopClassLoader aopClassLoader, Map<String, String> nameMapping) {
         ElementMatcher<String> bootstrapClassMatcher = ElementMatcherFactory.INSTANCE.createTypeNameMatcher(
                 "BootstrapClassMatcher", nameMapping.keySet(), ElementMatchers.none());

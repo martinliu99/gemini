@@ -39,14 +39,42 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 
+/**
+ * Factory interface for creating {@link io.gemini.api.aop.Pointcut} instances from
+ * {@link PointcutSpec} descriptors.
+ * <p>
+ * Three concrete implementations handle the three pointcut styles:
+ * <ul>
+ *   <li>{@link PojoPointcutCreator} – instantiates a {@link io.gemini.api.aop.Pointcut} class</li>
+ *   <li>{@link ExprPointcutCreator} – parses an AspectJ expression into an {@link io.gemini.aop.matcher.ExprPointcut}</li>
+ *   <li>{@link AspectJPointcutCreator} – parses an AspectJ expression with parameter binding</li>
+ * </ul>
+ * The {@link Compound} implementation delegates to all registered creators in order.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 public interface PointcutCreator {
 
     Logger LOGGER = LoggerFactory.getLogger(PointcutCreator.class);
 
 
+    /**
+     * Creates and returns a {@link io.gemini.api.aop.Pointcut} from the given
+     * {@link AdvisorSpec.PointcutAdvisorSpec}, or {@code null} if this creator does not
+     * handle the spec type.
+     *
+     * @param advisorContext the advisor context for the target class loader
+     * @param advisorSpec    the pointcut advisor spec to create a pointcut from
+     * @return the created {@link io.gemini.api.aop.Pointcut}, or {@code null}
+     */
     Pointcut create(AdvisorContext advisorContext, PointcutAdvisorSpec advisorSpec);
 
 
+    /**
+     * Delegates to all registered {@link PointcutCreator} instances in order,
+     * and returns the first non-null result.
+     */
     @NoScanning
     class Compound implements PointcutCreator {
 
@@ -91,8 +119,15 @@ public interface PointcutCreator {
     }
 
 
+    /**
+     * Abstract base providing common pointcut creation logic: spec class filtering,
+     * expression parsing error handling, and pointcut decoration with advice method matchers.
+     */
     abstract class AbstractBase<PS extends PointcutSpec, P extends Pointcut> implements PointcutCreator {
 
+        /**
+         * {@inheritDoc}
+         */
         @SuppressWarnings("unchecked")
         @Override
         public Pointcut create(AdvisorContext advisorContext, PointcutAdvisorSpec advisorSpec) {
@@ -213,6 +248,10 @@ public interface PointcutCreator {
     }
 
 
+    /**
+     * Instantiates a {@link io.gemini.api.aop.Pointcut} class referenced by a
+     * {@link io.gemini.aop.factory.support.PointcutSpec.PojoPointcutSpec}.
+     */
     class PojoPointcutCreator extends AbstractBase<PojoPointcutSpec, Pointcut> {
 
         /**
@@ -234,6 +273,10 @@ public interface PointcutCreator {
     }
 
 
+    /**
+     * Creates an {@link io.gemini.aop.matcher.ExprPointcut.AspectJExprPointcut} from an
+     * {@link io.gemini.aop.factory.support.PointcutSpec.ExprPointcutSpec} expression string.
+     */
     class ExprPointcutCreator extends AbstractBase<ExprPointcutSpec, Pointcut> {
 
         /**
@@ -263,6 +306,10 @@ public interface PointcutCreator {
     }
 
 
+    /**
+     * Creates an {@link io.gemini.aop.matcher.ExprPointcut.AspectJExprPointcut} with parameter
+     * binding from an {@link io.gemini.aop.factory.support.PointcutSpec.AspectJPointcutSpec}.
+     */
     class AspectJPointcutCreator extends AbstractBase<AspectJPointcutSpec, ExprPointcut> {
 
         /**

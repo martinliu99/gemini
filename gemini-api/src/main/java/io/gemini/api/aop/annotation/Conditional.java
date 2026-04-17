@@ -28,11 +28,26 @@ import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 
+/**
+ * Meta-annotation for defining custom conditional annotations in the Gemini AOP framework.
+ * <p>
+ * The referenced {@link ElementMatcher} implementation receives a {@link MatchingContext}
+ * and returns {@code true} if the advisor should be activated for the current target class loader.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Conditional {
 
+    /**
+     * The condition implementation class. Must implement {@link ElementMatcher} with
+     * {@link MatchingContext} as the type parameter.
+     *
+     * @return the condition class
+     */
     Class<? extends ElementMatcher<MatchingContext>> value();
 
 }

@@ -23,14 +23,12 @@ import java.lang.annotation.Target;
 /**
  * {@code BootstrapClassConsumer} is a mark annotation to indicate class accessing 
  * these bootstrap classes annotated via {@code BootstrapClassProvider}.
- * 
  * <p>
- * The AOP framework will scan annotated classes, and rename bootstrap class full name
+ * The Gemini AOP framework will scan annotated classes, and rename bootstrap class full name
  * from "xxx.yyy.java.***" to "java.***" when starting up.
  * 
  * 
  * @author   martin.liu
- * @since    1.0
  */
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.CLASS)

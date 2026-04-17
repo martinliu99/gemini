@@ -28,6 +28,11 @@ import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.condition.OnFieldCondition;
 
 
+/**
+ * Activates an advisor only when the specified field is present in the target type.
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE, ElementType.METHOD} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -35,5 +40,10 @@ import io.gemini.api.aop.condition.OnFieldCondition;
 @Order(120)
 public @interface ConditionalOnField {
 
+    /**
+     * The field expression that must be present in the target type.
+     *
+     * @return the field expression
+     */
     String fieldExpression();
 }

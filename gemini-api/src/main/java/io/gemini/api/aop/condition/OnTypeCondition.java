@@ -18,19 +18,21 @@
  */
 package io.gemini.api.aop.condition;
 
-import io.gemini.api.annotation.Initializer;
 import io.gemini.api.aop.MatchingContext;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Condition implementation for {@link io.gemini.api.aop.annotation.ConditionalOnType}.
+ * Evaluates whether the specified type expression is present in the target class loader's classpath.
+ * Throws {@link MissingElementException} if the type is absent, causing the advisor to be skipped.
+ *
+ * @author   martin.liu
  */
 public class OnTypeCondition implements ElementMatcher<MatchingContext> {
 
     private final String typeExpression;
 
 
-    @Initializer
     public OnTypeCondition(String typeExpression) {
         this.typeExpression = typeExpression;
     }

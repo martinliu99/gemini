@@ -22,13 +22,30 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 
+/**
+ * Declares an AspectJ-style pointcut expression for an advice class.
+ * <p>
+ * When placed on an {@link io.gemini.api.aop.Advice} implementation, the Gemini AOP framework 
+ * will parse the {@link #pointcutExpression()} using AspectJ syntax to determine 
+ * which joinpoints the advice applies to.
+ * </p>
+ *
+ * <pre>{@code
+ * @ExprPointcut(pointcutExpression = "execution(* com.example.service.*.*(..))")
+ * public class MyAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> { ... }
+ * }</pre>
+ *
+ * @author   martin.liu
+ */
 @Target( {ElementType.TYPE} )
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ExprPointcut {
 
     /**
-     * @return the pointcut expression where to bind the advice
+     * The AspectJ pointcut expression that defines where this advice applies.
+     *
+     * @return the pointcut expression, e.g. {@code "execution(* com.example..*(..))"} 
      */
     String pointcutExpression() default "";
 

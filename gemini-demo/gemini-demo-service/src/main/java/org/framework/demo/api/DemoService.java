@@ -15,6 +15,11 @@
  */
 package org.framework.demo.api;
 
+/**
+ * Demo service interface defining the operations that will be intercepted by Gemini AOP advisors.
+ *
+ * @author   martin.liu
+ */
 public interface DemoService {
 
     Response<String> process(Request request);

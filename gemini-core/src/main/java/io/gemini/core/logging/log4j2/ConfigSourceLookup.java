@@ -26,11 +26,15 @@ import org.apache.logging.log4j.core.lookup.StrLookup;
 import io.gemini.core.config.ConfigSource;
 
 /**
- * This class looks up property in configuration file via {@code ConfigSource}.
- *
+ * Log4j2 {@link org.apache.logging.log4j.core.lookup.StrLookup} that resolves property
+ * values from a {@link ConfigSource} stored in the {@link LoggerContext}.
+ * <p>
+ * Registered as a Log4j2 plugin under the {@code "logger"} category, allowing
+ * {@code ${logger:key}} expressions in Log4j2 configuration files to be resolved
+ * from the AOP framework's configuration.
+ * </p>
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @Plugin(name = "logger", category = StrLookup.CATEGORY)
 public class ConfigSourceLookup extends AbstractLookup implements LoggerContextAware {
@@ -41,6 +45,12 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
     private ConfigSource configSource;
 
 
+    /**
+     * Sets the {@link LoggerContext} and retrieves the {@link ConfigSource} stored under
+     * {@code CONFIG_SOURCE_KEY}.
+     *
+     * @param loggerContext the Log4j2 logger context
+     */
     @Override
     public void setLoggerContext(LoggerContext loggerContext) {
         if (loggerContext == null)
@@ -50,6 +60,13 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
         this.configSource = this.configSource == null ? ConfigSource.Dummy.INSTANCE : this.configSource;
     }
 
+    /**
+     * Looks up the value for the given key in the {@link ConfigSource}.
+     *
+     * @param event the log event (unused)
+     * @param key   the configuration key
+     * @return the value as a string, or {@code null} if absent
+     */
     @Override
     public String lookup(LogEvent event, String key) {
         if (configSource.containsKey(key) == false)
@@ -62,16 +79,31 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
         return null;
     }
 
+    /**
+     * Evaluates the lookup for the given key and returns a {@link LookupResult}.
+     *
+     * @param event the log event (unused)
+     * @param key   the configuration key
+     * @return a {@link ConfigSourceLookupResult} if found, or {@code null}
+     */
     public LookupResult evaluate(LogEvent event, String key) {
         final String value = lookup(event, key);
 
         return value == null ? null : new ConfigSourceLookupResult(value);
     }
 
+    /**
+     * A {@link LookupResult} that wraps a string value from the {@link ConfigSource}.
+     */
     public static class ConfigSourceLookupResult implements LookupResult {
 
         private final String value;
 
+        /**
+         * Constructs a {@code ConfigSourceLookupResult} with the given value.
+         *
+         * @param value the string value
+         */
         public ConfigSourceLookupResult(String value) {
             this.value = value;
         }

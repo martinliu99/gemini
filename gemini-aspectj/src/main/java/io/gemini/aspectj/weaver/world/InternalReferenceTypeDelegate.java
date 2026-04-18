@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentMap;
 
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.weaver.AjAttribute.WeaverVersionInfo;
@@ -44,8 +45,11 @@ import org.aspectj.weaver.WeaverStateInfo;
 import org.aspectj.weaver.patterns.PerClause;
 import org.aspectj.weaver.patterns.Pointcut;
 
+import io.gemini.core.classloader.ThreadContext;
+import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.pool.TypeResolutionInspector;
 import io.gemini.core.pool.TypeResolutionInspector.ResolutionLevel;
+import io.gemini.core.util.ClassLoaderUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
@@ -93,7 +97,8 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
     private String genericSignature = null;
 
-    private ResolvedPointcutDefinition[] pointcuts;
+    private List<PointcutMethod> pointcutMethods;
+    private ConcurrentMap<ClassLoader, ResolvedMember[]> pointcutsPerClassLoaderMap;
 
 
     /**
@@ -429,13 +434,39 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      */
     @Override
     public ResolvedMember[] getDeclaredPointcuts() {
-        if (pointcuts != null) {
-            return this.pointcuts;
-        }
-
         List<PointcutMethod> pointcutMethods = this.getDeclaredPointcutMethods(typeDescription);
-        ResolvedPointcutDefinition[] pointcuts = new ResolvedPointcutDefinition[pointcutMethods.size()];
+        if (pointcutMethods.size() == 0) 
+            return new ResolvedPointcutDefinition[0];
 
+        this.pointcutsPerClassLoaderMap = this.pointcutsPerClassLoaderMap == null 
+                ? new ConcurrentReferenceHashMap<>() : this.pointcutsPerClassLoaderMap;
+
+        // cache declared pointcuts per target class loader to avoid cached pointcut referring to 
+        // same Resolved type, and mismatching to target type under different target class loader.
+        return this.pointcutsPerClassLoaderMap.computeIfAbsent(
+                ClassLoaderUtils.maskNull(ThreadContext.getContextClassLoader()), 
+                key -> createDeclaredPointcuts(pointcutMethods)
+        );
+    }
+
+    private List<PointcutMethod> getDeclaredPointcutMethods(TypeDescription typeDescription) {
+        if (this.pointcutMethods != null)
+            return this.pointcutMethods;
+
+        List<PointcutMethod> pointcutMethods = new ArrayList<>();
+        for (MethodDescription methodDescription : typeDescription.getDeclaredMethods()) {
+            AnnotationList filter = methodDescription.getDeclaredAnnotations().filter(
+                    ElementMatchers.annotationType(org.aspectj.lang.annotation.Pointcut.class));
+            if (filter.size() == 0) continue;
+
+            pointcutMethods.add(
+                    new PointcutMethod(methodDescription, typeWorld.getPlaceholderHelper(), filter.get(0)) );
+        }
+        return this.pointcutMethods = pointcutMethods;
+    }
+
+    private ResolvedMember[] createDeclaredPointcuts(List<PointcutMethod> pointcutMethods) {
+        ResolvedPointcutDefinition[] pointcutDefs = new ResolvedPointcutDefinition[pointcutMethods.size()];
         PointcutParser pointcutParser = new PointcutParser(typeWorld);
 
         // phase 1, create legitimate entries in pointcuts[] before we
@@ -444,7 +475,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         // process allows us to cope with that
         for (int i = 0; i < pointcutMethods.size(); i++) {
             PointcutMethod pointcutMethod = pointcutMethods.get(i);
-            pointcuts[i] = new ResolvedPointcutDefinition(
+            pointcutDefs[i] = new ResolvedPointcutDefinition(
                     getResolvedTypeX(), 
                     pointcutMethod.getModifiers(), 
                     pointcutMethod.getPointcutName(), 
@@ -476,33 +507,19 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
 
             Pointcut pointcut = pointcutParser.resolvePointcutExpression(
                     pointcutMethod.getPointcutExpression(), this.resolvedTypeX, formalParameters);
-            ResolvedPointcutDefinition resolvedMember = pointcuts[i];
-            resolvedMember.setParameterNames(parameterNames);
-            resolvedMember.setPointcut(pointcut);
+            ResolvedPointcutDefinition pointcutDef = pointcutDefs[i];
+            pointcutDef.setParameterNames(parameterNames);
+            pointcutDef.setPointcut(pointcut);
         }
 
         // phase 3, now concretize them all
-        for (int i = 0; i < pointcuts.length; i++) {
-            pointcuts[i].setPointcut(pointcutParser.concretizePointcutExpression(
-                    pointcuts[i].getPointcut(), this.resolvedTypeX, formalParameterList.get(i)));
+        for (int i = 0; i < pointcutDefs.length; i++) {
+            pointcutDefs[i].setPointcut(pointcutParser.concretizePointcutExpression(
+                    pointcutDefs[i].getPointcut(), this.resolvedTypeX, formalParameterList.get(i)));
         }
 
-        return this.pointcuts = pointcuts;
+        return pointcutDefs;
     }
-
-    private List<PointcutMethod> getDeclaredPointcutMethods(TypeDescription typeDescription) {
-        List<PointcutMethod> pointcutMethods = new ArrayList<>();
-        for (MethodDescription methodDescription : typeDescription.getDeclaredMethods()) {
-            AnnotationList filter = methodDescription.getDeclaredAnnotations().filter(
-                    ElementMatchers.annotationType(org.aspectj.lang.annotation.Pointcut.class));
-            if (filter.size() == 0) continue;
-
-            pointcutMethods.add(
-                    new PointcutMethod(methodDescription, typeWorld.getPlaceholderHelper(), filter.get(0)) );
-        }
-        return pointcutMethods;
-    }
-
 
     private String[] tryToDiscoverParameterNames(PointcutMethod pointcutMethod) {
         MethodDescription methodDescription = (MethodDescription) pointcutMethod.getMethodDescription();

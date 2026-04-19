@@ -19,7 +19,6 @@ import io.gemini.aop.factory.support.AdvisorSpec;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Pointcut;
 import io.gemini.core.Ordered;
-import io.gemini.core.util.ObjectUtils;
 import io.gemini.core.util.StringUtils;
 
 /**
@@ -146,7 +145,7 @@ public interface Advisor extends Ordered {
          */
         @Override
         public String toString() {
-            return this.getAdvisorName() + "@" + ObjectUtils.getIdentityHexString(this);
+            return getOrder() + " - " +  this.getAdvisorName();
         }
     }
 

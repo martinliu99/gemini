@@ -206,7 +206,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
     @Override
     public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
             JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
-        // 1.check if cached advisorChain exists
+        // 1.check if cached advisors exists
         String targetTypeName = targetType.getTypeName();
         TargetTypeCache targetTypeCache = getTargetTypeCache(targetClassLoader, targetTypeName);
         if (targetTypeCache != null && targetTypeCache.isMatched() == false)
@@ -318,7 +318,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
             } catch(Exception e) {
                 if (LOGGER.isWarnEnabled()) 
                     LOGGER.warn("Could not weave target type. \n"
-                            + "  TargetClassLoader: {}"
+                            + "  ClassLoader: {}"
                             + "  TargetType: {}"
                             + "  CallbaclArgument: {}"
                             + "  Error reason: {} \n",

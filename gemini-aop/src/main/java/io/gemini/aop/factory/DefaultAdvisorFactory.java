@@ -218,7 +218,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         long startedAt = System.nanoTime();
 
         String factoryName = factoryContext.getFactoryName();
-        if (LOGGER.isDebugEnabled())
+        if (validCreation == false && LOGGER.isDebugEnabled())
             LOGGER.debug("^Creating Advisors via AdvisorCreator under '{}' for '{}', \n"
                     + "  {} \n", 
                     factoryName, targetClassLoader,
@@ -249,12 +249,12 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         .collect( Collectors.toList() );
 
 
-        if (LOGGER.isInfoEnabled()) {
+        if (validCreation == false && LOGGER.isInfoEnabled()) {
             if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisors.size() > 0) 
                 LOGGER.info("$Took '{}' seconds to create {} Advisors under '{}' for '{}', \n"
                         + "  {} \n", 
                         (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisors.size(), factoryName, targetClassLoader,
-                        StringUtils.join(advisors, Advisor::getAdvisorName, "\n  ")
+                        StringUtils.join(advisors, Advisor::toString, "\n  ")
                 );
             else if (aopContext.getDiagnosticLevel().isSimpleEnabled()) 
                 LOGGER.info("$Took '{}' seconds to create {} Advisors under '{}' for '{}'. ", 
@@ -486,8 +486,8 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                                     methodAdvisorEntry -> 
                                         new StringBuilder("Method: ")
                                             .append( MethodUtils.getMethodSignature( methodAdvisorEntry.getKey() ) )
-                                            .append("\n  Advices: ")
-                                            .append( StringUtils.join(methodAdvisorEntry.getValue(), Advisor::getAdvisorName, "\n    ", "\n    ", "\n") ),
+                                            .append("\n  Advisors: ")
+                                            .append( StringUtils.join(methodAdvisorEntry.getValue(), Advisor::toString, "\n    ", "\n    ", "\n") ),
                                     "\n  "
                             )
                     );

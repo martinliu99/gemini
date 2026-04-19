@@ -168,7 +168,7 @@ public interface AdvisorSpecScanner {
                     LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpecs under '{}', \n"
                             + "  {} \n",
                             (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, advisorSpecMap.size(), factoryName,
-                            StringUtils.join(advisorSpecMap.values(), AdvisorSpec::getAdvisorName, "\n  ")
+                            StringUtils.join(advisorSpecMap.values(), AdvisorSpec::toString, "\n  ")
                     );
                 else if (factoryContext.getAopContext().getDiagnosticLevel().isSimpleEnabled())
                     LOGGER.info("$Took '{}' seconds to scan {} AdvisorSpecs under '{}'. ",

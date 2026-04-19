@@ -164,7 +164,7 @@ public interface AdvisorSpec {
          */
         @Override
         public String toString() {
-            return getAdvisorName();
+            return getOrder() + " - " + getAdvisorName();
         }
     }
 

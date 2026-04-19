@@ -22,7 +22,14 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
 
+import org.framework.demo.classloader.RunnerClassLoader;
+import org.framework.demo.classloader.RunnerClassLoader2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,11 +47,13 @@ public class DemoServiceRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoServiceRunner.class);
 
+
     public static void main(String[] args) {
         long startedAt = System.nanoTime();
         if (LOGGER.isInfoEnabled())
             LOGGER.info("started to init class loader");
 
+        // 1.instrument target classes multiple times with different class loader instance.
         for (int i = 0; i < 2; i++) {
             DemoServiceRunner demoServiceRunner = new DemoServiceRunner();
     
@@ -52,7 +61,8 @@ public class DemoServiceRunner {
             demoServiceRunner.doInvoke(classLoader);
 
             if (LOGGER.isInfoEnabled())
-                LOGGER.info("started application by classloader '{}' in {} seconds.", classLoader, (System.nanoTime() - startedAt) / 1e9);
+                LOGGER.info("started application by classloader '{}' in {} seconds. \n", 
+                        classLoader, (System.nanoTime() - startedAt) / 1e9);
         }
 
         {
@@ -64,54 +74,58 @@ public class DemoServiceRunner {
             demoServiceRunner.doInvoke(classLoader);
 
             if (LOGGER.isInfoEnabled())
-                LOGGER.info("started application by classloader '{}' in {} seconds.", classLoader, (System.nanoTime() - startedAt) / 1e9);
+                LOGGER.info("started application by classloader '{}' in {} seconds. \n", 
+                        classLoader, (System.nanoTime() - startedAt) / 1e9);
         }
+
+
+        // 2.instrument special types
+        // JDK classes
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 1, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        Future<?> task = threadPoolExecutor.submit( new Runnable() {
+
+            @Override
+            public void run() {
+                if (LOGGER.isInfoEnabled())
+                    LOGGER.info("Executing task...");
+            }
+        } );
+        try {
+            task.get();
+        } catch (Exception e) {
+        } finally {
+            threadPoolExecutor.shutdownNow();
+        }
+
+
+        // 3.instrument special methods
+        // native method
+        byte[] data = "This is a long text that needs compression".getBytes();
+
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        deflater.setInput(data);
+        deflater.finish();
+
+        deflater.end();
     }
 
     private void doInvoke(RunnerClassLoader classLoader) {
         Thread.currentThread().setContextClassLoader(classLoader);
         try {
-            Class<?> requestType = classLoader.loadClass("org.framework.demo.api.Request");
-            if (LOGGER.isInfoEnabled())
-                LOGGER.info("get class {}", requestType);
-
+            // prepare arguments
             List<String> input = new ArrayList<>(2);
             input.add("Hello");
             input.add("World");
+
+            Class<?> requestType = classLoader.loadClass("org.framework.demo.api.Request");
             Object request = requestType.getDeclaredConstructor(List.class).newInstance(input);
 
-            Class<?> type = classLoader.loadClass("org.framework.demo.service.DemoServiceImpl");
-            if (LOGGER.isInfoEnabled())
-                LOGGER.info("get class {}", requestType);
+            Class<?> serviceType = classLoader.loadClass("org.framework.demo.service.DemoServiceImpl");
 
             {
-                Method method = type.getDeclaredMethod("process", requestType);
-                if (LOGGER.isInfoEnabled())
-                    LOGGER.info("get method {}", method);
-
-                Object service = type.getDeclaredConstructor().newInstance();
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("newInstance {}", service);
-                    LOGGER.info("started to call process()");
-                }
-
-                Object result = method.invoke(service, request);
-
-                if (LOGGER.isInfoEnabled())
-                    LOGGER.info("call process(): {}", result );
-            }
-        
-            {
-                Method method = type.getDeclaredMethod("process2", String.class);
-                Object service = type.getDeclaredConstructor().newInstance();
-
-                if (LOGGER.isInfoEnabled())
-                    LOGGER.info("started to call process2()");
-
-                Object result = method.invoke(service, "runner");
-
-                if (LOGGER.isInfoEnabled())
-                    LOGGER.info("call process2(): {}", result );
+                Method method = serviceType.getDeclaredMethod("process", requestType);
+                Object service = serviceType.getDeclaredConstructor().newInstance();
+                method.invoke(service, request);
             }
         } catch (Exception e) {
             e.printStackTrace();

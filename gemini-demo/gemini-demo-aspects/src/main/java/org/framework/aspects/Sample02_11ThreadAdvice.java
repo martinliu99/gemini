@@ -26,18 +26,34 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
+/**
+ * Demo advice that intercepts {@code java.lang.Thread#start()} using a POJO pointcut.
+ * <p>
+ * Activated only when the target class loader is the bootstrap class loader
+ * (via {@code @ConditionalOnClassLoader(isBootstrapClassLoader = true)}),
+ * demonstrating Gemini's ability to instrument JDK core classes.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @ConditionalOnClassLoader(isBootstrapClassLoader = true)
-@PojoPointcut(pointcutClass = Sample02_ThreadAdvice.class)
-public class Sample02_ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> implements Pointcut {
+@PojoPointcut(pointcutClass = Sample02_11ThreadAdvice.class)
+public class Sample02_11ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> implements Pointcut {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void before(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
-//        LOGGER.info("before thread's run: " + joinpoint);
+        LOGGER.info("Entering thread#start {}.", joinpoint.getTargetObject());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
-//        LOGGER.info("after thread's run: " + joinpoint);
+        LOGGER.info("Exited thread#start {}.", joinpoint.getTargetObject());
     }
 
     /**

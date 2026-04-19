@@ -15,24 +15,44 @@
  */
 package org.framework.aspects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
-import io.gemini.api.aop.annotation.AdvisorName;
-import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 import io.gemini.api.aop.annotation.ExprPointcut;
+import net.bytebuddy.description.method.MethodDescription;
 
-@AdvisorName("ThreadPoolAdvisor")
-@ConditionalOnClassLoader(isBootstrapClassLoader = true)
-@ExprPointcut(pointcutExpression = "execution(public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable))")
-public class Sample02_ThreadPoolAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
+/**
+ *
+ *
+ * @author   martin.liu
+ * @since	 1.0
+ */
+@ExprPointcut(pointcutExpression = 
+        "staticinitialization(org.framework.demo.service.DemoServiceImpl)")
+public class Sample03_01TypeInitializer extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample03_01TypeInitializer.class);
+
+
+    /** 
+     * {@inheritDoc}
+     */
     @Override
     public void before(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
-//        LOGGER.info("before threadpool's execute: " + joinpoint);
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("Entering '{}.{}' with args: {}", 
+                    joinpoint.getTargetClass(), MethodDescription.TYPE_INITIALIZER_INTERNAL_NAME, joinpoint.getArguments());
     }
 
+    /** 
+     * {@inheritDoc}
+     */
     @Override
     public void after(MutableJoinpoint<Void, RuntimeException> joinpoint) throws Throwable {
-//        LOGGER.info("after threadpool's execute: " + joinpoint);
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("Exited '{}.{}' with args: {}", 
+                    joinpoint.getTargetClass(), MethodDescription.TYPE_INITIALIZER_INTERNAL_NAME, joinpoint.getArguments());
     }
 }

@@ -27,17 +27,33 @@ import net.bytebuddy.matcher.ElementMatcher;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.matcher.TypeMatchers;
 
-@PojoPointcut(pointcutClass = Sample01_RunAdvice.class)
-public class Sample01_RunAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> implements Pointcut {
+/**
+ * Demo advice that intercepts {@code run()} methods on classes implementing {@code Runnable}
+ * within the AOP framework weaver transformer package.
+ * <p>
+ * Demonstrates the use of {@link TypeMatchers#isExtendedFrom(String)} to match types
+ * by their implemented interfaces.
+ * </p>
+ *
+ * @author   martin.liu
+ */
+@PojoPointcut(pointcutClass = Sample02_10RunAdvice.class)
+public class Sample02_10RunAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> implements Pointcut {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void before(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("before run: " + joinpoint);
+        LOGGER.info("Entering runnable {}.", joinpoint.getTargetObject());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void after(MutableJoinpoint<Object, RuntimeException> joinpoint) throws Throwable {
-        LOGGER.info("after run: " + joinpoint);
+        LOGGER.info("Exited runnable {}.", joinpoint.getTargetObject());
     }
 
     /** 

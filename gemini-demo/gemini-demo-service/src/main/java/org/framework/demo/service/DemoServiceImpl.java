@@ -15,9 +15,6 @@
  */
 package org.framework.demo.service;
 
-import java.io.File;
-import java.util.Arrays;
-
 import org.framework.demo.api.DemoService;
 import org.framework.demo.api.Request;
 import org.framework.demo.api.Response;
@@ -37,15 +34,18 @@ public class DemoServiceImpl implements DemoService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DemoServiceImpl.class);
 
+    static {
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("In DemoServiceImpl.");
+    }
+
     public DemoServiceImpl() {
         super();
-        LOGGER.info("getting classpathstr");
-        String classpathStr = System.getProperty("java.class.path");
-        LOGGER.info("classpathstr {}", classpathStr);
-        classpathStr = classpathStr.replace('\\', '/');
-        String[] classPathValues = classpathStr.split(File.pathSeparator);
-        LOGGER.info("classpath {}", Arrays.asList(classPathValues));
+
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("Initialized DemoServiceImpl.");
     }
+
 
     @Override
     @AspectJ

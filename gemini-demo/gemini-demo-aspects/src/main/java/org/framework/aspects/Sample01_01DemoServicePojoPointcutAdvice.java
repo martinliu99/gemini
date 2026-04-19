@@ -17,12 +17,14 @@ package org.framework.aspects;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.framework.demo.api.Request;
 import org.framework.demo.api.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.Advice;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Pointcut;
@@ -31,28 +33,46 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
-@PojoPointcut(pointcutClass = Sample01_DemoServicePojoPointcutAdvice.class)
-public class Sample01_DemoServicePojoPointcutAdvice extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
+/**
+ * Demo advice using the {@link PojoPointcut} annotation with a programmatic ByteBuddy matcher.
+ * <p>
+ * Demonstrates how to write a POJO advice class that also implements {@link io.gemini.api.aop.Pointcut}
+ * directly, providing {@link net.bytebuddy.matcher.ElementMatcher} instances for type and method selection.
+ * </p>
+ *
+ * @author   martin.liu
+ */
+@PojoPointcut(pointcutClass = Sample01_01DemoServicePojoPointcutAdvice.class)
+@Order(Sample01_01DemoServicePojoPointcutAdvice.ADVICE_INDEX)
+public class Sample01_01DemoServicePojoPointcutAdvice extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
         implements Pointcut {
 
-    private static final String DEMO_SERVICE_ADVICE = Sample01_DemoServicePojoPointcutAdvice.class.getSimpleName();
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_01DemoServicePojoPointcutAdvice.class);
+
+    public static final int ADVICE_INDEX = 1;
 
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void before(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+            LOGGER.info("Entering '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
 
-        // update argument
+        // update Request's list
         Request request = (Request) joinpoint.getArguments()[0];
-        List<String> input = new ArrayList<>(request.getInput());
-        input.add(DEMO_SERVICE_ADVICE);
+        List<String> input = request.getInput();
+        input.add(Sample01_01DemoServicePojoPointcutAdvice.class.getSimpleName());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void after(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+            LOGGER.info("Exited '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
     }
 
     /** 

@@ -27,37 +27,51 @@ import org.framework.demo.api.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.gemini.api.annotation.Order;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
+/**
+ * Demo aspect using AspectJ annotation style ({@code @Aspect}, {@code @Before}, {@code @AfterReturning}).
+ * <p>
+ * Demonstrates how to write an AspectJ-style aspect that integrates with the Gemini AOP framework.
+ * The pointcut targets {@code process(Request)} methods on all {@code *Impl} classes
+ * under the {@code org.framework.demo.service} package.
+ * </p>
+ *
+ * @author   martin.liu
+ */
 @Aspect
-public class Sample01_DemoServiceAspectJAspect {
+@Order(Sample01_03DemoServiceAspectJAspect.ADVICE_INDEX)
+public class Sample01_03DemoServiceAspectJAspect {
 
-    protected Logger LOGGER = null;
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_03DemoServiceAspectJAspect.class);
 
-    public Sample01_DemoServiceAspectJAspect() {
-        LOGGER = LoggerFactory.getLogger(Sample01_DemoServiceAspectJAspect.class);
-    }
+    public static final int ADVICE_INDEX = 3;
 
-    @Pointcut("execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
+
+    @Pointcut("execution(* org.framework.demo.service.*Impl.process(org.framework.demo.api.Request))")
     public void process() {}
 
     @Before("process()")
-//    @Before("execution(* org.framework.demo.service.*Impl.process(org.framework.demo.api.Request))")
-    public void before(MutableJoinpoint<Response<String>, RuntimeException> joinpoint) throws Throwable {
+    public void before(MutableJoinpoint<Response, RuntimeException> joinpoint) throws Throwable {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("before '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+            LOGGER.info("Entering '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
 
+        // modify Request argument
         Request request = (Request) joinpoint.getArguments()[0];
+
         List<String> input = new ArrayList<>(request.getInput());
-        input.add("DemoServiceAspect_process");
+        input.add(Sample01_03DemoServiceAspectJAspect.class.getSimpleName());
+
+        Request newRequest = new Request(input);
+        joinpoint.getArguments()[0] = newRequest;
     }
 
 
     @AfterReturning(pointcut = "process()", returning="returning")
-//    @After("@annotation(org.framework.demo.service.AspectJ)")
-    public Object after(MutableJoinpoint<Response<String>, RuntimeException> joinpoint, Response<String> returning) throws Throwable {
+    public Object after(MutableJoinpoint<Response, RuntimeException> joinpoint, Response<String> returning) throws Throwable {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("after '{}' with args: {}", this.getClass().getSimpleName(), joinpoint.getArguments());
+            LOGGER.info("Exited '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
 
         return true;
     }

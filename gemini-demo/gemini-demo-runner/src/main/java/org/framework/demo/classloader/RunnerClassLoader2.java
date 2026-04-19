@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.framework.demo;
+package org.framework.demo.classloader;
 
 import java.net.URL;
-import java.net.URLClassLoader;
 
 /**
  * load-time class loader, scans and instantiate service instance and dependent objects.
@@ -24,24 +23,13 @@ import java.net.URLClassLoader;
  * @author martin.liu
  *
  */
-public class RunnerClassLoader extends URLClassLoader {
+public class RunnerClassLoader2 extends RunnerClassLoader {
 
-
-    public RunnerClassLoader(URL[] urls, ClassLoader parent) {
+    /**
+     * @param urls
+     * @param parent
+     */
+    public RunnerClassLoader2(URL[] urls, ClassLoader parent) {
         super(urls, parent);
-    }
-
-    public URL[] getLocations() {
-        return this.getURLs();
-    }
-
-    @Override
-    public String toString() {
-        return super.toString();
-    }
-
-
-    protected Class<?> findClass(final String name) throws ClassNotFoundException {
-        return super.findClass(name);
     }
 }

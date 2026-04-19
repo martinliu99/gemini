@@ -15,8 +15,6 @@
  */
 package org.framework.aspects;
 
-import java.util.List;
-
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -24,28 +22,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 
+/**
+ *
+ *
+ * @author   martin.liu
+ */
 @Aspect
-public class Sample01_RequestAspect {
+public class Sample03_11NativeMethod {
 
-    protected Logger LOGGER = LoggerFactory.getLogger(Sample01_RequestAspect.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample03_11NativeMethod.class);
 
-    @Before("execution(* org.framework.demo.api.Request.getInput())")
-    public void before(MutableJoinpoint<List<String>, RuntimeException> joinpoint) throws Throwable {
+    private static final String POINTCUT_EXPR = "execution(private native static long java.util.zip.Deflater.init(int, int, boolean))";
 
+
+    @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+    @Before(POINTCUT_EXPR)
+    public void before(MutableJoinpoint<Long, RuntimeException> joinpoint) {
+        if (LOGGER.isInfoEnabled())
+            LOGGER.info("Entering Deflater#init {}.", joinpoint.getStaticPart());
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    @After("execution(* org.framework.demo.api.Request.getInput())")
-    public Object after(MutableJoinpoint<List<String>, RuntimeException> joinpoint) throws Throwable {
-        Object rtn = joinpoint.getReturning();
-        if (rtn instanceof List) {
-            ((List) rtn).add("after");
-        }
-
+    @ConditionalOnClassLoader(isBootstrapClassLoader = true)
+    @After(POINTCUT_EXPR)
+    public void after(MutableJoinpoint<Long, RuntimeException> joinpoint) {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("  after rquest::input with {}", rtn);
-
-        return rtn;
+            LOGGER.info("Exiting Deflater#init {}.", joinpoint.getStaticPart());
     }
 }

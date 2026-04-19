@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.Advisor;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
+import io.gemini.core.OrderComparator;
 import io.gemini.core.util.StringUtils;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -141,8 +142,20 @@ class CompoundAdvisorFactory implements AdvisorFactory {
             }
         }
 
-        return targetMethodAdvisorMap.size() == 0 
-                ? Collections.emptyMap() : new LinkedHashMap<MethodDescription, List<? extends Advisor>>(targetMethodAdvisorMap);
+        if (targetMethodAdvisorMap.size() == 0) 
+            return Collections.emptyMap();
+
+
+        // sort advisors
+        Map<MethodDescription, List<? extends Advisor>> resultMap = new LinkedHashMap<MethodDescription, List<? extends Advisor>>(
+                targetMethodAdvisorMap.size());
+        for (Entry<MethodDescription, List<Advisor>> entry : targetMethodAdvisorMap.entrySet()) {
+            List<Advisor> advisors = entry.getValue();
+            OrderComparator.sort(advisors);
+
+            resultMap.put(entry.getKey(), advisors);
+        }
+        return resultMap;
     }
 
     /**

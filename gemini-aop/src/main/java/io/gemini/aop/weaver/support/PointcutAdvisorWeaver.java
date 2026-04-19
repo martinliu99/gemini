@@ -192,9 +192,6 @@ public interface PointcutAdvisorWeaver {
                 candidateAdvisors.add(pointcutAdvisor);
             }
 
-            // sort advisor
-            OrderComparator.sort(candidateAdvisors);
-
             return candidateAdvisors;
         }
 
@@ -508,7 +505,9 @@ public interface PointcutAdvisorWeaver {
          */
         @Override
         protected Builder<?> doWeave(Builder<?> builder, Object... arguments) {
-            WithCustomMapping withCustomMapping = Advice.withCustomMapping().bootstrap(
+            WithCustomMapping withCustomMapping = Advice.withCustomMapping()
+            .with(new Advice.AssignReturned.Factory())
+            .bootstrap(
                     AopWeaver.BOOTSTRAP_DISPATCHER_CALLBACK_METHOD,
                     new DefaultBootstrapArgumentResolverFactory(this.callbackSlot)
             );

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.weaver.AjAttribute.WeaverVersionInfo;
@@ -44,12 +45,17 @@ import org.aspectj.weaver.UnresolvedType;
 import org.aspectj.weaver.WeaverStateInfo;
 import org.aspectj.weaver.patterns.PerClause;
 import org.aspectj.weaver.patterns.Pointcut;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.gemini.aspectj.weaver.ExprParser;
 import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.concurrent.ConcurrentReferenceHashMap;
 import io.gemini.core.pool.TypeResolutionInspector;
 import io.gemini.core.pool.TypeResolutionInspector.ResolutionLevel;
 import io.gemini.core.util.ClassLoaderUtils;
+import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.PlaceholderHelper;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
@@ -78,6 +84,9 @@ import net.bytebuddy.matcher.ElementMatchers;
  * @author   martin.liu
  */
 class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(InternalReferenceTypeDelegate.class);
+
 
     private final BytebuddyWorld typeWorld;
 
@@ -178,7 +187,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      * {@inheritDoc}
      */
     @Override
-    public String getRetentionPolicy() {
+    public @Nullable String getRetentionPolicy() {
         RetentionPolicy retentionPolicy = getRetentionPolicyInternal();
         return retentionPolicy == null ? null : retentionPolicy.name();
     }
@@ -330,7 +339,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      * {@inheritDoc}
      */
     @Override
-    public ResolvedType getSuperclass() {
+    public @Nullable ResolvedType getSuperclass() {
         // Superclass of object is null
         if (this.typeDescription.represents(Object.class))
             return null;
@@ -435,7 +444,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     @Override
     public ResolvedMember[] getDeclaredPointcuts() {
         List<PointcutMethod> pointcutMethods = this.getDeclaredPointcutMethods(typeDescription);
-        if (pointcutMethods.size() == 0) 
+        if (pointcutMethods.size() == 0)
             return new ResolvedPointcutDefinition[0];
 
         this.pointcutsPerClassLoaderMap = this.pointcutsPerClassLoaderMap == null 
@@ -450,10 +459,10 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
     }
 
     private List<PointcutMethod> getDeclaredPointcutMethods(TypeDescription typeDescription) {
-        if (this.pointcutMethods != null)
-            return this.pointcutMethods;
+        if (pointcutMethods != null)
+            return pointcutMethods;
 
-        List<PointcutMethod> pointcutMethods = new ArrayList<>();
+        List<PointcutMethod> pointcutMethods = new CopyOnWriteArrayList<>();
         for (MethodDescription methodDescription : typeDescription.getDeclaredMethods()) {
             AnnotationList filter = methodDescription.getDeclaredAnnotations().filter(
                     ElementMatchers.annotationType(org.aspectj.lang.annotation.Pointcut.class));
@@ -462,11 +471,11 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
             pointcutMethods.add(
                     new PointcutMethod(methodDescription, typeWorld.getPlaceholderHelper(), filter.get(0)) );
         }
-        return this.pointcutMethods = pointcutMethods;
+        return (this.pointcutMethods = pointcutMethods);
     }
 
     private ResolvedMember[] createDeclaredPointcuts(List<PointcutMethod> pointcutMethods) {
-        ResolvedPointcutDefinition[] pointcutDefs = new ResolvedPointcutDefinition[pointcutMethods.size()];
+        List<ResolvedPointcutDefinition> pointcutDefs = new ArrayList<ResolvedPointcutDefinition>(pointcutMethods.size());
         PointcutParser pointcutParser = new PointcutParser(typeWorld);
 
         // phase 1, create legitimate entries in pointcuts[] before we
@@ -475,19 +484,26 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         // process allows us to cope with that
         for (int i = 0; i < pointcutMethods.size(); i++) {
             PointcutMethod pointcutMethod = pointcutMethods.get(i);
-            pointcutDefs[i] = new ResolvedPointcutDefinition(
-                    getResolvedTypeX(), 
-                    pointcutMethod.getModifiers(), 
-                    pointcutMethod.getPointcutName(), 
-                    typeWorld.convertType(pointcutMethod.getParameterTypes()), null);
+            pointcutDefs.add( 
+                    new ResolvedPointcutDefinition(
+                            getResolvedTypeX(), 
+                            pointcutMethod.getModifiers(), 
+                            pointcutMethod.getPointcutName(), 
+                            typeWorld.convertType(pointcutMethod.getParameterTypes()), 
+                            null
+                    )
+            );
         }
 
         // phase 2, now go back round and resolve in-place all of the pointcuts
         List<Map<String, ? extends TypeDefinition>> formalParameterList = new ArrayList<>(pointcutMethods.size());
-        for (int i = 0; i < pointcutMethods.size(); i++) {
-            PointcutMethod pointcutMethod = pointcutMethods.get(i);
+        for (int i = 0; i < pointcutDefs.size(); i++) {
+            ResolvedPointcutDefinition pointcutDef = pointcutDefs.get(i);
+            if (pointcutDef == null)
+                continue;
 
             // validate parameters
+            PointcutMethod pointcutMethod = pointcutMethods.get(i);
             TypeDescription[] parameterTypes = pointcutMethod.getParameterTypes();
             String[] parameterNames = pointcutMethod.getArgNames();
             if (parameterNames.length != parameterTypes.length) {
@@ -505,20 +521,50 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
                 formalParameters.put(parameterNames[j], parameterTypes[j]);
             }
 
-            Pointcut pointcut = pointcutParser.resolvePointcutExpression(
-                    pointcutMethod.getPointcutExpression(), this.resolvedTypeX, formalParameters);
-            ResolvedPointcutDefinition pointcutDef = pointcutDefs[i];
-            pointcutDef.setParameterNames(parameterNames);
-            pointcutDef.setPointcut(pointcut);
+            String pointcutExpression = pointcutMethod.getPointcutExpression();
+            try {
+                Pointcut pointcut = pointcutParser.resolvePointcutExpression(
+                        pointcutExpression, this.resolvedTypeX, formalParameters);
+                pointcutDef.setParameterNames(parameterNames);
+                pointcutDef.setPointcut(pointcut);
+            } catch (Exception e) {
+                handleException(pointcutMethod, e);
+
+                pointcutDefs.set(i, null);
+            }
         }
 
         // phase 3, now concretize them all
-        for (int i = 0; i < pointcutDefs.length; i++) {
-            pointcutDefs[i].setPointcut(pointcutParser.concretizePointcutExpression(
-                    pointcutDefs[i].getPointcut(), this.resolvedTypeX, formalParameterList.get(i)));
+        for (int i = 0; i < pointcutDefs.size(); i++) {
+            ResolvedPointcutDefinition pointcutDef = pointcutDefs.get(i);
+            if (pointcutDef == null)
+                continue;
+
+            PointcutMethod pointcutMethod = pointcutMethods.get(i);
+            try {
+                Pointcut pointcut = pointcutDef.getPointcut();
+                pointcut = pointcutParser.concretizePointcutExpression(
+                        pointcut, this.resolvedTypeX, formalParameterList.get(i));
+                pointcutDef.setPointcut(pointcut);
+
+                i++;
+            } catch (Exception e) {
+                handleException(pointcutMethod, e);
+
+                pointcutDefs.set(i, null);
+            }
         }
 
-        return pointcutDefs;
+        // 4.remove ignored pointcutDef & pointcutMethod
+        for (int i = pointcutDefs.size() - 1; i >= 0; i--) {
+            if (pointcutDefs.get(i) != null)
+                continue;
+
+            pointcutDefs.remove(i);
+            pointcutMethods.remove(i);
+        }
+
+        return pointcutDefs.toArray( new ResolvedPointcutDefinition[0]);
     }
 
     private String[] tryToDiscoverParameterNames(PointcutMethod pointcutMethod) {
@@ -533,12 +579,67 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
         return ret;
     }
 
+    private void handleException(PointcutMethod pointcutMethod, Exception e) {
+        if (e instanceof ExprParser.ExprParseException) {
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Ignored named @Pointcut with unparsable PointcutExpression. \n"
+                        + "  DeclaringType: {} \n"
+                        + "  @Pointcut: {} \n"
+                        + "  PointcutExpression: {} \n"
+                        + "  Syntax Error: {} \n", 
+                        typeDescription.getTypeName(),
+                        MethodUtils.getMethodSignature(pointcutMethod.getMethodDescription()),
+                        pointcutMethod.getPointcutExpression(), 
+                        e.getMessage()
+                );
+        } else if (e instanceof ExprParser.ExprLintException) {
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Ignored named @Pointcut with lint PointcutExpression. \n"
+                        + "  DeclaringType: {} \n"
+                        + "  @Pointcut: {} \n"
+                        + "  PointcutExpression: {} \n"
+                        + "  Lint message: {} \n", 
+                        typeDescription.getTypeName(),
+                        MethodUtils.getMethodSignature(pointcutMethod.getMethodDescription()),
+                        pointcutMethod.getPointcutExpression(), 
+                        e.getMessage()
+                );
+        } else if (e instanceof ExprParser.ExprUnknownException) {
+            if (LOGGER.isWarnEnabled()) {
+                Throwable cause = e.getCause();
+                LOGGER.warn("Ignored named @Pointcut with illegal PointcutExpression. \n"
+                        + "  DeclaringType: {} \n"
+                        + "  @Pointcut: {} \n"
+                        + "  PointcutExpression: {} \n"
+                        + "  Error reason: {} \n", 
+                        typeDescription.getTypeName(),
+                        MethodUtils.getMethodSignature(pointcutMethod.getMethodDescription()),
+                        pointcutMethod.getPointcutExpression(), 
+                        cause.getMessage(), 
+                        cause
+                );
+            }
+        } else {
+            if (LOGGER.isWarnEnabled())
+                LOGGER.warn("Ignored named @Pointcut with illegal PointcutExpression. \n"
+                        + "  DeclaringType: {} \n"
+                        + "  @Pointcut: {} \n"
+                        + "  PointcutExpression: {} \n"
+                        + "  Error reason: {} \n", 
+                        typeDescription.getTypeName(),
+                        MethodUtils.getMethodSignature(pointcutMethod.getMethodDescription()),
+                        pointcutMethod.getPointcutExpression(), 
+                        e.getMessage(), 
+                        e
+                );
+        }
+    }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ResolvedType getOuterClass() {
+    public @Nullable ResolvedType getOuterClass() {
          return typeWorld.resolve(typeDescription.getEnclosingType()); 
     }
 
@@ -555,7 +656,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      * {@inheritDoc}
      */
     @Override
-    public PerClause getPerClause() {
+    public @Nullable PerClause getPerClause() {
         // no per clause...
         return null;
     }
@@ -594,7 +695,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      * {@inheritDoc}
      */
     @Override
-    public WeaverStateInfo getWeaverState() {
+    public @Nullable WeaverStateInfo getWeaverState() {
         return null;
     }
 
@@ -683,7 +784,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      * {@inheritDoc}
      */
     @Override
-    public AnnotationTargetKind[] getAnnotationTargetKinds() {
+    public @Nullable AnnotationTargetKind[] getAnnotationTargetKinds() {
         return null;
     }
 

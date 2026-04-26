@@ -36,14 +36,14 @@ public class DemoServiceImpl implements DemoService {
 
     static {
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("In DemoServiceImpl.");
+            LOGGER.info("In DemoServiceImpl.<clinit>");
     }
 
     public DemoServiceImpl() {
         super();
 
         if (LOGGER.isInfoEnabled())
-            LOGGER.info("Initialized DemoServiceImpl.");
+            LOGGER.info("In DemoServiceImpl.<init>.");
     }
 
 

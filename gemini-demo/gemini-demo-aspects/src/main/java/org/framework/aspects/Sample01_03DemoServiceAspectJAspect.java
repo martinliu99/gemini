@@ -49,16 +49,17 @@ public class Sample01_03DemoServiceAspectJAspect {
     public static final int ADVICE_INDEX = 3;
 
 
-    @Pointcut("execution(* org.framework.demo.service.*Impl.process(org.framework.demo.api.Request))")
-    public void process() {}
+    @Pointcut("execution(* org.framework.demo.service.*Impl.process(org.framework.demo.api.Request)) && args(request)")
+    public void process(Request request) {}
 
-    @Before("process()")
-    public void before(MutableJoinpoint<Response, RuntimeException> joinpoint) throws Throwable {
+    @Pointcut("args(request)")
+    public void args(Request request) {}
+
+    // refer to named pointcut in current class
+    @Before(value = "process(request) ", argNames = "request")
+    public void before(MutableJoinpoint<Response<String>, RuntimeException> joinpoint, Request request) throws Throwable {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("Entering '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
-
-        // modify Request argument
-        Request request = (Request) joinpoint.getArguments()[0];
 
         List<String> input = new ArrayList<>(request.getInput());
         input.add(Sample01_03DemoServiceAspectJAspect.class.getSimpleName());
@@ -68,11 +69,20 @@ public class Sample01_03DemoServiceAspectJAspect {
     }
 
 
-    @AfterReturning(pointcut = "process()", returning="returning")
-    public Object after(MutableJoinpoint<Response, RuntimeException> joinpoint, Response<String> returning) throws Throwable {
+    // refer to named pointcut in another class
+    @AfterReturning(pointcut = "org.framework.aspects.Sample01_03DemoServiceAspectJAspect$CommonPointcuts.process()", returning="returning")
+    public Object after(MutableJoinpoint<Response<String>, RuntimeException> joinpoint, Response<String> returning) throws Throwable {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("Exited '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
 
         return true;
+    }
+
+
+    @Aspect
+    public static class CommonPointcuts {
+
+        @Pointcut("execution(* org.framework.demo.service.*Impl.process(org.framework.demo.api.Request))")
+        public void process() {}
     }
 }

@@ -17,21 +17,12 @@ package io.gemini.aop.factory.support;
 
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.gemini.aop.factory.support.AdviceSpec.AspectJAdviceSpec;
 import io.gemini.aop.matcher.ExprPointcut.PointcutParameterMatcher;
 import io.gemini.api.aop.Pointcut;
 import io.gemini.core.util.Assert;
-import io.gemini.core.util.ClassUtils;
-import io.gemini.core.util.MethodUtils;
-import net.bytebuddy.description.method.MethodDescription;
-import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
-import net.bytebuddy.description.type.TypeList;
-import net.bytebuddy.matcher.ElementMatcher;
 
 /**
  * Describes the pointcut specification for a {@link AdvisorSpec.PointcutAdvisorSpec}.
@@ -50,7 +41,7 @@ import net.bytebuddy.matcher.ElementMatcher;
  *
  * @author   martin.liu
  */
-public interface PointcutSpec extends ElementMatcher<MethodDescription> {
+public interface PointcutSpec {
 
     boolean DEFAULT_BREAK_CIRCULARITY = false;
 
@@ -67,29 +58,12 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
      */
     boolean isBreakCircularity();
 
-    /**
-     * Returns the {@link ElementMatcher} used to match target methods against this pointcut's
-     * advice method signature constraints (e.g. returning type and throwing type compatibility).
-     * <p>
-     * By default, implementations return {@code this} since {@link PointcutSpec} itself
-     * extends {@link ElementMatcher}.
-     * </p>
-     *
-     * @return the method matcher for this pointcut spec
-     */
-    ElementMatcher<MethodDescription> getAdviceMethodMatcher();
-
 
     /**
      * Abstract base providing returning/throwing type compatibility validation
      * against the target method's actual return and exception types.
      */
     abstract class AbstractBase implements PointcutSpec {
-
-        private static final Logger LOGGER = LoggerFactory.getLogger(PointcutSpec.class);
-
-        private static final Generic RUNTIME_EXCEPTION = TypeDefinition.Sort.describe(RuntimeException.class);
-
 
         private final AdviceSpec adviceSpec;
         private final boolean breakCircularity;
@@ -109,177 +83,6 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
          */
         public boolean isBreakCircularity() {
             return breakCircularity;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        public ElementMatcher<MethodDescription> getAdviceMethodMatcher() {
-            return this;
-        }
-
-
-        /**
-         * {@inheritDoc}
-         */
-        public boolean matches(MethodDescription targetMethod) {
-            // 1.verify returning and throwing with matched method
-            // verify returning type argument
-            Generic targetReturningType = targetMethod.isConstructor() 
-                    ? targetMethod.getDeclaringType().asGenericType() : targetMethod.getReturnType();
-
-            Generic parameterizedReturningType = getAdviceSpec().getParameterizedReturningType();
-            if (parameterizedReturningType != null 
-                    && matchesReturningType(targetMethod, true, targetReturningType, parameterizedReturningType) == false) {
-                return false;
-            }
-
-            // verify throwing type argument
-            Generic parameterizedThrowingType = getAdviceSpec().getParameterizedThrowingType();
-            if (parameterizedThrowingType != null
-                    && matchesThrowingType(targetMethod, true, parameterizedThrowingType) == false) {
-                return false;
-            }
-
-            return true;
-        }
-
-        protected boolean matchesReturningType(MethodDescription targetMethod, 
-                boolean parameterizedReturningType, Generic targetReturningType, Generic adviceReturningType) {
-            targetReturningType = TypeDefinition.Sort.NON_GENERIC == adviceReturningType.getSort() 
-                    || TypeDefinition.Sort.GENERIC_ARRAY == adviceReturningType.getSort()
-                    ? targetReturningType.asRawType() : targetReturningType;
-
-            String matchingReturningTypeMsg = parameterizedReturningType ? "ParameterizedReturning" : "AdviceReturning";
-
-            MethodDescription adviceMethod = getAdviceSpec().getAdviceMethod();
-
-            if (ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under target ClassLoader. \n"
-                            + "  DeclaringType: {} \n"
-                            + "  AdviceMethod: {} \n"
-                            + "    {}: {} {} \n",
-                            matchingReturningTypeMsg,
-                            getAdviceSpec().getDeclaringType(),
-                            MethodUtils.getMethodSignature(adviceMethod),
-                            matchingReturningTypeMsg, adviceReturningType.getVisibility(), adviceReturningType
-                    );
-
-                return false;
-            }
-
-            if (parameterizedReturningType == true) {
-                if (ClassUtils.equals(adviceReturningType, targetReturningType) == false) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored advice method with {} is different to target method's returning type. \n" 
-                                + "  DeclaringType: {} \n"
-                                + "  AdviceMethod: {} \n"
-                                + "    {}: {} \n"
-                                + "  TargetMethod: {} \n"
-                                + "    ActualReturning: {} \n",
-                                matchingReturningTypeMsg,
-                                getAdviceSpec().getDeclaringType(),
-                                MethodUtils.getMethodSignature(adviceMethod),
-                                matchingReturningTypeMsg, adviceReturningType, 
-                                MethodUtils.getMethodSignature(targetMethod),
-                                targetReturningType
-                        );
-
-                    return false;
-                }
-            } else {
-                if (ClassUtils.isAssignableFrom(adviceReturningType, targetReturningType) == false) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored advice method with {} is unassignable from target method's returning type. \n" 
-                                + "  DeclaringType: {} \n"
-                                + "  AdviceMethod: {} \n"
-                                + "    {}: {} \n"
-                                + "  TargetMethod: {} \n"
-                                + "    ActualReturning: {} \n",
-                                matchingReturningTypeMsg, 
-                                getAdviceSpec().getDeclaringType(),
-                                MethodUtils.getMethodSignature(adviceMethod),
-                                matchingReturningTypeMsg, adviceReturningType, 
-                                MethodUtils.getMethodSignature(targetMethod),
-                                targetReturningType
-                        );
-
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        protected boolean matchesThrowingType(MethodDescription targetMethod, 
-                boolean parameterizedThrowingType, Generic adviceThrowingType) {
-            String matchingThrowingTypeMsg = parameterizedThrowingType ? "ParameterizedThrowing" : "AdviceThrowing";
-
-            MethodDescription adviceMethod = getAdviceSpec().getAdviceMethod();
-
-            if (ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under target ClassLoader. \n"
-                            + "  DeclaringType: {} \n"
-                            + "  AdviceMethod: {} \n"
-                            + "    {}: {} {} \n",
-                            matchingThrowingTypeMsg,
-                            getAdviceSpec().getDeclaringType(),
-                            MethodUtils.getMethodSignature(adviceMethod),
-                            matchingThrowingTypeMsg, adviceThrowingType.getVisibility(), adviceThrowingType
-                    );
-
-                return false;
-            }
-
-            TypeList.Generic exceptionTypes = targetMethod.getExceptionTypes();
-            if (exceptionTypes.size() == 0) {
-                if (ClassUtils.equals(adviceThrowingType, RUNTIME_EXCEPTION) == false) {
-                    if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored advice method with non RuntimeException throwing type. \n" 
-                                + "  DeclaringType: {} \n"
-                                + "  AdviceMethod: {} \n"
-                                + "    {}: {} \n"
-                                + "  TargetMethod: {} \n"
-                                + "    ActualThrowing: RuntimeException \n",
-                                getAdviceSpec().getDeclaringType(),
-                                MethodUtils.getMethodSignature(adviceMethod),
-                                matchingThrowingTypeMsg, adviceThrowingType, 
-                                MethodUtils.getMethodSignature(targetMethod)
-                        );
-
-                    return false;
-                }
-                return true;
-            }
-
-            boolean matched = true;
-            for (Generic exceptionType : exceptionTypes) {
-                if (ClassUtils.isAssignableFrom(adviceThrowingType, exceptionType) == false) {
-                    matched = false;
-                    break;
-                }
-            }
-
-            if (matched == false) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored advice method with throwing type is unassignable from target method's all throwing types. \n"
-                            + "  DeclaringType: {} \n"
-                            + "  AdviceMethod: {} \n"
-                            + "    {}: {} \n"
-                            + "  TargetMethod: {} \n"
-                            + "    ActualThrowing: {} \n",
-                            getAdviceSpec().getDeclaringType(),
-                            MethodUtils.getMethodSignature(adviceMethod),
-                            matchingThrowingTypeMsg, adviceThrowingType, 
-                            MethodUtils.getMethodSignature(targetMethod),
-                            exceptionTypes
-                    );
-
-                return false;
-            }
-
-            return true;
         }
     }
 
@@ -366,9 +169,16 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
 
 
     /** 
-     * AspectJ pointcut spec that extends {@link ExprPointcutSpec} with parameter binding metadata. 
+     * AspectJ pointcut spec that extends {@link PointcutSpec} with parameter binding metadata. 
      */
-    interface AspectJPointcutSpec extends ExprPointcutSpec {
+    interface AspectJPointcutSpec extends PointcutSpec {
+
+        /**
+         * Returns the AspectJ pointcut expression string used to match target types and methods.
+         *
+         * @return the pointcut expression, never empty
+         */
+        String getPointcutExpression();
 
         /**
          * Returns the {@link TypeDescription} of the AspectJ advice class that declares this pointcut.
@@ -399,15 +209,29 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
          * Default {@link AspectJPointcutSpec} implementation that additionally validates
          * advice returning/throwing parameter types against the target method.
          */
-        class Default extends ExprPointcutSpec.Default implements AspectJPointcutSpec {
+        class Default extends PointcutSpec.AbstractBase implements AspectJPointcutSpec {
+
+            private final String pointcutExpression;
+
 
             public Default(AspectJAdviceSpec adviceSpec, boolean breakCircularity, 
                     String pointcutExpression) {
-                super(adviceSpec, breakCircularity, pointcutExpression);
+                super(adviceSpec, breakCircularity);
+
+                this.pointcutExpression = pointcutExpression;
             }
 
             protected AspectJAdviceSpec getAdviceSpec() {
                 return (AspectJAdviceSpec) super.getAdviceSpec();
+            }
+
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public String getPointcutExpression() {
+                return this.pointcutExpression;
             }
 
             /**
@@ -432,37 +256,6 @@ public interface PointcutSpec extends ElementMatcher<MethodDescription> {
             @Override
             public PointcutParameterMatcher getPointcutParameterMatcher() {
                 return getAdviceSpec();
-            }
-
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public boolean matches(MethodDescription targetMethod) {
-                if (super.matches(targetMethod) == false)
-                    return false;
-
-
-                // 1.verify returning and throwing with matched method
-                // verify returning type argument
-                Generic targetReturningType = targetMethod.isConstructor() 
-                        ? targetMethod.getDeclaringType().asGenericType() : targetMethod.getReturnType();
-
-                Generic adviceReturningParameterType = getAdviceSpec().getAdviceReturningParameterType();
-                if (adviceReturningParameterType != null
-                        && matchesReturningType(targetMethod, false, targetReturningType, adviceReturningParameterType) == false) {
-                    return false;
-                }
-
-                // verify throwing type argument
-                Generic adviceThrowingParameterType = getAdviceSpec().getAdviceThrowingParameterType();
-                if (adviceThrowingParameterType != null
-                        && matchesThrowingType(targetMethod, false, adviceThrowingParameterType) == false) {
-                    return false;
-                }
-
-                return true;
             }
         }
     }

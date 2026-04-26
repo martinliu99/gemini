@@ -75,8 +75,12 @@ public interface AdvisorCreator {
         private final List<? extends AdvisorCreator> advisorCreators;
 
         public Compound(FactoryContext factoryContext) {
-            List<? extends AdvisorCreator> advisorCreators = factoryContext.getObjectFactory().createObjectsImplementing(
-                    AdvisorCreator.class, true,"factoryContext", factoryContext);
+            List<? extends AdvisorCreator> advisorCreators = factoryContext.getObjectFactory()
+                    .createObjectsImplementing(
+                            AdvisorCreator.class, 
+                            false, 
+                            "factoryContext", factoryContext
+                    );
             this.advisorCreators = advisorCreators == null 
                     ? Collections.emptyList() : advisorCreators;
 
@@ -97,7 +101,7 @@ public interface AdvisorCreator {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not create Advisor via '{}'. \n"
                                 + "  Error reason: {} \n", 
-                                advisorCreator, 
+                                advisorCreator.getClass().getSimpleName(), 
                                 t.getMessage(), 
                                 t
                         );
@@ -123,7 +127,7 @@ public interface AdvisorCreator {
 
         public AbstractBase(FactoryContext factoryContext) {
             this.adviceCreator = new AdviceCreator.Compound(factoryContext);
-            this.pointcutCreator = new PointcutCreator.Compound(factoryContext);
+            this.pointcutCreator = new PointcutCreator.Compound(factoryContext, adviceCreator);
 
         }
 
@@ -136,15 +140,13 @@ public interface AdvisorCreator {
         }
 
 
-        protected abstract Class<? extends AdvisorSpec> doGetAdvisorSpecClass();
-
+        protected abstract boolean supports(AdvisorSpec advisorSpec);
 
         @Override
         @SuppressWarnings("unchecked")
         public Advisor create(AdvisorContext advisorContext, AdvisorSpec advisorSpec) {
             try {
-                Class<? extends AdvisorSpec> advisorSpecClass = doGetAdvisorSpecClass();
-                if (advisorSpecClass == null || advisorSpecClass.isAssignableFrom(advisorSpec.getClass()) == false)
+                if (advisorSpec == null || supports(advisorSpec) == false)
                     return null;
 
                 // 1.validate advisor condition
@@ -265,12 +267,13 @@ public interface AdvisorCreator {
             super(factoryContext);
         }
 
-        /**
+
+        /** 
          * {@inheritDoc}
          */
         @Override
-        protected Class<? extends AdvisorSpec> doGetAdvisorSpecClass() {
-            return PointcutAdvisorSpec.class;
+        protected boolean supports(AdvisorSpec advisorSpec) {
+            return PointcutAdvisorSpec.class.isAssignableFrom(advisorSpec.getClass());
         }
 
         /**
@@ -279,6 +282,8 @@ public interface AdvisorCreator {
         @Override
         protected Advisor doCreateAdvisor(AdvisorContext advisorContext, PointcutAdvisorSpec advisorSpec) {
             Pointcut pointcut = getPointcutCreator().create(advisorContext, advisorSpec);
+            if (pointcut == null)
+                return null;
 
             return new DefaultPointcutAdvisor(
                     advisorSpec, 

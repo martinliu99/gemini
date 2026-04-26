@@ -95,8 +95,12 @@ public interface PointcutSpecParser {
 
 
         public Compound(FactoryContext factoryContext) {
-            List<? extends PointcutSpecParser> pointcutSpecParsers = factoryContext.getObjectFactory().createObjectsImplementing(
-                    PointcutSpecParser.class, true, "factoryContext", factoryContext);
+            List<? extends PointcutSpecParser> pointcutSpecParsers = factoryContext.getObjectFactory()
+                    .createObjectsImplementing(
+                            PointcutSpecParser.class, 
+                            false, 
+                            "factoryContext", factoryContext
+                    );
             this.pointcutSpecParsers = pointcutSpecParsers == null 
                     ? Collections.emptyList() : pointcutSpecParsers;
 
@@ -119,7 +123,7 @@ public interface PointcutSpecParser {
                         LOGGER.warn("Could not parse PointcutSpec via '{}'. \n"
                                 + "  DeclaringType: {} \n"
                                 + "  Error reason: {} \n", 
-                                pointcutSpecParser, 
+                                pointcutSpecParser.getClass().getSimpleName(), 
                                 adviceSpec.getDeclaringType().getTypeName(),
                                 t.getMessage(), 
                                 t
@@ -170,10 +174,7 @@ public interface PointcutSpecParser {
      */
     abstract class AbstractBase<A extends AdviceSpec, P extends PointcutSpec> implements PointcutSpecParser {
 
-        protected abstract Class<? extends A> doGetAdviceSpecClass();
-
-        protected abstract Class<? extends P> doGetPointcutSpecClass();
-
+        protected abstract boolean supports(AdviceSpec adviceSpec);
 
         /** 
          * {@inheritDoc}
@@ -182,19 +183,17 @@ public interface PointcutSpecParser {
         @Override
         public PointcutSpec parse(FactoryContext factoryContext, AdviceSpec adviceSpec) {
             try {
-                Class<? extends A> adviceSpecClass = doGetAdviceSpecClass();
-                if (adviceSpecClass == null 
-                        || adviceSpecClass.isAssignableFrom(adviceSpec.getClass()) == false)
+                if (adviceSpec == null || supports(adviceSpec) == false)
                     return null;
 
                 return doParse(factoryContext, (A) adviceSpec);
             } catch(IllegalSpecException e) {
                 return null;
             } catch (Exception e) {
-                LOGGER.warn("Could not parse '{}'. \n"
+                LOGGER.warn("Could not parse PointcutSpec via '{}'. \n"
                         + "  DeclaringType: {} \n"
                         + "  Error reason: {} \n", 
-                        doGetPointcutSpecClass().getSimpleName(), 
+                        this.getClass().getSimpleName(), 
                         adviceSpec.getDeclaringType().getTypeName(), 
                         e.getMessage(),
                         e
@@ -221,21 +220,17 @@ public interface PointcutSpecParser {
         public PointcutSpec parse(FactoryContext factoryContext, String configKeyPrefix, AdviceSpec adviceSpec,
                 PointcutAdvisorSpec existingAdvisorSpec) {
             try {
-                Class<? extends A> adviceSpecClass = doGetAdviceSpecClass();
-                if (adviceSpecClass == null 
-                        || adviceSpecClass.isAssignableFrom(adviceSpec.getClass()) == false
-                        || (existingAdvisorSpec != null && existingAdvisorSpec.getAdviceSpec() != null
-                            && existingAdvisorSpec.getAdviceSpec().getClass() != adviceSpec.getClass()) )
+                if (adviceSpec == null || supports(adviceSpec) == false)
                     return null;
 
                 return doParse(factoryContext, configKeyPrefix, (A) adviceSpec, existingAdvisorSpec);
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Could not parse '{}'. \n"
+                    LOGGER.warn("Could not parse PointcutSpec via '{}'. \n"
                             + "  ConfigKeyPrefix: {} \n"
                             + "  DeclaringType: {} \n"
                             + "  Error reason: {} \n", 
-                            doGetPointcutSpecClass().getSimpleName(), 
+                            this.getClass().getSimpleName(), 
                             configKeyPrefix,
                             adviceSpec.getDeclaringType().getTypeName(), 
                             e.getMessage(), 
@@ -261,18 +256,9 @@ public interface PointcutSpecParser {
          * {@inheritDoc}
          */
         @Override
-        protected Class<? extends AdviceSpec> doGetAdviceSpecClass() {
-            return AdviceSpec.class;
+        protected boolean supports(AdviceSpec adviceSpec) {
+            return true;
         }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected Class<? extends PojoPointcutSpec> doGetPointcutSpecClass() {
-            return PojoPointcutSpec.class;
-        }
-
 
         /** 
          * {@inheritDoc}
@@ -322,18 +308,9 @@ public interface PointcutSpecParser {
          * {@inheritDoc}
          */
         @Override
-        protected Class<? extends AdviceSpec> doGetAdviceSpecClass() {
-            return AdviceSpec.class;
+        protected boolean supports(AdviceSpec adviceSpec) {
+            return true;
         }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected Class<? extends ExprPointcutSpec> doGetPointcutSpecClass() {
-            return ExprPointcutSpec.class;
-        }
-
 
         /** 
          * {@inheritDoc}
@@ -394,18 +371,9 @@ public interface PointcutSpecParser {
          * {@inheritDoc}
          */
         @Override
-        protected Class<? extends AspectJAdviceSpec> doGetAdviceSpecClass() {
-            return AspectJAdviceSpec.class;
+        protected boolean supports(AdviceSpec adviceSpec) {
+            return AspectJAdviceSpec.class.isAssignableFrom(adviceSpec.getClass());
         }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected Class<? extends AspectJPointcutSpec> doGetPointcutSpecClass() {
-            return AspectJPointcutSpec.class;
-        }
-
 
         /** 
          * {@inheritDoc}

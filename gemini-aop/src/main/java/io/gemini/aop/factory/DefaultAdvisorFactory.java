@@ -401,7 +401,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                         + "  ClassLoader: {} \n"
                         + "  Error reason: {} \n",
                         MethodUtils.getMethodSignature(targetMethod), 
-                        pointcutAdvisor, 
+                        pointcutAdvisor.getAdvisorName(), 
                         targetClassLoader, 
                         t.getMessage(), 
                         t

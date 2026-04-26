@@ -220,7 +220,7 @@ public class FactoryContext implements Closeable {
 
         String internalConfig = classLoader.getResource(FACTORY_INTERNAL_PROPERTIES) == null ? null : FACTORY_INTERNAL_PROPERTIES;
 
-        List<Converter> loadedConverters = objectFactory.createObjectsImplementing(Converter.class, true);
+        List<Converter> loadedConverters = objectFactory.createObjectsImplementing(Converter.class, false);
         List<Converter<?, ?>> converters = new ArrayList<>(loadedConverters.size());
         for (Converter<?, ?> converter : loadedConverters) 
             converters.add(converter);

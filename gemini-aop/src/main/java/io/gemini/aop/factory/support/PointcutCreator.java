@@ -81,9 +81,12 @@ public interface PointcutCreator {
         private final List<? extends PointcutCreator> pointcutCreators;
 
 
-        public Compound(FactoryContext factoryContext) {
+        public Compound(FactoryContext factoryContext, AdviceCreator adviceCreator) {
             List<? extends PointcutCreator> pointcutCreators = factoryContext.getObjectFactory()
-                    .createObjectsImplementing(PointcutCreator.class, true);
+                    .createObjectsImplementing(PointcutCreator.class, 
+                            false, 
+                            "adviceCreator", adviceCreator
+                    );
             this.pointcutCreators = pointcutCreators == null 
                     ? Collections.emptyList() : pointcutCreators;
 
@@ -106,7 +109,7 @@ public interface PointcutCreator {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not create Pointcut via '{}'. \n"
                                 + "  Error reason: {} \n", 
-                                pointcutCreator, 
+                                pointcutCreator.getClass().getSimpleName(), 
                                 t.getMessage(), 
                                 t
                         );
@@ -125,6 +128,18 @@ public interface PointcutCreator {
      */
     abstract class AbstractBase<PS extends PointcutSpec, P extends Pointcut> implements PointcutCreator {
 
+        private final AdviceCreator adviceCreator;
+
+
+        public AbstractBase(AdviceCreator adviceCreator) {
+            this.adviceCreator = adviceCreator;
+        }
+
+        protected AdviceCreator getAdviceCreator() {
+            return adviceCreator;
+        }
+
+
         /**
          * {@inheritDoc}
          */
@@ -133,6 +148,8 @@ public interface PointcutCreator {
         public Pointcut create(AdvisorContext advisorContext, PointcutAdvisorSpec advisorSpec) {
             Class<? extends PointcutSpec> pointcutSpecClass = doGetSpecClass();
             PointcutSpec pointcutSpec = advisorSpec.getPointcutSpec();
+            if (pointcutSpec == null)
+                System.out.println();
             if (pointcutSpecClass == null || pointcutSpecClass.isAssignableFrom(pointcutSpec.getClass()) == false)
                 return null;
 
@@ -144,7 +161,7 @@ public interface PointcutCreator {
                 throw e;
             } catch (ExprParser.ExprParseException e) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored AdvisorSpec with unparsable AspectJExprPointcut. \n"
+                    LOGGER.warn("Ignored AdvisorSpec with unparsable PointcutExpression. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  PointcutExpression: {} \n"
                             + "  ClassLoader: {} \n"
@@ -158,7 +175,7 @@ public interface PointcutCreator {
                 throw new IllegalSpecException();
             } catch (ExprParser.ExprLintException e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
-                    LOGGER.warn("Ignored AdvisorSpec with lint AspectJExprPointcut. \n"
+                    LOGGER.warn("Ignored AdvisorSpec with lint PointcutExpression. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  PointcutExpression: {} \n"
                             + "  ClassLoader: {} \n"
@@ -172,7 +189,7 @@ public interface PointcutCreator {
             } catch (ExprParser.ExprUnknownException e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     Throwable cause = e.getCause();
-                    LOGGER.warn("Ignored AdvisorSpec with illegal AspectJExprPointcut. \n"
+                    LOGGER.warn("Ignored AdvisorSpec with illegal PointcutExpression. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  PointcutExpression: {} \n"
                             + "  ClassLoader: {} \n"
@@ -186,7 +203,7 @@ public interface PointcutCreator {
                 }
             } catch (Exception e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
-                    LOGGER.warn("Ignored AdvisorSpec with illegal AspectJExprPointcut. \n"
+                    LOGGER.warn("Ignored AdvisorSpec with illegal PointcutExpression. \n"
                             + "  AdvisorSpec: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -203,7 +220,7 @@ public interface PointcutCreator {
 
 
             // 2.decorate Pointcut
-            Pointcut pointcut = doDecoratePointcut(advisorContext, (PS) pointcutSpec, originPointcut);
+            Pointcut pointcut = doDecoratePointcut(advisorContext, advisorSpec, (PS) pointcutSpec, originPointcut);
 
 
             // 3.validate Pointcut
@@ -232,11 +249,15 @@ public interface PointcutCreator {
 
         protected abstract P doCreatePointcut(AdvisorContext advisorContext, PS pointcutSpec);
 
-        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, PS pointcutSpec, P pointcut) {
+        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, PointcutAdvisorSpec advisorSpec, 
+                PS pointcutSpec, P pointcut) {
             ElementMatcher<MethodDescription> methodMatcher = pointcut.getMethodMatcher();
-            if (pointcutSpec.getAdviceMethodMatcher() != null)
+            ElementMatcher<MethodDescription> adviceMethodMatcher = adviceCreator
+                    .createAdviceMatcher(advisorContext, advisorSpec);
+            if (adviceMethodMatcher != null)
+                // match [methodMatcher, adviceMethodMatcher] sequentially
                 methodMatcher = new ElementMatcher.Junction.Conjunction<MethodDescription>(
-                        methodMatcher, pointcutSpec.getAdviceMethodMatcher());
+                        methodMatcher, adviceMethodMatcher );
 
             return new Pointcut.Default( 
                     pointcut.getTypeMatcher(), methodMatcher);
@@ -253,6 +274,10 @@ public interface PointcutCreator {
      * {@link io.gemini.aop.factory.support.PointcutSpec.PojoPointcutSpec}.
      */
     class PojoPointcutCreator extends AbstractBase<PojoPointcutSpec, Pointcut> {
+
+        public PojoPointcutCreator(AdviceCreator adviceCreator) {
+            super(adviceCreator);
+        }
 
         /**
          * {@inheritDoc}
@@ -278,6 +303,10 @@ public interface PointcutCreator {
      * {@link io.gemini.aop.factory.support.PointcutSpec.ExprPointcutSpec} expression string.
      */
     class ExprPointcutCreator extends AbstractBase<ExprPointcutSpec, Pointcut> {
+
+        public ExprPointcutCreator(AdviceCreator adviceCreator) {
+            super(adviceCreator);
+        }
 
         /**
          * {@inheritDoc}
@@ -312,6 +341,10 @@ public interface PointcutCreator {
      */
     class AspectJPointcutCreator extends AbstractBase<AspectJPointcutSpec, ExprPointcut> {
 
+        public AspectJPointcutCreator(AdviceCreator adviceCreator) {
+            super(adviceCreator);
+        }
+
         /**
          * {@inheritDoc}
          */
@@ -344,11 +377,13 @@ public interface PointcutCreator {
          * {@inheritDoc}
          */
         @Override
-        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, 
+        protected Pointcut doDecoratePointcut(AdvisorContext advisorContext, PointcutAdvisorSpec advisorSpec, 
                 AspectJPointcutSpec pointcutSpec, ExprPointcut pointcut) {
             ElementMatcher<MethodDescription> methodMatcher = pointcut.getMethodMatcher();
-            ElementMatcher<MethodDescription> adviceMethodMatcher = pointcutSpec.getAdviceMethodMatcher();
+            ElementMatcher<MethodDescription> adviceMethodMatcher = getAdviceCreator()
+                    .createAdviceMatcher(advisorContext, advisorSpec);
             if (adviceMethodMatcher != null)
+                // match [methodMatcher, adviceMethodMatcher] sequentially
                 methodMatcher = new ElementMatcher.Junction.Conjunction<MethodDescription>(
                         new ElementMatcher<MethodDescription>() {
                             @Override

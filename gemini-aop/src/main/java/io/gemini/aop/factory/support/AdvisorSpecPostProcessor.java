@@ -82,7 +82,10 @@ public interface AdvisorSpecPostProcessor {
         public Compound(FactoryContext factoryContext) {
             List<? extends AdvisorSpecPostProcessor> advisorSpecPostProcessors = factoryContext.getObjectFactory()
                     .createObjectsImplementing(
-                            AdvisorSpecPostProcessor.class, true, "factoryContext", factoryContext);
+                            AdvisorSpecPostProcessor.class, 
+                            false, 
+                            "factoryContext", factoryContext
+                    );
             this.advisorSpecPostProcessors = advisorSpecPostProcessors == null 
                     ? Collections.emptyList() : advisorSpecPostProcessors;
 
@@ -114,7 +117,7 @@ public interface AdvisorSpecPostProcessor {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not post-process loaded AdvisorSpecs via '{}', \n"
                                 + "  Error reason: {} \n",
-                                advisorSpecPostProcessor, 
+                                advisorSpecPostProcessor.getClass().getSimpleName(), 
                                 t.getMessage(), 
                                 t
                         );
@@ -201,8 +204,12 @@ public interface AdvisorSpecPostProcessor {
 
                 AdviceSpec adviceSpec = adviceSpecParser.parse(factoryContext, configKeyPrefix, 
                         existingAdvisorSpec == null ? null : existingAdvisorSpec.getAdviceSpec());
+                if (adviceSpec == null)
+                    return null;
 
                 PointcutSpec pointcutSpec = pointcutSpecParser.parse(factoryContext, configKeyPrefix, adviceSpec, existingAdvisorSpec);
+                if (pointcutSpec == null)
+                    return null;
 
                 // overwrite configuration properties if exists
                 advisorName = StringUtils.hasText(advisorName) 

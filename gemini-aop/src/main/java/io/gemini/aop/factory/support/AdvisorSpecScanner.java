@@ -46,6 +46,7 @@ import io.gemini.core.util.Throwables;
 import io.github.classgraph.ClassInfo;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
+import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
@@ -84,8 +85,12 @@ public interface AdvisorSpecScanner {
         private final List<? extends AdvisorSpecScanner> advisorSpecScanners;
 
         public Compound(FactoryContext factoryContext) {
-            this.advisorSpecScanners = factoryContext.getObjectFactory().createObjectsImplementing(
-                    AdvisorSpecScanner.class, true, "factoryContext", factoryContext);
+            this.advisorSpecScanners = factoryContext.getObjectFactory()
+                    .createObjectsImplementing(
+                            AdvisorSpecScanner.class, 
+                            false, 
+                            "factoryContext", factoryContext
+                    );
         }
 
         /**
@@ -116,7 +121,7 @@ public interface AdvisorSpecScanner {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not scan AdvisorSpec via '{}'. \n"
                                 + "  Error reason: {} \n", 
-                                advisorSpecScanner, 
+                                advisorSpecScanner.getClass().getSimpleName(), 
                                 t.getMessage(), 
                                 t
                         );
@@ -189,12 +194,19 @@ public interface AdvisorSpecScanner {
             implements AdvisorSpecScanner {
 
         private final FactoryContext factoryContext;
-        private String resolverName;
+        private final String scannerName;
+
+        private final AdviceSpecParser adviceSpecParser;
+        private final PointcutSpecParser pointcutSpecParser;
 
 
-        public AbstractBase(FactoryContext factoryContext) {
+        public AbstractBase(FactoryContext factoryContext, AdviceSpecParser adviceSpecParser,
+                PointcutSpecParser pointcutSpecParser) {
             this.factoryContext = factoryContext;
-            this.resolverName = this.getClass().getName();
+            this.scannerName = this.getClass().getName();
+
+            this.adviceSpecParser = adviceSpecParser;
+            this.pointcutSpecParser = pointcutSpecParser;
         }
 
 
@@ -202,12 +214,20 @@ public interface AdvisorSpecScanner {
             return factoryContext;
         }
 
-        public String getResolverName() {
-            return resolverName;
+        protected static AdviceSpecParser createAdviceSpecParser(FactoryContext factoryContext) {
+            return new AdviceSpecParser.Compound(factoryContext);
         }
 
-        protected AdviceSpecParser createAdviceSpecParser() {
-            return new AdviceSpecParser.Compound(factoryContext);
+        protected AdviceSpecParser getAdviceSpecParser() {
+            return adviceSpecParser;
+        }
+
+        protected static PointcutSpecParser createPointcutSpecParser(FactoryContext factoryContext) {
+            return new PointcutSpecParser.Compound(factoryContext);
+        }
+
+        protected PointcutSpecParser getPointcutSpecParser() {
+            return pointcutSpecParser;
         }
 
         /**
@@ -253,9 +273,9 @@ public interface AdvisorSpecScanner {
 
                 if (LOGGER.isInfoEnabled() && factoryContext.getAopContext().getDiagnosticLevel().isDebugEnabled()) {
                     if (CollectionUtils.isEmpty(advisorSpecs)) {
-                        LOGGER.info("Did not find AdvisorSpec via '{}'.", resolverName);
+                        LOGGER.info("Did not find AdvisorSpec via '{}'.", scannerName);
                     } else {
-                        LOGGER.info("Found {} AdvisorSpecs via '{}'. ", advisorSpecs.size(), resolverName);
+                        LOGGER.info("Found {} AdvisorSpecs via '{}'. ", advisorSpecs.size(), scannerName);
                     }
                 }
 
@@ -264,7 +284,7 @@ public interface AdvisorSpecScanner {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not scan AdvisorSpec via '{}'."
                             + "  Error reason: {} \n", 
-                            resolverName, 
+                            scannerName, 
                             e.getMessage(),
                             e
                     );
@@ -285,6 +305,7 @@ public interface AdvisorSpecScanner {
 
                 AnnotationList annotations = decalringType.getDeclaredAnnotations();
 
+                // parse advisor name
                 String advisorName = null;
                 AnnotationDescription advisorNameAnnotation = annotations.ofType(AdvisorName.class);
                 if (advisorNameAnnotation != null)
@@ -292,12 +313,15 @@ public interface AdvisorSpecScanner {
                 if (StringUtils.hasText(advisorName) == false)
                     advisorName = adviceClassName;
 
+                // parse Condition
                 ElementMatcher<MatchingContext> condition = doParseCondition(factoryContext, annotations);
 
+                // parse AdviceSpec
                 AdviceSpec adviceSpec = doParseAdviceSpec(factoryContext, advisorName, decalringType);
                 if (adviceSpec == null)
                     return null;
 
+                // parse PointcutSpec
                 PointcutSpec pointcutSpec = doParsePointcutSpecs(factoryContext, adviceSpec);
                 if (pointcutSpec == null)
                     return null;
@@ -335,13 +359,11 @@ public interface AdvisorSpecScanner {
 
         protected AdviceSpec doParseAdviceSpec(FactoryContext factoryContext, 
                 String advisorName, TypeDescription adviceType) {
-            Collection<? extends AdviceSpec> adviceSpecs = doGetAdviceSpecParser().parse(factoryContext, adviceType);
+            Collection<? extends AdviceSpec> adviceSpecs = getAdviceSpecParser().parse(factoryContext, adviceType);
             if (CollectionUtils.isEmpty(adviceSpecs))
                 return null;
             return adviceSpecs.iterator().next();
         }
-
-        protected abstract AdviceSpecParser doGetAdviceSpecParser();
 
         protected PointcutSpec doParsePointcutSpecs(FactoryContext factoryContext, AdviceSpec adviceSpec) {
             return null;
@@ -355,15 +377,8 @@ public interface AdvisorSpecScanner {
      */
     public class ForAtPojoPointcut extends AbstractBase {
 
-        private final AdviceSpecParser adviceSpecParser;
-        private final PointcutSpecParser.ForPojoPointcut pojoPointcutParser;
-
-
         public ForAtPojoPointcut(FactoryContext factoryContext) {
-            super(factoryContext);
-
-            this.adviceSpecParser = createAdviceSpecParser();
-            this.pojoPointcutParser = new PointcutSpecParser.ForPojoPointcut();
+            super(factoryContext, createAdviceSpecParser(factoryContext), new PointcutSpecParser.ForPojoPointcut());
         }
 
         /**
@@ -386,16 +401,8 @@ public interface AdvisorSpecScanner {
          * {@inheritDoc}
          */
         @Override
-        protected AdviceSpecParser doGetAdviceSpecParser() {
-            return adviceSpecParser;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
         protected PointcutSpec doParsePointcutSpecs(FactoryContext factoryContext, AdviceSpec adviceSpec) {
-            return pojoPointcutParser.parse(factoryContext, adviceSpec);
+            return getPointcutSpecParser().parse(factoryContext, adviceSpec);
         }
     }
 
@@ -406,15 +413,8 @@ public interface AdvisorSpecScanner {
      */
     public class ForAtExprPointcut extends AbstractBase {
 
-        private final AdviceSpecParser adviceSpecParser;
-        private final PointcutSpecParser.ForExprPointcut exprPointcutParser;
-
-
         public ForAtExprPointcut(FactoryContext factoryContext) {
-            super(factoryContext);
-
-            this.adviceSpecParser = createAdviceSpecParser();
-            this.exprPointcutParser = new PointcutSpecParser.ForExprPointcut();
+            super(factoryContext, createAdviceSpecParser(factoryContext), new PointcutSpecParser.ForExprPointcut());
         }
 
         /**
@@ -437,16 +437,8 @@ public interface AdvisorSpecScanner {
          * {@inheritDoc}
          */
         @Override
-        protected AdviceSpecParser doGetAdviceSpecParser() {
-            return adviceSpecParser;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
         protected PointcutSpec doParsePointcutSpecs(FactoryContext factoryContext, AdviceSpec adviceSpec) {
-            return exprPointcutParser.parse(factoryContext, adviceSpec);
+            return getPointcutSpecParser().parse(factoryContext, adviceSpec);
         }
     }
 
@@ -457,15 +449,8 @@ public interface AdvisorSpecScanner {
      */
     public class ForAspectJPointcutAdvisor extends AbstractBase {
 
-        private final AdviceSpecParser adviceSpecParser;
-        private final PointcutSpecParser.ForAspectJPointcut aspectJPointcut;
-
-
         public ForAspectJPointcutAdvisor(FactoryContext factoryContext) {
-            super(factoryContext);
-
-            this.adviceSpecParser = createAdviceSpecParser();
-            this.aspectJPointcut = new PointcutSpecParser.ForAspectJPointcut();
+            super(factoryContext, createAdviceSpecParser(factoryContext), new PointcutSpecParser.ForAspectJPointcut());
         }
 
 
@@ -497,7 +482,7 @@ public interface AdvisorSpecScanner {
                 if (adviceType == null) 
                     return null;
 
-                Collection<? extends AdviceSpec> adviceSpecs = doGetAdviceSpecParser().parse(factoryContext, adviceType);
+                Collection<? extends AdviceSpec> adviceSpecs = getAdviceSpecParser().parse(factoryContext, adviceType);
                 if (CollectionUtils.isEmpty(adviceSpecs))
                     return null;
 
@@ -510,11 +495,12 @@ public interface AdvisorSpecScanner {
 
                 List<PointcutAdvisorSpec> pointcutAdvisorSpecs = new ArrayList<>(adviceSpecs.size());
                 for (AdviceSpec adviceSpec : adviceSpecs) {
+                    AspectJAdviceSpec aspectJAdviceSpec = (AspectJAdviceSpec) adviceSpec;
+                    MethodDescription adviceMethod = aspectJAdviceSpec.getAdviceMethod();
                     try {
-                        AspectJAdviceSpec aspectJAdviceSpec = (AspectJAdviceSpec) adviceSpec;
+                        AnnotationList adviceMethodAnnotations = adviceMethod.getDeclaredAnnotations();
 
-                        AnnotationList adviceMethodAnnotations = aspectJAdviceSpec.getAdviceMethod().getDeclaredAnnotations();
-
+                        // parse advisor name
                         AnnotationDescription advisorNameAnnotation = adviceMethodAnnotations.ofType(AdvisorName.class);
                         if (advisorNameAnnotation == null)
                             advisorNameAnnotation = typeAdvisorNameAnnotation;
@@ -547,7 +533,9 @@ public interface AdvisorSpecScanner {
                         if (orderAnnotation != null)
                             order = orderAnnotation.getValue("value").resolve(Integer.class);
 
-                        PointcutSpec pointcutSpec = aspectJPointcut.parse(factoryContext, aspectJAdviceSpec);
+                        PointcutSpec pointcutSpec = getPointcutSpecParser().parse(factoryContext, aspectJAdviceSpec);
+                        if (pointcutSpec == null)
+                            continue;
 
                         PointcutAdvisorSpec pointcutAdvisorSpec = new PointcutAdvisorSpec.Default(
                                 advisorName, condition, 
@@ -562,7 +550,8 @@ public interface AdvisorSpecScanner {
                                     + "  AdviceMethod: {} \n" 
                                     + "  Error reason: {} \n", 
                                     adviceSpec.getDeclaringType().getTypeName(), 
-                                    MethodUtils.getMethodSignature(adviceSpec.getAdviceMethod()),
+                                    MethodUtils.getMethodSignature(adviceMethod),
+                                    null,
                                     e.getMessage(),
                                     e
                             );
@@ -584,14 +573,6 @@ public interface AdvisorSpecScanner {
 
                 return null;
             }
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected AdviceSpecParser doGetAdviceSpecParser() {
-            return adviceSpecParser;
         }
     }
 }

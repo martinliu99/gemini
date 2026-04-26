@@ -43,10 +43,10 @@ import io.gemini.aop.weaver.WeaverContext;
 import io.gemini.aop.weaver.advice.CircularityBreakerCodeGenerator;
 import io.gemini.aop.weaver.advice.DescriptorOffset;
 import io.gemini.api.annotation.NoScanning;
-import io.gemini.api.aop.AopException;
 import io.gemini.core.OrderComparator;
 import io.gemini.core.Ordered;
 import io.gemini.core.classloader.ThreadContext;
+import io.gemini.core.object.ObjectFactory.ObjectsException;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
 import io.gemini.core.util.MethodUtils;
@@ -112,7 +112,7 @@ public interface PointcutAdvisorWeaver {
 
             List<? extends PointcutAdvisorWeaver> advisorWeavers = aopWeaver.getWeaverContext().getAopContext().getObjectFactory()
                     .createObjectsImplementing(PointcutAdvisorWeaver.class, 
-                            true, 
+                            false, 
                             "aopWeaver", aopWeaver, 
                             "loadedType", loadedType,
                             "targetMethod", targetMethod, 
@@ -176,7 +176,7 @@ public interface PointcutAdvisorWeaver {
 
             this.pointcutAdvisors = resolveAdvisors(advisors);
             if (CollectionUtils.isEmpty(this.pointcutAdvisors))
-                throw new IgnoredWeaverException();
+                throw new ObjectsException.SkippedObjectCreationException();
         }
 
         private List<? extends PointcutAdvisor> resolveAdvisors(List<? extends Advisor> advisors) {
@@ -242,19 +242,6 @@ public interface PointcutAdvisorWeaver {
         }
 
         protected abstract Builder<?> doWeave(Builder<?> builder, Object... arguments);
-    }
-
-
-    /**
-     * Thrown internally when a weaver has no candidate advisors and should be silently skipped.
-     */
-    class IgnoredWeaverException extends AopException {
-
-        public IgnoredWeaverException() {
-            super("");
-        }
-
-        private static final long serialVersionUID = -5947928415690884829L;
     }
 
 

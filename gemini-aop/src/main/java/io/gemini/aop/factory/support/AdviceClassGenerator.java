@@ -104,27 +104,13 @@ enum AdviceClassGenerator {
         // 1.define class
         // prepare parent interfaces
         List<TypeDefinition> implementTypeDefinitions = new ArrayList<>(2);
-        Generic parameterizedReturningType = adviceSpec.getParameterizedReturningType();
-        Generic parameterizedThrowingType = adviceSpec.getParameterizedThrowingType();
-        if (parameterizedReturningType != null) {
-            if (adviceKind.isAround() == true) {
-                implementTypeDefinitions.add(
-                        TypeDescription.Generic.Builder.parameterizedType(AROUND_ADVICE_TYPE, parameterizedReturningType, parameterizedThrowingType).build() );
-            } else if (adviceKind.isBefore() == true) {
-                implementTypeDefinitions.add(
-                        TypeDescription.Generic.Builder.parameterizedType(BEFORE_ADVICE_TYPE, parameterizedReturningType, parameterizedThrowingType).build() );
-            } else {
-                implementTypeDefinitions.add(
-                        TypeDescription.Generic.Builder.parameterizedType(AFTER_ADVICE_TYPE, parameterizedReturningType, parameterizedThrowingType).build() );
-            }
+
+        if (adviceKind.isAround() == true) {
+            implementTypeDefinitions.add(AROUND_ADVICE_TYPE);
+        } else if (adviceKind.isBefore() == true) {
+            implementTypeDefinitions.add(BEFORE_ADVICE_TYPE);
         } else {
-            if (adviceKind.isAround() == true) {
-                implementTypeDefinitions.add(AROUND_ADVICE_TYPE);
-            } else if (adviceKind.isBefore() == true) {
-                implementTypeDefinitions.add(BEFORE_ADVICE_TYPE);
-            } else {
-                implementTypeDefinitions.add(AFTER_ADVICE_TYPE);
-            }
+            implementTypeDefinitions.add(AFTER_ADVICE_TYPE);
         }
 
         TypeDescription adviceType = adviceSpec.getDeclaringType();
@@ -166,12 +152,7 @@ enum AdviceClassGenerator {
                 : (adviceKind.isBefore() ? BEFORE_ADVICE_METHOD_NAME : AFTER_ADVICE_METHOD_NAME);
         builder = builder
                 .defineMethod(methodName, void.class, Modifier.PUBLIC)
-                .withParameter(
-                        parameterizedReturningType != null
-                            ? TypeDescription.Generic.Builder.parameterizedType(MUTABLE_JOINPOINT_TYPE, parameterizedReturningType, parameterizedThrowingType).build()
-                            : MUTABLE_JOINPOINT_TYPE, 
-                        "joinpoint"
-                )
+                .withParameter(MUTABLE_JOINPOINT_TYPE, "joinpoint")
         .throwing(Throwable.class)
         .intercept( new AspectJAdviceMethodImplementation(adviceSpec) )
         ;

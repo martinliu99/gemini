@@ -71,7 +71,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
     Log4j2LoggingSystem(String configLocation, ConfigView configView, DiagnosticLevel diagnosticLevel) {
         this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
 
-        this.configSource =  new ConfigViewAdapter(configView, diagnosticLevel.isDebugEnabled());
+        this.configSource =  new ConfigViewAdapter(configView, this.diagnosticLevel.isDebugEnabled());
 
 
         if (StringUtils.hasText(configLocation))

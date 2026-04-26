@@ -79,7 +79,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
     public LogbackLoggingSystem(String configLocation, ConfigView configView, DiagnosticLevel diagnosticLevel) {
         this.diagnosticLevel = diagnosticLevel == null ? DiagnosticLevel.DISABLED : diagnosticLevel;
 
-        this.loggerSettings= fetchLoggerSettings(diagnosticLevel, configView);
+        this.loggerSettings= fetchLoggerSettings(this.diagnosticLevel, configView);
 
         if (StringUtils.hasText(configLocation))
             this.configLocation = configLocation;

@@ -102,4 +102,15 @@ public abstract class Throwables {
         return cause != null ? cause : t;
     }
 
+
+    public static Throwable findCause(Throwable t) {
+        while (t != null) {
+            if (t.getCause() != null)
+                t = t.getCause();
+            else
+                return t;
+        }
+
+        return null;
+    }
 }

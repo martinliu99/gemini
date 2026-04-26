@@ -123,13 +123,13 @@ public interface ObjectFactory extends Closeable {
      * as discovered by the class scanner.
      *
      * @param clazz            the base class or interface
-     * @param ignoredException whether to silently skip classes that fail to instantiate
+     * @param throwException   whether to throw exception when fail to instantiate class
      * @param arguments        optional constructor arguments
      * @param <T>              the base type
      * @return list of created instances
      * @throws ObjectsException if instantiation fails and {@code ignoredException} is {@code false}
      */
-    <T> List<T> createObjectsImplementing(Class<T> clazz, boolean ignoredException, Object... arguments) throws ObjectsException;
+    <T> List<T> createObjectsImplementing(Class<T> clazz, boolean throwException, Object... arguments) throws ObjectsException;
 
 
     /**
@@ -143,7 +143,7 @@ public interface ObjectFactory extends Closeable {
     /**
      * Exception thrown when an object cannot be created or loaded by the factory.
      */
-    public class ObjectsException extends BaseException {
+    class ObjectsException extends BaseException {
 
         private static final long serialVersionUID = 7286124443140436785L;
 
@@ -173,6 +173,23 @@ public interface ObjectFactory extends Closeable {
          */
         public ObjectsException(String message, Throwable t) {
             super(message, t);
+        }
+
+
+        /**
+         * Exception thrown to mark an object creation should be silently skipped.
+         *
+         */
+        public static class SkippedObjectCreationException extends ObjectsException {
+
+            private static final long serialVersionUID = 82897166217406631L;
+
+            /**
+             * @param message
+             */
+            public SkippedObjectCreationException() {
+                super("");
+            }
         }
     }
 
@@ -357,7 +374,7 @@ public interface ObjectFactory extends Closeable {
             try {
                 return doInstantiateObject(clazz, candidateConstructor, invocationArgs);
             } catch (Exception e) {
-                throw new ObjectsException("Cannot instantiate class [" + clazz.getName() + "]", e);
+                throw new ObjectsException("Could not instantiate class [" + clazz.getName() + "]", e);
             }
         }
 
@@ -366,7 +383,7 @@ public interface ObjectFactory extends Closeable {
          * {@inheritDoc}
          */
         @Override
-        public <T> List<T> createObjectsImplementing(Class<T> baseClass, boolean ignoredException,
+        public <T> List<T> createObjectsImplementing(Class<T> baseClass, boolean throwException,
                 Object... arguments) throws ObjectsException {
             Assert.notNull(baseClass, "'baseClass' must not be null.'");
             Map<String, Object> args = CollectionUtils.of(String.class, arguments);
@@ -384,9 +401,15 @@ public interface ObjectFactory extends Closeable {
                             ? doCreateObject(canidateType)
                             : createObjectInternal(canidateType, args)
                     );
+                } catch (ObjectsException.SkippedObjectCreationException skipped) {
                 } catch (ObjectsException e) {
-                    if (ignoredException == false)
+                    if (throwException)
                         throw e;
+                    else {
+                        Throwable cause = Throwables.findCause(e);
+                        if (LOGGER.isWarnEnabled() && cause instanceof ObjectsException.SkippedObjectCreationException == false)
+                            LOGGER.warn("Could not instantiate class {}.", className, e);
+                    }
                 }
             }
 

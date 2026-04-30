@@ -91,15 +91,15 @@
 
 
         <!-- plugin settings -->
-        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
         <java.version>8</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+
+        <error-prone.settings>-Xplugin:ErrorProne -Xep:NullAway:WARN -XepOpt:NullAway:AnnotatedPackages=io.gemini1</error-prone.settings>
 
         <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
         <spotbugs-maven-plugin.version>4.8.6.7</spotbugs-maven-plugin.version>
@@ -217,6 +217,12 @@
                 <artifactId>jspecify</artifactId>
                 <version>${jspecify.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.uber.nullaway</groupId>
+                <artifactId>nullaway</artifactId>
+                <version>0.13.4</version>
+                <scope>provided</scope>
+            </dependency>
 
             <dependency>
                 <groupId>net.bytebuddy</groupId>
@@ -313,13 +319,12 @@
                     <configuration>
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
-                        <release>${maven.compiler.release}</release>
+<!--                        <release>${maven.compiler.release}</release>-->
                         <encoding>${project.build.sourceEncoding}</encoding>
-                        <proc>none</proc>
-                        <compilerArgument>-parameters</compilerArgument>
-                        <showWarnings>true</showWarnings>
+<!--                        <proc>none</proc>-->
                     </configuration>
                 </plugin>
+
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -456,7 +461,8 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-antrun-plugin</artifactId>
                     <version>${maven-antrun-plugin.version}</version>
-                    <inherited>false</inherited>            <!-- submodule does not inherit this task! -->
+                    <!-- submodule does not inherit this task! -->
+                    <inherited>false</inherited>
                     <executions>
                         <execution>
                             <id>package</id>
@@ -673,6 +679,128 @@
             </plugin>
         </plugins>
     </build>
+
+
+    <profiles>
+        <profile>
+            <id>error-prone-jdk8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <source>1.8</source>
+                            <target>1.8</target>
+                            <fork>true</fork>
+<!--                            <verbose>true</verbose>-->
+                            <showWarnings>true</showWarnings>
+                            <showDeprecation>true</showDeprecation>
+                            <compilerArgs>
+                                <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/9+181-r4173-1/javac-9+181-r4173-1.jar</arg>
+                                <arg>-J-Dfile.encoding=UTF-8</arg>
+                                <arg>-J-Dsun.stdout.encoding=UTF-8</arg>
+                                <arg>-J-Dsun.stderr.encoding=UTF-8</arg>
+                                <arg>-J-Dstdout.encoding=UTF-8</arg>
+                                <arg>-J-Dstderr.encoding=UTF-8</arg>
+<!--                                <arg>-verbose</arg>-->
+                                <arg>-parameters</arg>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>${error-prone.settings}</arg>
+                            </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>com.google.errorprone</groupId>
+                                    <artifactId>error_prone_core</artifactId>
+                                    <version>2.10.0</version>
+                                </path>
+                                <path>
+                                    <groupId>com.uber.nullaway</groupId>
+                                    <artifactId>nullaway</artifactId>
+                                    <version>0.10.26</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                      <dependencies>
+                        <dependency>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>javac</artifactId>
+                            <version>9+181-r4173-1</version>
+                        </dependency>
+                      </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>error-prone-jdk17</id>
+            <activation>
+                <jdk>[17, )</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>${java.version}</maven.compiler.release>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <release>${maven.compiler.release}</release>
+                            <encoding>${project.build.sourceEncoding}</encoding>
+    <!--                        <proc>none</proc>-->
+                            <fork>true</fork>
+<!--                            <verbose>true</verbose>-->
+                            <showWarnings>true</showWarnings>
+                            <showDeprecation>true</showDeprecation>
+                            <compilerArgs>
+                                <arg>-J-Dfile.encoding=UTF-8</arg>
+                                <arg>-J-Dsun.stdout.encoding=UTF-8</arg>
+                                <arg>-J-Dsun.stderr.encoding=UTF-8</arg>
+                                <arg>-J-Dstdout.encoding=UTF-8</arg>
+                                <arg>-J-Dstderr.encoding=UTF-8</arg>
+                                <arg>-J--add-exports=java.base/jdk.internal.javac=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                                <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+<!--                                <arg>-verbose</arg>-->
+                                <arg>-parameters</arg>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>--should-stop=ifError=FLOW</arg>
+                                <arg> -XDaddTypeAnnotationsToSymbol=true</arg>
+                                <arg>${error-prone.settings} -XepOpt:NullAway:UseJSpecifyMode=true -Xep:AssignmentExpression:OFF</arg>
+<!--                                <arg>-XepOpt:NullAway:OnlyNullMarked=true</arg>-->
+                            </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>com.google.errorprone</groupId>
+                                    <artifactId>error_prone_core</artifactId>
+                                    <version>2.42.0</version>
+                                </path>
+                                <path>
+                                    <groupId>com.uber.nullaway</groupId>
+                                    <artifactId>nullaway</artifactId>
+                                    <version>0.13.4</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 
     <repositories>

@@ -30,10 +30,10 @@ import java.lang.annotation.Target;
  * which joinpoints the advice applies to.
  * </p>
  *
- * <pre>{@code
- * @ExprPointcut(pointcutExpression = "execution(* com.example.service.*.*(..))")
- * public class MyAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> { ... }
- * }</pre>
+ * <pre>{@literal
+ * @}ExprPointcut(pointcutExpression = "execution(* com.example.service.*.*(..))")
+ * public class MyAdvice extends Advice.AbstractBeforeAfter&lt;Object, RuntimeException&gt; { ... }
+ * </pre>
  *
  * @author   martin.liu
  */

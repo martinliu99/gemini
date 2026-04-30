@@ -255,17 +255,11 @@ public interface PlaceholderHelper {
                     return this.lookup(null, key);
                 }
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public String lookup(LogEvent event, String key) {
                     return placeholderResolver.getValue(key);
                 }
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public LookupResult evaluate(LogEvent event, String key) {
                     final String value = lookup(event, key);
@@ -282,25 +276,16 @@ public interface PlaceholderHelper {
 
             StrSubstitutor strSubstitutor = new StrSubstitutor(new StrLookup() {
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public String lookup(String key) {
                     return this.lookup(null, key);
                 }
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public String lookup(LogEvent event, String key) {
                     return configView.getAsString(key, null);
                 }
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public LookupResult evaluate(LogEvent event, String key) {
                     final String value = lookup(event, key);
@@ -323,9 +308,6 @@ public interface PlaceholderHelper {
 
             return new PlaceholderHelper() {
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public String replace(String placeholder) {
                     return strSubstitutor.replace(placeholder);
@@ -333,7 +315,7 @@ public interface PlaceholderHelper {
             };
         }
 
-        private static class PlaceholderLookupResult implements LookupResult {
+        static class PlaceholderLookupResult implements LookupResult {
 
             private final String value;
 
@@ -341,17 +323,11 @@ public interface PlaceholderHelper {
                 this.value = value;
             }
 
-            /**
-             * {@inheritDoc}
-             */
             @Override
             public String value() {
                 return value;
             }
 
-            /**
-             * {@inheritDoc}
-             */
             @Override
             public boolean isLookupEvaluationAllowedInValue() {
                 // evaluate variables in return value

@@ -63,9 +63,9 @@ public class AspectClassLoader extends BaseClassLoader {
     /**
      * Create AspectClassLoader instance with AopClassLoader.
      * 
-     * @param loaderName
-     * @param urls
-     * @param aopClassLoader
+     * @param loaderName        class loader name
+     * @param urls              class paths
+     * @param aopClassLoader    parent class loader
      */
     public AspectClassLoader(String loaderName, URL[] urls, AopClassLoader aopClassLoader) {
         super(urls, aopClassLoader);
@@ -236,10 +236,9 @@ public class AspectClassLoader extends BaseClassLoader {
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
         List<Enumeration<URL>> urlsList = new ArrayList<>();
-        Enumeration<URL> urls = null;
 
         // 1.delegate to parent CL(AopClassLoader) to load AOP framework resources
-        urls = super.getResources(name);
+        Enumeration<URL> urls = super.getResources(name);
         if (urls != null) {
             urlsList.add(urls);
         }

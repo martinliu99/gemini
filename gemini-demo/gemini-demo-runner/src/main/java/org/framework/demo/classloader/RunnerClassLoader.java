@@ -35,12 +35,18 @@ public class RunnerClassLoader extends URLClassLoader {
         return this.getURLs();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
         return super.toString();
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     protected Class<?> findClass(final String name) throws ClassNotFoundException {
         return super.findClass(name);
     }

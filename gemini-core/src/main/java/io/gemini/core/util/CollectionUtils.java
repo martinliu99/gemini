@@ -18,6 +18,7 @@ package io.gemini.core.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +95,8 @@ public abstract class CollectionUtils {
         Assert.notNull(keyClass, "'keyClass' must not be null.");
 
         if (arguments == null || arguments.length == 0) 
-            return Collections.emptyMap();
+            return new HashMap<>();
+
         Assert.isTrue(arguments.length % 2 == 0, "Odd argument count.");
 
         Map<K, Object> map = new LinkedHashMap<>(arguments.length / 2);

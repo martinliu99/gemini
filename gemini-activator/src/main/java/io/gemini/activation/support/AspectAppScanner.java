@@ -30,7 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.gemini.activation.util.FileUtils;
@@ -82,9 +81,11 @@ public interface AspectAppScanner {
                 return Collections.emptyMap();
 
             Map<Path, List<Path>> aspectClassPaths = new LinkedHashMap<>();
-            for (Iterator<Path> iterator = Files.list(aspectAppsPath).filter( Files::isDirectory ).iterator(); iterator.hasNext(); ) {
-                Path aspectAppPath = iterator.next();
-                aspectClassPaths.put(aspectAppPath, this.getAspectAppClassPaths(aspectAppPath));
+            try (Stream<Path> stream = Files.list(aspectAppsPath)) {
+                for (Iterator<Path> iterator = stream.filter( Files::isDirectory ).iterator(); iterator.hasNext(); ) {
+                    Path aspectAppPath = iterator.next();
+                    aspectClassPaths.put(aspectAppPath, this.getAspectAppClassPaths(aspectAppPath));
+                }
             }
 
             return FileUtils.toURL(aspectClassPaths);
@@ -98,12 +99,16 @@ public interface AspectAppScanner {
                 classPaths.add( confPath );
 
             Path aspectsPath = aspectAppPath.resolve("aspects");
-            if (Files.exists(aspectsPath))
-                scanPath(Files.list(aspectsPath), classPaths);
+            if (Files.exists(aspectsPath)) 
+                try (Stream<Path> stream = Files.list(aspectsPath)) {
+                    scanPath(stream, classPaths);
+            }
 
             Path libPath = aspectAppPath.resolve("lib");
             if (Files.exists(libPath))
-                scanPath(Files.list(libPath), classPaths);
+                try (Stream<Path> stream = Files.list(libPath)) {
+                    scanPath(stream, classPaths);
+                }
 
             return classPaths;
         }
@@ -111,7 +116,7 @@ public interface AspectAppScanner {
         private void scanPath(Stream<Path> pathStream, List<Path> resourcePaths) {
             pathStream.filter( Files::isRegularFile )
             .sorted( Comparator.comparing(p -> p.getFileName().toString()) )        // sort by filename
-            .collect( Collectors.toCollection(() -> resourcePaths) );
+            .forEach( p -> resourcePaths.add(p) );
         }
     }
 
@@ -136,23 +141,23 @@ public interface AspectAppScanner {
          */
         @Override
         public Map<String, URL[]> scanClassPathURLs() throws IOException {
-//          // retrieve folder from classpath
-          List<Path> candidatePaths = new ArrayList<>();
-          for (String classPath : getClassPaths()) {
-              for (String suffix : scannedClassFolders) {
-                  if (classPath.endsWith(suffix))
-                      candidatePaths.add( Paths.get(classPath) );
-              }
-          }
+            // retrieve folder from classpath
+            List<Path> candidatePaths = new ArrayList<>();
+            for (String classPath : getClassPaths()) {
+                for (String suffix : scannedClassFolders) {
+                    if (classPath.endsWith(suffix))
+                        candidatePaths.add( Paths.get(classPath) );
+                }
+            }
 
-          return candidatePaths == null ? Collections.emptyMap() : 
-              Collections.singletonMap("Classes-Folder-AspectApp", FileUtils.toURL(candidatePaths));
+            return candidatePaths == null ? Collections.emptyMap() : 
+                Collections.singletonMap("Classes-Folder-AspectApp", FileUtils.toURL(candidatePaths));
         }
 
         private List<String> getClassPaths() {
             String classpathStr = System.getProperty("java.class.path");
             classpathStr = classpathStr.replace('\\', '/');
-            String[] classPathValues = classpathStr.split(File.pathSeparator);
+            String[] classPathValues = classpathStr.split(File.pathSeparator, -1);
 
             List<String> classPaths = new ArrayList<>(classPathValues.length);
             for (String classPath : classPathValues) {

@@ -21,6 +21,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -76,13 +77,13 @@ enum AdviceClassGenerator {
     private static final TypeDescription MUTABLE_JOINPOINT_TYPE = TypeDescription.ForLoadedType.of(Joinpoint.MutableJoinpoint.class);
 
     private static final TypeDescription AROUND_ADVICE_TYPE = TypeDescription.ForLoadedType.of(Advice.Around.class);
-    private static final String AROUND_ADVICE_METHOD_NAME = AROUND_ADVICE_TYPE.getSimpleName().toLowerCase();
+    private static final String AROUND_ADVICE_METHOD_NAME = AROUND_ADVICE_TYPE.getSimpleName().toLowerCase(Locale.ENGLISH);
 
     private static final TypeDescription BEFORE_ADVICE_TYPE = TypeDescription.ForLoadedType.of(Advice.Before.class);
-    private static final String BEFORE_ADVICE_METHOD_NAME = BEFORE_ADVICE_TYPE.getSimpleName().toLowerCase();
+    private static final String BEFORE_ADVICE_METHOD_NAME = BEFORE_ADVICE_TYPE.getSimpleName().toLowerCase(Locale.ENGLISH);
 
     private static final TypeDescription AFTER_ADVICE_TYPE = TypeDescription.ForLoadedType.of(Advice.After.class);
-    private static final String AFTER_ADVICE_METHOD_NAME = AFTER_ADVICE_TYPE.getSimpleName().toLowerCase();
+    private static final String AFTER_ADVICE_METHOD_NAME = AFTER_ADVICE_TYPE.getSimpleName().toLowerCase(Locale.ENGLISH);
 
     private static final String DELEGATE_CLASS_FILED = "delegateClass";
     private static final String DELEGATE_OBJECT_FILED = "delegateObject";
@@ -186,7 +187,8 @@ enum AdviceClassGenerator {
 
 
         /**
-         * @param adviceSpec
+         * Create AspectJAdviceMethodImplementation with given AspectJAdviceSpec
+         * @param adviceSpec AspectJAdviceSpec
          */
         public AspectJAdviceMethodImplementation(AspectJAdviceSpec adviceSpec) {
             this.adviceSpec = adviceSpec;

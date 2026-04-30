@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -181,17 +182,17 @@ public class DefaultAopLauncher implements AopLauncher {
 
             if (StringUtils.hasLength(allLoggingLevel))
                 try {
-                    loggingLevel = Level.valueOf(allLoggingLevel.toUpperCase());
-                } catch (Exception e) {}
+                    loggingLevel = Level.valueOf(allLoggingLevel.toUpperCase(Locale.ENGLISH));
+                } catch (Exception ignored) { /* do nothing */ }
         }
 
         DeferredLoggerFactory.replayDeferredMessages(loggingLevel);
     }
 
     /**
-     * Configures ByteBuddy settings as eagly as possible before any ByteBuddy API invocation.
+     * Configures ByteBuddy settings as eagerly as possible before any ByteBuddy API invocation.
      * 
-     * @param aopContext
+     * @param aopContext aop context
      */
     private void configureByteBuddy(AopContext aopContext) {
         // enable Class-File API under JDK 24+.
@@ -206,7 +207,7 @@ public class DefaultAopLauncher implements AopLauncher {
             );
 
         // disable Nexus
-        System.getProperties().setProperty(Nexus.PROPERTY, Boolean.TRUE.toString());
+        System.getProperties().setProperty(Nexus.PROPERTY, "true");
 
         // set byte code dump path
         if (aopContext.isDumpByteCode()) {

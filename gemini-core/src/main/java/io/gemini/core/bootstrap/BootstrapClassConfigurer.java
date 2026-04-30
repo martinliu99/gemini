@@ -138,7 +138,7 @@ public class BootstrapClassConfigurer {
                     .map( provider -> new SimpleEntry<String, String>(provider.getSrcClassName(), provider.getDestClassName()) )
                     .collect( Collectors.toMap( Entry::getKey, Entry::getValue) );
 
-            injectByteCode(sourceClassLoader, providerClasses, getClassRenamer(nameMapping));
+            injectByteCode(providerClasses, getClassRenamer(nameMapping));
 
             long time = System.nanoTime() - startedAt;
             if (LOGGER.isInfoEnabled()) {
@@ -193,8 +193,7 @@ public class BootstrapClassConfigurer {
         return providerClasses;
     }
 
-    private void injectByteCode(ClassLoader sourceClassLoader, 
-            Map<Class<?>, Set<ProviderClass>> providerClasses, ClassRenamer classRenamer) throws IllegalClassFormatException {
+    private void injectByteCode(Map<Class<?>, Set<ProviderClass>> providerClasses, ClassRenamer classRenamer) throws IllegalClassFormatException {
         // inject into bootstrap class loader with ClassInjector
         // Instrumentation.appendToBootstrapClassLoaderSearch(...) does NOT support java.lang.* class injection
 

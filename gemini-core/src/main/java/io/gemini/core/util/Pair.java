@@ -83,7 +83,7 @@ public class Pair<L, R> {
             return true;
         if (obj == null)
             return false;
-        if (getClass() != obj.getClass())
+        if (obj instanceof Pair == false)
             return false;
         
         @SuppressWarnings("unchecked")
@@ -105,6 +105,7 @@ public class Pair<L, R> {
     /**
      * {@inheritDoc}
      */
+    @Override
     public String toString() {
         return (this.left == null ? "null" : left) + "-" + (this.right == null ? "null" : this.right);
     }

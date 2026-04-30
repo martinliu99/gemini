@@ -31,7 +31,7 @@ import io.gemini.api.aop.matcher.TypeMatchers;
  * Demo advice that intercepts {@code run()} methods on classes implementing {@code Runnable}
  * within the AOP framework weaver transformer package.
  * <p>
- * Demonstrates the use of {@link TypeMatchers#isExtendedFrom(String)} to match types
+ * Demonstrates the use of {@link TypeMatchers#isExtendedFrom(String...)} to match types
  * by their implemented interfaces.
  * </p>
  *

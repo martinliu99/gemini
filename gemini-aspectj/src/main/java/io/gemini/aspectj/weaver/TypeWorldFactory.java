@@ -113,7 +113,10 @@ public interface TypeWorldFactory {
                 super(typePoolFactory);
             }
 
-
+            /**
+             * {@inheritDoc}
+             */
+            @Override
             protected TypeWorld doCreateTypeWorld(TypePool typePool, PlaceholderHelper placeholderHelper) {
                 return new BytebuddyWorld.TyepResolutionDetector(typePool, placeholderHelper);
             }

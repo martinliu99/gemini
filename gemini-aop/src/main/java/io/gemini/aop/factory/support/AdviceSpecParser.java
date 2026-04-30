@@ -391,7 +391,7 @@ public interface AdviceSpecParser {
             MethodList<MethodDescription.InDefinedShape> declaredMethods = declaringType.getDeclaredMethods();
             Map<String, AspectJAdviceSpec> adviceSpecMap = new LinkedHashMap<>(declaredMethods.size());
             for (MethodDescription adviceMethod : declaredMethods) {
-                AspectJAdviceSpec adviceSpec = parseAspectJAdviceSpec(factoryContext, declaringType, adviceMethod);
+                AspectJAdviceSpec adviceSpec = parseAspectJAdviceSpec(declaringType, adviceMethod);
                 if (adviceSpec == null)
                     continue;
 
@@ -421,8 +421,7 @@ public interface AdviceSpecParser {
             return adviceSpecMap.values();
         }
 
-        private AspectJAdviceSpec parseAspectJAdviceSpec(FactoryContext factoryContext, 
-                TypeDescription declaringType, MethodDescription adviceMethod) {
+        private AspectJAdviceSpec parseAspectJAdviceSpec(TypeDescription declaringType, MethodDescription adviceMethod) {
             // validate method modifier
             if (adviceMethod.isAbstract()) {
                 if (LOGGER.isWarnEnabled())

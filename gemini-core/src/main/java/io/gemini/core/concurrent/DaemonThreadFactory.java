@@ -80,6 +80,7 @@ public class DaemonThreadFactory implements ThreadFactory {
      * @param r the runnable to execute in the new thread
      * @return a new daemon thread ready to be started; never {@code null}
      */
+    @Override
     public Thread newThread(Runnable r) {
         Thread t = new Thread(group,
                               r,
@@ -90,8 +91,6 @@ public class DaemonThreadFactory implements ThreadFactory {
 
         t.setDaemon(true);
 
-        if (t.getPriority() != Thread.NORM_PRIORITY)
-            t.setPriority(Thread.NORM_PRIORITY);
         return t;
     }
 }

@@ -52,9 +52,9 @@ public class AspectTypePool extends TypePool.Default {
      * {@inheritDoc}
      */
     @Override
-    public Resolution describe(String name) {
+    public TypePool.Resolution describe(String name) {
         // 1.look up cache
-        Resolution resolution = this.cacheProvider.find(name);
+        TypePool.Resolution resolution = this.cacheProvider.find(name);
         if (resolution != null && resolution.isResolved())
             return resolution;
 
@@ -65,16 +65,16 @@ public class AspectTypePool extends TypePool.Default {
             resolution = doResolveViaTargetTypePool(name, targetCL);
             if (resolution != null && resolution.isResolved())
                 return resolution;
-        } catch (Exception e) { }
+        } catch (Exception ignored) { /* do nothing */ }
 
 
         // 3.look up AspectClassLoader
         return super.describe(name);
     }
 
-    private Resolution doResolveViaTargetTypePool(String name, ClassLoader targetCL) {
+    private TypePool.Resolution doResolveViaTargetTypePool(String name, ClassLoader targetCL) {
         if (targetCL == null)
-            return new Resolution.Illegal(name);
+            return new TypePool.Resolution.Illegal(name);
 
         TypePool typePool = this.typePoolFactory.createTypePool(targetCL, null);
         return typePool.describe(name);
@@ -83,10 +83,10 @@ public class AspectTypePool extends TypePool.Default {
 
     /**
      * Only resolve aspect relevant types to avoid target ClassLoader resource lookup.
-     * @param name
-     * @return
+     * @param name  type name
+     * @return      resolved type
      */
-    public Resolution describeAspectType(String name) {
+    public TypePool.Resolution describeAspectType(String name) {
         return super.describe(name);
     }
 
@@ -114,16 +114,16 @@ public class AspectTypePool extends TypePool.Default {
          * {@inheritDoc}
          */
         @Override
-        public Resolution locate(String name) throws IOException {
+        public ClassFileLocator.Resolution locate(String name) throws IOException {
             InputStream inputStream = aspectClassLoader.getAspectResourceAsStream(name.replace('.', '/') + CLASS_FILE_EXTENSION);
             if (inputStream != null) {
                 try {
-                    return new Resolution.Explicit(StreamDrainer.DEFAULT.drain(inputStream));
+                    return new ClassFileLocator.Resolution.Explicit(StreamDrainer.DEFAULT.drain(inputStream));
                 } finally {
                     inputStream.close();
                 }
             } else {
-                return new Resolution.Illegal(name);
+                return new ClassFileLocator.Resolution.Illegal(name);
             }
         }
 

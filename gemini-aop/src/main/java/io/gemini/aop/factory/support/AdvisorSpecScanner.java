@@ -475,7 +475,7 @@ public interface AdvisorSpecScanner {
         private Collection<PointcutAdvisorSpec> parsePointcutAdvisorSpec(FactoryContext factoryContext, String adviceClassName) {
             TypeDescription aspectType = factoryContext.getTypePool().describeAspectType(adviceClassName).resolve();
             if (aspectType == null) 
-                return Collections.emptyList();
+                return new ArrayList<>();
 
             try {
                 TypeDescription adviceType = factoryContext.getTypePool().describeAspectType(adviceClassName).resolve();

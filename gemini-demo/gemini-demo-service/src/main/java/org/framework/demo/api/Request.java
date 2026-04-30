@@ -34,8 +34,11 @@ public class Request {
         return this.input;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
-        return this.input == null ? null : this.input.toString();
+        return this.input == null ? "" : this.input.toString();
     }
 }

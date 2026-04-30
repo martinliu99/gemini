@@ -137,6 +137,7 @@ public interface ObjectFactory extends Closeable {
      *
      * @throws IOException if an I/O error occurs during close
      */
+    @Override
     void close() throws IOException;
 
 
@@ -184,9 +185,6 @@ public interface ObjectFactory extends Closeable {
 
             private static final long serialVersionUID = 82897166217406631L;
 
-            /**
-             * @param message
-             */
             public SkippedObjectCreationException() {
                 super("");
             }
@@ -363,7 +361,7 @@ public interface ObjectFactory extends Closeable {
 
                 Object argument = arguments.get(parameterName);
                 if (argument != null && ClassUtils.isAssignableFrom(parameterType, argument.getClass()) == false)
-                    throw new ObjectsException("Illegal argument type [" + (argument == null ? "null" : argument.getClass())
+                    throw new ObjectsException("Illegal argument type [" + argument.getClass()
                             + "] for parameter [" + parameterName 
                             + "] of constrcutor [" + candidateConstructor + "]");
 
@@ -402,6 +400,7 @@ public interface ObjectFactory extends Closeable {
                             : createObjectInternal(canidateType, args)
                     );
                 } catch (ObjectsException.SkippedObjectCreationException skipped) {
+                    /* do nothing */
                 } catch (ObjectsException e) {
                     if (throwException)
                         throw e;
@@ -579,7 +578,7 @@ public interface ObjectFactory extends Closeable {
                 for (Annotation annotation : field.getAnnotations()) {
                     if (INJECTION_ANNOTATION.contains(annotation.annotationType().getName()) == true) {
                         candidate = true;
-                        continue;
+                        break;
                     }
                 }
                 if (candidate == false) 

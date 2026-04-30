@@ -86,6 +86,7 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
      * @param key   the configuration key
      * @return a {@link ConfigSourceLookupResult} if found, or {@code null}
      */
+    @Override
     public LookupResult evaluate(LogEvent event, String key) {
         final String value = lookup(event, key);
 
@@ -108,11 +109,18 @@ public class ConfigSourceLookup extends AbstractLookup implements LoggerContextA
             this.value = value;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String value() {
             return value;
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isLookupEvaluationAllowedInValue() {
             // evaluate variables in return value
             return true;

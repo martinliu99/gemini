@@ -302,6 +302,7 @@ interface TypePools {
         /**
          * {@inheritDoc}
          */
+        @Override
         public boolean isResolved() {
             return delegateSupplier.get().isResolved();
         }
@@ -309,6 +310,7 @@ interface TypePools {
         /**
          * {@inheritDoc}
          */
+        @Override
         public TypeDescription resolve() {
             return delegatedTypeDescription;
         }
@@ -339,11 +341,15 @@ interface TypePools {
         /**
          * {@inheritDoc}
          */
+        @Override
         public String getName() {
             return name;
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected TypeDescription delegate() {
             return delegateSupplier.get().resolve();
@@ -352,6 +358,7 @@ interface TypePools {
         /**
          * {@inheritDoc}
          */
+        @Override
         public Generic getSuperClass() {
             return delegateSupplier.get().resolve().getSuperClass();
         }
@@ -359,6 +366,7 @@ interface TypePools {
         /**
          * {@inheritDoc}
          */
+        @Override
         public TypeList.Generic getInterfaces() {
             return delegateSupplier.get().resolve().getInterfaces();
         }
@@ -408,7 +416,7 @@ interface TypePools {
              */
             @Override
             public void setResolutionLevel(ResolutionLevel resolutionLevel) {
-                if (this.resolutionLevel.ordinal() < resolutionLevel.ordinal())
+                if (this.resolutionLevel.getLevelCode() < resolutionLevel.getLevelCode())
                     this.resolutionLevel = resolutionLevel;
             }
 
@@ -426,6 +434,7 @@ interface TypePools {
             /**
              * {@inheritDoc}
              */
+            @Override
             public Generic getSuperClass() {
                 this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
 
@@ -435,6 +444,7 @@ interface TypePools {
             /**
              * {@inheritDoc}
              */
+            @Override
             public TypeList.Generic getInterfaces() {
                 this.setResolutionLevel(ResolutionLevel.SUPER_TYPE_RESOLUTION);
 

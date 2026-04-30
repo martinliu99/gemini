@@ -135,7 +135,7 @@ class FactoriesContext implements Closeable {
 
     List<Set<String>> parseConflictTargetClassLoaders(String conflictTargetClassLoadersStr) {
         if (StringUtils.hasText(conflictTargetClassLoadersStr) == false)
-            return Collections.emptyList();
+            return new ArrayList<>();
 
         StringTokenizer groupSt = new StringTokenizer(conflictTargetClassLoadersStr, ";");
 

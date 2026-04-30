@@ -795,7 +795,7 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
      * types, and argument names. Used during the three-phase pointcut resolution in
      * {@link #getDeclaredPointcuts()}.
      */
-    private static class PointcutMethod {
+    static class PointcutMethod {
 
         private final MethodDescription methodDescription;
 
@@ -910,8 +910,9 @@ class InternalReferenceTypeDelegate implements ReferenceTypeDelegate {
          *
          * @return the string representation
          */
+        @Override
         public String toString() {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             sb.append(getPointcutName());
             sb.append("(");
             TypeDescription[] ptypes = getParameterTypes();

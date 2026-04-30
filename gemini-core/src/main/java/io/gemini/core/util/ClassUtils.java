@@ -125,7 +125,7 @@ public abstract class ClassUtils {
     public static Class<?> forName(String className, boolean initialize, ClassLoader classLoader) 
             throws ClassNotFoundException {
         Assert.notNull(className, "'className' must not be null.");
-        Class<?> clazz = resolvePrimitieType(className, classLoader);
+        Class<?> clazz = resolvePrimitieType(className);
         if (clazz != null)
             return clazz;
 
@@ -136,7 +136,7 @@ public abstract class ClassUtils {
         }
     }
 
-    private static Class<?> resolvePrimitieType(String className, ClassLoader classLoader) {
+    private static Class<?> resolvePrimitieType(String className) {
         return PRIMITIVE_TYPE_MAP.containsKey(className) ? PRIMITIVE_TYPE_MAP.get(className) : null;
     }
 
@@ -151,7 +151,7 @@ public abstract class ClassUtils {
         if (StringUtils.hasText(className) == false)
             return "";
 
-        String[] items = className.split("\\"+PACKAGE_SEPARATOR);
+        String[] items = className.split("\\"+PACKAGE_SEPARATOR, -1);
         if (items.length == 0)
             return className;
 
@@ -227,9 +227,12 @@ public abstract class ClassUtils {
     }
 
     /**
-     * @param leftType
-     * @param rightType
-     * @return
+     * Determines if {@code leftType} is the same as of {@code rightType},
+     * with support for primitive/wrapper boxing.
+     * 
+     * @param leftType  the potential supertype
+     * @param rightType the potential subtype
+     * @return {@code true} if {@code leftType} is assignable from {@code rightType}
      */
     private static boolean isAssignablePrimitiveFrom(Class<?> leftType, Class<?> rightType) {
         if (leftType.isPrimitive() && rightType.isPrimitive()) {

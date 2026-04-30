@@ -18,10 +18,10 @@
  */
 package io.gemini.api.aop.matcher;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 
@@ -101,7 +101,7 @@ public class TypeMatchers {
         if (superTypeNameSet.contains(targetType.getTypeName())) {
             return false;
         }
-        final Queue<TypeDefinition> queue = new LinkedList<>();
+        final Queue<TypeDefinition> queue = new ArrayDeque<>();
         queue.add(targetType);
         for (TypeDefinition current = queue.poll();
              current != null && !superTypeNameSet.isEmpty();

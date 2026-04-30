@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -131,7 +130,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
 
             return false;
         })
-        .collect( Collectors.toList() );
+        .forEach( advisor -> advisor.getAdvisorName() );
     }
 
     /**
@@ -209,16 +208,17 @@ class DefaultAdvisorFactory implements AdvisorFactory {
      * Creates advisors for all specs using the given {@link AdvisorContext}, executing tasks
      * in parallel if the global task executor is configured for parallel mode.
      *
-     * @param advisorContext    the per-class-loader advisor context
      * @param targetClassLoader the target class loader (used for thread context)
+     * @param targetJavaModule  the target java module
+     * @param validateCreation     validate advisor creation
      * @return list of successfully created advisors
      */
     protected List<? extends Advisor> doCreateAdvisors(ClassLoader targetClassLoader, 
-            JavaModule targetJavaModule, boolean validCreation) {
+            JavaModule targetJavaModule, boolean validateCreation) {
         long startedAt = System.nanoTime();
 
         String factoryName = factoryContext.getFactoryName();
-        if (validCreation == false && LOGGER.isDebugEnabled())
+        if (validateCreation == false && LOGGER.isDebugEnabled())
             LOGGER.debug("^Creating Advisors via AdvisorCreator under '{}' for '{}', \n"
                     + "  {} \n", 
                     factoryName, targetClassLoader,
@@ -226,7 +226,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
             );
 
 
-        AdvisorContext advisorContext = validCreation 
+        AdvisorContext advisorContext = validateCreation 
                 ? factoryContext.createAdvisorContext(targetClassLoader, null, true)
                 : factoryContext.createAdvisorContext(targetClassLoader, targetJavaModule);
 
@@ -249,7 +249,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
         .collect( Collectors.toList() );
 
 
-        if (validCreation == false && LOGGER.isInfoEnabled()) {
+        if (validateCreation == false && LOGGER.isInfoEnabled()) {
             if (aopContext.getDiagnosticLevel().isDebugEnabled() && advisors.size() > 0) 
                 LOGGER.info("$Took '{}' seconds to create {} Advisors under '{}' for '{}', \n"
                         + "  {} \n", 
@@ -342,7 +342,7 @@ class DefaultAdvisorFactory implements AdvisorFactory {
                     || (targetMethod.isSynthetic() && !targetMethod.isBridge()) )
                 continue;
 
-            List<Advisor> candidateAdvisors = new LinkedList<>();
+            List<Advisor> candidateAdvisors = new ArrayList<>();
             for (Advisor.PointcutAdvisor pointcutAdvisor : pointcutAdvisors) {
                 if (doMatchAdvisor(targetType, targetClassLoader, targetModule, 
                         targetMethod, pointcutAdvisor) == false)

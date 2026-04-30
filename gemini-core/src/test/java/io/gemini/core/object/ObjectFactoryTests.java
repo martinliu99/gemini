@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import io.gemini.core.DiagnosticLevel;
 
 /**
- *
+ * Unit tests of {@code ObjectFactory}.
  *
  * @author   martin.liu
  */
@@ -53,6 +53,6 @@ public class ObjectFactoryTests {
     private static class InnerClass {
 
         @SuppressWarnings("unused")
-        public InnerClass() {}
+        InnerClass() {}
     }
 }

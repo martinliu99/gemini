@@ -97,7 +97,7 @@ public class HasExprTests extends AbstractTests {
         try {
 //            data = data.replace("existsMethod(", "execution(");
             World world = createReflectionWorld();
-            TypePattern typePattern = createHasTypePatternt(world, data);
+            TypePattern typePattern = createHasTypePatternt(data);
 
             ResolvedType resolvedType = world.resolve("io.gemini.aspectj.weaver.patterns.HasPatternParserTests");
 
@@ -114,16 +114,7 @@ public class HasExprTests extends AbstractTests {
         LOGGER.info("@Condition(result:  {}): {}.", result, data);
     }
 
-    /**
-     * @param world2
-     * @param data
-     * @return
-     * @throws SecurityException 
-     * @throws NoSuchFieldException 
-     * @throws IllegalAccessException 
-     * @throws IllegalArgumentException 
-     */
-    private TypePattern createHasTypePatternt(World world, String pointcutExpression) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+    private TypePattern createHasTypePatternt(String pointcutExpression) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
         PatternParser patternParser = new HasPatternParser(pointcutExpression);
 
         Field field = PatternParser.class.getDeclaredField("allowHasTypePatterns");
@@ -149,18 +140,23 @@ public class HasExprTests extends AbstractTests {
         } else {
             ResolvedType inType = world.resolve(inScope.getName());
             ISourceContext sourceContext = new ISourceContext() {
+
+                @Override
                 public ISourceLocation makeSourceLocation(IHasPosition position) {
                     return new SourceLocation(new File(""), 0);
                 }
 
+                @Override
                 public ISourceLocation makeSourceLocation(int line, int offset) {
                     return new SourceLocation(new File(""), line);
                 }
 
+                @Override
                 public int getOffset() {
                     return 0;
                 }
 
+                @Override
                 public void tidy() {
                 }
             };

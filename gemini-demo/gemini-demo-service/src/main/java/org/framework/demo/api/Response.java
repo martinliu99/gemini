@@ -46,6 +46,10 @@ public class Response<T> {
         return this.data;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String toString() {
         return this.data.toString();
     }

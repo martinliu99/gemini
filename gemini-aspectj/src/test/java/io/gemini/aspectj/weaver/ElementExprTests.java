@@ -100,8 +100,8 @@ public class ElementExprTests {
     public static class NestedClassLoader extends URLClassLoader {
 
         /**
-         * @param urls
-         * @param parent
+         * @param urls      class paths
+         * @param parent    parent class loader
          */
         public NestedClassLoader(URL[] urls, ClassLoader parent) {
             super(urls, parent);
@@ -409,7 +409,10 @@ public class ElementExprTests {
     }
 
 
-    public class InnerClass {}
+    public class InnerClass {
+
+        ElementExprTests enclosingType = ElementExprTests.this;
+    }
 
     public static class NestClass {}
 
@@ -417,7 +420,7 @@ public class ElementExprTests {
     public @interface Mark {}
 
     @Mark
-    public class GenericType<T> {
+    public static class GenericType<T> {
 
         private T t;
 
@@ -431,31 +434,22 @@ public class ElementExprTests {
     }
 
     @Mark
-    public class Parameterized extends GenericType<String> {
+    public static class Parameterized extends GenericType<String> {
 
-        /**
-         * @param t
-         */
         public Parameterized(String t) {
             super(t);
         }
     }
 
-    public class Super extends Parameterized {
+    public static class Super extends Parameterized {
 
-        /**
-         * @param t
-         */
         public Super(String t) {
             super(t);
         }
     }
 
-    public class Sub extends Super {
+    public static class Sub extends Super {
 
-        /**
-         * @param t
-         */
         public Sub(String t) {
             super(t);
         }

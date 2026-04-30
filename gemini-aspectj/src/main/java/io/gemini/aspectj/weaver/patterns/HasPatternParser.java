@@ -103,7 +103,7 @@ public class HasPatternParser extends PatternParser {
      * whether the named type actually exists in the world. {@link #matchesStatically}
      * returns the cached existence flag rather than performing a runtime type check.
      */
-    private static class HasTypePattern extends WildTypePattern {
+    static class HasTypePattern extends WildTypePattern {
 
         private boolean existType = false;
 
@@ -178,7 +178,7 @@ public class HasPatternParser extends PatternParser {
      * construction time to the boolean value determined during binding resolution.
      * This avoids any further type-system lookup at match time.
      */
-    private static class BooleanTypePattern extends ExactTypePattern {
+    static class BooleanTypePattern extends ExactTypePattern {
 
         private final boolean existType;
 
@@ -217,7 +217,7 @@ public class HasPatternParser extends PatternParser {
      * {@link #matches} returns the cached existence flag rather than re-evaluating
      * the pattern at weave time.
      */
-    private class HasSignaturePattern extends SignaturePattern {
+    class HasSignaturePattern extends SignaturePattern {
 
         private final boolean matchField;
         private boolean existSignature = false;

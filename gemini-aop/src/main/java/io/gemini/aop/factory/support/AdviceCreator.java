@@ -433,7 +433,7 @@ public interface AdviceCreator {
 
 //                this.loadClass(advisorContext, adviceSpec, adviceSpec.getDeclaringType().getTypeName());
 
-                if (LOGGER.isInfoEnabled() && (advisorContext.getFactoryContext().getAopContext().getDiagnosticLevel().isSimpleEnabled()))
+                if (LOGGER.isInfoEnabled() && advisorContext.getFactoryContext().getAopContext().getDiagnosticLevel().isSimpleEnabled())
                     LOGGER.info("Took '{}' seconds to inject AdvisorClass '{}' into classloader '{}'.", 
                             (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, adviceSpec.getAdviceClassName(), aspectClassLoader
                     );

@@ -390,7 +390,7 @@ public interface PointcutSpecParser {
                 try {
                     // override 'value' attribute
                     pointcutExpression = aspectJAdviceAnnotation.getValue("pointcut").resolve(String.class).trim();
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { /* do nothing */ }
             }
 
             AnnotationList adviceMethodAnnotations = adviceSpec.getAdviceMethod().getDeclaredAnnotations();

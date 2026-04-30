@@ -18,7 +18,6 @@ package io.gemini.aop.factory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +66,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
 
         Map<String, FactoryContext> factoryContextMap = factoriesContext.getFactoryContextMap();
 
-        this.advisorFactoryMap = createAdvisorFactoryMap(aopContext, factoriesContext, factoryContextMap);
+        this.advisorFactoryMap = createAdvisorFactoryMap(aopContext, factoryContextMap);
 
 
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled())
@@ -83,12 +82,10 @@ class CompoundAdvisorFactory implements AdvisorFactory {
      * aspect application found in the {@link FactoriesContext}.
      *
      * @param aopContext       the central AOP context
-     * @param factoriesContext the aggregated factories context
      * @param factoryContextMap map of factory name to {@link FactoryContext}
      * @return ordered map of {@link FactoryContext} to its {@link DefaultAdvisorFactory}
      */
     private Map<FactoryContext, DefaultAdvisorFactory> createAdvisorFactoryMap(AopContext aopContext, 
-            FactoriesContext factoriesContext,
             Map<String, FactoryContext> factoryContextMap) {
         Map<FactoryContext, DefaultAdvisorFactory> advisorFactoryMap = new LinkedHashMap<>(factoryContextMap.size());
         for (FactoryContext factoryContext : factoryContextMap.values()) {
@@ -143,7 +140,7 @@ class CompoundAdvisorFactory implements AdvisorFactory {
         }
 
         if (targetMethodAdvisorMap.size() == 0) 
-            return Collections.emptyMap();
+            return new LinkedHashMap<>();
 
 
         // sort advisors

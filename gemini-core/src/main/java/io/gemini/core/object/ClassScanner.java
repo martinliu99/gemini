@@ -16,6 +16,7 @@
 package io.gemini.core.object;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -125,15 +126,15 @@ public interface ClassScanner {
 
         private final DiagnosticLevel diagnosticLevel;
 
-        private final Set<URL> filteredClasspathElementUrls;
+        private final List<URL> filteredClasspathElementUrls;
 
         private final ClassInfoList classInfoList;   // cache found class info globally.
 
 
         protected Default(boolean enableVerbose, DiagnosticLevel diagnosticLevel,
-                Set<ClassLoader> scannedClassLoaders, Set<URL> overrideClasspaths, 
+                Set<ClassLoader> scannedClassLoaders, List<URL> overrideClasspaths, 
                 Set<String> acceptJarPatterns, Set<String> acceptPackages, 
-                int workThreads, Set<URL> filteredClasspathElementUrls) {
+                int workThreads, List<URL> filteredClasspathElementUrls) {
             long startedAt = System.nanoTime();
             if (LOGGER.isDebugEnabled())
                 LOGGER.debug("^Creating ClassScanner, ");
@@ -167,8 +168,9 @@ public interface ClassScanner {
                         .disableNestedJarScanning()
                         .acceptPackages(formmatedPackages)
                         .filterClasspathElements(
-                                ACCEPT_ALL_JARS == formattedJarPatterns 
-                                    ? new AllClasspathElementFilter() : new DefaultClasspathElementFilter(formattedJarPatterns) )
+                                ACCEPT_ALL_JARS.equals(formattedJarPatterns) 
+                                    ? new AllClasspathElementFilter() 
+                                    : new DefaultClasspathElementFilter(formattedJarPatterns) )
                         ;
 
                 if (overrideClasspaths.size() > 0) {
@@ -201,7 +203,7 @@ public interface ClassScanner {
                 }
 
                 if (LOGGER.isInfoEnabled()) {
-                    if (diagnosticLevel.isDebugEnabled())
+                    if (this.diagnosticLevel.isDebugEnabled())
                         LOGGER.info("$Took '{}' seconds to create ClassScanner with settings, \n" 
                                 + "  enableVerbose: {} \n"
                                 + "  diagnosticLevel: {} \n"
@@ -217,7 +219,7 @@ public interface ClassScanner {
                                 acceptPackages, acceptJarPatterns, 
                                 workThreads, filteredClasspathElementUrls
                         );
-                    else if (diagnosticLevel.isSimpleEnabled())
+                    else if (this.diagnosticLevel.isSimpleEnabled())
                         LOGGER.info("$Took '{}' seconds to create ClassScanner with settings.",
                                 (System.nanoTime() - startedAt) / 1e9
                         );
@@ -254,7 +256,7 @@ public interface ClassScanner {
             return packages;
         }
 
-        protected Default(ClassScanner classScanner, Set<URL> filteredClasspathElementUrls) {
+        protected Default(ClassScanner classScanner, List<URL> filteredClasspathElementUrls) {
             Assert.notNull(classScanner, "'classScanner' must not be null.");
             if (classScanner instanceof Default == false)
                 throw new IllegalArgumentException("classScanner must be instanceof ClassScanner.Default");
@@ -270,6 +272,7 @@ public interface ClassScanner {
         /**
          * {@inheritDoc}
          */
+        @Override
         public List<String> getClassNamesImplementing(String typeName) {
             return this.getClassesImplementing(typeName, this.filteredClasspathElementUrls).getNames();
         }
@@ -295,6 +298,7 @@ public interface ClassScanner {
         /**
          * {@inheritDoc}
          */
+        @Override
         public List<String> getClassNamesWithAnnotation(String annotationName) {
             return this.getClassesWithAnnotation(annotationName, this.filteredClasspathElementUrls).getNames();
         }
@@ -331,6 +335,9 @@ public interface ClassScanner {
          */
         static class AllClasspathElementFilter implements ClasspathElementFilter {
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public boolean includeClasspathElement(String classpathElementPathStr) {
                 return true;
@@ -349,6 +356,9 @@ public interface ClassScanner {
                 this.acceptJarPatterns = acceptJarPatterns;
             }
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public boolean includeClasspathElement(String classpathElementPathStr) {
                 // 1) scan Automatic classfile 
@@ -377,6 +387,9 @@ public interface ClassScanner {
 
             private static final String NO_SCANNING_TYPE = NoScanning.class.getName();
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public boolean accept(ClassInfo classInfo) {
                 // filter annotation
@@ -400,6 +413,9 @@ public interface ClassScanner {
                 this.classpathElementURLs = classpathElementURLs == null ? Collections.emptyList() : classpathElementURLs;;
             }
 
+            /**
+             * {@inheritDoc}
+             */
             @Override
             public boolean accept(ClassInfo classInfo) {
                 try {
@@ -454,7 +470,7 @@ public interface ClassScanner {
         private DiagnosticLevel diagnosticLevel;
 
         private final Set<ClassLoader> scannedClassLoaders;
-        private final Set<URL> overrideClasspaths;
+        private final List<URL> overrideClasspaths;
 
         private final Set<String> acceptJarPatterns;
         private final Set<String> acceptPackages;
@@ -462,17 +478,17 @@ public interface ClassScanner {
         private int workThreads = 0;
 
         private ClassScanner classScanner;
-        private final Set<URL> filteredClasspathElementUrls;
+        private final List<URL> filteredClasspathElementUrls;
 
 
         public Builder() {
             this.scannedClassLoaders = new LinkedHashSet<>();
-            this.overrideClasspaths = new LinkedHashSet<>();
+            this.overrideClasspaths = new ArrayList<>();
 
             this.acceptJarPatterns = new LinkedHashSet<>();
             this.acceptPackages = new LinkedHashSet<>();
 
-            this.filteredClasspathElementUrls = new LinkedHashSet<>();
+            this.filteredClasspathElementUrls = new ArrayList<>();
         }
 
 

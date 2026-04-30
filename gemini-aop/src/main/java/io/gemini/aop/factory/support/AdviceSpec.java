@@ -21,9 +21,9 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.stream.Collectors;
@@ -117,6 +117,7 @@ public interface AdviceSpec {
         /**
          * {@inheritDoc}
          */
+        @Override
         public AdviceKind getAdviceKind() {
             return adviceKind;
         }
@@ -133,6 +134,7 @@ public interface AdviceSpec {
         /**
          * {@inheritDoc}
          */
+        @Override
         public TypeDescription getDeclaringType() {
             return declaringType;
         }
@@ -140,6 +142,7 @@ public interface AdviceSpec {
         /**
          * {@inheritDoc}
          */
+        @Override
         public String getAdviceClassName() {
             return adviceClassName;
         }
@@ -165,6 +168,7 @@ public interface AdviceSpec {
          *
          * @return the {@link PojoAdviceKind}
          */
+        @Override
         PojoAdviceKind getAdviceKind();
 
         /**
@@ -190,8 +194,6 @@ public interface AdviceSpec {
              * @param declaringType              the declaring type
              * @param adviceClassName            the fully-qualified advice class name
              * @param adviceMethod               the advice method (before/after/invoke)
-             * @param parameterizedReturningType the parameterized return type of the joinpoint, or {@code null}
-             * @param parameterizedThrowingType  the parameterized throw type of the joinpoint, or {@code null}
              */
             public Default(PojoAdviceKind adviceKind, TypeDescription declaringType, 
                     String adviceClassName, MethodDescription adviceMethod) {
@@ -204,6 +206,7 @@ public interface AdviceSpec {
             /** 
              * {@inheritDoc}
              */
+            @Override
             public PojoAdviceKind getAdviceKind() {
                 return (PojoAdviceKind) super.getAdviceKind();
             }
@@ -229,6 +232,7 @@ public interface AdviceSpec {
         /** 
          * Returns the AspectJ advice kind (@Before, @After, @AfterReturning, @AfterThrowing, @Around). 
          */
+        @Override
         AspectJAdviceKind getAdviceKind();
 
         /** 
@@ -337,7 +341,7 @@ public interface AdviceSpec {
                 this.adviceMethod = adviceMethod;
                 this.adviceAnnotation = adviceAnnotation;
 
-                String adviceKindValue = adviceAnnotation.getAnnotationType().getSimpleName().toUpperCase();
+                String adviceKindValue = adviceAnnotation.getAnnotationType().getSimpleName().toUpperCase(Locale.ENGLISH);
                 setAdviceKind( AspectJAdviceKind.parse(adviceKindValue) );
 
                 String adviceClassName = doGenerateAdviceClassName(adviceKindValue);
@@ -372,7 +376,7 @@ public interface AdviceSpec {
                 this.adviceAnnotation = null;
 
                 String adviceKindKey = configKeyPrefix + "adviceCategory";
-                String adviceKindValue = configView.getAsString(adviceKindKey, "").toUpperCase();
+                String adviceKindValue = configView.getAsString(adviceKindKey, "").toUpperCase(Locale.ENGLISH);
                 try {
                     setAdviceKind( AspectJAdviceKind.parse(adviceKindValue) );
                 } catch (Exception e) {
@@ -486,7 +490,7 @@ public interface AdviceSpec {
             private List<String> resolveParameterNames(TypeDescription declaringType, MethodDescription adviceMethod, 
                     String argNamesStr, ParameterList<ParameterDescription.InDefinedShape> parameters) {
                 if (parameters.size() == 0)
-                    return Collections.emptyList();
+                    return new ArrayList<>();
 
                 ParameterDescription.InDefinedShape index0Param = parameters.get(0);
                 List<String> parameterNames = new ArrayList<>(parameters.size());
@@ -547,7 +551,7 @@ public interface AdviceSpec {
             private Map<String, ParameterDescription.InDefinedShape> createParameterDescriptionMap(
                     ParameterList<ParameterDescription.InDefinedShape> parameters, List<String> parameterNames) {
                 if (parameterNames.size() == 0)
-                    return Collections.emptyMap();
+                    return new LinkedHashMap<>();
 
                 Map<String, ParameterDescription.InDefinedShape> parameterDescriptionMap = new LinkedHashMap<>(parameters.size());
 
@@ -664,6 +668,7 @@ public interface AdviceSpec {
             /**
              * {@inheritDoc}
              */
+            @Override
             public AspectJAdviceKind getAdviceKind() {
                 return (AspectJAdviceKind) super.getAdviceKind();
             }
@@ -687,6 +692,7 @@ public interface AdviceSpec {
             /**
              * {@inheritDoc}
              */
+            @Override
             public Generic getAdviceReturningParameterType() {
                 return adviceReturningParameterType;
             }
@@ -694,6 +700,7 @@ public interface AdviceSpec {
             /**
              * {@inheritDoc}
              */
+            @Override
             public Generic getAdviceThrowingParameterType() {
                 return adviceThrowingParameterType;
             }
@@ -701,6 +708,7 @@ public interface AdviceSpec {
             /**
              * {@inheritDoc}
              */
+            @Override
             public Map<String, Generic> getPointcutParameterTypes() {
                 Map<String, Generic> parameterTypes = new LinkedHashMap<>(pointcutParameterNames.size());
                 for (String parameterName : pointcutParameterNames)
@@ -750,7 +758,7 @@ public interface AdviceSpec {
                                     MethodUtils.getMethodSignature(getAdviceMethod()),
                                     pointcutParameterNames,
                                     MethodUtils.getMethodSignature(targetMethod), 
-                                    pointcutParameters == null ? null : pointcutParameters.stream()
+                                    pointcutParameters.stream()
                                             .map( p -> p.getParamName() )
                                             .collect( Collectors.toList() )
                             );
@@ -785,6 +793,7 @@ public interface AdviceSpec {
             /**
              * {@inheritDoc}
              */
+            @Override
             public Map<String, NamedPointcutParameter> getNamedPointcutParameters() {
                 return namedPointcutParameters;
             }
@@ -800,6 +809,7 @@ public interface AdviceSpec {
             /**
              * {@inheritDoc}
              */
+            @Override
             public DynamicType.Unloaded<? extends Advice> getUnloadedAdviceClass() {
                 if (unloadedAdviceClass == null)
                 this.unloadedAdviceClass = AdviceClassGenerator.INSTANCE.make(this, true);
@@ -834,6 +844,7 @@ public interface AdviceSpec {
             /** 
              * Returns the Buddy advice kind (OnMethodEnter, OnMethodExit, or both). 
              */
+            @Override
             public ByteBuddyAdviceKind getAdviceKind() {
                 return (ByteBuddyAdviceKind) super.getAdviceKind();
             }

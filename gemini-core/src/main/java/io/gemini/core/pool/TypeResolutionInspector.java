@@ -55,8 +55,19 @@ public interface TypeResolutionInspector {
      */
     static enum ResolutionLevel {
 
-        NO_RESOLUTION,
-        TYPE_RESOLUTION,
-        SUPER_TYPE_RESOLUTION;
+        NO_RESOLUTION(0),
+        TYPE_RESOLUTION(10),
+        SUPER_TYPE_RESOLUTION(20);
+
+
+        private final int levelCode;
+
+        ResolutionLevel(int levelCode) {
+            this.levelCode = levelCode;
+        }
+
+        public int getLevelCode() {
+            return levelCode;
+        }
     }
 }

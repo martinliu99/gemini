@@ -144,11 +144,6 @@ public interface DescriptorOffset {
      */
     class ForRegularInvocation extends AbstractBase {
 
-        /**
-         * 
-         * @param targetMethod
-         * @param arguments
-         */
         public ForRegularInvocation(MethodDescription targetMethod, Object... arguments) {
             super(targetMethod, arguments);
         }

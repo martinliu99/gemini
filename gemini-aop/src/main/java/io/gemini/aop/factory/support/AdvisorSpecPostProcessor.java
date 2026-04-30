@@ -112,7 +112,8 @@ public interface AdvisorSpecPostProcessor {
             for (AdvisorSpecPostProcessor advisorSpecPostProcessor : advisorSpecPostProcessors) {
                 try {
                     advisorSpecMap = advisorSpecPostProcessor.postProcess(factoryContext, advisorSpecMap);
-                } catch (IllegalSpecException e) {
+                } catch (IllegalSpecException ignored) {
+                    /* do nothing */
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not post-process loaded AdvisorSpecs via '{}', \n"

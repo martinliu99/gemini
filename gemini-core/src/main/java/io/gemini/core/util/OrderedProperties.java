@@ -88,7 +88,7 @@ public class OrderedProperties extends Properties {
      * {@inheritDoc}
      */
     @Override
-    public Enumeration<Object> keys() {
+    public synchronized Enumeration<Object> keys() {
         return Collections.enumeration(this.keys);
     }
 
@@ -119,7 +119,7 @@ public class OrderedProperties extends Properties {
     }
 
     /**
-     * @param values
+     * {@inheritDoc}
      */
     @Override
     public synchronized void putAll(Map<?, ?> values) {
@@ -142,6 +142,7 @@ public class OrderedProperties extends Properties {
      * @param inStream the input stream to load from (may be {@code null})
      * @throws IOException if an I/O error occurs
      */
+    @Override
     public synchronized void load(InputStream inStream) throws IOException {
         if (inStream == null)
             return;
@@ -150,11 +151,11 @@ public class OrderedProperties extends Properties {
     }
 
     /**
-     * load file with given charset
+     * load input stream with given charset
      * 
-     * @param inStream
-     * @param charset
-     * @throws IOException
+     * @param inStream      input steam contains properties
+     * @param charset       charset used to read input stream
+     * @throws IOException  possible exceptions when reading input stream
      */
     public synchronized void load(InputStream inStream, Charset charset) throws IOException {
         if (inStream == null)

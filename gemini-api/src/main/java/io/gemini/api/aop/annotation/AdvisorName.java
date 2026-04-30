@@ -38,7 +38,7 @@ public @interface AdvisorName {
     /**
      * unique advisor name
      * 
-     * @return
+     * @return  advisor name
      */
     String value();
 }

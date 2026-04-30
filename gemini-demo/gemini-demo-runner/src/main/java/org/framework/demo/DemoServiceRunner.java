@@ -20,6 +20,7 @@ import java.io.FilenameFilter;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -93,6 +94,7 @@ public class DemoServiceRunner {
         try {
             task.get();
         } catch (Exception e) {
+            /* do nothing */
         } finally {
             threadPoolExecutor.shutdownNow();
         }
@@ -100,7 +102,7 @@ public class DemoServiceRunner {
 
         // 3.instrument special methods
         // native method
-        byte[] data = "This is a long text that needs compression".getBytes();
+        byte[] data = "This is a long text that needs compression".getBytes(Charset.defaultCharset());
 
         Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
         deflater.setInput(data);
@@ -128,7 +130,7 @@ public class DemoServiceRunner {
                 method.invoke(service, request);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.warn("Could not invoke target class.", e);
         }
     }
 
@@ -144,21 +146,23 @@ public class DemoServiceRunner {
 
             if (lib.isDirectory()) {
                 File[] jarFiles = lib.listFiles(new FilenameFilter() {  
+                    @Override
                     public boolean accept(File dir, String name) {  
                         return name.endsWith(".jar") || name.endsWith(".zip");  
                     }  
                 });
 
                 for (int i=0; i<jarFiles.length; i++) {
+                    File jarFile = jarFiles[i];
                     try {
-                        urls.add(jarFiles[i].toURI().toURL());
+                        urls.add(jarFile.toURI().toURL());
                     } catch (MalformedURLException e) {
-                        e.printStackTrace();
+                        LOGGER.warn("Could not load resoulce '{}'.", jarFile, e);
                     }
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.warn("Could not invoke target class.", e);
         }
 
         return urls.toArray(new URL[] {});

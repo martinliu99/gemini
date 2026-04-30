@@ -201,11 +201,19 @@ public interface ClassRenamer {
                 this.removedAnnotationDescriptors = removedAnnotationDescriptors;
             }
 
+            /**
+             * {@inheritDoc}
+             */
+            @Override
             public void visitInnerClass(final String name, final String outerName, final String innerName, final int access) {
                 if (removedInnerClasses.contains(name) == false)
                     super.visitInnerClass(name, outerName, innerName, access);
             }
 
+            /**
+             * {@inheritDoc}
+             */
+            @Override
             public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
                 return removedAnnotationDescriptors.contains(descriptor) ? null : super.visitAnnotation(descriptor, visible);
             }

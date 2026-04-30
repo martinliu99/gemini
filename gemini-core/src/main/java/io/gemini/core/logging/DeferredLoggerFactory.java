@@ -71,7 +71,7 @@ public class DeferredLoggerFactory {
         try {
             clazz = Class.forName("ch.qos.logback.classic.LoggerContext");
             method = clazz.getDeclaredMethod("getFrameworkPackages");
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { /* do nothing */ }
 
         LOGGER_CONTEXT_CLASS = clazz;
         GET_FRAMEWORK_PACKAGES_METHOD = method;
@@ -90,7 +90,7 @@ public class DeferredLoggerFactory {
             try {
                 @SuppressWarnings({ "unchecked", "unused" })
                 List<String> frameworkPackages = (List<String>) GET_FRAMEWORK_PACKAGES_METHOD.invoke(iLoggerFactory);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { /* do nothing */ }
         }
     }
 
@@ -126,7 +126,7 @@ public class DeferredLoggerFactory {
     /**
      * Exits defer mode, and replays cache log messages with given log level.
      * 
-     * @param loggingLevel
+     * @param loggingLevel logger level to replay messages
      */
     public static void replayDeferredMessages(Level loggingLevel) {
         INSTANCE.replayDeferredMessagesInternal(loggingLevel);
@@ -195,18 +195,18 @@ public class DeferredLoggerFactory {
                 for (Iterator<WeakReference<DeferredLogger>> it = loggers.values().iterator(); it.hasNext(); ) {
                     WeakReference<DeferredLogger> loggerRef = it.next();
 
-                    DeferredLogger DeferredLogger = loggerRef.get();
-                    if (DeferredLogger == null) {
+                    DeferredLogger deferredLogger = loggerRef.get();
+                    if (deferredLogger == null) {
                         it.remove();
                         continue;
                     }
 
                     if (deferMode == true)
-                        DeferredLogger.enableDeferMode();
+                        deferredLogger.enableDeferMode();
                     else
-                        DeferredLogger.disableDeferMode();
+                        deferredLogger.disableDeferMode();
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) { /* do nothing */ }
         }
     }
 
@@ -269,12 +269,11 @@ public class DeferredLoggerFactory {
         .append(" - ").append(
                 MessageFormatter.arrayFormat(message.getMessage(), message.getArgumentArray(), message.getThrowable()).getMessage() ).append(SPACE)
         .append("\n")
-        .toString();
+        ;
     }
 
     private void clear() {
         loggers.clear();
-//        eventQueue.clear();
     }
 
 
@@ -305,6 +304,10 @@ public class DeferredLoggerFactory {
                 this.disableDeferMode();
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public String getName() {
             return name;
         }
@@ -529,16 +532,16 @@ public class DeferredLoggerFactory {
          * {@inheritDoc}
          */
         @Override
-        public void trace(Marker marker, String format, Object arg1, Object arg2) {
-            if (isTraceEnabled(marker)) {
+        public void trace(Marker arg0, String arg1, Object arg2, Object arg3) {
+            if (isTraceEnabled(arg0)) {
                 Logger delegate = getDelegate();
 
                 if (delegate == null)
-                    recordMessage(marker, Level.TRACE.toInt(), format, new Object[] {arg1, arg2}, null);
+                    recordMessage(arg0, Level.TRACE.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else if (delegate instanceof LocationAwareLogger)
-                    ((LocationAwareLogger) delegate).log(marker, FQCN, Level.TRACE.toInt(), format, new Object[] {arg1, arg2}, null);
+                    ((LocationAwareLogger) delegate).log(arg0, FQCN, Level.TRACE.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else
-                    delegate.trace(marker, format, arg1, arg2);
+                    delegate.trace(arg0, arg1, arg2, arg3);
             }
         }
 
@@ -699,16 +702,16 @@ public class DeferredLoggerFactory {
          * {@inheritDoc}
          */
         @Override
-        public void debug(Marker marker, String format, Object arg1, Object arg2) {
-            if (isDebugEnabled(marker)) {
+        public void debug(Marker arg0, String arg1, Object arg2, Object arg3) {
+            if (isDebugEnabled(arg0)) {
                 Logger delegate = getDelegate();
 
                 if (delegate == null)
-                    recordMessage(marker, Level.DEBUG.toInt(), format, new Object[] {arg1, arg2}, null);
+                    recordMessage(arg0, Level.DEBUG.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else if (delegate instanceof LocationAwareLogger)
-                    ((LocationAwareLogger) delegate).log(marker, FQCN, Level.DEBUG.toInt(), format, new Object[] {arg1, arg2}, null);
+                    ((LocationAwareLogger) delegate).log(arg0, FQCN, Level.DEBUG.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else
-                    delegate.debug(marker, format, arg1, arg2);
+                    delegate.debug(arg0, arg1, arg2, arg3);
             }
         }
 
@@ -869,16 +872,16 @@ public class DeferredLoggerFactory {
          * {@inheritDoc}
          */
         @Override
-        public void info(Marker marker, String format, Object arg1, Object arg2) {
-            if (isInfoEnabled(marker)) {
+        public void info(Marker arg0, String arg1, Object arg2, Object arg3) {
+            if (isInfoEnabled(arg0)) {
                 Logger delegate = getDelegate();
 
                 if (delegate == null)
-                    recordMessage(marker, Level.INFO.toInt(), format, new Object[] {arg1, arg2}, null);
+                    recordMessage(arg0, Level.INFO.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else if (delegate instanceof LocationAwareLogger)
-                    ((LocationAwareLogger) delegate).log(marker, FQCN, Level.INFO.toInt(), format, new Object[] {arg1, arg2}, null);
+                    ((LocationAwareLogger) delegate).log(arg0, FQCN, Level.INFO.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else
-                    delegate.info(marker, format, arg1, arg2);
+                    delegate.info(arg0, arg1, arg2, arg3);
             }
         }
 
@@ -1039,16 +1042,16 @@ public class DeferredLoggerFactory {
          * {@inheritDoc}
          */
         @Override
-        public void warn(Marker marker, String format, Object arg1, Object arg2) {
-            if (isWarnEnabled(marker)) {
+        public void warn(Marker arg0, String arg1, Object arg2, Object arg3) {
+            if (isWarnEnabled(arg0)) {
                 Logger delegate = getDelegate();
 
                 if (delegate == null)
-                    recordMessage(marker, Level.WARN.toInt(), format, new Object[] {arg1, arg2}, null);
+                    recordMessage(arg0, Level.WARN.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else if (delegate instanceof LocationAwareLogger)
-                    ((LocationAwareLogger) delegate).log(marker, FQCN, Level.WARN.toInt(), format, new Object[] {arg1, arg2}, null);
+                    ((LocationAwareLogger) delegate).log(arg0, FQCN, Level.WARN.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else
-                    delegate.warn(marker, format, arg1, arg2);
+                    delegate.warn(arg0, arg1, arg2, arg3);
             }
         }
 
@@ -1209,16 +1212,16 @@ public class DeferredLoggerFactory {
          * {@inheritDoc}
          */
         @Override
-        public void error(Marker marker, String format, Object arg1, Object arg2) {
-            if (isErrorEnabled(marker)) {
+        public void error(Marker arg0, String arg1, Object arg2, Object arg3) {
+            if (isErrorEnabled(arg0)) {
                 Logger delegate = getDelegate();
 
                 if (delegate == null)
-                    recordMessage(marker, Level.ERROR.toInt(), format, new Object[] {arg1, arg2}, null);
+                    recordMessage(arg0, Level.ERROR.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else if (delegate instanceof LocationAwareLogger)
-                    ((LocationAwareLogger) delegate).log(marker, FQCN, Level.ERROR.toInt(), format, new Object[] {arg1, arg2}, null);
+                    ((LocationAwareLogger) delegate).log(arg0, FQCN, Level.ERROR.toInt(), arg1, new Object[] {arg2, arg3}, null);
                 else
-                    delegate.error(marker, format, arg1, arg2);
+                    delegate.error(arg0, arg1, arg2, arg3);
             }
         }
 
@@ -1282,10 +1285,21 @@ public class DeferredLoggerFactory {
          * {@inheritDoc}
          */
         @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((name == null) ? 0 : name.hashCode());
+            return result;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean equals(Object o) {
             if (this == o)
                 return true;
-            if (o == null || getClass() != o.getClass())
+            if (o instanceof DeferredLogger == false)
                 return false;
 
             DeferredLogger that = (DeferredLogger) o;

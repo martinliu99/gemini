@@ -471,9 +471,9 @@ public class AopMetrics {
          * Renders the application startup summary using timing data from {@link LauncherMetrics}
          * and the weaver metrics collected during the application launching phase.
          * 
-         * @param launcherMetrics
-         * @param appStartupMetrics
-         * @return
+         * @param   launcherMetrics     metrics of launcher
+         * @param   appStartupMetrics   metrics of application startup
+         * @return  rendered application startup summary
          */
         public String renderAppStartupSummaryTemplate(LauncherMetrics launcherMetrics, WeaverMetrics appStartupMetrics) {
             Map<String, Object> valueMap = new HashMap<>();
@@ -720,11 +720,15 @@ public class AopMetrics {
                 return formatStr( (String) item, ITEM_NAME_LENGTH, false);
             }
 
-            if (item instanceof Float || item instanceof Double)
-                return String.format("%9.6f", item);
+            if (item instanceof Float)
+                return String.format("%9.6f", (Float) item);
+            if (item instanceof Double)
+                return String.format("%9.6f", (Double) item);
 
-            if (item instanceof Integer || item instanceof Long) 
-                return String.format("%6d", item);
+            if (item instanceof Integer) 
+                return String.format("%6d", (Integer) item);
+            if (item instanceof Long) 
+                return String.format("%6d", (Long) item);
 
             return item;
         }
@@ -1489,6 +1493,7 @@ public class AopMetrics {
          *
          * @param advisorCreationCount the number of additional advisors created
          */
+        @Override
         public void incrAdvisorCreationCount(int advisorCreationCount) {
             this.setAdvisorCreationCount(this.getAdvisorCreationCount() + advisorCreationCount);
         }

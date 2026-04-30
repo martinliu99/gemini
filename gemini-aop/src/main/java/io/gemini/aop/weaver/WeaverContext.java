@@ -17,6 +17,7 @@ package io.gemini.aop.weaver;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -176,7 +177,7 @@ public class WeaverContext {
 
         // load weaver installer settings
         {
-            String strategy = configView.getAsString("aop.weaver.redefinitionStrategy", "").toUpperCase();
+            String strategy = configView.getAsString("aop.weaver.redefinitionStrategy", "").toUpperCase(Locale.ENGLISH);
 
             try {
                 this.redefinitionStrategy = RedefinitionStrategy.valueOf(strategy);

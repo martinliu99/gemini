@@ -24,10 +24,9 @@ import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
 
 /**
- *
+ * Abstract base class contains common logic.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public abstract class AbstractTests {
 

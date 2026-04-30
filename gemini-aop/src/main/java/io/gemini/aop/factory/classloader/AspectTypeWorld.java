@@ -73,7 +73,7 @@ public class AspectTypeWorld extends BytebuddyWorld {
                 ResolvedType resolvedType = targetTypeWorld == null ? null : targetTypeWorld.getWorld().resolve(unresolvedType, allowMissing);
                 if (resolvedType != null && resolvedType.isMissing() == false)
                     return resolvedType;
-            } catch (Exception e) {}
+            } catch (Exception ignored) { /* do nothing */ }
         }
 
         // 2.resolve aspect type

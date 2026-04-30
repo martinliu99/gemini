@@ -73,6 +73,7 @@ public class PatternParserV2 extends PatternParser {
      *
      * {@inheritDoc}
      */
+    @Override
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
         if (typePattern instanceof WildTypePattern == false)
@@ -87,6 +88,7 @@ public class PatternParserV2 extends PatternParser {
      *
      * {@inheritDoc}
      */
+    @Override
     public Pointcut parseSinglePointcut() {
         Pointcut pointcut = super.parseSinglePointcut();
         if (pointcut instanceof KindedPointcut == false)
@@ -102,7 +104,7 @@ public class PatternParserV2 extends PatternParser {
      * delegate is first accessed. Also overrides {@code matchesExactly} to strip anonymous
      * and nested flags via {@link TopTypeFacade} before delegating to the super implementation.
      */
-    private static class WildTypePatternV2 extends WildTypePattern {
+    static class WildTypePatternV2 extends WildTypePattern {
 
         /**
          * Creates a {@code WildTypePatternV2} by copying all attributes from the given
@@ -175,7 +177,7 @@ public class PatternParserV2 extends PatternParser {
      * {@link #isNested()} to always return {@code false}, ensuring that AspectJ's
      * {@code matchesExactly} logic treats the type as a plain top-level class.
      */
-    private static class TopTypeFacade extends ReferenceTypes.Facade {
+    static class TopTypeFacade extends ReferenceTypes.Facade {
 
         /**
          * Creates a {@code TopTypeFacade} that wraps the given reference type and
@@ -214,7 +216,7 @@ public class PatternParserV2 extends PatternParser {
      * silently returns {@link FuzzyBoolean#NO} when a {@link NoSuchTypeException} is
      * thrown during type-argument or supertype lookup.
      */
-    private static class KindedPointcutV2 extends KindedPointcut {
+    static class KindedPointcutV2 extends KindedPointcut {
 
         /**
          * Creates a {@code KindedPointcutV2} by copying the kind and signature from
@@ -226,8 +228,8 @@ public class PatternParserV2 extends PatternParser {
             super(kindedPointcut.getKind(), kindedPointcut.getSignature());
         }
 
-        private KindedPointcutV2(Kind kind, SignaturePattern signature, ShadowMunger munger) {
-            super(kind, signature);
+        public KindedPointcutV2(Kind kind, SignaturePattern signature, ShadowMunger munger) {
+            super(kind, signature, munger);
         }
 
         /**
@@ -237,7 +239,7 @@ public class PatternParserV2 extends PatternParser {
         public FuzzyBoolean fastMatch(FastMatchInfo info) {
             Kind infoKind = info.getKind();
             Kind kind = this.getKind();
-            if (infoKind != null && infoKind != kind)
+            if (infoKind != null && infoKind.equals(kind))
                 return FuzzyBoolean.NO;
 
             try {
@@ -250,8 +252,8 @@ public class PatternParserV2 extends PatternParser {
                         traverseTypeHierarchy = false;
                     }
 
-                    if ( Shadow.ConstructorExecution == kind || Shadow.StaticInitialization == kind
-                            || (Shadow.MethodExecution == kind && traverseTypeHierarchy == false) ) {
+                    if ( Shadow.ConstructorExecution.equals(kind) || Shadow.StaticInitialization.equals(kind)
+                            || (Shadow.MethodExecution.equals(kind) && traverseTypeHierarchy == false) ) {
                         return typePattern.matchesStatically(info.getType()) ? FuzzyBoolean.MAYBE: FuzzyBoolean.NO;
                     }
                 } else  if (this.getSignature().getDeclaringType() instanceof WildTypePattern) {
@@ -272,14 +274,16 @@ public class PatternParserV2 extends PatternParser {
          */
         @Override
         protected FuzzyBoolean matchInternal(Shadow shadow) {
-            if (shadow.getKind() != getKind()) {
+            Kind shadowKind = shadow.getKind();
+            Kind kind = getKind();
+            if (shadowKind.equals(kind) == false) {
                 return FuzzyBoolean.NO;
             }
 
-            if (shadow.getKind() == Shadow.SynchronizationLock && getKind() == Shadow.SynchronizationLock) {
+            if (Shadow.SynchronizationLock.equals(shadowKind) && Shadow.SynchronizationLock.equals(kind)) {
                 return FuzzyBoolean.YES;
             }
-            if (shadow.getKind() == Shadow.SynchronizationUnlock && getKind() == Shadow.SynchronizationUnlock) {
+            if (Shadow.SynchronizationUnlock.equals(shadowKind) && Shadow.SynchronizationUnlock.equals(kind)) {
                 return FuzzyBoolean.YES;
             }
 

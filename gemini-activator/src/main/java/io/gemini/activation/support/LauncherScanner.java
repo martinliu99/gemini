@@ -22,7 +22,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.gemini.activation.util.FileUtils;
 
@@ -79,10 +79,11 @@ public interface LauncherScanner {
             // 2.scan lib folder
             Path libPath = launchPath.resolve("lib");
             if (Files.exists(libPath)) {
-                Files.list( libPath )
-                .filter( Files::isRegularFile )
-                .sorted( Comparator.comparing(p -> p.getFileName().toString()) )    // sort by filename
-                .collect( Collectors.toCollection( () -> launchClassPaths) );
+                try (Stream<Path> stream = Files.list( libPath )) {
+                    stream.filter( Files::isRegularFile )
+                    .sorted( Comparator.comparing(p -> p.getFileName().toString()) )    // sort by filename
+                    .forEach( p -> launchClassPaths.add(p) );
+                }
             }
 
             return FileUtils.toURL(launchClassPaths);

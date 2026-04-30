@@ -15,8 +15,9 @@
  */
 package io.gemini.core.util;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Utility class providing a formatted current timestamp string.
@@ -31,8 +32,9 @@ public abstract class DateUtils {
      * @return the formatted timestamp string
      */
     public static String now() {
-        SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
-        Date date = new Date(System.currentTimeMillis());
-        return formatter.format(date);
+        ZoneId systemDefault = ZoneId.systemDefault();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+                .withZone( systemDefault );
+        return formatter.format( LocalDate.now( systemDefault ) );
     }
 }

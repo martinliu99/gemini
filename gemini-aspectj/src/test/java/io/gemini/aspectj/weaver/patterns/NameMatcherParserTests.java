@@ -24,9 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import net.bytebuddy.matcher.ElementMatcher;
 
-/**
- * 
- */
 public class NameMatcherParserTests {
 
     @Test

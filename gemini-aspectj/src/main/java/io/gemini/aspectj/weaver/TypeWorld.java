@@ -171,6 +171,7 @@ public interface TypeWorld {
         /**
          * {@inheritDoc}
          */
+        @Override
         public TypeDescription describeType(String typeName) {
             return getDelegate().describeType(typeName);
         }
@@ -179,6 +180,7 @@ public interface TypeWorld {
         /**
          * {@inheritDoc}
          */
+        @Override
         public ResolvedMember resolve(Member member) {
             return getDelegate().resolve(member);
         }
@@ -192,6 +194,9 @@ public interface TypeWorld {
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String toString() {
             return getClass().getSimpleName() + "-" + getDelegate().toString();
@@ -224,6 +229,7 @@ public interface TypeWorld {
          * @param typeDescription the type description to resolve
          * @return the resolved type or a lazy facade; {@code null} if {@code typeDescription} is {@code null}
          */
+        @Override
         public ResolvedType resolve(TypeDescription typeDescription) {
             if (typeDescription == null)
                 return null;
@@ -308,7 +314,7 @@ public interface TypeWorld {
         }
 
 
-        private static class Resolution {
+        static class Resolution {
 
             final ResolvedType resolvedType;
             ConcurrentMap<Member, Shadow> shadowCache;

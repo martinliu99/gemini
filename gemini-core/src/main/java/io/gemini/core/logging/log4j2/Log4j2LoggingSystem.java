@@ -84,7 +84,7 @@ public class Log4j2LoggingSystem implements LoggingSystem {
 
         if (this.configSource.containsProperty(SIMPLE_INITIALIZATION_KEY)) {
             String value = this.configSource.getProperty(SIMPLE_INITIALIZATION_KEY);
-            this.simpleInitialization = value == null || Boolean.valueOf(value) == true ? true : false;
+            this.simpleInitialization = (value == null || Boolean.valueOf(value) == true) ? true : false;
         } else {
             this.simpleInitialization = true;
         }

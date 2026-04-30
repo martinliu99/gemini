@@ -25,7 +25,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 
 /**
- *
+ * Demo advice intercepting native method of unloaded class.
  *
  * @author   martin.liu
  */

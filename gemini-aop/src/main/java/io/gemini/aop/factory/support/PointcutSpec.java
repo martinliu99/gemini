@@ -81,6 +81,7 @@ public interface PointcutSpec {
         /**
          * {@inheritDoc}
          */
+        @Override
         public boolean isBreakCircularity() {
             return breakCircularity;
         }
@@ -221,6 +222,10 @@ public interface PointcutSpec {
                 this.pointcutExpression = pointcutExpression;
             }
 
+            /**
+             * {@inheritDoc}
+             */
+            @Override
             protected AspectJAdviceSpec getAdviceSpec() {
                 return (AspectJAdviceSpec) super.getAdviceSpec();
             }

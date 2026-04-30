@@ -237,6 +237,8 @@ public interface Joinpoints {
         protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractBase.class);
 
         protected static final Object UNDEFINED_RETURNING = new Object();
+
+        @SuppressWarnings("StaticAssignmentOfThrowable")
         protected static final Throwable UNDEFINED_THROWING = new Throwable();
 
 
@@ -292,7 +294,7 @@ public interface Joinpoints {
 
         /**
          * get this class Lookup to access private member
-         * @return
+         * @return lookup of target type
          */
         @Override
         public Lookup getTargetLookup() {
@@ -301,7 +303,7 @@ public interface Joinpoints {
 
         /**
          * get class information
-         * @return
+         * @return target type
          */
         @Override
         public Class<?> getTargetClass() {
@@ -452,6 +454,7 @@ public interface Joinpoints {
          *
          * @param returning the override return value to set
          */
+        @Override
         public void setAdviceReturning(T returning) {
             Descriptor descriptor = getDescriptor();
             if (descriptor.voidReturning) {
@@ -500,6 +503,7 @@ public interface Joinpoints {
          *
          * @param throwing the override exception to set; must not be {@code null}
          */
+        @Override
         public void setAdviceThrowing(E throwing) {
             if (throwing == null) {
                 if (LOGGER.isWarnEnabled())
@@ -1257,7 +1261,7 @@ public interface Joinpoints {
                             StringUtils.join(getAroundAdvice(), e -> e.getClass().getName(), "\n    ")
                     );
 
-                return doDispatch();
+                return super.doDispatch();
             }
         }
     }

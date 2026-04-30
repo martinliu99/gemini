@@ -33,10 +33,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author   martin.liu
  */
+@SuppressWarnings("rawtypes")
 public class ExecutionMemento<T> {
 
-    private static ThreadLocal<Map<String, TargetMethod>> TARGET_METHOD_MEMENTOES;
-    private static ThreadLocal<Map<String, AdviceMethod>> ADVICE_METHOD_MEMENTOES;
+    // do not use subtype to avoid possible class initialization deadlock
+    private static ThreadLocal<Map<String, ExecutionMemento>> TARGET_METHOD_MEMENTOES;
+    private static ThreadLocal<Map<String, ExecutionMemento>> ADVICE_METHOD_MEMENTOES;
 
 
     private T memento;
@@ -54,14 +56,18 @@ public class ExecutionMemento<T> {
 
 
     static {
-        TARGET_METHOD_MEMENTOES = new ThreadLocal<Map<String, TargetMethod>>() {
-            protected Map<String, TargetMethod> initialValue() {
+        TARGET_METHOD_MEMENTOES = new ThreadLocal<Map<String, ExecutionMemento>>() {
+
+            @Override
+            protected Map<String, ExecutionMemento> initialValue() {
                 return new ConcurrentHashMap<>();
             }
         };
 
-        ADVICE_METHOD_MEMENTOES = new ThreadLocal<Map<String, AdviceMethod>>() {
-            protected Map<String, AdviceMethod> initialValue() {
+        ADVICE_METHOD_MEMENTOES = new ThreadLocal<Map<String, ExecutionMemento>>() {
+
+            @Override
+            protected Map<String, ExecutionMemento> initialValue() {
                 return new ConcurrentHashMap<>();
             }
         };
@@ -93,7 +99,7 @@ public class ExecutionMemento<T> {
      * @return the stored memento, or {@code null} if none has been recorded
      */
     public static TargetMethod getTargetMethodInvoker(String targetMethod) {
-        return TARGET_METHOD_MEMENTOES.get().get(targetMethod);
+        return (TargetMethod) TARGET_METHOD_MEMENTOES.get().get(targetMethod);
     }
 
     /**
@@ -113,7 +119,7 @@ public class ExecutionMemento<T> {
      * @return the stored memento, or {@code null} if none has been recorded
      */
     public static AdviceMethod getAdviceMethodInvoker(String adviceMethod) {
-        return ADVICE_METHOD_MEMENTOES.get().get(adviceMethod);
+        return (AdviceMethod) ADVICE_METHOD_MEMENTOES.get().get(adviceMethod);
     }
 
     protected T setInvoker(T invoker) {

@@ -29,6 +29,11 @@ import org.junit.jupiter.api.Test;
 
 import io.gemini.api.annotation.NoScanning;
 
+/**
+ * Unit tests of {@code ClassScanner}.
+ *
+ * @author   martin.liu
+ */
 public class ClassScannerTests {
 
     private ClassScanner classScanner;
@@ -96,14 +101,15 @@ public class ClassScannerTests {
 
     @Target({ ElementType.TYPE_USE, ElementType.TYPE })
     @Retention(RetentionPolicy.RUNTIME)
-    public @interface AtMarker {}
+    public static @interface AtMarker {}
 
     @AtMarker
-    public class InnerClass implements Marker {}
+    public static class InnerClass implements Marker {
+    }
 
     @NoScanning
     @AtMarker
-    public class IgnoredInnerClass implements Marker {}
+    public static class IgnoredInnerClass implements Marker {}
 
     @AtMarker
     public static class NestedClass implements Marker {}

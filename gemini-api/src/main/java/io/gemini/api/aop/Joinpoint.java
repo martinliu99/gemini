@@ -34,13 +34,13 @@ public interface Joinpoint {
 
     /**
      * get Lookup of target class to access members of target object
-     * @return
+     * @return lookup of target class
      */
     Lookup getTargetLookup();
 
     /**
      * get target class
-     * @return
+     * @return target class
      */
     Class<?> getTargetClass();
 
@@ -74,26 +74,26 @@ public interface Joinpoint {
     /**
      * Get attached additional context value for provided key.
      * 
-     * @param key
-     * @return
+     * @param key   the key of context value
+     * @return      context value
      */
     Object getInvocationContext(String key);
 
     /**
      * Attach additional contextual key value pair across one method invocation.
      * 
-     * @param key
-     * @param value
+     * @param key   the key of context value
+     * @param value context value
      */
     void setInvocationContext(String key, Object value);
 
 
     /**
      * The {@link MutableJoinpoint} sub-interface additionally exposes the 
-     * return value and thrown exception, and allows advice to override them. 
+     * returning value and throwing exception, and allows advice to override them. 
      *
-     * @param <T>
-     * @param <E>
+     * @param <T>   returning value
+     * @param <E>   throwing exception
      */
     interface MutableJoinpoint<T, E extends Throwable> extends Joinpoint {
 
@@ -101,15 +101,15 @@ public interface Joinpoint {
          * Get the return value of target method invocation and throw IllegalStateException 
          * when called in {@link io.gemini.api.aop.Advice.Before} advice.
          * 
-         * @return 
-         * @throws IllegalStateException
+         * @return      returning value
+         * @throws IllegalStateException    thrown exception when called in {@link io.gemini.api.aop.Advice.Before} advice
          */
         T getReturning() throws IllegalStateException;
 
         /**
          * Override the return value of target method invocation.
          * 
-         * @param returning
+         * @param returning     returning value
          */
         void setAdviceReturning(T returning);
 
@@ -118,15 +118,15 @@ public interface Joinpoint {
          * Get the thrown exception of target method invocation and throw IllegalStateException 
          * when called in {@link io.gemini.api.aop.Advice.Before} advice.
          * 
-         * @return
-         * @throws IllegalStateException
+         * @return throwing     throwing exception
+         * @throws IllegalStateException    thrown exception when called in {@link io.gemini.api.aop.Advice.Before} advice.
          */
         E getThrowing() throws IllegalStateException;
 
         /**
          * Override the thrown exception of target method invocation.
          *
-         * @param throwing
+         * @param throwing throwing exception
          */
         void setAdviceThrowing(E throwing);
     }
@@ -138,16 +138,15 @@ public interface Joinpoint {
      * 
      * TODO: not supported
      * 
-     * @param <T>
-     * @param <E>
+     * @param <T>   returning value
+     * @param <E>   throwing exception
      */
     interface ProceedingJoinpoint<T, E extends Throwable> extends Joinpoint {
 
         /**
          * Proceeds to the next advice in the chain or target method invocation.
          *
-         * @return 
-         * @throws 
+         * @return returning value
          */
         T proceed() throws E;
 
@@ -155,9 +154,9 @@ public interface Joinpoint {
          * Proceeds to the next advice in the chain or target method invocation 
          * with overrode arguments.
          * 
-         * @param arguments
-         * @return
-         * @throws Throwable
+         * @param arguments     the arguments of method invocation
+         * @return              returning value of method invocation
+         * @throws Throwable    throwing exception
          */
         T proceed(Object... arguments) throws E;
     }

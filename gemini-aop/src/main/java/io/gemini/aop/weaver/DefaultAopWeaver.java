@@ -52,7 +52,7 @@ import net.bytebuddy.agent.builder.AgentBuilder.TypeStrategy;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
-import net.bytebuddy.dynamic.DynamicType.Builder;
+import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.scaffold.inline.MethodNameTransformer;
 import net.bytebuddy.utility.JavaModule;
 
@@ -204,7 +204,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
      * {@inheritDoc}
      */
     @Override
-    public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
+    public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
             JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
         // 1.check if cached advisors exists
         String targetTypeName = targetType.getTypeName();
@@ -226,7 +226,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
                 builder = entry.getValue().weave(builder, targetTypeCache.isLoaded());
             }
 
-            if (Boolean.TRUE == targetTypeCache.setTransformed(true)) {
+            if (true == targetTypeCache.setTransformed(true)) {
                 LOGGER.error("Reweaved type '{}' loaded by ClassLoader '{}' since it was already transformed!\n", targetTypeName, targetClassLoader);
             }
 
@@ -248,7 +248,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
      * Selects proper TypeStrategy based on class file format change.
      */
     @Override
-    public Builder<?> builder(TypeDescription targetType, ByteBuddy byteBuddy, ClassFileLocator classFileLocator,
+    public DynamicType.Builder<?> builder(TypeDescription targetType, ByteBuddy byteBuddy, ClassFileLocator classFileLocator,
             MethodNameTransformer methodNameTransformer, ClassLoader targetClassLoader, JavaModule module,
             ProtectionDomain protectionDomain) {
         String targetTypeName = targetType.getTypeName();
@@ -471,7 +471,7 @@ class DefaultAopWeaver implements AopWeaver, AgentBuilder.TypeStrategy, Bootstra
          * {@inheritDoc}
          */
         @Override
-        public Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
+        public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
                 JavaModule targetModule, ProtectionDomain targetProtectionDomain) {
             String targetTypeName = targetType.getTypeName();
             if (LOGGER.isInfoEnabled() && getAopContext().isDiagnosticType(targetTypeName))

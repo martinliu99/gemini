@@ -31,6 +31,7 @@ import java.util.NoSuchElementException;
  *
  * @author   martin.liu
  */
+@SuppressWarnings("JdkObsolete")
 public class CompoundEnumeration<E> implements Enumeration<E> {
 
     private final Iterator<Enumeration<E>> iterator;
@@ -50,6 +51,7 @@ public class CompoundEnumeration<E> implements Enumeration<E> {
      *
      * @return {@code true} if more elements are available
      */
+    @Override
     public boolean hasMoreElements() {
         return next();
     }
@@ -71,6 +73,7 @@ public class CompoundEnumeration<E> implements Enumeration<E> {
      * @return the next element
      * @throws NoSuchElementException if no more elements are available
      */
+    @Override
     public E nextElement() {
         if (!next()) {
             throw new NoSuchElementException();

@@ -129,16 +129,9 @@ public class ConfigViewAdapter implements PropertySource, ConfigSource {
     public String getProperty(String key) {
         String value = doGetProperty(SETTING_KEY_PREFIX + key);
         if (value != null)
-            return (String) value;
+            return value;
 
-        value = doGetProperty(key);
-        if (value == null)
-            return null;
-
-        if (value instanceof String)
-            return (String) value;
-
-        throw new IllegalStateException("value '" + value + "' is not String.");
+        return doGetProperty(key);
     }
 
     private String doGetProperty(String key) {

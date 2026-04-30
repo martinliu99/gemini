@@ -32,11 +32,11 @@ public class FileUtils {
 
 
     /**
-     * Convert the map of List<Path> to the map of URL[].
+     * Convert the map of List&lt;Path&gt; to the map of URL array.
      * 
-     * @param pathResources
-     * @return
-     * @throws MalformedURLException
+     * @param pathResources         map of List&lt;Path&gt;
+     * @return                      map of URL array
+     * @throws MalformedURLException    Thrown to indicate that a malformed URL has occurred.
      */
     public static Map<String, URL[]> toURL(Map<Path, List<Path>> pathResources) throws MalformedURLException {
         Map<String, URL[]> result = new LinkedHashMap<>(pathResources.size());
@@ -50,9 +50,9 @@ public class FileUtils {
     /**
      * Convert the list of Path resources to their URL array.
      * 
-     * @param resources
-     * @return
-     * @throws MalformedURLException 
+     * @param resources     list of Path resources
+     * @return              URL array
+     * @throws MalformedURLException Thrown to indicate that a malformed URL has occurred
      */
     public static URL[] toURL(List<Path> resources) throws MalformedURLException {
         URL[] urls = new URL[resources.size()];

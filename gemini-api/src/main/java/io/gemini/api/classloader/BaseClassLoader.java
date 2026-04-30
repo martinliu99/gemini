@@ -33,8 +33,10 @@ public abstract class BaseClassLoader extends URLClassLoader {
 
 
     /**
-     * @param urls
-     * @param parent
+     * Initializes BaseClassLoader.
+     * 
+     * @param urls      class paths
+     * @param parent    parent class loader
      */
     public BaseClassLoader(URL[] urls, ClassLoader parent) {
         super(urls, parent);

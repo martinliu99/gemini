@@ -31,10 +31,10 @@ import io.gemini.api.aop.Pointcut;
  * provide ByteBuddy {@link net.bytebuddy.matcher.ElementMatcher} instances for type and method matching.
  * </p>
  *
- * <pre>{@code
- * @PojoPointcut(pointcutClass = MyPointcut.class)
- * public class MyAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> { ... }
- * }</pre>
+ * <pre>{@literal
+ * @}PojoPointcut(pointcutClass = MyPointcut.class)
+ * public class MyAdvice extends Advice.AbstractBeforeAfter&lt;Object, RuntimeException&gt; { ... }
+ * </pre>
  *
  * @author   martin.liu
  */

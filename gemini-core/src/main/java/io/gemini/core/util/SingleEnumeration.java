@@ -30,6 +30,7 @@ import java.util.NoSuchElementException;
  *
  * @author   martin.liu
  */
+@SuppressWarnings("JdkObsolete")
 public class SingleEnumeration<E> implements Enumeration<E> {
 
     private E element;
@@ -49,6 +50,7 @@ public class SingleEnumeration<E> implements Enumeration<E> {
      *
      * @return {@code true} if the element is available
      */
+    @Override
     public boolean hasMoreElements() {
         return element != null;
     }
@@ -59,6 +61,7 @@ public class SingleEnumeration<E> implements Enumeration<E> {
      * @return the element
      * @throws NoSuchElementException if the element has already been returned
      */
+    @Override
     public E nextElement() {
         if (element == null) {
             throw new NoSuchElementException();

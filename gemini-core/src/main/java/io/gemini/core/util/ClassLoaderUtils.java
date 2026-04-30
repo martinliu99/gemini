@@ -106,7 +106,7 @@ public abstract class ClassLoaderUtils {
     public static List<String> getClassPaths() {
         String classpathStr = System.getProperty("java.class.path");
         classpathStr = classpathStr.replace('\\', '/');
-        String[] classPathValues = classpathStr.split(File.pathSeparator);
+        String[] classPathValues = classpathStr.split(File.pathSeparator, -1);
 
         List<String> classPaths = new ArrayList<>(classPathValues.length);
         for (String classPath : classPathValues) {

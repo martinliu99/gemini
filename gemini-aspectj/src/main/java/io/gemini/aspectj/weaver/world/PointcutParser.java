@@ -112,8 +112,8 @@ public class PointcutParser {
 
         supportedPrimitives = supportedPointcutKinds;
         for (PointcutPrimitive pointcutPrimitive : supportedPointcutKinds) {
-            if ((pointcutPrimitive == PointcutPrimitive.IF) || (pointcutPrimitive == PointcutPrimitive.CFLOW)
-                    || (pointcutPrimitive == PointcutPrimitive.CFLOW_BELOW)) {
+            if (PointcutPrimitive.IF.equals(pointcutPrimitive) || PointcutPrimitive.CFLOW.equals(pointcutPrimitive)
+                    || PointcutPrimitive.CFLOW_BELOW.equals(pointcutPrimitive)) {
                 throw new UnsupportedOperationException("Cannot handle if, cflow, and cflowbelow primitives");
             }
         }
@@ -290,35 +290,35 @@ public class PointcutParser {
 
     private void validateKindedPointcut(KindedPointcut pointcut, String pointcutExpression) {
         Shadow.Kind kind = pointcut.getKind();
-        if ((kind == Shadow.MethodCall) || (kind == Shadow.ConstructorCall)) {
+        if (Shadow.MethodCall.equals(kind) || Shadow.ConstructorCall.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.CALL)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.CALL);
             }
-        } else if ((kind == Shadow.MethodExecution) || (kind == Shadow.ConstructorExecution)) {
+        } else if (Shadow.MethodExecution.equals(kind) || Shadow.ConstructorExecution.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.EXECUTION)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.EXECUTION);
             }
-        } else if (kind == Shadow.AdviceExecution) {
+        } else if (Shadow.AdviceExecution.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.ADVICE_EXECUTION)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.ADVICE_EXECUTION);
             }
-        } else if (kind == Shadow.FieldGet) {
+        } else if (Shadow.FieldGet.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.GET)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.GET);
             }
-        } else if (kind == Shadow.FieldSet) {
+        } else if (Shadow.FieldSet.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.SET)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.SET);
             }
-        } else if (kind == Shadow.Initialization) {
+        } else if (Shadow.Initialization.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.INITIALIZATION)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.INITIALIZATION);
             }
-        } else if (kind == Shadow.PreInitialization) {
+        } else if (Shadow.PreInitialization.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.PRE_INITIALIZATION)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.PRE_INITIALIZATION);
             }
-        } else if (kind == Shadow.StaticInitialization) {
+        } else if (Shadow.StaticInitialization.equals(kind)) {
             if (!supportedPrimitives.contains(PointcutPrimitive.STATIC_INITIALIZATION)) {
                 throw new UnsupportedPointcutPrimitiveException(pointcutExpression, PointcutPrimitive.STATIC_INITIALIZATION);
             }

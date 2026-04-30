@@ -20,6 +20,7 @@ import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -89,7 +90,7 @@ public class LogbackLoggingSystem implements LoggingSystem {
             this.configLocation = INTERNAL_CONFIGURATION_FILE;
 
         if (this.loggerSettings.containsKey(LOGGER_ALL_LOG_LEVEL_KEY)) {
-            String logLevel = this.loggerSettings.get(LOGGER_ALL_LOG_LEVEL_KEY).toUpperCase();
+            String logLevel = this.loggerSettings.get(LOGGER_ALL_LOG_LEVEL_KEY).toUpperCase(Locale.ENGLISH);
             this.allLogLevel = StringUtils.hasText(logLevel) ? Level.toLevel(logLevel) : null;
         } else {
             this.allLogLevel = null;
@@ -199,11 +200,6 @@ public class LogbackLoggingSystem implements LoggingSystem {
         return (LoggerContext) factory;
     }
 
-    /**
-     * @param loggerContext
-     * @param currentClassLoader 
-     * @throws JoranException 
-     */
     private void configureLoggerContext(ClassLoader currentClassLoader, LoggerContext loggerContext) throws JoranException {
         // reset LoggerContext
         if (debugLogback)

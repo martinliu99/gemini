@@ -35,6 +35,7 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
     /** 
      * {@inheritDoc}
      */
+    @Override
     boolean matches(MethodDescription targetMethod);
 
 

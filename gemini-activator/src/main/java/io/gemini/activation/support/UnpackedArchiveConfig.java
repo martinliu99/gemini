@@ -20,6 +20,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -89,7 +90,7 @@ public class UnpackedArchiveConfig implements LauncherConfig {
 
     private Map<String, String> parseLaunchArgs(String launchArgsStr) {
         if (launchArgsStr == null)
-            return Collections.emptyMap();
+            return new HashMap<>();
 
         Map<String, String> agentArgs = new LinkedHashMap<>();
 

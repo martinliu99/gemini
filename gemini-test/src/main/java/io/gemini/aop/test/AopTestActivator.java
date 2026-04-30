@@ -28,6 +28,7 @@ import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.LauncherDiscoveryListener;
@@ -157,8 +158,8 @@ public class AopTestActivator implements LauncherDiscoveryListener, TestExecutio
 
 
         // 3.iterate test-classes folder to load resource files
-        try {
-            Files.walk(rootPath)
+        try (Stream<Path> stream = Files.walk(rootPath)) {
+            stream
             .filter( Files::isRegularFile )
             .filter( p -> p.toString().endsWith(ClassUtils.CLASS_FILE_EXTENSION) == false )
             .forEach( p -> {

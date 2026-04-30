@@ -25,10 +25,9 @@ import io.gemini.api.aop.annotation.ExprPointcut;
 import net.bytebuddy.description.method.MethodDescription;
 
 /**
- *
+ * Demo advice intercepting constructor of target class.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @ExprPointcut(pointcutExpression = 
         "execution(public org.framework.demo.service.DemoServiceImpl.new())")

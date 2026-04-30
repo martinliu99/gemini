@@ -51,7 +51,7 @@ import net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.DynamicType.Builder;
+import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.scaffold.MethodGraph;
 import net.bytebuddy.matcher.BooleanMatcher;
 import net.bytebuddy.utility.JavaModule;
@@ -107,7 +107,7 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
      * @return the modified type builder
      */
     @Override
-    Builder<?> transform(Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
+    DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription targetType, ClassLoader targetClassLoader, 
             JavaModule targetModule, ProtectionDomain targetProtectionDomain);
 
 
@@ -182,7 +182,7 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
          * @param launcherMetrics  metrics collector for startup timing
          * @return the created {@link DefaultAopWeaver}
          */
-        protected DefaultAopWeaver createAopWeaver(AopContext aopContext, 
+        private DefaultAopWeaver createAopWeaver(AopContext aopContext, 
                 AdvisorFactory advisorFactory, 
                 LauncherMetrics launcherMetrics) {
             long startedAt = System.nanoTime();
@@ -215,7 +215,7 @@ public interface AopWeaver extends RawMatcher, Transformer, Closeable {
          * @param launcherMetrics metrics collector for startup timing
          * @param aopWeaver       the weaver to install
          */
-        protected void installByteBuddy(Instrumentation instrumentation, 
+        private void installByteBuddy(Instrumentation instrumentation, 
                 AopContext aopContext, 
                 LauncherMetrics launcherMetrics,
                 DefaultAopWeaver aopWeaver) {

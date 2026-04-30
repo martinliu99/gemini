@@ -160,6 +160,7 @@ class InternalAnnotationAJ extends AbstractAnnotationAJ {
     /**
      * {@inheritDoc}
      */
+    @Override
     public String getStringFormOfValue(String name) {
         AnnotationValue<?, ?> annotationValue = nameValuePair.get(name);
         return annotationValue == null ? null : annotationValue.resolve().toString();

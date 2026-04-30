@@ -25,6 +25,7 @@ import org.aspectj.bridge.IMessage;
 import org.aspectj.bridge.IMessageHandler;
 import org.aspectj.weaver.BoundedReferenceType;
 import org.aspectj.weaver.IWeavingSupport;
+import org.aspectj.weaver.MemberKind;
 import org.aspectj.weaver.ReferenceType;
 import org.aspectj.weaver.ReferenceTypeDelegate;
 import org.aspectj.weaver.ResolvedMember;
@@ -167,6 +168,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
     /**
      * {@inheritDoc}
      */
+    @Override
     public TypeDescription describeType(String typeName) {
         if ("java.lang.Object".equals(typeName)) return OBJECT_DESCRIPTION;
 
@@ -177,6 +179,7 @@ public class BytebuddyWorld extends World implements TypeWorld {
     /**
      * {@inheritDoc}
      */
+    @Override
     public ResolvedMember resolve(Member member) {
         return doResolve(member);
     }
@@ -204,9 +207,10 @@ public class BytebuddyWorld extends World implements TypeWorld {
     }
 
     protected Shadow makeExecutionShadow(ResolvedMember member) {
-        Kind kind = org.aspectj.weaver.Member.CONSTRUCTOR == member.getKind()
+        MemberKind memberKind = member.getKind();
+        Kind kind = org.aspectj.weaver.Member.CONSTRUCTOR.equals(memberKind)
                 ? Shadow.ConstructorExecution
-                : (org.aspectj.weaver.Member.STATIC_INITIALIZATION == member.getKind()
+                : (org.aspectj.weaver.Member.STATIC_INITIALIZATION.equals(memberKind)
                         ? Shadow.StaticInitialization
                         : Shadow.MethodExecution);
 
@@ -320,6 +324,9 @@ public class BytebuddyWorld extends World implements TypeWorld {
         }
 
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected ReferenceTypeDelegate resolveDelegate(ReferenceType referenceType) {
             try {
@@ -337,22 +344,38 @@ public class BytebuddyWorld extends World implements TypeWorld {
 
     private static class ExceptionBasedMessageHandler implements IMessageHandler {
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean handleMessage(IMessage message) throws AbortException {
             throw new WorldLintException(message.toString());
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public boolean isIgnoring(org.aspectj.bridge.IMessage.Kind kind) {
-            if (kind == IMessage.INFO) {
+            if (IMessage.INFO.equals(kind)) {
                 return true;
             } else {
                 return false;
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void dontIgnore(org.aspectj.bridge.IMessage.Kind kind) {
             // empty
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void ignore(org.aspectj.bridge.IMessage.Kind kind) {
             // empty
         }

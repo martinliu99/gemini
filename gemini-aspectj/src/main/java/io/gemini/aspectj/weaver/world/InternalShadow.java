@@ -258,9 +258,10 @@ class InternalShadow extends Shadow {
     @Override
     public org.aspectj.weaver.Member getEnclosingCodeSignature() {
         // XXX this code is copied from BcelShadow with one minor change...
-        if (getKind().isEnclosingKind()) {
+        Kind kind = getKind();
+        if (kind.isEnclosingKind()) {
             return getSignature();
-        } else if (getKind() == Shadow.PreInitialization) {
+        } else if (Shadow.PreInitialization.equals(kind)) {
             // PreInit doesn't enclose code but its signature
             // is correctly the signature of the ctor.
             return getSignature();

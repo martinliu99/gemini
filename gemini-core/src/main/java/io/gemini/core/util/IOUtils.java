@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
@@ -29,6 +30,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
+import java.nio.charset.Charset;
 
 /**
  * Utility class for I/O stream operations used throughout the Gemini AOP framework.
@@ -40,6 +42,11 @@ import java.net.URLStreamHandler;
  * @author   martin.liu
  */
 public abstract class IOUtils {
+
+    /**
+     * 
+     */
+    private static final String DEFAULT_CHARSET = "UTF-8";
 
     public static final int EOF = -1;
 
@@ -140,10 +147,7 @@ public abstract class IOUtils {
     public static String toString(final InputStream inputStream) throws IOException {
         Assert.notNull(inputStream, "'inputStream' must not be null.");
 
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        doCopy(inputStream, outputStream, new byte[DEFAULT_BUFFER_SIZE]);
-
-        return outputStream.toString();
+        return toString(new InputStreamReader(inputStream, Charset.forName(DEFAULT_CHARSET)));
     }
 
     /**
@@ -291,6 +295,7 @@ public abstract class IOUtils {
          *
          * @return the input stream
          */
+        @Override
         public InputStream getInputStream() {
             connect(); 
             return inputStream;

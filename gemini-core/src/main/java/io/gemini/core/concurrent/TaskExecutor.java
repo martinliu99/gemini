@@ -216,7 +216,7 @@ public interface TaskExecutor {
 
         private <T> List<List<T>> splitTasks(Collection<T> elements, int batchCount) {
             if (elements.size() == 0)
-                return Collections.emptyList();
+                return new ArrayList<>();
 
             int avgEleCount = elements.size() / batchCount;
             int mod = elements.size() % batchCount;
@@ -242,12 +242,6 @@ public interface TaskExecutor {
             return splitedTaskList;
         }
 
-        /**
-         * @param splitTasks
-         * @param taskExecutor
-         * @param taskCount
-         * @return
-         */
         private <T, R> List<R> executeTasksInParallel(List<List<T>> splitedTaskList, Function<T, R> taskExecutor,
                 Function<Supplier<Collection<R>>, Collection<R>> executionWrapper, int taskCount) {
             // submit splitTasks

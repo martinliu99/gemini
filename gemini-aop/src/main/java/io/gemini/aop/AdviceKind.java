@@ -16,6 +16,7 @@
 package io.gemini.aop;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -132,7 +133,7 @@ public interface AdviceKind {
          * @throws IllegalArgumentException if the value is not recognized
          */
         public static AspectJAdviceKind parse(String value) {
-            value = value == null ? "" : value.trim().toUpperCase();
+            value = value == null ? "" : value.trim().toUpperCase(Locale.ENGLISH);
             AspectJAdviceKind kind = VALUE_MAP.get(value);
             if (kind != null)
                 return kind;

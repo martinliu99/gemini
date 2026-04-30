@@ -50,6 +50,9 @@ public interface ReferenceTypes {
             super(signature, world);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean isGenericType() {
             return false;
@@ -58,10 +61,14 @@ public interface ReferenceTypes {
         /** 
          * {@inheritDoc} 
          */
+        @Override
         public ResolvedType resolve(World world) {
             return this;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public ReferenceTypeDelegate getDelegate() {
             if (super.getDelegate() == null) {
@@ -94,7 +101,7 @@ public interface ReferenceTypes {
          */
         @Override
         public int hashCode() {
-            return this.hashCode();
+            return super.hashCode();
         }
 
         /**

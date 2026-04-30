@@ -62,6 +62,7 @@ public class TypeNamePatternParser extends PatternParser {
      *
      * {@inheritDoc}
      */
+    @Override
     public TypePattern parseSingleTypePattern(boolean insideTypeParameters) {
         TypePattern typePattern = super.parseSingleTypePattern(insideTypeParameters);
         return typePattern instanceof WildTypePattern ? new WildTypeNamePattern( (WildTypePattern) typePattern) : typePattern;

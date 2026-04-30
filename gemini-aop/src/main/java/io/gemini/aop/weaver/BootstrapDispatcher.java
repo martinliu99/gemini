@@ -80,7 +80,7 @@ public abstract class BootstrapDispatcher {
     /**
      * Initializes {@code BootstrapDispatcher#Delegator} field when AOP framework launches.
      * 
-     * @param delegator
+     * @param delegator instance of BootstrapDispatcher#Delegator
      */
     public static void setDelegator(Delegator delegator) {
         if (DELEGATOR != null) {
@@ -98,7 +98,7 @@ public abstract class BootstrapDispatcher {
     /**
      * Get {@code BootstrapDispatcher#Delegator}.
      * 
-     * @return
+     * @return initialized {@code BootstrapDispatcher#Delegator}.
      */
     public static Delegator getDelegator() {
         return DELEGATOR;

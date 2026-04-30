@@ -51,7 +51,7 @@ public class Sample01_11DemoServiceByteBuddyAdvice {
     @Advice.AssignReturned.AsScalar
     @Advice.AssignReturned.ToAllArguments(typing = Assigner.Typing.DYNAMIC)
     public static Object[] before(
-            @Advice.This() DemoService targetObject,
+            @Advice.This DemoService targetObject,
             @Advice.AllArguments(typing = Assigner.Typing.DYNAMIC) Object[] arguments) throws Throwable {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("Entering '{}' with args: {}", targetObject, arguments);
@@ -68,7 +68,7 @@ public class Sample01_11DemoServiceByteBuddyAdvice {
 
     @OnMethodExit(inline = false)
     public static Object after(
-            @Advice.This() DemoService targetObject,
+            @Advice.This DemoService targetObject,
             @Advice.Argument(value = 0, readOnly = true, typing = Assigner.Typing.DYNAMIC) Request request) throws Throwable {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("Exited '{}' with args: {}", targetObject, request);

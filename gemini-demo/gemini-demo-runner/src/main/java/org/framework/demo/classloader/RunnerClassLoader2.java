@@ -26,8 +26,8 @@ import java.net.URL;
 public class RunnerClassLoader2 extends RunnerClassLoader {
 
     /**
-     * @param urls
-     * @param parent
+     * @param urls      class paths
+     * @param parent    parent class loader
      */
     public RunnerClassLoader2(URL[] urls, ClassLoader parent) {
         super(urls, parent);

@@ -24,10 +24,9 @@ import io.gemini.api.aop.annotation.ExprPointcut;
 import net.bytebuddy.description.method.MethodDescription;
 
 /**
- *
+ * Demo advice intercepting type initializer of target class.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 @ExprPointcut(pointcutExpression = 
         "staticinitialization(org.framework.demo.service.DemoServiceImpl)")

@@ -29,7 +29,9 @@ import org.slf4j.LoggerFactory;
 import io.gemini.core.DiagnosticLevel;
 
 /**
- * 
+ * Unit tests of {@code TaskExecutor}.
+ *
+ * @author   martin.liu
  */
 public class TaskExecutorTests {
 
@@ -46,8 +48,7 @@ public class TaskExecutorTests {
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    LOGGER.warn("Interrupt thread sleeping.");
                 }
                 return index;
             });

@@ -57,7 +57,6 @@ import net.bytebuddy.asm.AsmVisitorWrapper;
 import net.bytebuddy.asm.AsmVisitorWrapper.ForDeclaredMethods.MethodVisitorWrapper;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.dynamic.DynamicType;
-import net.bytebuddy.dynamic.DynamicType.Builder;
 import net.bytebuddy.implementation.Implementation;
 import net.bytebuddy.implementation.MethodCall;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
@@ -128,10 +127,10 @@ public interface PointcutAdvisorWeaver {
          * {@inheritDoc}
          */
         @Override
-        public Builder<?> weave(Builder<?> builder, Object... arguments) {
+        public DynamicType.Builder<?> weave(DynamicType.Builder<?> builder, Object... arguments) {
             for (PointcutAdvisorWeaver advisorWeaver : advisorWeavers) {
                 try {
-                    Builder<?> returning = advisorWeaver.weave(builder, arguments);
+                    DynamicType.Builder<?> returning = advisorWeaver.weave(builder, arguments);
                     if (returning != null)
                         builder = returning;
                 } catch (Throwable t) {
@@ -223,7 +222,7 @@ public interface PointcutAdvisorWeaver {
          * {@inheritDoc}
          */
         @Override
-        public Builder<?> weave(Builder<?> builder, Object... arguments) {
+        public DynamicType.Builder<?> weave(DynamicType.Builder<?> builder, Object... arguments) {
             try {
                 return doWeave(builder, arguments);
             } catch (Exception e) {
@@ -241,7 +240,7 @@ public interface PointcutAdvisorWeaver {
             }
         }
 
-        protected abstract Builder<?> doWeave(Builder<?> builder, Object... arguments);
+        protected abstract DynamicType.Builder<?> doWeave(DynamicType.Builder<?> builder, Object... arguments);
     }
 
 
@@ -268,7 +267,7 @@ public interface PointcutAdvisorWeaver {
          * {@inheritDoc}
          */
         @Override
-        protected Builder<?> doWeave(Builder<?> builder, Object... arguments) {
+        protected DynamicType.Builder<?> doWeave(DynamicType.Builder<?> builder, Object... arguments) {
             if (getTargetMethod().isNative() == false)
                 return builder;
 
@@ -335,7 +334,7 @@ public interface PointcutAdvisorWeaver {
          * {@inheritDoc}
          */
         @Override
-        protected Builder<?> doWeave(Builder<?> builder, Object... arguments) {
+        protected DynamicType.Builder<?> doWeave(DynamicType.Builder<?> builder, Object... arguments) {
             MethodDescription targetMethod = getTargetMethod();
 
             WithCustomMapping withCustomMapping = Advice.withCustomMapping().bind( 
@@ -468,10 +467,6 @@ public interface PointcutAdvisorWeaver {
         private int callbackSlot;
 
 
-        /**
-         * @param targetMethod
-         * @param advisors
-         */
         public ByteBuddyAdviceWeaver(AopWeaver aopWeaver, boolean loadedType, MethodDescription targetMethod, 
                 List<? extends Advisor> advisors) {
             super(aopWeaver, loadedType, targetMethod, advisors);
@@ -491,7 +486,7 @@ public interface PointcutAdvisorWeaver {
          * {@inheritDoc}
          */
         @Override
-        protected Builder<?> doWeave(Builder<?> builder, Object... arguments) {
+        protected DynamicType.Builder<?> doWeave(DynamicType.Builder<?> builder, Object... arguments) {
             WithCustomMapping withCustomMapping = Advice.withCustomMapping()
             .with(new Advice.AssignReturned.Factory())
             .bootstrap(

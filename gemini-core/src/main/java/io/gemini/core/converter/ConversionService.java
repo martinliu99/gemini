@@ -87,6 +87,7 @@ public interface ConversionService {
      * @param <T>        the target type
      * @return the converted value, or {@code null} if {@code source} is {@code null}
      */
+    @SuppressWarnings("TypeParameterUnusedInFormals")
     <T> T convert(Object source, Generic targetType);
 
     /**
@@ -97,7 +98,7 @@ public interface ConversionService {
      * @param <T>       the target type
      * @return the converted value, or {@code null} if {@code source} is {@code null}
      */
-    <T> T convert(Object source, Converter<?, ?> converter);
+    <T> T convert(Object source, Converter<?, T> converter);
 
 
     /**
@@ -225,7 +226,7 @@ public interface ConversionService {
          * {@inheritDoc}
          */
         @Override
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
         public <T> T convert(Object source, Generic targetType) {
             if (source == null)
                 return null;
@@ -255,7 +256,7 @@ public interface ConversionService {
          */
         @Override
         @SuppressWarnings("unchecked")
-        public <T> T convert(Object source, Converter<?, ?> converter) {
+        public <T> T convert(Object source, Converter<?, T> converter) {
             if (source == null)
                 return null;
 
@@ -330,7 +331,7 @@ public interface ConversionService {
                     return true;
                 if (obj == null)
                     return false;
-                if (getClass() != obj.getClass())
+                if (obj instanceof ConverterCacheKey == false)
                     return false;
                 ConverterCacheKey other = (ConverterCacheKey) obj;
                 if (sourceTpe == null) {

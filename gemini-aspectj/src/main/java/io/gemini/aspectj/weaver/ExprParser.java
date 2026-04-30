@@ -109,11 +109,6 @@ public enum ExprParser {
         }
     }
 
-
-    /**
-     * @param expression
-     * @return
-     */
     private String validateExpression(String expression) {
         Assert.hasText(expression, "'expression' must not be empty");
         return expression.trim();
@@ -468,18 +463,23 @@ public enum ExprParser {
             return new SimpleScope(typeWorld.getWorld(), formalBindings);
 
         ISourceContext sourceContext = new ISourceContext() {
+
+            @Override
             public ISourceLocation makeSourceLocation(IHasPosition position) {
                 return new SourceLocation(new File(""), 0);
             }
 
+            @Override
             public ISourceLocation makeSourceLocation(int line, int offset) {
                 return new SourceLocation(new File(""), line);
             }
 
+            @Override
             public int getOffset() {
                 return 0;
             }
 
+            @Override
             public void tidy() {
             }
         };
@@ -544,7 +544,7 @@ public enum ExprParser {
         }
 
         private static String buildUserMessageFromParserException(String expression, ParserException ex) {
-            StringBuffer msg = new StringBuffer();
+            StringBuilder msg = new StringBuilder();
 
             msg.append("Expression is not well-formed: expecting '");
             msg.append(ex.getMessage());

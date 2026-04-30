@@ -90,6 +90,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
      * @param targetMethod the method to test
      * @return {@code true} if the pointcut matches the method
      */
+    @Override
     boolean matches(MethodDescription targetMethod);
 
     /**
@@ -216,10 +217,14 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
          *
          * @return the pointcut expression; never {@code null}
          */
+        @Override
         public String getPointcutExpression() {
             return this.pointcutExpression;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public ElementMatcher<TypeDescription> getTypeMatcher() {
             return new ElementMatcher<TypeDescription>() {
@@ -261,6 +266,7 @@ public interface ExprPointcut extends io.gemini.api.aop.Pointcut, ElementMatcher
         /** 
          * {@inheritDoc}
          */
+        @Override
         public boolean matches(MethodDescription targetMethod) {
             return doMatch(targetMethod, false, PointcutParameterMatcher.True.INSTANCE);
         }

@@ -20,6 +20,7 @@ package io.gemini.api;
  * Base unchecked exception for all framework exceptions.
  * Subclasses should provide domain-specific error semantics.
  *
+ * @author   martin.liu
  */
 public abstract class BaseException extends RuntimeException {
 

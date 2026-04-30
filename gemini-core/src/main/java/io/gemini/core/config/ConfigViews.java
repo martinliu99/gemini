@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -217,7 +218,7 @@ public class ConfigViews {
      */
     public static DiagnosticLevel getDiagnosticLevel(ConfigView configView) {
         if (configView.containsKey(DIAGNOSTIC_LEVEL_KEY)) {
-            String level = configView.getAsString(DIAGNOSTIC_LEVEL_KEY).toUpperCase();
+            String level = configView.getAsString(DIAGNOSTIC_LEVEL_KEY).toUpperCase(Locale.ENGLISH);
             try {
                 return DiagnosticLevel.valueOf(level);
             } catch (Exception e) {

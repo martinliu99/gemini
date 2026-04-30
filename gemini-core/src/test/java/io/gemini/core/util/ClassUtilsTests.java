@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import net.bytebuddy.description.type.TypeDescription;
 
 /**
- *
+ * Unit tests of {@code ClassUtils}.
  *
  * @author   martin.liu
  */
@@ -57,7 +57,7 @@ public class ClassUtilsTests {
             try {
                 loadedType = ClassUtils.forName(typeName, false, null);
             } catch (Throwable t) {
-                t.printStackTrace();
+                LOGGER.warn("Could not instantiate class '{}'.", typeName);
             }
             LOGGER.info("Type '{}' is loaded, '{}'.", typeName, loadedType);
 

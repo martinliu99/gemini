@@ -50,7 +50,7 @@ public enum OrderComparator implements Comparator<Object> {
     }
 
     @SuppressWarnings("rawtypes")
-    protected int getOrder(Object obj) {
+    private int getOrder(Object obj) {
         if (obj == null)
             return Order.LOWEST_PRECEDENCE;
 

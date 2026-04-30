@@ -17,7 +17,6 @@ package io.gemini.core.config;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +71,7 @@ public interface ConfigView {
      */
     default Collection<String> keys(String keyPrefix) {
         if (keyPrefix == null)
-            return Collections.emptyList();
+            return new ArrayList<>();
 
         Set<String> keys = new LinkedHashSet<>();
         for (String key : this.keys()) {
@@ -140,6 +139,7 @@ public interface ConfigView {
      * @param <T>        the target type
      * @return the converted value, or {@code defaultValue} if absent
      */
+    @SuppressWarnings("TypeParameterUnusedInFormals")
     <T> T getValue(String key, boolean resolvePlaceholders, Generic targetType);
 
     /**
@@ -166,7 +166,7 @@ public interface ConfigView {
      * @param <T>                 the target type
      * @return the converted value
      */
-    <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter);
+    <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, T> converter);
 
     /**
      * Returns the value for the given key, converted using the given {@link Converter},
@@ -179,7 +179,7 @@ public interface ConfigView {
      * @param <T>                 the target type
      * @return the converted value, or {@code defaultValue} if absent
      */
-    <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter);
+    <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, T> converter);
 
 
     /**
@@ -419,6 +419,7 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
+        @SuppressWarnings("TypeParameterUnusedInFormals")
         public <T> T getValue(String key, boolean resolvePlaceholders, Generic targetType) {
             Assert.notNull(targetType, "'targetType' must not be null.");
 
@@ -449,7 +450,7 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
-        public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter) {
+        public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, T> converter) {
             Object value = getValue(key, resolvePlaceholders);
 
             return conversionService.convert(value, converter);
@@ -459,7 +460,7 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
-        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter) {
+        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, T> converter) {
             Object value = null;
             try {
                 value = getValue(key, resolvePlaceholders);
@@ -621,6 +622,7 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
+        @SuppressWarnings("TypeParameterUnusedInFormals")
         public <T> T getValue(String key, boolean resolvePlaceholders, Generic targetType) {
             if (super.containsKey(key))
                 return super.getValue(key, resolvePlaceholders, targetType);
@@ -644,7 +646,7 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
-        public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, ?> converter) {
+        public <T> T getValue(String key, boolean resolvePlaceholders, Converter<?, T> converter) {
             if (super.containsKey(key))
                 return super.getValue(key, resolvePlaceholders, converter);
 
@@ -655,7 +657,7 @@ public interface ConfigView {
          * {@inheritDoc}
          */
         @Override
-        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, ?> converter) {
+        public <T> T getValue(String key, T defaultValue, boolean resolvePlaceholders, Converter<?, T> converter) {
             if (super.containsKey(key))
                 return super.getValue(key, defaultValue, resolvePlaceholders, converter);
 

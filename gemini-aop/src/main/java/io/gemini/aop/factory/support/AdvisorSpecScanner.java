@@ -55,7 +55,7 @@ import net.bytebuddy.matcher.ElementMatcher;
  * <p>
  * The {@link Compound} implementation delegates to all registered scanners in order,
  * deduplicates by advisor name, and then runs all {@link AdvisorSpecPostProcessor} instances.
- * Concrete scanners ({@link ForAtPojoPointcut}, {@link ForAtExprPointcut}, {@link ForAspectJPointcutAdvisor})
+ * Concrete scanners ({@link ForAtPojoPointcutAdvisor}, {@link ForAtExprPointcutAdvisor}, {@link ForAspectJPointcutAdvisor})
  * discover advice classes annotated with {@code @PojoPointcut}, {@code @ExprPointcut}, or {@code @Aspect}.
  * </p>
  *
@@ -241,7 +241,7 @@ public interface AdvisorSpecScanner {
             if (classInfo.isAnonymousInnerClass() == false)
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec class is NOT top-level or nested, concrete class. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  Use @{} annotation to ignore this illegal AdvisorSpec. \n", 
                             classInfo.getName(), 
                             NoScanning.class.getName()
@@ -375,9 +375,9 @@ public interface AdvisorSpecScanner {
      * Scans for advice classes annotated with {@link io.gemini.api.aop.annotation.PojoPointcut}
      * and builds {@link AdvisorSpec.PointcutAdvisorSpec} instances with POJO-style pointcuts.
      */
-    public class ForAtPojoPointcut extends AbstractBase {
+    public class ForAtPojoPointcutAdvisor extends AbstractBase {
 
-        public ForAtPojoPointcut(FactoryContext factoryContext) {
+        public ForAtPojoPointcutAdvisor(FactoryContext factoryContext) {
             super(factoryContext, createAdviceSpecParser(factoryContext), new PointcutSpecParser.ForPojoPointcut());
         }
 
@@ -411,9 +411,9 @@ public interface AdvisorSpecScanner {
      * Scans for advice classes annotated with {@link io.gemini.api.aop.annotation.ExprPointcut}
      * and builds {@link AdvisorSpec.PointcutAdvisorSpec} instances with expression-based pointcuts.
      */
-    public class ForAtExprPointcut extends AbstractBase {
+    public class ForAtExprPointcutAdvisor extends AbstractBase {
 
-        public ForAtExprPointcut(FactoryContext factoryContext) {
+        public ForAtExprPointcutAdvisor(FactoryContext factoryContext) {
             super(factoryContext, createAdviceSpecParser(factoryContext), new PointcutSpecParser.ForExprPointcut());
         }
 

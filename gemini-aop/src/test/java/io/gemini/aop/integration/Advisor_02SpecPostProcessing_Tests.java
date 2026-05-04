@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
 package io.gemini.aop.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +27,11 @@ import io.gemini.api.aop.MatchingContext;
 import io.gemini.api.aop.annotation.Conditional;
 import net.bytebuddy.matcher.ElementMatcher;
 
-
+/**
+ * Tests post processing of advice spec scanning.
+ *
+ * @author   martin.liu
+ */
 public class Advisor_02SpecPostProcessing_Tests {
 
     @Test
@@ -38,14 +39,14 @@ public class Advisor_02SpecPostProcessing_Tests {
         new SpecPostPrcoessing_Object().postPrcoessSpec(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecPostProcessing_ExprPointcut_Advice.POST_PROCESS_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecPostProcessing_ExprPointcut_Advisor.POST_PROCESS_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
     }
 
 
-    private static class SpecPostPrcoessing_Object {
+    static class SpecPostPrcoessing_Object {
 
         public long postPrcoessSpec(long input) {
             new ConditionMatching_Object().conditionMethod();
@@ -55,9 +56,9 @@ public class Advisor_02SpecPostProcessing_Tests {
     }
 
 
-    private static class SpecPostProcessing_ExprPointcut_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
+    static class SpecPostProcessing_ExprPointcut_Advisor extends Advice.AbstractAfter<Long, RuntimeException> {
 
-        private static final String POST_PROCESS_SPEC_AFTER_ADVICE = SpecPostProcessing_ExprPointcut_Advice.class.getName() + ".after";
+        private static final String POST_PROCESS_SPEC_AFTER_ADVICE = SpecPostProcessing_ExprPointcut_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -78,7 +79,6 @@ public class Advisor_02SpecPostProcessing_Tests {
         private Condition_Object condition_Object; 
 
         private void conditionMethod() {
-            return;
         }
     }
 
@@ -92,9 +92,8 @@ public class Advisor_02SpecPostProcessing_Tests {
     }
 
 
-    private static class OnMarkCondition implements ElementMatcher<MatchingContext> {
+    static class OnMarkCondition implements ElementMatcher<MatchingContext> {
 
-        @SuppressWarnings("unused")
         public OnMarkCondition(boolean mark) {
             
         }

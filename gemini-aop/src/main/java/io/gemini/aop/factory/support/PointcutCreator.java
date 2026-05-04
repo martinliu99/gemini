@@ -162,7 +162,7 @@ public interface PointcutCreator {
             } catch (ExprParser.ExprParseException e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with unparsable PointcutExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName:{} \n"
                             + "  PointcutExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Syntax Error: {} \n", 
@@ -176,7 +176,7 @@ public interface PointcutCreator {
             } catch (ExprParser.ExprLintException e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     LOGGER.warn("Ignored AdvisorSpec with lint PointcutExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName:{} \n"
                             + "  PointcutExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Lint message: {} \n", 
@@ -190,7 +190,7 @@ public interface PointcutCreator {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     Throwable cause = e.getCause();
                     LOGGER.warn("Ignored AdvisorSpec with illegal PointcutExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName:{} \n"
                             + "  PointcutExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -204,7 +204,7 @@ public interface PointcutCreator {
             } catch (Exception e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     LOGGER.warn("Ignored AdvisorSpec with illegal PointcutExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName:{} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
@@ -232,7 +232,7 @@ public interface PointcutCreator {
             } catch (Exception e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with illegal Pointcut. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName:{} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 

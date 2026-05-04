@@ -149,7 +149,7 @@ public interface AdviceCreator {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not load Advice class via '{}'. \n"
-                                + "  AdvisorSpec: {} \n"
+                                + "  AdvisorName: {} \n"
                                 + "  AdviceClass: {} \n"
                                 + "  ClassLoader: {} \n"
                                 + "  Error reason: {} \n", 
@@ -182,7 +182,7 @@ public interface AdviceCreator {
                 } catch (Throwable t) {
                     if (LOGGER.isWarnEnabled())
                         LOGGER.warn("Could not create Advice via '{}'. \n"
-                                + "  AdvisorSpec: {} \n"
+                                + "  AdvisorName: {} \n"
                                 + "  AdviceClass: {} \n"
                                 + "  ClassLoader: {} \n"
                                 + "  Error reason: {} \n", 
@@ -240,7 +240,7 @@ public interface AdviceCreator {
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not load Advice class. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  AdviceClass: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -268,7 +268,7 @@ public interface AdviceCreator {
 
             if (LOGGER.isWarnEnabled())
                 LOGGER.warn("Ignored AdvisorSpec with non top-level or nested, concrete AdviceClass. \n"
-                        + "  AdvisorSpec: {} \n"
+                        + "  AdvisorName: {} \n"
                         + "  AdviceClass: {} \n"
                         + "  ClassLoader: {} \n",
                         advisorName, 
@@ -286,7 +286,7 @@ public interface AdviceCreator {
 
             if (LOGGER.isWarnEnabled())
                 LOGGER.warn("Ignored AdvisorSpec with non {} AdviceClass. \n"
-                        + "  AdvisorSpec: {} \n"
+                        + "  AdvisorName: {} \n"
                         + "  AdviceClass: {} \n"
                         + "  ClassLoader: {} \n",
                         Advice.class.getName(), 
@@ -321,7 +321,7 @@ public interface AdviceCreator {
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with uninstantiable AdviceClass. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  AdviceClass: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -442,7 +442,7 @@ public interface AdviceCreator {
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not generate adapter class for AspectJ advice method. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  AdapterClass: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -478,7 +478,7 @@ public interface AdviceCreator {
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not instantiate adapter class for AspectJ advice method. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  AdapterClass: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -553,7 +553,7 @@ public interface AdviceCreator {
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not instantiate adapter class for AspectJ advice method. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  AdapterClass: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 

@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.util.zip.Deflater;
 
 import org.aspectj.lang.annotation.After;
@@ -35,7 +36,7 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.annotation.ConditionalOnClassLoader;
 
 /**
- *
+ * Tests methods, e.g., type initializer, class method, constructor, instance method or native method, etc.
  *
  * @author   martin.liu
  */
@@ -248,9 +249,7 @@ public class Target_02TargetMethod_Tests {
 
                 defaultMethod = InterfaceImplementor_Object.class.getDeclaredMethod(DEFAULT_METHOD_NAME);
                 implementorDefaultMethod = InterfaceImplementor_Object.class.getDeclaredMethod(IMPLEMENTOR_DEFAULT_METHOD_NAME);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
 
             IMPLEMENTOR_INTERFACE_METHOD = implementorInterfaceMethod;
             DEFAULT_METHOD = defaultMethod;
@@ -395,9 +394,7 @@ public class Target_02TargetMethod_Tests {
             try {
                 genericBridge = BridgeMethod_Object.class.getDeclaredMethod(GENERIC_BRIDGE_NAME);
                 covariantBridge = BridgeMethod_Object.class.getDeclaredMethod(COVARIANT_BRIDGE_NAME);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
 
             GENERIC_BRIDGE = genericBridge;
             COVARIANT_BRIDGE = covariantBridge;
@@ -487,7 +484,7 @@ public class Target_02TargetMethod_Tests {
     @Test
     public void testNativeMethod() {
         {
-            byte[] data = "This is a long text that needs compression".getBytes();
+            byte[] data = "This is a long text that needs compression".getBytes(Charset.defaultCharset());
 
             Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
             deflater.setInput(data);
@@ -521,9 +518,7 @@ public class Target_02TargetMethod_Tests {
             Method method = null;
             try {
                 method = Deflater.class.getDeclaredMethod("init", int.class, int.class, boolean.class);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             NATIVE_METHOD = method;
         }
 

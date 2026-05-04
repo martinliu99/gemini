@@ -45,7 +45,7 @@ import net.bytebuddy.asm.Advice;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 /**
- *
+ * Tests target classes, e.g., class loaded by bootstrap class loader, class version lower than java 8, etc.
  *
  * @author   martin.liu
  */
@@ -57,7 +57,9 @@ public class Target_01TargetClass_Tests {
     @Test
     public void testJdkClass1() {
         String object = new String();
-        object.toString();
+        String result = object.toString();
+
+        assertThat(result).isNotNull();
 
         AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(JdkClass1_Aspect.JDKCLASS_BEFORE_ADVICE);
         assertThat(beforeAdviceMethodInvoker).isNotNull();
@@ -84,9 +86,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = String.class.getDeclaredMethod("toString");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             JDKCLASS_METHOD = method;
         }
 
@@ -156,9 +156,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = ThreadPoolExecutor.class.getDeclaredMethod("execute", Runnable.class);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             JDKCLASS_METHOD = method;
         }
 
@@ -257,9 +255,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = ToStringBuilder.class.getMethod("append", String.class, Object.class);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             BYTECODE_1X_METHOD = method;
         }
 
@@ -307,9 +303,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = BooleanConverter.class.getMethod("convert", Class.class, Object.class);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             BYTECODE_2X_METHOD = method;
         }
 
@@ -357,9 +351,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = Option.class.getMethod("getArgs");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             BYTECODE_3X_METHOD = method;
         }
 
@@ -407,9 +399,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = MimeType.class.getMethod("getBaseType");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             BYTECODE_4X_METHOD = method;
         }
 
@@ -418,7 +408,7 @@ public class Target_01TargetClass_Tests {
          * {@code MimeType} is loaded by BootstrapClassLoader under JDK8 or below, 
          * but loaded by AppClassLoader under JDK9 or above.
          * 
-         * @param joinpoint
+         * @param joinpoint the mutable joinpoint providing access to target object, arguments, and result
          */
         @SuppressWarnings("rawtypes")
         @ConditionalOnClassLoader(classLoaderExpression = "BootstrapClassLoader || AppClassLoader")
@@ -464,9 +454,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = ServletException.class.getMethod("getRootCause");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             BYTECODE_5X_METHOD = method;
         }
 
@@ -513,9 +501,7 @@ public class Target_01TargetClass_Tests {
             Method method = null;
             try {
                 method = MDC.class.getMethod("get", String.class);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             BYTECODE_6X_METHOD = method;
         }
 

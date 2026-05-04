@@ -160,7 +160,7 @@ public interface AdvisorCreator {
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not create Advisor. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 
@@ -186,7 +186,7 @@ public interface AdvisorCreator {
             } catch (ExprParser.ExprParseException e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with unparsable ConditionExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  ConditionExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Syntax Error: {} \n", 
@@ -200,7 +200,7 @@ public interface AdvisorCreator {
             } catch (ExprParser.ExprLintException e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     LOGGER.warn("Ignored AdvisorSpec with lint ConditionExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  ConditionExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Lint message: {} \n", 
@@ -213,7 +213,7 @@ public interface AdvisorCreator {
             } catch (MissingElementException e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     LOGGER.warn("Ignored AdvisorSpec missing element under given ClassLoader. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  ConditionExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -227,7 +227,7 @@ public interface AdvisorCreator {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled()) {
                     Throwable cause = e.getCause();
                     LOGGER.warn("Ignored AdvisorSpec with illegal ConditionExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  ConditionExpression: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
@@ -241,7 +241,7 @@ public interface AdvisorCreator {
             } catch (Exception e) {
                 if (advisorContext.isValidateContext() == false && LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored AdvisorSpec with illegal ConditionExpression. \n"
-                            + "  AdvisorSpec: {} \n"
+                            + "  AdvisorName: {} \n"
                             + "  ClassLoader: {} \n"
                             + "  Error reason: {} \n", 
                             advisorSpec.getAdvisorName(), 

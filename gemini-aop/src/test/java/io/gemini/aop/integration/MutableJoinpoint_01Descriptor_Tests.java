@@ -34,7 +34,7 @@ import io.gemini.aop.test.ExecutionMemento.TargetMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
- *
+ * Tests joinpoint descriptor accessing.
  *
  * @author   martin.liu
  */
@@ -175,9 +175,7 @@ public class MutableJoinpoint_01Descriptor_Tests {
             Method method = null;
             try {
                 method = ClassMethod_Object.class.getMethod(ClassMethod_Object.DESCRIPTOR);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             DESCRIPTOR_METHOD = method;
         }
 
@@ -254,9 +252,7 @@ public class MutableJoinpoint_01Descriptor_Tests {
             Constructor<?> method = null;
             try {
                 method = InstanceConstructor_Object.class.getConstructor(byte.class);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             DESCRIPTOR_CONSTRUCTOR = method;
         }
 
@@ -337,9 +333,7 @@ public class MutableJoinpoint_01Descriptor_Tests {
             Method method = null;
             try {
                 method = InstanceMethod_Object.class.getMethod(InstanceMethod_Object.DESCRIPTOR);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { /* do nothing */ }
             DESCRIPTOR_METHOD = method;
         }
 

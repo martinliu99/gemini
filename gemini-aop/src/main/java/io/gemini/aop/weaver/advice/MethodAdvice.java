@@ -25,36 +25,39 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
 
 
 /**
- * Framework ByteBuddy {@code @Advice} class for static methods.
+ * Framework ByteBuddy {@code @Advice} class for methods, including type initializer, class method, 
+ * or instance method.
  * <p>
- * Intercepts static method invocations, passes arguments to before-advice (which may
- * modify them), and propagates after-advice return/throw overrides.
+ * Intercepts method invocations, passes the target object and arguments to
+ * before-advice (which may modify them), and propagates after-advice return/throw overrides.
  * </p>
  *
  * @author   martin.liu
  */
 @BootstrapClassConsumer
-public class ClassMethodAdvice {
+public class MethodAdvice {
 
     /**
-     * Executed before the static method body.
+     * Executed before the method body.
      * Creates a {@link Dispatcher}, invokes before-advice (which may modify arguments),
      * and returns {@code true} to skip the method body if advice has set a return or throw value.
      *
-     * @param descriptor  the cached joinpoint descriptor (injected via INDY)
-     * @param arguments   the method arguments (may be replaced by advice)
-     * @param dispatcher  thread-local dispatcher (injected via {@code @Advice.Local})
+     * @param descriptor    the cached joinpoint descriptor (injected via INDY)
+     * @param targetObject  the target instance ({@code this})
+     * @param arguments     the method arguments (may be replaced by advice)
+     * @param dispatcher    thread-local dispatcher (injected via {@code @Advice.Local})
      * @return {@code true} to skip the method body, {@code false} to proceed normally
      * @throws Throwable if before-advice throws
      */
     @Advice.OnMethodEnter(skipOn = Advice.OnNonDefaultValue.class, inline = true, prependLineNumber = true)
-    public static boolean beforeStaticMethod(
+    public static boolean beforeMethod(
             @DescriptorOffset.Descriptor Object descriptor,
+            @Advice.This(readOnly = false, typing = Assigner.Typing.DYNAMIC, optional = true) Object targetObject,
             @Advice.AllArguments(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object[] arguments,
             @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher
             ) throws Throwable {
         // 1.create dispatcher
-        dispatcher = getDelegator().createDispacther(descriptor, null, arguments);
+        dispatcher = getDelegator().createDispacther(descriptor, targetObject, arguments);
         if (dispatcher == null)
             // ignore instrumentation and execute instrumented method
             return false;
@@ -70,16 +73,16 @@ public class ClassMethodAdvice {
 
 
     /**
-     * Executed after the static method body (or after being skipped).
+     * Executed after the method body (or after being skipped).
      * Invokes after-advice and propagates any advice-set return or throw value.
      *
      * @param returning   the actual return value of the method
      * @param throwing    the exception thrown by the method, or {@code null}
-     * @param dispatcher  the dispatcher created in {@link #beforeStaticMethod}
+     * @param dispatcher  the dispatcher created in {@link #beforeMethod}
      * @throws Throwable if after-advice throws or if advice sets a throw value
      */
     @Advice.OnMethodExit(onThrowable = Throwable.class, inline = true)
-    public static void afterStaticMethod(
+    public static void afterMethod(
             @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returning,
             @Advice.Thrown(readOnly = false, typing = Assigner.Typing.DYNAMIC) Throwable throwing,
             @Advice.Local(value = VAR_ADVICE_DISPATCHER) Dispatcher<Object, Throwable> dispatcher

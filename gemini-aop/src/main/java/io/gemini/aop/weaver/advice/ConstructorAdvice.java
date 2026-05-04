@@ -34,7 +34,7 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
  * @author   martin.liu
  */
 @BootstrapClassConsumer
-public class InstanceConstructorAdvice {
+public class ConstructorAdvice {
 
     /**
      * Executed before the constructor body.

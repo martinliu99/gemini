@@ -26,10 +26,8 @@ import org.slf4j.LoggerFactory;
 import io.gemini.aop.AopContext;
 import io.gemini.aop.AopMetrics;
 import io.gemini.aop.matcher.ElementMatcherFactory;
-import io.gemini.aop.weaver.advice.ClassInitializerAdvice;
-import io.gemini.aop.weaver.advice.ClassMethodAdvice;
-import io.gemini.aop.weaver.advice.InstanceConstructorAdvice;
-import io.gemini.aop.weaver.advice.InstanceMethodAdvice;
+import io.gemini.aop.weaver.advice.ConstructorAdvice;
+import io.gemini.aop.weaver.advice.MethodAdvice;
 import io.gemini.api.annotation.NoMatching;
 import io.gemini.api.classloader.BaseClassLoader;
 import io.gemini.core.config.ConfigView;
@@ -166,13 +164,13 @@ public class WeaverContext {
         // load joinpoint transformer settings
         {
             this.classInitializerAdvice = configView.getAsClass(
-                    "aop.weaver.classInitializerAdvice", ClassInitializerAdvice.class);
+                    "aop.weaver.classInitializerAdvice", MethodAdvice.class);
             this.classMethodAdvice = configView.getAsClass(
-                    "aop.weaver.classMethodAdvice", ClassMethodAdvice.class);
+                    "aop.weaver.classMethodAdvice", MethodAdvice.class);
             this.instanceConstructorAdvice = configView.getAsClass(
-                    "aop.weaver.instanceConstructorAdvice", InstanceConstructorAdvice.class);
+                    "aop.weaver.instanceConstructorAdvice", ConstructorAdvice.class);
             this.instanceMethodAdvice = configView.getAsClass(
-                    "aop.weaver.instanceMethodAdvice", InstanceMethodAdvice.class);
+                    "aop.weaver.instanceMethodAdvice", MethodAdvice.class);
         }
 
         // load weaver installer settings

@@ -16,7 +16,7 @@
 package io.gemini.aop.integration;
 
 /**
- *
+ * Tests advice implementation exception handling.
  *
  * @author   martin.liu
  */

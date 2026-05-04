@@ -49,6 +49,7 @@ import io.gemini.core.classloader.ThreadContext;
 import io.gemini.core.object.ObjectFactory.ObjectsException;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.CollectionUtils;
+import io.gemini.core.util.MethodHandleLookup;
 import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.Throwables;
 import net.bytebuddy.asm.Advice;
@@ -587,11 +588,13 @@ public interface PointcutAdvisorWeaver {
                 if ( (byteBuddyAdvice = advisor.getAdviceClass()).getName().equals(adviceTypeName))
                     break;
             }
+            if (byteBuddyAdvice == null)
+                return null;    //throw?
 
             // use lookup of instrumented type to avoid LinkageError described in https://github.com/elastic/apm-agent-java/issues/1450
             try {
-                if (byteBuddyAdvice != null)
-                    return targetLookup.findStatic(byteBuddyAdvice, adviceMethodName, adviceMethodType);
+                MethodHandleLookup lookup = MethodHandleLookup.select(byteBuddyAdvice, targetLookup);
+                return lookup.findStatic(byteBuddyAdvice, adviceMethodName, adviceMethodType);
             } catch (Exception e) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Could not find static advice method. \n"

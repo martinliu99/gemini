@@ -40,9 +40,9 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
  * @author   martin.liu
  */
 @ExprPointcut(pointcutExpression = "execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
-public class Sample01_11DemoServiceByteBuddyAdvice {
+public class Sample01_11ByteBuddyAdvice_Advisor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_11DemoServiceByteBuddyAdvice.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_11ByteBuddyAdvice_Advisor.class);
 
     public static final int ADVICE_INDEX = 4;
 
@@ -60,19 +60,26 @@ public class Sample01_11DemoServiceByteBuddyAdvice {
         Request request = (Request) arguments[0];
 
         List<String> input = new ArrayList<>(request.getInput());
-        input.add(Sample01_11DemoServiceByteBuddyAdvice.class.getSimpleName());
+        input.add(Sample01_11ByteBuddyAdvice_Advisor.class.getSimpleName());
 
         Request newRequest = new Request(input);
         return new Object[] {newRequest};
     }
 
-    @OnMethodExit(inline = false)
-    public static Object after(
-            @Advice.This DemoService targetObject,
-            @Advice.Argument(value = 0, readOnly = true, typing = Assigner.Typing.DYNAMIC) Request request) throws Throwable {
-        if (LOGGER.isInfoEnabled())
-            LOGGER.info("Exited '{}' with args: {}", targetObject, request);
 
-        return true;
+    @ExprPointcut(pointcutExpression = "execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
+    @SuppressWarnings("UnusedNestedClass")
+    private static class Test {
+
+        @OnMethodExit(inline = false)
+        static Object after(
+                @Advice.This DemoService targetObject,
+                @Advice.Argument(value = 0, readOnly = true, typing = Assigner.Typing.DYNAMIC) Request request) throws Throwable {
+            if (LOGGER.isInfoEnabled())
+                LOGGER.info("Exited '{}' with args: {}", targetObject, request);
+
+            return true;
+        }
+
     }
 }

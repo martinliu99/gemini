@@ -42,12 +42,12 @@ import net.bytebuddy.matcher.ElementMatcher;
  *
  * @author   martin.liu
  */
-@PojoPointcut(pointcutClass = Sample01_01DemoServicePojoPointcutAdvice.class)
-@Order(Sample01_01DemoServicePojoPointcutAdvice.ADVICE_INDEX)
-public class Sample01_01DemoServicePojoPointcutAdvice extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
+@PojoPointcut(pointcutClass = Sample01_01PojoPointcut_Advisor.class)
+@Order(Sample01_01PojoPointcut_Advisor.ADVICE_INDEX)
+public class Sample01_01PojoPointcut_Advisor extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
         implements Pointcut {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_01DemoServicePojoPointcutAdvice.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_01PojoPointcut_Advisor.class);
 
     public static final int ADVICE_INDEX = 1;
 
@@ -63,7 +63,7 @@ public class Sample01_01DemoServicePojoPointcutAdvice extends Advice.AbstractBef
         // update Request's list
         Request request = (Request) joinpoint.getArguments()[0];
         List<String> input = request.getInput();
-        input.add(Sample01_01DemoServicePojoPointcutAdvice.class.getSimpleName());
+        input.add(Sample01_01PojoPointcut_Advisor.class.getSimpleName());
     }
 
     /**

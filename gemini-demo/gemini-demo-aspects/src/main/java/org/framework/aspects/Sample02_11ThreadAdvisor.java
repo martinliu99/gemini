@@ -37,8 +37,8 @@ import net.bytebuddy.matcher.ElementMatcher;
  * @author   martin.liu
  */
 @ConditionalOnClassLoader(isBootstrapClassLoader = true)
-@PojoPointcut(pointcutClass = Sample02_11ThreadAdvice.class)
-public class Sample02_11ThreadAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> implements Pointcut {
+@PojoPointcut(pointcutClass = Sample02_11ThreadAdvisor.class)
+public class Sample02_11ThreadAdvisor extends Advice.AbstractBeforeAfter<Void, RuntimeException> implements Pointcut {
 
     /**
      * {@inheritDoc}

@@ -37,8 +37,8 @@ import io.gemini.api.aop.matcher.TypeMatchers;
  *
  * @author   martin.liu
  */
-@PojoPointcut(pointcutClass = Sample02_10RunAdvice.class)
-public class Sample02_10RunAdvice extends Advice.AbstractBeforeAfter<Object, RuntimeException> implements Pointcut {
+@PojoPointcut(pointcutClass = Sample02_10RunAdvisor.class)
+public class Sample02_10RunAdvisor extends Advice.AbstractBeforeAfter<Object, RuntimeException> implements Pointcut {
 
     /**
      * {@inheritDoc}

@@ -41,10 +41,10 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
  * @author   martin.liu
  */
 @Aspect
-@Order(Sample01_03DemoServiceAspectJAspect.ADVICE_INDEX)
-public class Sample01_03DemoServiceAspectJAspect {
+@Order(Sample01_03AspectJ_Aspect.ADVICE_INDEX)
+public class Sample01_03AspectJ_Aspect {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_03DemoServiceAspectJAspect.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_03AspectJ_Aspect.class);
 
     public static final int ADVICE_INDEX = 3;
 
@@ -62,7 +62,7 @@ public class Sample01_03DemoServiceAspectJAspect {
             LOGGER.info("Entering '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());
 
         List<String> input = new ArrayList<>(request.getInput());
-        input.add(Sample01_03DemoServiceAspectJAspect.class.getSimpleName());
+        input.add(Sample01_03AspectJ_Aspect.class.getSimpleName());
 
         Request newRequest = new Request(input);
         joinpoint.getArguments()[0] = newRequest;
@@ -70,7 +70,7 @@ public class Sample01_03DemoServiceAspectJAspect {
 
 
     // refer to named pointcut in another class
-    @AfterReturning(pointcut = "org.framework.aspects.Sample01_03DemoServiceAspectJAspect$CommonPointcuts.process()", returning="returning")
+    @AfterReturning(pointcut = "org.framework.aspects.Sample01_03AspectJ_Aspect$CommonPointcuts.process()", returning="returning")
     public Object after(MutableJoinpoint<Response<String>, RuntimeException> joinpoint, Response<String> returning) throws Throwable {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("Exited '{}' with args: {}", joinpoint.getTargetObject(), joinpoint.getArguments());

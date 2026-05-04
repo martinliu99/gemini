@@ -39,10 +39,10 @@ import io.gemini.api.aop.annotation.ExprPointcut;
  */
 @ExprPointcut(pointcutExpression = 
         "execution(org.framework.demo.api.Response<java.lang.String> org.framework.demo.service.DemoServiceImpl.process(org.framework.demo.api.Request))")
-@Order(Sample01_02DemoServiceExprPointcutAdvice.ADVICE_INDEX)
-public class Sample01_02DemoServiceExprPointcutAdvice extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> {
+@Order(Sample01_02ExprPointcut_Advisor.ADVICE_INDEX)
+public class Sample01_02ExprPointcut_Advisor extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_02DemoServiceExprPointcutAdvice.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_02ExprPointcut_Advisor.class);
 
     public static final int ADVICE_INDEX = 2;
 
@@ -58,7 +58,7 @@ public class Sample01_02DemoServiceExprPointcutAdvice extends Advice.AbstractBef
         // update Request's list
         Request request = (Request) joinpoint.getArguments()[0];
         List<String> input = request.getInput();
-        input.add(Sample01_02DemoServiceExprPointcutAdvice.class.getSimpleName());
+        input.add(Sample01_02ExprPointcut_Advisor.class.getSimpleName());
     }
 
     /**

@@ -35,7 +35,7 @@ import io.gemini.api.aop.annotation.ExprPointcut;
 @AdvisorName("ThreadPoolAdvisor")
 @ConditionalOnClassLoader(isBootstrapClassLoader = true)
 @ExprPointcut(pointcutExpression = "execution(public void java.util.concurrent.ThreadPoolExecutor.execute(java.lang.Runnable))")
-public class Sample02_11ThreadPoolAdvice extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
+public class Sample02_11ThreadPoolAdvisor extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
     /**
      * {@inheritDoc}

@@ -33,8 +33,8 @@ public class OnTypeCondition implements ElementMatcher<MatchingContext> {
     private final String typeExpression;
 
 
-    public OnTypeCondition(String typeExpression) {
-        this.typeExpression = typeExpression;
+    public OnTypeCondition(String value) {
+        this.typeExpression = value;
     }
 
     /**

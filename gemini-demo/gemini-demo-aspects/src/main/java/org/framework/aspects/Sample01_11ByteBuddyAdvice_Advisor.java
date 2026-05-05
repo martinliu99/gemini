@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.framework.demo.api.DemoService;
 import org.framework.demo.api.Request;
+import org.framework.demo.service.DemoServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,7 @@ import net.bytebuddy.implementation.bytecode.assign.Assigner;
  *
  * @author   martin.liu
  */
-@ExprPointcut(pointcutExpression = "execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
+@ExprPointcut("execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
 public class Sample01_11ByteBuddyAdvice_Advisor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Sample01_11ByteBuddyAdvice_Advisor.class);
@@ -51,7 +52,7 @@ public class Sample01_11ByteBuddyAdvice_Advisor {
     @Advice.AssignReturned.AsScalar
     @Advice.AssignReturned.ToAllArguments(typing = Assigner.Typing.DYNAMIC)
     public static Object[] before(
-            @Advice.This DemoService targetObject,
+            @Advice.This DemoServiceImpl targetObject,
             @Advice.AllArguments(typing = Assigner.Typing.DYNAMIC) Object[] arguments) throws Throwable {
         if (LOGGER.isInfoEnabled())
             LOGGER.info("Entering '{}' with args: {}", targetObject, arguments);
@@ -67,7 +68,7 @@ public class Sample01_11ByteBuddyAdvice_Advisor {
     }
 
 
-    @ExprPointcut(pointcutExpression = "execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
+    @ExprPointcut("execution(* org.framework.demo.service..*Impl.process(org.framework.demo.api.Request))")
     @SuppressWarnings("UnusedNestedClass")
     private static class Test {
 

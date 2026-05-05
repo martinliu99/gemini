@@ -33,8 +33,8 @@ public class OnMethodCondition implements ElementMatcher<MatchingContext> {
     private final String methodExpression;
 
 
-    public OnMethodCondition(String methodExpression) {
-        this.methodExpression = methodExpression;
+    public OnMethodCondition(String value) {
+        this.methodExpression = value;
     }
 
     /**

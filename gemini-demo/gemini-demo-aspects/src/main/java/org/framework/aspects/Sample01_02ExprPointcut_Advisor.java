@@ -37,8 +37,7 @@ import io.gemini.api.aop.annotation.ExprPointcut;
  *
  * @author   martin.liu
  */
-@ExprPointcut(pointcutExpression = 
-        "execution(org.framework.demo.api.Response<java.lang.String> org.framework.demo.service.DemoServiceImpl.process(org.framework.demo.api.Request))")
+@ExprPointcut("execution(org.framework.demo.api.Response<java.lang.String> org.framework.demo.service.DemoServiceImpl.process(org.framework.demo.api.Request))")
 @Order(Sample01_02ExprPointcut_Advisor.ADVICE_INDEX)
 public class Sample01_02ExprPointcut_Advisor extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> {
 

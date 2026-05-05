@@ -42,7 +42,7 @@ import net.bytebuddy.matcher.ElementMatcher;
  *
  * @author   martin.liu
  */
-@PojoPointcut(pointcutClass = Sample01_01PojoPointcut_Advisor.class)
+@PojoPointcut(Sample01_01PojoPointcut_Advisor.class)
 @Order(Sample01_01PojoPointcut_Advisor.ADVICE_INDEX)
 public class Sample01_01PojoPointcut_Advisor extends Advice.AbstractBeforeAfter<Response<String>, RuntimeException> 
         implements Pointcut {

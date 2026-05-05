@@ -48,6 +48,6 @@ public @interface PojoPointcut {
      *
      * @return the pointcut class
      */
-    Class<? extends Pointcut> pointcutClass();
+    Class<? extends Pointcut> value();
 
 }

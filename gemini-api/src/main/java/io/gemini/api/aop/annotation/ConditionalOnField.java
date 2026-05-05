@@ -45,5 +45,5 @@ public @interface ConditionalOnField {
      *
      * @return the field expression
      */
-    String fieldExpression();
+    String value();
 }

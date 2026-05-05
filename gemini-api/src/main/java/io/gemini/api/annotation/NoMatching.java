@@ -31,6 +31,6 @@ import java.lang.annotation.Target;
 @Documented
 public @interface NoMatching {
 
-    boolean classLoader() default false;
+    boolean value() default false;
 
 }

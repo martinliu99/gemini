@@ -45,5 +45,5 @@ public @interface ConditionalOnMethod {
      *
      * @return the method expression
      */
-    String methodExpression();
+    String value();
 }

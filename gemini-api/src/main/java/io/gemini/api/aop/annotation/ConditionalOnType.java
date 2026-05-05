@@ -49,5 +49,5 @@ public @interface ConditionalOnType {
      *
      * @return the type expression
      */
-    String typeExpression();
+    String value();
 }

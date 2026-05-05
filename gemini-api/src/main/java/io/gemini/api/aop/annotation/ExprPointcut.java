@@ -47,6 +47,6 @@ public @interface ExprPointcut {
      *
      * @return the pointcut expression, e.g. {@code "execution(* com.example..*(..))"} 
      */
-    String pointcutExpression() default "";
+    String value();
 
 }

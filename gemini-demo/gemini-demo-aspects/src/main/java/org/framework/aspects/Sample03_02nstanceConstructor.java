@@ -29,8 +29,7 @@ import net.bytebuddy.description.method.MethodDescription;
  *
  * @author   martin.liu
  */
-@ExprPointcut(pointcutExpression = 
-        "execution(public org.framework.demo.service.DemoServiceImpl.new())")
+@ExprPointcut("execution(public org.framework.demo.service.DemoServiceImpl.new())")
 public class Sample03_02nstanceConstructor extends Advice.AbstractBeforeAfter<DemoServiceImpl, RuntimeException> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Sample03_02nstanceConstructor.class);

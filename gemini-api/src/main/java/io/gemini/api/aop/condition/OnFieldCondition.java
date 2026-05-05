@@ -33,8 +33,8 @@ public class OnFieldCondition implements ElementMatcher<MatchingContext> {
     private final String fieldExpression;
 
 
-    public OnFieldCondition(String fieldExpression) {
-        this.fieldExpression = fieldExpression;
+    public OnFieldCondition(String value) {
+        this.fieldExpression = value;
     }
 
     /**

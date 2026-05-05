@@ -85,7 +85,7 @@ public class Advice_01AdviceClass_Tests {
         }
     }
 
-    @ExprPointcut(pointcutExpression = Advice_01AdviceClass_Tests.POINTCUT_EXPRESSION)
+    @ExprPointcut(Advice_01AdviceClass_Tests.POINTCUT_EXPRESSION)
     private static class AdviceClass_PojoAdvice_Advisor extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
         private static final String ADVICE_CLASS_BEFORE_ADVICE = AdviceClass_PojoAdvice_Advisor.class.getName() + ".before";
@@ -139,7 +139,7 @@ public class Advice_01AdviceClass_Tests {
         }
     }
 
-    @ExprPointcut(pointcutExpression = Advice_01AdviceClass_Tests.POINTCUT_EXPRESSION)
+    @ExprPointcut(Advice_01AdviceClass_Tests.POINTCUT_EXPRESSION)
     static class AdviceClass_ByteBuddyAdvice_Advisor {
 
         private static final String ADVICE_CLASS_BEFORE_ADVICE = AdviceClass_ByteBuddyAdvice_Advisor.class.getName() + ".before";

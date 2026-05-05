@@ -33,8 +33,8 @@ public class OnConstructorCondition implements ElementMatcher<MatchingContext> {
     private final String constructorExpression;
 
 
-    public OnConstructorCondition(String constructorExpression) {
-        this.constructorExpression = constructorExpression;
+    public OnConstructorCondition(String value) {
+        this.constructorExpression = value;
     }
 
     /**

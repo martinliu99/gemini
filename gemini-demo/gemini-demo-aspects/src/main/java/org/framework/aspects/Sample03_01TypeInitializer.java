@@ -28,8 +28,7 @@ import net.bytebuddy.description.method.MethodDescription;
  *
  * @author   martin.liu
  */
-@ExprPointcut(pointcutExpression = 
-        "staticinitialization(org.framework.demo.service.DemoServiceImpl)")
+@ExprPointcut("staticinitialization(org.framework.demo.service.DemoServiceImpl)")
 public class Sample03_01TypeInitializer extends Advice.AbstractBeforeAfter<Void, RuntimeException> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Sample03_01TypeInitializer.class);

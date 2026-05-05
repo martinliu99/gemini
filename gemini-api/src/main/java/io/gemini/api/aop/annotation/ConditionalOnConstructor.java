@@ -45,5 +45,5 @@ public @interface ConditionalOnConstructor {
      *
      * @return the constructor expression
      */
-    String constructorExpression();
+    String value();
 }

@@ -29,7 +29,7 @@ import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
- * Tests parameter binding of AspectJ advice.
+ * Tests parameter binding of AspectJ advice via AspectJ annotations.
  *
  * @author   martin.liu
  */
@@ -435,5 +435,5 @@ public class Advice_06AspectJParamBinding_Tests {
                         .withInvoked(true)
                         .withThrowing(throwing) );
         }
-}
+    }
 }

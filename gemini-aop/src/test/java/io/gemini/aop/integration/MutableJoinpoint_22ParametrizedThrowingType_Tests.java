@@ -28,7 +28,7 @@ import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
- *
+ * Tests type parameters matching of {@code MutableJoinpoint} argument.
  *
  * @author   martin.liu
  */

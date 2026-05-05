@@ -34,10 +34,9 @@ import io.gemini.aop.test.ExecutionMemento.TargetMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
- *
+ * Tests arguments accessing or modifying of target method.
  *
  * @author   martin.liu
- * @since	 1.0
  */
 public class MutableJoinpoint_03TargetArgument_Tests {
 

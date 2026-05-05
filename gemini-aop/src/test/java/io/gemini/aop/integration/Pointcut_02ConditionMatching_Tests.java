@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * 
- */
 package io.gemini.aop.integration;
 
 import static net.bytebuddy.matcher.ElementMatchers.isPrivate;
@@ -43,7 +40,9 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
- * 
+ * Tests condition matching.
+ *
+ * @author   martin.liu
  */
 public class Pointcut_02ConditionMatching_Tests {
 
@@ -66,12 +65,10 @@ public class Pointcut_02ConditionMatching_Tests {
         }
     }
 
-    private static class VoidMatching_Object {
+    static class VoidMatching_Object {
 
         private void matchVoid() {
             new ConditionMatching_Object().conditionMethod();
-
-            return;
         }
     }
 
@@ -81,7 +78,6 @@ public class Pointcut_02ConditionMatching_Tests {
         private Condition_Object condition_Object; 
 
         private void conditionMethod() {
-            return;
         }
     }
 
@@ -98,7 +94,7 @@ public class Pointcut_02ConditionMatching_Tests {
 
         private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Aspect.class.getName() + ".matchVoid_afterAdvice";
 
-        @ConditionalOnField(fieldExpression = "io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
+        @ConditionalOnField("io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$Condition_Object io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.condition_Object")
         @After(MATCH_VOID_POINTCUT)
         public void matchVoid_afterAdvice(MutableJoinpoint<Void, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(MATCH_VOID_AFTER_ADVICE, 
@@ -115,7 +111,7 @@ public class Pointcut_02ConditionMatching_Tests {
     }
 
 
-    private static class OnMarkCondition implements ElementMatcher<MatchingContext> {
+    static class OnMarkCondition implements ElementMatcher<MatchingContext> {
 
         @SuppressWarnings("unused")
         public OnMarkCondition(boolean mark) {
@@ -132,8 +128,8 @@ public class Pointcut_02ConditionMatching_Tests {
         
     }
 
-    @PojoPointcut(pointcutClass = VoidMatching_Advice.class)
-    @ConditionalOnMethod(methodExpression = "private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()")
+    @PojoPointcut(VoidMatching_Advice.class)
+    @ConditionalOnMethod("private void io.gemini.aop.integration.Pointcut_02ConditionMatching_Tests$ConditionMatching_Object.conditionMethod()")
     @ConditionalOnClassLoader(isAppClassLoader = true)
     public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> 
             implements Pointcut {

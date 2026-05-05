@@ -32,7 +32,7 @@ import io.gemini.aop.test.ExecutionMemento.TargetMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
 /**
- *
+ * Tests thrown exception modification by target method.
  *
  * @author   martin.liu
  */

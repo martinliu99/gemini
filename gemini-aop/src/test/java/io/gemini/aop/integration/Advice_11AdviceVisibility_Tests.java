@@ -93,7 +93,7 @@ public class Advice_11AdviceVisibility_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = AdviceVisibility_PojoPointcut_Advisor.class)
+    @PojoPointcut(AdviceVisibility_PojoPointcut_Advisor.class)
     private static class AdviceVisibility_PojoPointcut_Advisor extends Advice.AbstractAfter<Long, RuntimeException> implements Pointcut {
 
         private static final String ADVICE_VISIBILITY_AFTER_ADVICE = AdviceVisibility_PojoPointcut_Advisor.class.getName() + ".after";
@@ -129,7 +129,7 @@ public class Advice_11AdviceVisibility_Tests {
         }
     }
 
-    @ExprPointcut(pointcutExpression = Advice_11AdviceVisibility_Tests.POINTCUT_EXPRESSION)
+    @ExprPointcut(Advice_11AdviceVisibility_Tests.POINTCUT_EXPRESSION)
     private static class AdviceVisibility_ExprPointcut_Advisor extends Advice.AbstractAfter<Long, RuntimeException> {
 
         private static final String ADVICE_VISIBILITY_AFTER_ADVICE = AdviceVisibility_ExprPointcut_Advisor.class.getName() + ".after";
@@ -169,7 +169,7 @@ public class Advice_11AdviceVisibility_Tests {
         }
     }
 
-    @ExprPointcut(pointcutExpression = Advice_11AdviceVisibility_Tests.POINTCUT_EXPRESSION)
+    @ExprPointcut(Advice_11AdviceVisibility_Tests.POINTCUT_EXPRESSION)
     private static class AdviceVisibility_ByteBuddyAdvice_Advisor {
 
         private static final String ADVICE_VISIBILITY_BEFORE_ADVICE = AdviceVisibility_ByteBuddyAdvice_Advisor.class.getName() + ".before";

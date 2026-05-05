@@ -33,29 +33,40 @@ import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 import io.gemini.api.aop.Pointcut;
 import io.gemini.api.aop.annotation.ExprPointcut;
 import io.gemini.api.aop.annotation.PojoPointcut;
+import net.bytebuddy.asm.Advice.OnMethodExit;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.matcher.ElementMatcher;
 
-
+/**
+ * Tests advisor spec scanning.
+ *
+ * @author   martin.liu
+ */
 public class Advisor_01SpecScanning_Tests {
+
+    private static final String SCAN_SPEC_POINTCUT_EXPRESSION = 
+            "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))";
+    private static final String IGNORE_ILLEGAL_SPEC_POINTCUT_EXPRESSION = 
+            "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.ignoreIllegalSpec(long))";
+
 
     @Test
     public void testSpecScanning() {
         new SpecScanning_Object().scanSpec(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_AtPojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_PojoPointcut_Advisor.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_AtExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_ExprPointcut_Advisor.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
-
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_Aspect.SCAN_SPEC_AFTER_ADVICE);
@@ -70,7 +81,7 @@ public class Advisor_01SpecScanning_Tests {
         }
     }
 
-    private static class SpecScanning_Object {
+    static class SpecScanning_Object {
 
         public long scanSpec(long input) {
             return input;
@@ -81,10 +92,10 @@ public class Advisor_01SpecScanning_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = SpecScanning_AtPojoPointcutAdvice.class)
-    public static class SpecScanning_AtPojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> implements Pointcut {
+    @PojoPointcut(SpecScanning_PojoPointcut_Advisor.class)
+    public static class SpecScanning_PojoPointcut_Advisor extends Advice.AbstractAfter<Long, RuntimeException> implements Pointcut {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_AtPojoPointcutAdvice.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_PojoPointcut_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -118,10 +129,10 @@ public class Advisor_01SpecScanning_Tests {
     }
 
 
-    @ExprPointcut(pointcutExpression = "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))")
-    public static class SpecScanning_AtExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> {
+    @ExprPointcut("execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))")
+    public static class SpecScanning_ExprPointcut_Advisor extends Advice.AbstractAfter<Long, RuntimeException> {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_AtExprPointcutAdvice.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_ExprPointcut_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -139,12 +150,9 @@ public class Advisor_01SpecScanning_Tests {
     @Aspect
     public static class SpecScanning_Aspect {
 
-        private static final String MATCH_ADVISOR_SPEC_POINTCUT = 
-                "execution(!private long io.gemini.aop.integration.Advisor_01SpecScanning_Tests$SpecScanning_Object.scanSpec(long))";
-
         private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_Aspect.class.getName() + ".after";
 
-        @After(MATCH_ADVISOR_SPEC_POINTCUT)
+        @After(SCAN_SPEC_POINTCUT_EXPRESSION)
         public void scanSpec_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
                     new AdviceMethod()
@@ -169,7 +177,7 @@ public class Advisor_01SpecScanning_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = SpecScanning_Advice_Sub.class)
+    @PojoPointcut(SpecScanning_Advice_Sub.class)
     public static class SpecScanning_Advice_Sub extends SpecScanning_Advice_Base implements Pointcut {
 
         /**
@@ -198,23 +206,41 @@ public class Advisor_01SpecScanning_Tests {
         new SpecScanning_Object().ignoreIllegalSpec(1l);
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NullAdvisorSpec_PojoPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NullPointcutMatcher_Advisor.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NullAdvisorSpec_ExprPointcutAdvice.SCAN_SPEC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NullPointcutExpr_Advisor.SCAN_SPEC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNull();
         }
 
-        
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_NoAdviceMethod_Aspect.SCAN_SPEC_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNull();
+        }
+
+        {
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_InlineAdvice_Advisor.SCAN_SPEC_AFTER_ADVICE);
+            assertThat(beforeAdviceMethodInvoker).isNull();
+        }
+
+        {
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_InlineAdvice_Advisor.SCAN_SPEC_AFTER_ADVICE);
+            assertThat(beforeAdviceMethodInvoker).isNull();
+        }
+
+        {
+            AdviceMethod beforeAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(SpecScanning_InstanceMethodAdvice_Advisor.SCAN_SPEC_AFTER_ADVICE);
+            assertThat(beforeAdviceMethodInvoker).isNull();
+        }
     }
 
-    @PojoPointcut(pointcutClass = SpecScanning_NullAdvisorSpec_PojoPointcutAdvice.class)
-    public static class SpecScanning_NullAdvisorSpec_PojoPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> 
+    @PojoPointcut(SpecScanning_NullPointcutMatcher_Advisor.class)
+    public static class SpecScanning_NullPointcutMatcher_Advisor extends Advice.AbstractAfter<Long, RuntimeException> 
             implements Pointcut {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullAdvisorSpec_PojoPointcutAdvice.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullPointcutMatcher_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -244,10 +270,10 @@ public class Advisor_01SpecScanning_Tests {
         }
     }
 
-    @ExprPointcut(pointcutExpression = "")
-    public static class SpecScanning_NullAdvisorSpec_ExprPointcutAdvice extends Advice.AbstractAfter<Long, RuntimeException> {
+    @ExprPointcut("")
+    public static class SpecScanning_NullPointcutExpr_Advisor extends Advice.AbstractAfter<Long, RuntimeException> {
 
-        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullAdvisorSpec_ExprPointcutAdvice.class.getName() + ".after";
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NullPointcutExpr_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -262,6 +288,60 @@ public class Advisor_01SpecScanning_Tests {
     }
 
     @Aspect
-    public static class SpecScanning_NoAdvice_Aspect {
+    public static class SpecScanning_NoAdviceMethod_Aspect {
+
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_NoAdviceMethod_Aspect.class.getName() + ".after";
+    }
+
+    @ExprPointcut(IGNORE_ILLEGAL_SPEC_POINTCUT_EXPRESSION)
+    static class SpecScanning_DuplicateAdvice_Advisor {
+
+        private static final String SCAN_SPEC_AFTER1_ADVICE = SpecScanning_InstanceMethodAdvice_Advisor.class.getName() + ".after1";
+        private static final String SCAN_SPEC_AFTER2_ADVICE = SpecScanning_InstanceMethodAdvice_Advisor.class.getName() + ".after2";
+
+
+        @OnMethodExit(inline = true)
+        public static void after1() throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER1_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true) );
+        }
+
+        @OnMethodExit(inline = true)
+        public static void after2() throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER2_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true) );
+        }
+    }
+
+    @ExprPointcut(IGNORE_ILLEGAL_SPEC_POINTCUT_EXPRESSION)
+    static class SpecScanning_InlineAdvice_Advisor {
+
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_InstanceMethodAdvice_Advisor.class.getName() + ".after";
+
+
+        @OnMethodExit(inline = true)
+        public static void before() throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true) );
+        }
+    }
+
+    @ExprPointcut(IGNORE_ILLEGAL_SPEC_POINTCUT_EXPRESSION)
+    static class SpecScanning_InstanceMethodAdvice_Advisor {
+
+        private static final String SCAN_SPEC_AFTER_ADVICE = SpecScanning_InstanceMethodAdvice_Advisor.class.getName() + ".after";
+
+
+        @OnMethodExit(inline = false)
+        public void after(
+                @net.bytebuddy.asm.Advice.Return(typing = Assigner.Typing.DYNAMIC) Object returning) throws Throwable {
+            ExecutionMemento.putAdviceMethodInvoker(SCAN_SPEC_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(returning) );
+        }
     }
 }

@@ -97,24 +97,24 @@ public class Advice_06AspectJParamBinding_Tests {
     @Test
     public void testTargetArgumentBinding() {
         long arg1 = 1l;
-        long arg2 = 2l;
+        String arg2 = "2";
         TargetArgumentBinding_Object object = new TargetArgumentBinding_Object();
         object.bindTargetArgument(arg1, arg2);
+
+        Object[] expectedArgs = new Object[] {arg1, arg2};
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetArgumentBinding_Aspect.BIND_TARGET_ARGUMENT_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(
-                    new Object[] {arg1, arg2} );
+            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo( expectedArgs );
         }
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetArgumentBinding_Aspect.REFERENCE_POINTCUT_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(
-                    new Object[] {arg1, arg2} );
+            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo( expectedArgs );
         }
 
         {
@@ -126,14 +126,16 @@ public class Advice_06AspectJParamBinding_Tests {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetArgumentBinding_Aspect.BIND_PARTIAL_PARAMS_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo(
-                    new Object[] {arg1} );
+            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo( new Object[] {arg1} );
         }
     }
 
     public static class TargetArgumentBinding_Object {
 
-        public long bindTargetArgument(long _long, Long string) {
+        /**
+         * Here only wrapper class of primitive type could be bound to super type.
+         */
+        public long bindTargetArgument(Long _long, String string) {
             return _long + Long.valueOf(string);
         }
     }
@@ -147,7 +149,7 @@ public class Advice_06AspectJParamBinding_Tests {
         private static final String BIND_TARGET_ARGUMENT_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindTargetArgument_afterAdvice";
 
         @After(value = BIND_TARGET_ARGUMENT_POINTCUT, argNames = "_long, string")
-        public void bindTargetArgument_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long _long, Number string) {
+        public void bindTargetArgument_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, Number _long, String string) {
             ExecutionMemento.putAdviceMethodInvoker(BIND_TARGET_ARGUMENT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -158,10 +160,10 @@ public class Advice_06AspectJParamBinding_Tests {
         private static final String REFERENCE_POINTCUT_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".reference_pointcut_afterAdvice";
 
         @Pointcut(BIND_TARGET_ARGUMENT_POINTCUT)
-        public void bindTargetArgument(long _long, long string) {  }
+        public void bindTargetArgument(Number _long, String string) {  }
 
         @After(value = "bindTargetArgument(_long, string)", argNames = "string, _long")
-        public void reference_pointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long string, long _long) {
+        public void reference_pointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, String string, Number _long) {
             ExecutionMemento.putAdviceMethodInvoker(REFERENCE_POINTCUT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -175,7 +177,7 @@ public class Advice_06AspectJParamBinding_Tests {
         private static final String BIND_INCONSISTENT_PARAMS_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindInconsistentParams_afterAdvice";
 
         @After(value = BIND_INCONSISTENT_PARAMS_POINTCUT, argNames = "string, _long, integer")
-        public void bindInconsistentParams_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long string, long _long, int integer) {
+        public void bindInconsistentParams_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, String string, Number _long, int integer) {
             ExecutionMemento.putAdviceMethodInvoker(BIND_INCONSISTENT_PARAMS_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true) );
@@ -188,7 +190,7 @@ public class Advice_06AspectJParamBinding_Tests {
         private static final String BIND_PARTIAL_PARAMS_AFTER_ADVICE = TargetArgumentBinding_Aspect.class.getName() + ".bindPartialParams_afterAdvice";
 
         @After(value = BIND_PARTIAL_PARAMS_POINTCUT, argNames = "_long")
-        public void bindPartialParams_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, long _long) {
+        public void bindPartialParams_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, Number _long) {
             ExecutionMemento.putAdviceMethodInvoker(BIND_PARTIAL_PARAMS_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)

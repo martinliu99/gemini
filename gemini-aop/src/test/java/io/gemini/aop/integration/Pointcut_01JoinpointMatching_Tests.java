@@ -40,7 +40,11 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
-
+/**
+ * Tests pointcut matching.
+ *
+ * @author   martin.liu
+ */
 public class Pointcut_01JoinpointMatching_Tests {
 
     @Test
@@ -55,17 +59,16 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidMatching_Advice.MATCH_VOID_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(VoidMatching_Advisor.MATCH_VOID_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isNull();
         }
     }
 
-    private static class VoidMatching_Object {
+    static class VoidMatching_Object {
 
         private void matchVoid() {
-            return;
         }
     }
 
@@ -86,10 +89,10 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = VoidMatching_Advice.AdvicePointcut.class)
-    public static class VoidMatching_Advice extends Advice.AbstractAfter<Void, RuntimeException> {
+    @PojoPointcut(VoidMatching_Advisor.AdvicePointcut.class)
+    public static class VoidMatching_Advisor extends Advice.AbstractAfter<Void, RuntimeException> {
 
-        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advice.class.getName() + ".after";
+        private static final String MATCH_VOID_AFTER_ADVICE = VoidMatching_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -145,14 +148,14 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Advice.MATCH_PRIMITIVE_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(PrimitiveMatching_Advisor.MATCH_PRIMITIVE_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
         }
     }
 
-    private static class PrimitiveMatching_Object {
+    static class PrimitiveMatching_Object {
 
         public long matchPrimitive(long input) {
             return input;
@@ -190,10 +193,10 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = PrimitiveMatching_Advice.AdvicePointcut.class)
-    public static class PrimitiveMatching_Advice extends Advice.AbstractAfter<Long, RuntimeException> {
+    @PojoPointcut(PrimitiveMatching_Advisor.AdvicePointcut.class)
+    public static class PrimitiveMatching_Advisor extends Advice.AbstractAfter<Long, RuntimeException> {
 
-        private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advice.class.getName() + ".after";
+        private static final String MATCH_PRIMITIVE_AFTER_ADVICE = PrimitiveMatching_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -244,14 +247,14 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericMatching_Advice.MATCH_GENERIC_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericMatching_Advisor.MATCH_GENERIC_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
         }
     }
 
-    private static class GenericMatching_Object<T extends Number & Comparable<T>> {
+    static class GenericMatching_Object<T extends Number & Comparable<T>> {
 
         public T matchGeneric(T input) {
             return input;
@@ -275,10 +278,10 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = GenericMatching_Advice.class)
-    public static class GenericMatching_Advice extends Advice.AbstractAfter<Number, RuntimeException> implements Pointcut {
+    @PojoPointcut(GenericMatching_Advisor.class)
+    public static class GenericMatching_Advisor extends Advice.AbstractAfter<Number, RuntimeException> implements Pointcut {
 
-        private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advice.class.getName() + ".after";
+        private static final String MATCH_GENERIC_AFTER_ADVICE = GenericMatching_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -325,14 +328,14 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayMatching_Advice.MATCH_GENERIC_ARRAY_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericArrayMatching_Advisor.MATCH_GENERIC_ARRAY_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
         }
     }
 
-    private static class GenericArrayMatching_Object<T extends Number> {
+    static class GenericArrayMatching_Object<T extends Number> {
 
         public T[] matchGenericArray(T[] input) {
             return input;
@@ -356,10 +359,10 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = GenericArrayMatching_Advice.class)
-    public static class GenericArrayMatching_Advice extends Advice.AbstractAfter<Number[], RuntimeException> implements Pointcut {
+    @PojoPointcut(GenericArrayMatching_Advisor.class)
+    public static class GenericArrayMatching_Advisor extends Advice.AbstractAfter<Number[], RuntimeException> implements Pointcut {
 
-        private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advice.class.getName() + ".after";
+        private static final String MATCH_GENERIC_ARRAY_AFTER_ADVICE = GenericArrayMatching_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -406,14 +409,14 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionMatching_Advice.MATCH_GENERIC_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(GenericCollectionMatching_Advisor.MATCH_GENERIC_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
         }
     }
 
-    private static class GenericCollectionMatching_Object<T extends Number> {
+    static class GenericCollectionMatching_Object<T extends Number> {
 
         public List<T> matchGenericCollection(List<T> input) {
             return input;
@@ -439,10 +442,10 @@ public class Pointcut_01JoinpointMatching_Tests {
     }
 
     @SuppressWarnings("rawtypes")
-    @PojoPointcut(pointcutClass = GenericCollectionMatching_Advice.class)
-    public static class GenericCollectionMatching_Advice extends Advice.AbstractAfter<List, RuntimeException> implements Pointcut {
+    @PojoPointcut(GenericCollectionMatching_Advisor.class)
+    public static class GenericCollectionMatching_Advisor extends Advice.AbstractAfter<List, RuntimeException> implements Pointcut {
 
-        private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advice.class.getName() + ".after";
+        private static final String MATCH_GENERIC_COLLECTION_AFTER_ADVICE = GenericCollectionMatching_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -489,14 +492,14 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
 
         {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionMatching_Advice.MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE);
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(ParameterizedCollectionMatching_Advisor.MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
             assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo(expectReturning);
         }
     }
 
-    private static class ParameterizedCollectionMatching_Object {
+    static class ParameterizedCollectionMatching_Object {
 
         public List<String> matchParameterizedCollection(List<String> input) {
             return input;
@@ -520,10 +523,10 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = ParameterizedCollectionMatching_Advice.class)
-    public static class ParameterizedCollectionMatching_Advice extends Advice.AbstractAfter<List<String>, RuntimeException> implements Pointcut {
+    @PojoPointcut(ParameterizedCollectionMatching_Advisor.class)
+    public static class ParameterizedCollectionMatching_Advisor extends Advice.AbstractAfter<List<String>, RuntimeException> implements Pointcut {
 
-        private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advice.class.getName() + ".after";
+        private static final String MATCH_PARAMETERIZED_COLLECTION_AFTER_ADVICE = ParameterizedCollectionMatching_Advisor.class.getName() + ".after";
 
         /**
          * {@inheritDoc}
@@ -577,7 +580,7 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    private static class WildCardCollectionMatching_Object {
+    static class WildCardCollectionMatching_Object {
 
         public List<? extends Number> matchWildCardCollection(List<? extends Number> input) {
             return input;
@@ -601,7 +604,7 @@ public class Pointcut_01JoinpointMatching_Tests {
         }
     }
 
-    @PojoPointcut(pointcutClass = WildCardCollectionMatching_Advice.class)
+    @PojoPointcut(WildCardCollectionMatching_Advice.class)
     public static class WildCardCollectionMatching_Advice extends Advice.AbstractAfter<List<? extends Number>, RuntimeException> implements Pointcut {
 
         private static final String MATCH_WILD_CARD_COLLECTION_AFTER_ADVICE = WildCardCollectionMatching_Advice.class.getName() + ".after";

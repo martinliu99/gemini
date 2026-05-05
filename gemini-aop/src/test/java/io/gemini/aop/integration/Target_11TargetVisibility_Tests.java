@@ -23,12 +23,18 @@ import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
 
+import io.gemini.aop.integration.Advice_07ByteBuddyParamBinding.TargetArgumentBinding_AllArguemtns_Advisor;
+import io.gemini.aop.integration.Advice_07ByteBuddyParamBinding.TargetReturningBinding_Advisor;
+import io.gemini.aop.integration.Advice_07ByteBuddyParamBinding.TargetThrowingBinding_Advisor;
 import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
+import io.gemini.api.aop.annotation.ExprPointcut;
+import net.bytebuddy.asm.Advice;
+import net.bytebuddy.asm.Advice.OnMethodExit;
 
 /**
- *
+ * Tests target class visibility.
  *
  * @author   martin.liu
  */
@@ -41,11 +47,20 @@ public class Target_11TargetVisibility_Tests {
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetObjectVisibility_Aspect.ACCESS_TARGET_OBJECT_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(object);
+        }
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetObjectVisibility_ByteBuddy_Advisor.ACCESS_TARGET_OBJECT_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getTargetObject()).isEqualTo(object);
         }
     }
 
-    private static class TargetObjectVisibility_Object {
+    protected static class TargetObjectVisibility_Object {
 
         public long accessTargetObject() {
             return 1l;
@@ -69,25 +84,55 @@ public class Target_11TargetVisibility_Tests {
         }
     }
 
+    @ExprPointcut(TargetObjectVisibility_ByteBuddy_Advisor.ACCESS_TARGET_OBJECT_POINTCUT)
+    public static class TargetObjectVisibility_ByteBuddy_Advisor {
+
+        public static final String ACCESS_TARGET_OBJECT_POINTCUT = 
+                "execution(!private long io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetObjectVisibility_Object.accessTargetObject())";
+
+        private static final String ACCESS_TARGET_OBJECT_AFTER_ADVICE = TargetObjectVisibility_ByteBuddy_Advisor.class.getName() + ".accessTargetObject_afterAdvice";
+
+        @OnMethodExit(inline = false)
+        public static void accessTargetObject_afterAdvice(
+                @Advice.This TargetObjectVisibility_Object targetObject) {
+            ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_OBJECT_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withTargetObject(targetObject) );
+        }
+    }
+
 
     @Test
     public void testTargetArgumentVisibility() {
         TargetArgumentVisibility_Object object = new TargetArgumentVisibility_Object();
-        object.accessTargetArgument(new TargetArgumentVisibility_Object.Argument());
+        TargetArgumentVisibility_Object.Argument_Object arg = new TargetArgumentVisibility_Object.Argument_Object();
+        object.accessTargetArgument(arg);
+
+        Object[] expectedArgs = new Object[] {arg};
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetArgumentVisibility_Aspect.ACCESS_TARGET_ARGUMENT_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo( expectedArgs );
+        }
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetArgumentVisibility_Advisor.ACCESS_TARGET_ARGUMENT_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getArguments()).isEqualTo( expectedArgs );
         }
     }
 
     private static class TargetArgumentVisibility_Object {
 
-        public long accessTargetArgument(Argument argument) {
+        public long accessTargetArgument(Argument_Object argument) {
             return 1l;
         }
 
-        private static class Argument {}
+        protected static class Argument_Object {}
     }
 
     @Aspect
@@ -99,7 +144,7 @@ public class Target_11TargetVisibility_Tests {
         private static final String ACCESS_TARGET_ARGUMENT_AFTER_ADVICE = TargetArgumentVisibility_Aspect.class.getName() + ".accessTargetArgument_afterAdvice";
 
         @After(value = ACCESS_TARGET_ARGUMENT_POINTCUT, argNames = "argument")
-        public void accessTargetArgument_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, TargetArgumentVisibility_Object.Argument argument) {
+        public void accessTargetArgument_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint, TargetArgumentVisibility_Object.Argument_Object argument) {
             ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_ARGUMENT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -107,25 +152,53 @@ public class Target_11TargetVisibility_Tests {
         }
     }
 
+    @ExprPointcut(TargetArgumentVisibility_Advisor.ACCESS_TARGET_ARGUMENT_POINTCUT)
+    public static class TargetArgumentVisibility_Advisor {
+
+        private static final String ACCESS_TARGET_ARGUMENT_POINTCUT = 
+                "execution(!private long io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetArgumentVisibility_Object.accessTargetArgument(..))";
+
+        private static final String ACCESS_TARGET_ARGUMENT_AFTER_ADVICE = TargetArgumentBinding_AllArguemtns_Advisor.class.getName() + ".bindTargetArgument_afterAdvice";
+
+
+        @OnMethodExit(inline = false)
+        public static void bindTargetArgument_afterAdvice(
+                @Advice.AllArguments Object[] args) {
+            ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_ARGUMENT_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withArgumnts(args) );
+        }
+    }
+
 
     @Test
     public void testTargetReturningVisibility() {
         TargetReturningVisibility_Object object = new TargetReturningVisibility_Object();
-        object.accessTargetReturning();
+        Object expectedReturning = object.accessTargetReturning();
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetReturningVisibility_Aspect.ACCESS_TARGET_RETURNING_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNull();
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo( expectedReturning );
+        }
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetReturningVisibility_Advisor.ACCESS_TARGET_RETURNING_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+            assertThat(afterAdviceMethodInvoker.getReturning()).isEqualTo( expectedReturning );
         }
     }
 
     private static class TargetReturningVisibility_Object {
 
-        public Returning accessTargetReturning() {
-            return new Returning();
+        public TargetReturningVisibility_Object.Returning_Object accessTargetReturning() {
+            return new TargetReturningVisibility_Object.Returning_Object();
         }
 
-        static class Returning {}
+        protected static class Returning_Object {}
     }
 
     @Aspect
@@ -138,7 +211,25 @@ public class Target_11TargetVisibility_Tests {
 
         @SuppressWarnings("rawtypes")
         @AfterReturning(value = ACCESS_TARGET_RETURNING_POINTCUT, returning = "returning")
-        public void accessTargetReturning_afterAdvice(MutableJoinpoint joinpoint, TargetReturningVisibility_Object.Returning returning) {
+        public void accessTargetReturning_afterAdvice(MutableJoinpoint joinpoint, TargetReturningVisibility_Object.Returning_Object returning) {
+            ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_RETURNING_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withReturning(returning) );
+        }
+    }
+
+    @ExprPointcut(TargetReturningVisibility_Advisor.ACCESS_TARGET_RETURNING_POINTCUT)
+    public static class TargetReturningVisibility_Advisor {
+
+        private static final String ACCESS_TARGET_RETURNING_POINTCUT = 
+                "execution(* io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetReturningVisibility_Object.accessTargetReturning())";
+
+        private static final String ACCESS_TARGET_RETURNING_AFTER_ADVICE = TargetReturningBinding_Advisor.class.getName() + ".bindTargetReturning_afterAdvice";
+
+        @OnMethodExit(inline = false)
+        public static void bindTargetReturning_afterAdvice(
+                @Advice.Return TargetReturningVisibility_Object.Returning_Object returning) {
             ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_RETURNING_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true)
@@ -156,26 +247,35 @@ public class Target_11TargetVisibility_Tests {
         } catch (Exception actualException) {
             {
                 AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetThrowingVisibility_Aspect.ACCESS_TARGET_THROWING_AFTER_ADVICE);
-                assertThat(afterAdviceMethodInvoker).isNull();
+                assertThat(afterAdviceMethodInvoker).isNotNull();
+                assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+                assertThat(afterAdviceMethodInvoker.getThrowing()).isEqualTo( actualException );
+            }
+
+            {
+                AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(TargetThrowingVisibility_Advisor.ACCESS_TARGET_THROWING_AFTER_ADVICE);
+                assertThat(afterAdviceMethodInvoker).isNotNull();
+                assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+                assertThat(afterAdviceMethodInvoker.getThrowing()).isEqualTo( actualException );
             }
         }
     }
 
-    protected static class TargetThrowingVisibility_Object {
+    private static class TargetThrowingVisibility_Object {
 
-        private ExceptionA_Object cause;
+        private TargetThrowingVisibility_Object.ExceptionA_Object cause;
 
 
-        public TargetThrowingVisibility_Object(ExceptionA_Object cause) {
+        public TargetThrowingVisibility_Object(TargetThrowingVisibility_Object.ExceptionA_Object cause) {
             this.cause = cause;
         }
 
-        public void accessTargetThrowing() throws ExceptionA_Object {
+        public void accessTargetThrowing() throws TargetThrowingVisibility_Object.ExceptionA_Object {
             throw cause;
         }
 
 
-        static class ExceptionA_Object extends Exception {
+        protected static class ExceptionA_Object extends Exception {
 
             /**
              * 
@@ -206,6 +306,25 @@ public class Target_11TargetVisibility_Tests {
         }
     }
 
+    @ExprPointcut(TargetThrowingVisibility_Advisor.ACCESS_TARGET_THROWING_POINTCUT)
+    public static class TargetThrowingVisibility_Advisor {
+
+        private static final String ACCESS_TARGET_THROWING_POINTCUT = 
+                "execution(!private void io.gemini.aop.integration.Target_11TargetVisibility_Tests$TargetThrowingVisibility_Object.accessTargetThrowing())";
+
+        private static final String ACCESS_TARGET_THROWING_AFTER_ADVICE = TargetThrowingBinding_Advisor.class.getName() + ".bindTargetThrowing_afterAdvice";
+
+
+        @OnMethodExit(inline = false, onThrowable = TargetThrowingVisibility_Object.ExceptionA_Object.class)
+        public static void bindTargetThrowing_afterAdvice(
+                @Advice.Thrown TargetThrowingVisibility_Object.ExceptionA_Object throwing) {
+            ExecutionMemento.putAdviceMethodInvoker(ACCESS_TARGET_THROWING_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true)
+                        .withThrowing(throwing) );
+        }
+    }
+
 
     @Test
     public void testParametrizedReturningVisibility() {
@@ -218,10 +337,10 @@ public class Target_11TargetVisibility_Tests {
         }
     }
 
-    private static class ParametrizedReturningVisibility_Object {
+    static class ParametrizedReturningVisibility_Object {
 
-        public Returning accessParametrizedReturning() {
-            return new Returning();
+        public ParametrizedReturningVisibility_Object.Returning accessParametrizedReturning() {
+            return new ParametrizedReturningVisibility_Object.Returning();
         }
 
         private static class Returning {}
@@ -261,19 +380,19 @@ public class Target_11TargetVisibility_Tests {
 
     protected static class ParametrizedThrowingingVisibility_Object {
 
-        private ExceptionA_Object cause;
+        private ParametrizedThrowingingVisibility_Object.ExceptionA_Object cause;
 
 
-        public ParametrizedThrowingingVisibility_Object(ExceptionA_Object cause) {
+        public ParametrizedThrowingingVisibility_Object(ParametrizedThrowingingVisibility_Object.ExceptionA_Object cause) {
             this.cause = cause;
         }
 
-        public void accessParametrizedThrowinging() throws ExceptionA_Object {
+        public void accessParametrizedThrowinging() throws ParametrizedThrowingingVisibility_Object.ExceptionA_Object {
             throw cause;
         }
 
 
-        private static class ExceptionA_Object extends Exception {
+        static class ExceptionA_Object extends Exception {
 
             /**
              * 

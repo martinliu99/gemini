@@ -26,7 +26,11 @@ import io.gemini.aop.test.ExecutionMemento;
 import io.gemini.aop.test.ExecutionMemento.AdviceMethod;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
-
+/**
+ * Tests AspectJ pointcut expression matching.
+ *
+ * @author   martin.liu
+ */
 public class Pointcut_11AspectJExprMatching_Tests {
 
     @Test
@@ -36,12 +40,6 @@ public class Pointcut_11AspectJExprMatching_Tests {
 
         {
             AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(LogicalOperator_Aspect.MATCH_LOGICAL_OPERATOR_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNotNull();
-            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(LogicalOperator_Aspect.MATCH_REFERNECE_POINTCUT_AFTER_ADVICE);
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
@@ -56,15 +54,9 @@ public class Pointcut_11AspectJExprMatching_Tests {
             assertThat(afterAdviceMethodInvoker).isNotNull();
             assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
         }
-
-        {
-            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(LogicalOperator_Aspect.MATCH_REFERNECE_POINTCUT_AFTER_ADVICE);
-            assertThat(afterAdviceMethodInvoker).isNotNull();
-            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
-        }
     }
 
-    private static class LogicalOperator_Object {
+    static class LogicalOperator_Object {
 
         public long matchLogicalOperator(long input) {
             return input;
@@ -91,18 +83,87 @@ public class Pointcut_11AspectJExprMatching_Tests {
                     new AdviceMethod()
                         .withInvoked(true) );
         }
+    }
 
 
-        private static final String MATCH_REFERNECE_POINTCUT_AFTER_ADVICE = LogicalOperator_Aspect.class.getName() + ".matchReferencePointcut_afterAdvice";
+    @Test
+    public void testReferencePointcut() {
+        NamedPointcut_Object object = new NamedPointcut_Object();
+        object.match1(1l);
 
-        @Pointcut("execution(!private long io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$LogicalOperator_Object.matchLogicalOperator(long))")
-        public void matchLogicalOperator() { }
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(LocalRefPointcut_Aspect.MATCH_REFERNECE_POINTCUT_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+        }
 
-        @Pointcut("execution(!private java.lang.Long io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$LogicalOperator_Object.matchLogicalOperator(java.lang.Long))")
-        public void matchLogicalOperator2() { }
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(CrossClassRefPointcut_Aspect.MATCH_REFERNECE_POINTCUT_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+        }
 
-        @After("matchLogicalOperator() or matchLogicalOperator2()")
-        public void matchReferencePointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
+        ExecutionMemento.clearMemento();
+
+
+        object.match2( Long.valueOf(1l) );
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(LocalRefPointcut_Aspect.MATCH_REFERNECE_POINTCUT_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+        }
+
+        {
+            AdviceMethod afterAdviceMethodInvoker = ExecutionMemento.getAdviceMethodInvoker(CrossClassRefPointcut_Aspect.MATCH_REFERNECE_POINTCUT_AFTER_ADVICE);
+            assertThat(afterAdviceMethodInvoker).isNotNull();
+            assertThat(afterAdviceMethodInvoker.isInvoked()).isTrue();
+        }
+    }
+
+    static class NamedPointcut_Object {
+
+        public long match1(long input) {
+            return input;
+        }
+
+        public Long match2(Long input) {
+            return input;
+        }
+    }
+
+    @Aspect
+    public static class LocalRefPointcut_Aspect {
+
+        private static final String MATCH_REFERNECE_POINTCUT_AFTER_ADVICE = LocalRefPointcut_Aspect.class.getName() + ".matchRefPointcut_afterAdvice";
+
+        @Pointcut("execution(!private long io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$NamedPointcut_Object.match1(long))")
+        public void match1() { }
+
+        @Pointcut("execution(!private java.lang.Long io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$NamedPointcut_Object.match2(java.lang.Long))")
+        public void match2() { }
+
+        @After("match1() or match2()")
+        public void matchRefPointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
+            ExecutionMemento.putAdviceMethodInvoker(MATCH_REFERNECE_POINTCUT_AFTER_ADVICE, 
+                    new AdviceMethod()
+                        .withInvoked(true) );
+        }
+    }
+
+    @Aspect
+    public static class CrossClassRefPointcut_Aspect {
+
+        private static final String MATCH_REFERNECE_POINTCUT_AFTER_ADVICE = CrossClassRefPointcut_Aspect.class.getName() + ".matchRefPointcut_afterAdvice";
+
+        @Pointcut("execution(!private long io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$NamedPointcut_Object.match1(long))")
+        public void match1() { }
+
+        @Pointcut("execution(!private java.lang.Long io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$NamedPointcut_Object.match2(java.lang.Long))")
+        public void match2() { }
+
+        @After("io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$LocalRefPointcut_Aspect.match1() or io.gemini.aop.integration.Pointcut_11AspectJExprMatching_Tests$LocalRefPointcut_Aspect.match2()")
+        public void matchRefPointcut_afterAdvice(MutableJoinpoint<Long, RuntimeException> joinpoint) {
             ExecutionMemento.putAdviceMethodInvoker(MATCH_REFERNECE_POINTCUT_AFTER_ADVICE, 
                     new AdviceMethod()
                         .withInvoked(true) );
@@ -145,7 +206,7 @@ public class Pointcut_11AspectJExprMatching_Tests {
         }
     }
 
-    private static class Placeholder_Object {
+    static class Placeholder_Object {
 
         public long matchPlaceholder(long input) {
             return input;

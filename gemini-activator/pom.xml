@@ -23,6 +23,12 @@
         <dependency>
             <groupId>io.gemini</groupId>
             <artifactId>gemini-api</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.bytebuddy</groupId>
+                    <artifactId>byte-buddy</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Should not add other depenedencies, except for gemini-api -->
     </dependencies>
@@ -71,6 +77,14 @@
                             <include>io.gemini:*</include>
                         </includes>
                     </artifactSet>
+                    <filters>
+                        <filter>
+                            <artifact>io.gemini:gemini-api</artifact>
+                            <excludes>
+                                <exclude>META-INF/MANIFEST.MF</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
             </plugin>
 

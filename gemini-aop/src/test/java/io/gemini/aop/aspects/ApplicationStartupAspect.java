@@ -23,6 +23,11 @@ import org.aspectj.lang.annotation.Aspect;
 import io.gemini.aop.AopContext;
 import io.gemini.api.aop.Joinpoint.MutableJoinpoint;
 
+/**
+ * Intercepts application startup, and record Gemini startup message.
+ *
+ * @author   martin.liu
+ */
 @Aspect
 public class ApplicationStartupAspect {
 

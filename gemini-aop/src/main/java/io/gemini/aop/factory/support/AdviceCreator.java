@@ -48,7 +48,6 @@ import io.gemini.core.util.Throwables;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.matcher.ElementMatcher;
-import net.bytebuddy.matcher.ElementMatchers;
 
 /**
  * Factory interface for loading and instantiating {@link io.gemini.api.aop.Advice} classes
@@ -736,7 +735,7 @@ public interface AdviceCreator {
         @Override
         protected ElementMatcher<MethodDescription> doCreateAdviceMatcher(AdvisorContext advisorContext,
                 AdvisorSpec advisorSpec, ByteBuddyAdviceSpec adviceSpec) {
-            return ElementMatchers.any();
+            return new AdviceMatcher.ByteBuddyAdviceMatcher(adviceSpec);
         }
 
         /**

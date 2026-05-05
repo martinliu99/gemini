@@ -57,10 +57,13 @@ import net.bytebuddy.asm.Advice.WithCustomMapping;
 import net.bytebuddy.asm.AsmVisitorWrapper;
 import net.bytebuddy.asm.AsmVisitorWrapper.ForDeclaredMethods.MethodVisitorWrapper;
 import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.implementation.Implementation;
 import net.bytebuddy.implementation.MethodCall;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
+import net.bytebuddy.pool.TypePool;
 
 /**
  * Applies one or more {@link io.gemini.aop.Advisor.PointcutAdvisor} instances to a target method
@@ -99,8 +102,6 @@ public interface PointcutAdvisorWeaver {
      */
     @NoScanning
     class Compound implements PointcutAdvisorWeaver {
-
-        protected static final Logger LOGGER = LoggerFactory.getLogger(PointcutAdvisorWeaver.class);
 
         private final MethodDescription targetMethod;
         private final List<? extends PointcutAdvisorWeaver> advisorWeavers;
@@ -549,14 +550,20 @@ public interface PointcutAdvisorWeaver {
 
         private Advice toAdvice(WithCustomMapping withCustomMapping, PointcutAdvisor advisor) {
             Class<?> adviceClass = advisor.getAdviceClass();
+            ClassLoader classLoader = adviceClass.getClassLoader();
+
+            TypePool typePool = getWeaverContext().getAopContext().getTypePoolFactory().createTypePool(classLoader, null);
+            TypeDescription adviceType = typePool.describe(adviceClass.getName()).resolve();
+            ClassFileLocator classFileLocator = ClassFileLocator.ForClassLoader.of(classLoader);
+
             if (advisor.isBreakCircularity() == false)
-                return withCustomMapping.to(adviceClass);
+                return withCustomMapping.to(adviceType, classFileLocator);
             else {
                 DynamicType.Loaded<?> loadedAdviceClass = BEARKING_CIRCULARITY_ADVICES.computeIfAbsent(
                         adviceClass, 
-                        clazz -> CircularityBreakerCodeGenerator.INSTANCE.wrapMethodCall(adviceClass)
+                        clazz -> CircularityBreakerCodeGenerator.INSTANCE.wrapMethodCall(adviceClass, adviceType, classFileLocator)
                 );
-                return withCustomMapping.to(loadedAdviceClass.getLoaded(), loadedAdviceClass);
+                return withCustomMapping.to(loadedAdviceClass.getTypeDescription(), loadedAdviceClass);
             }
         }
 

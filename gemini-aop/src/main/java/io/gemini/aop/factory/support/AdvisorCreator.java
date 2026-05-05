@@ -325,6 +325,9 @@ public interface AdvisorCreator {
             this.adviceCreator = adviceCreator;
         }
 
+        /** 
+         * {@inheritDoc}
+         */
         @Override
         public Class<? extends Advice> getAdviceClass() {
             if (adviceClass == null)
@@ -333,6 +336,9 @@ public interface AdvisorCreator {
             return adviceClass;
         }
 
+        /** 
+         * {@inheritDoc}
+         */
         @Override
         public Advice getAdvice() {
             return adviceCreator.createInstance(advisorContext, advisorSpec, adviceClass);

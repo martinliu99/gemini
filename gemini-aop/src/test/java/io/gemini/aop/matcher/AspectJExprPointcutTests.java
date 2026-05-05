@@ -28,6 +28,11 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
 
+/**
+ * Tests {@code ExprPointcut} supports AspectJ pointcut expression.
+ *
+ * @author   martin.liu
+ */
 public class AspectJExprPointcutTests {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AspectJExprPointcutTests.class);

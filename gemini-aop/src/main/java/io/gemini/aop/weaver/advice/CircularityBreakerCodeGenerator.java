@@ -47,6 +47,7 @@ import net.bytebuddy.asm.AsmVisitorWrapper;
 import net.bytebuddy.asm.AsmVisitorWrapper.ForDeclaredMethods.MethodVisitorWrapper;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import net.bytebuddy.implementation.Implementation.Context;
@@ -72,7 +73,7 @@ import net.bytebuddy.utility.JavaConstant;
  *   <li>{@link #wrapMethodImplementation(Class)} – rewrites the advice method body to check
  *       {@link BootstrapDispatcher#isDispatchable()} before executing, preventing re-entrant
  *       dispatch when the advice itself triggers the same instrumented joinpoint.</li>
- *   <li>{@link #wrapMethodCall(Class)} – replaces the advice method body with an INDY call
+ *   <li>{@link #wrapMethodCall(Class, TypeDescription, ClassFileLocator)} – replaces the advice method body with an INDY call
  *       that checks dispatchability before delegating to the original advice logic.</li>
  *   <li>{@link #postProcessTargetMethod(int)} – patches the callback slot constant in the
  *       target method's INDY instruction after the advice class has been generated.</li>
@@ -151,34 +152,6 @@ public enum CircularityBreakerCodeGenerator {
                 .load(adviceClass.getClassLoader(), ClassLoadingStrategySelector.Default.SINGLETON.select(adviceClass));
     }
 
-
-    /**
-     * Wraps the advice method call with a dispatchability guard using an INDY-based delegation.
-     * The generated class replaces the method body with an INDY call that checks
-     * {@link BootstrapDispatcher#isDispatchable()} before invoking the original advice logic.
-     *
-     * @param adviceClass the original ByteBuddy advice class to wrap
-     * @return a loaded dynamic type containing the wrapped advice class
-     */
-    public DynamicType.Loaded<?> wrapMethodCall(Class<?> adviceClass) {
-        return new ByteBuddy()
-                .redefine(adviceClass)
-                .name(adviceClass.getName() + CIRCULARITY_BREAKER_CLASSNAME)
-                .visit(
-                        new AsmVisitorWrapper.ForDeclaredMethods()
-                        .readerFlags(ClassReader.EXPAND_FRAMES)
-                        .writerFlags(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS)
-                        .invokable(
-                                adviceMethodMatcher(adviceClass),
-                                MethodCallWrapper.INSTANCE
-                        )
-                )
-                .make(TypeResolutionStrategy.Lazy.INSTANCE)
-                .load(adviceClass.getClassLoader(), ClassLoadingStrategySelector.Default.SINGLETON.select(adviceClass))
-                ;
-    }
-
-
     private static ElementMatcher<MethodDescription> adviceMethodMatcher(Class<?> adviceClass) {
         List<ElementMatcher<? super MethodDescription>> adviceMethodMatchers = new ArrayList<>(2);
         for (Method method : adviceClass.getDeclaredMethods()) {
@@ -194,6 +167,52 @@ public enum CircularityBreakerCodeGenerator {
         }
         return new ElementMatcher.Junction.Disjunction<MethodDescription>(adviceMethodMatchers);
     }
+
+
+    /**
+     * Wraps the advice method call with a dispatchability guard using an INDY-based delegation.
+     * The generated class replaces the method body with an INDY call that checks
+     * {@link BootstrapDispatcher#isDispatchable()} before invoking the original advice logic.
+     * @param adviceClass the original ByteBuddy advice class to wrap
+     * @param adviceType the ByeBuddy type description of adviceClass
+     * @param classFileLocator the class file locator to locate binary reprensention of adviceType
+     * @return a loaded dynamic type containing the wrapped advice class
+     */
+    public DynamicType.Loaded<?> wrapMethodCall(Class<?> adviceClass, TypeDescription adviceType, 
+            ClassFileLocator classFileLocator) {
+        return new ByteBuddy()
+                .redefine(adviceType, classFileLocator)
+                .name(adviceType.getTypeName() + CIRCULARITY_BREAKER_CLASSNAME)
+                .visit(
+                        new AsmVisitorWrapper.ForDeclaredMethods()
+                        .readerFlags(ClassReader.EXPAND_FRAMES)
+                        .writerFlags(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS)
+                        .invokable(
+                                adviceMethodMatcher(adviceType),
+                                MethodCallWrapper.INSTANCE
+                        )
+                )
+                .make(TypeResolutionStrategy.Lazy.INSTANCE)
+                .load(adviceClass.getClassLoader(), ClassLoadingStrategySelector.Default.SINGLETON.select(adviceClass))
+                ;
+    }
+
+    private static ElementMatcher<MethodDescription> adviceMethodMatcher(TypeDescription adviceType) {
+        List<ElementMatcher<? super MethodDescription>> adviceMethodMatchers = new ArrayList<>(2);
+        for (MethodDescription method : adviceType.getDeclaredMethods()) {
+            if (method.getDeclaredAnnotations().isAnnotationPresent(OnMethodEnter.class)
+                    && method.getDeclaredAnnotations().isAnnotationPresent(OnMethodExit.class))
+                continue;
+
+            adviceMethodMatchers.add(
+                    named( method.getName() )
+                    .and( takesArguments( method.getParameters().asTypeList().asErasures() ) )
+                    .and( returns( method.getReturnType().asErasure() ) )
+            );
+        }
+        return new ElementMatcher.Junction.Disjunction<MethodDescription>(adviceMethodMatchers);
+    }
+
 
 
     /**

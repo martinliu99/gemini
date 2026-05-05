@@ -78,6 +78,15 @@ public interface TypePoolFactory {
     TypePool createTypePool(ClassLoader classLoader, JavaModule javaModule);
 
     /**
+     * Registers a existing type pool for the given class loader and module.
+     * 
+     * @param classLoader the class loader to create a pool for
+     * @param javaModule  the Java module (may be {@code null})
+     * @param typePool the type pool to be registered
+     */
+    void registerTypePool(ClassLoader classLoader, JavaModule javaModule, TypePool typePool);
+
+    /**
      * Removes and returns the cached type resolution for the given type name.
      *
      * @param typeName the fully-qualified type name
@@ -260,6 +269,18 @@ public interface TypePoolFactory {
                     readerMode,
                     parentPool
             );
+        }
+
+
+        /** 
+         * {@inheritDoc}
+         */
+        @Override
+        public void registerTypePool(ClassLoader classLoader, JavaModule javaModule, TypePool typePool) {
+            TypePool existingTypePool = this.types.putIfAbsent(ClassLoaderUtils.maskNull(classLoader), typePool);
+            if (existingTypePool != null)
+                throw new IllegalStateException(
+                        String.format("Already registered type pool %s for class loader %s", existingTypePool, classLoader) );
         }
 
 

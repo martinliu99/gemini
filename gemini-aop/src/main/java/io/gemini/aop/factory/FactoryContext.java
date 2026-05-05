@@ -181,7 +181,7 @@ public class FactoryContext implements Closeable {
         this.typePoolFactory = aopContext.getTypePoolFactory();
         this.typeWorldFactory = aopContext.getTypeWorldFactory();
 
-        this.typePool = new AspectTypePool(classLoader, typePoolFactory);
+        this.typePool = createAspectTypePool(classLoader, typePoolFactory);
         this.typeWorld = 
                 new TypeWorld.CacheResolutionFacade(
                         new TypeWorld.LazyFacade(
@@ -195,6 +195,50 @@ public class FactoryContext implements Closeable {
         if (LOGGER.isInfoEnabled() && aopContext.getDiagnosticLevel().isSimpleEnabled()) 
             LOGGER.info("$Took '{}' seconds to create FactoryContext '{}'.", 
                     (System.nanoTime() - startedAt) / AopMetrics.NANO_TIME, factoryName);
+    }
+
+    /**
+     * Creates a {@link ClassScanner} scoped to the combined classpath of the AOP class loader
+     * and this aspect application's own resource URLs.
+     *
+     * @param aopContext the central AOP context providing the base class scanner and class loader
+     * @return a new {@link ClassScanner} filtered to the relevant classpath entries
+     */
+    private ClassScanner createClassScanner(AopContext aopContext) {
+        ClassScanner aopClassScanner = aopContext.getClassScanner();
+        Assert.notNull(aopClassScanner, "'classScanner' must not be null.");
+
+        // collect resourceUrls by parent ClassLoader and current appResource
+        List<URL> resourceUrls = new ArrayList<>();
+        resourceUrls.addAll( Arrays.asList(aopContext.getAopClassLoader().getURLs()) );
+        resourceUrls.addAll( Arrays.asList(factoryResourceURLs) );
+
+        // create ClassScanner
+        return new ClassScanner.Builder()
+                .classScanner( aopClassScanner )
+                .filteredClasspathElementUrls(resourceUrls)
+                .build();
+    }
+
+    /**
+     * Creates an {@link ObjectFactory} backed by the given class loader and class scanner,
+     * and pre-registers the {@link AopContext} and the factory itself as named singletons.
+     *
+     * @param classLoader  the aspect class loader used to load advice classes
+     * @param classScanner the class scanner used to discover advice implementations
+     * @return a configured {@link ObjectFactory}
+     */
+    private ObjectFactory createObjectFactory(AspectClassLoader classLoader, ClassScanner classScanner) {
+        ObjectFactory objectFactory = new ObjectFactory.Builder()
+                .diagnosticLevel(aopContext.getDiagnosticLevel())
+                .classLoader(classLoader)
+                .classScanner(classScanner)
+                .build(false);
+
+        objectFactory.registerSingleton(AOP_CONTEXT_OBJECT, aopContext);
+        objectFactory.registerSingleton(OBJECT_FACTORY_OBJECT, objectFactory);
+
+        return objectFactory;
     }
 
     /**
@@ -252,6 +296,21 @@ public class FactoryContext implements Closeable {
     private String getUserDefinedConfigLocation(AopContext aopContext) {
         return "factory" + (aopContext.isDefaultProfile() ? "" : "-" + aopContext.getActiveProfile()) + ".properties";
     }
+
+    /**
+     * Creates an {@link AspectTypePool} backed by the given class loader, and registers into
+     * the given type pool factory.
+     * 
+     * @param classLoader   the aspect class loader used to locate advice classes
+     * @param typePoolFactory the type pool factory to register created {@link AspectTypePool}
+     * @return the created {@link AspectTypePool}
+     */
+    private AspectTypePool createAspectTypePool(AspectClassLoader classLoader, TypePoolFactory typePoolFactory) {
+        AspectTypePool typePool = new AspectTypePool(classLoader, typePoolFactory);
+        typePoolFactory.registerTypePool(classLoader, null, typePool);
+        return typePool;
+    }
+
 
     /**
      * Loads and applies all factory-level settings from the given {@link ConfigView}:
@@ -333,50 +392,6 @@ public class FactoryContext implements Closeable {
             conflictTargetClassLoaders.addAll( factoriesContext.getConflictTargetClassLoaders() );  // merge settings in weaverContext
             this.conflictTargetClassLoaders = conflictTargetClassLoaders;
         }
-    }
-
-    /**
-     * Creates a {@link ClassScanner} scoped to the combined classpath of the AOP class loader
-     * and this aspect application's own resource URLs.
-     *
-     * @param aopContext the central AOP context providing the base class scanner and class loader
-     * @return a new {@link ClassScanner} filtered to the relevant classpath entries
-     */
-    private ClassScanner createClassScanner(AopContext aopContext) {
-        ClassScanner aopClassScanner = aopContext.getClassScanner();
-        Assert.notNull(aopClassScanner, "'classScanner' must not be null.");
-
-        // collect resourceUrls by parent ClassLoader and current appResource
-        List<URL> resourceUrls = new ArrayList<>();
-        resourceUrls.addAll( Arrays.asList(aopContext.getAopClassLoader().getURLs()) );
-        resourceUrls.addAll( Arrays.asList(factoryResourceURLs) );
-
-        // create ClassScanner
-        return new ClassScanner.Builder()
-                .classScanner( aopClassScanner )
-                .filteredClasspathElementUrls(resourceUrls)
-                .build();
-    }
-
-    /**
-     * Creates an {@link ObjectFactory} backed by the given class loader and class scanner,
-     * and pre-registers the {@link AopContext} and the factory itself as named singletons.
-     *
-     * @param classLoader  the aspect class loader used to load advice classes
-     * @param classScanner the class scanner used to discover advice implementations
-     * @return a configured {@link ObjectFactory}
-     */
-    private ObjectFactory createObjectFactory(AspectClassLoader classLoader, ClassScanner classScanner) {
-        ObjectFactory objectFactory = new ObjectFactory.Builder()
-                .diagnosticLevel(aopContext.getDiagnosticLevel())
-                .classLoader(classLoader)
-                .classScanner(classScanner)
-                .build(false);
-
-        objectFactory.registerSingleton(AOP_CONTEXT_OBJECT, aopContext);
-        objectFactory.registerSingleton(OBJECT_FACTORY_OBJECT, objectFactory);
-
-        return objectFactory;
     }
 
 
@@ -604,6 +619,8 @@ public class FactoryContext implements Closeable {
         // create AspectClassLoader & objectFactory per ClassLoader
         AspectClassLoader classLoader = this.classLoader;
         ObjectFactory objectFactory = this.objectFactory;
+        AspectTypePool typePool = this.typePool;
+
         if (sharedMode == false) {
             classLoader = new AspectClassLoader(
                     factoryName, 
@@ -614,6 +631,7 @@ public class FactoryContext implements Closeable {
             classLoader.setTargetFirstResourceMatcher(targetFirstResourcesMatcher);
 
             objectFactory = createObjectFactory(classLoader, classScanner);
+            typePool = createAspectTypePool(classLoader, typePoolFactory);
         }
 
         return new AdvisorContext(this,

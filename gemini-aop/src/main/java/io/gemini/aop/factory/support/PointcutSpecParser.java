@@ -271,7 +271,7 @@ public interface PointcutSpecParser {
             Class<? extends Pointcut> pointcutClass = null;
             AnnotationDescription pointcutAnnotation = adviceType.getDeclaredAnnotations().ofType(PojoPointcut.class);
             if (pointcutAnnotation != null)
-                pointcutClass = pointcutAnnotation.getValue("pointcutClass")
+                pointcutClass = pointcutAnnotation.getValue("value")
                 .load(factoryContext.getClassLoader())
                 .resolve(Class.class);
 
@@ -322,7 +322,7 @@ public interface PointcutSpecParser {
             String pointcutExpression = null;
             AnnotationDescription pointcutAnnotation = adviceType.getDeclaredAnnotations().ofType(ExprPointcut.class);
             if (pointcutAnnotation != null)
-                pointcutExpression = pointcutAnnotation.getValue("pointcutExpression").resolve(String.class).trim();
+                pointcutExpression = pointcutAnnotation.getValue("value").resolve(String.class).trim();
 
             if (StringUtils.hasText(pointcutExpression) == false)
                 return null;

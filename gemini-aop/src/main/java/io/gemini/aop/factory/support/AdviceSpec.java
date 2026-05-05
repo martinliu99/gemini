@@ -41,9 +41,10 @@ import io.gemini.api.aop.Joinpoint;
 import io.gemini.aspectj.weaver.PointcutParameter;
 import io.gemini.aspectj.weaver.PointcutParameter.NamedPointcutParameter;
 import io.gemini.core.config.ConfigView;
-import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.StringUtils;
+import net.bytebuddy.asm.Advice.OnMethodEnter;
+import net.bytebuddy.asm.Advice.OnMethodExit;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterDescription;
@@ -95,7 +96,7 @@ public interface AdviceSpec {
      */
     abstract class AbstractBase implements AdviceSpec {
 
-        protected static final Logger LOGGER = LoggerFactory.getLogger(AdviceSpecParser.class);
+        protected static final Logger LOGGER = LoggerFactory.getLogger(AdviceSpec.class);
 
 
         private AdviceKind adviceKind;
@@ -725,7 +726,7 @@ public interface AdviceSpec {
                 // 1.match parameter count and type
                 if (pointcutParameters == null || pointcutParameters.size() != pointcutParameterNames.size()) {
                     if (LOGGER.isWarnEnabled())
-                        LOGGER.warn("Ignored advice method with advice parameters is different to target method's resolved parameters. \n" 
+                        LOGGER.warn("Ignored advice method with advice parameter count is different to target method's resolved parameters. \n" 
                                 + "  DeclaringType: {} \n"
                                 + "  AdviceMethod: {} \n"
                                 + "    AdviceParameters: {} \n"
@@ -761,21 +762,6 @@ public interface AdviceSpec {
                                     pointcutParameters.stream()
                                             .map( p -> p.getParamName() )
                                             .collect( Collectors.toList() )
-                            );
-
-                        return false;
-                    }
-
-                    TypeDescription paramType = parameterDescriptionMap.get(pointcutParameterBinding.getParamName()).getType().asErasure();
-                    if (ClassUtils.isVisibleTo(paramType, targetMethod.getDeclaringType().asErasure()) == false) {
-                        if (LOGGER.isWarnEnabled())
-                            LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under target ClassLoader. \n"
-                                    + "  DeclaringType: {} \n"
-                                    + "  AdviceMethod: {} \n"
-                                    + "    parameter '{}': {} {} \n",
-                                    getDeclaringType().getTypeName(),
-                                    MethodUtils.getMethodSignature(getAdviceMethod()),
-                                    name, paramType.getVisibility(), paramType
                             );
 
                         return false;
@@ -821,14 +807,33 @@ public interface AdviceSpec {
 
 
     /** 
-     * Raw ByteBuddy {@code @Advice} class spec — no advice method, just the class itself. 
+     * Raw ByteBuddy {@code @Advice} class spec, incuding enterAdviceMethod and exitAdviceMethod.
      */
     interface ByteBuddyAdviceSpec extends AdviceSpec {
+
+        /**
+         * Represent advice method annotated with {@link OnMethodEnter} if exists.
+         * 
+         * @return the enter advice method instance
+         */
+        MethodDescription getEnterAdviceMethod();
+
+        /**
+         * Represent advice method annotated with {@link OnMethodExit} if exists.
+         * 
+         * @return the exit advice method instance
+         */
+        MethodDescription getExitAdviceMethod();
+
 
         /**
          * Default {@link ByteBuddyAdviceSpec} implementation for raw ByteBuddy {@code @Advice} classes.
          */
         class Default extends AbstractBase implements ByteBuddyAdviceSpec {
+
+            private final MethodDescription enterAdviceMethod;
+            private final MethodDescription exitAdviceMethod;
+
 
             /**
              * Creates a ByteBuddy advice spec from the given advice class type.
@@ -836,8 +841,12 @@ public interface AdviceSpec {
              * @param adviceKind    the ByteBuddy advice kind (OnMethodEnter, OnMethodExit, or both)
              * @param declaringType the ByteBuddy {@code @Advice} class type description
              */
-            public Default(ByteBuddyAdviceKind adviceKind, TypeDescription declaringType) {
+            public Default(ByteBuddyAdviceKind adviceKind, TypeDescription declaringType,
+                    MethodDescription enterAdviceMethod, MethodDescription exitAdviceMethod) {
                 super(adviceKind, declaringType, declaringType.getTypeName());
+
+                this.enterAdviceMethod = enterAdviceMethod;
+                this.exitAdviceMethod = exitAdviceMethod;
             }
 
 
@@ -847,6 +856,22 @@ public interface AdviceSpec {
             @Override
             public ByteBuddyAdviceKind getAdviceKind() {
                 return (ByteBuddyAdviceKind) super.getAdviceKind();
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public MethodDescription getEnterAdviceMethod() {
+                return enterAdviceMethod;
+            }
+
+            /** 
+             * {@inheritDoc}
+             */
+            @Override
+            public MethodDescription getExitAdviceMethod() {
+                return exitAdviceMethod;
             }
         }
     }

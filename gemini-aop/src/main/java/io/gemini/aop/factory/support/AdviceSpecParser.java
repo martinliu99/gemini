@@ -410,7 +410,7 @@ public interface AdviceSpecParser {
 
             if (adviceSpecMap.size() == 0) {
                 if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored AdviceSpec without advice methods. \n"
+                    LOGGER.warn("Ignored AspectJ aspect without advice methods. \n"
                             + "  DeclaringType: {} \n", 
                             declaringType.getTypeName()
                     );
@@ -423,17 +423,6 @@ public interface AdviceSpecParser {
 
         private AspectJAdviceSpec parseAspectJAdviceSpec(TypeDescription declaringType, MethodDescription adviceMethod) {
             // validate method modifier
-            if (adviceMethod.isAbstract()) {
-                if (LOGGER.isWarnEnabled())
-                    LOGGER.warn("Ignored abstract AspectJ advice method. \n"
-                            + "  DeclaringType: {} \n"
-                            + "  AdviceMethod: {} \n",
-                            declaringType.getTypeName(), 
-                            MethodUtils.getMethodSignature(adviceMethod) 
-                    );
-                return null;
-            }
-
             if (adviceMethod.isPrivate()) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored private AspectJ advice method. \n"
@@ -585,18 +574,20 @@ public interface AdviceSpecParser {
         @Override
         public List<? extends ByteBuddyAdviceSpec> doParse(FactoryContext factoryContext, TypeDescription declaringType) {
             // validate declaringType
-            MethodDescription enterMethod = null;
-            MethodDescription exitMethod = null;
+            MethodDescription enterAdviceMethod = null;
+            MethodDescription exitAdviceMethod = null;
             for (MethodDescription method : declaringType.getDeclaredMethods()) {
                 if (method.getDeclaredAnnotations().isAnnotationPresent(OnMethodEnter.class)) {
-                    if (enterMethod == null)
-                        enterMethod = method;
+                    if (enterAdviceMethod == null)
+                        enterAdviceMethod = method;
                     else {
                         if (LOGGER.isWarnEnabled())
-                            LOGGER.warn("Ignored AdviceSpec with more than one @OnMethodEnter annotated advice methods. \n"
+                            LOGGER.warn("Ignored ByteBuddy advice with more than one @OnMethodEnter annotated advice methods. \n"
                                     + "  DeclaringType: {} \n"
+                                    + "  AdviceMethod: {} \n" 
                                     + "  AdviceMethod: {} \n", 
                                     declaringType.getTypeName(),
+                                    MethodUtils.getMethodSignature(enterAdviceMethod),
                                     MethodUtils.getMethodSignature(method)
                             );
 
@@ -605,14 +596,16 @@ public interface AdviceSpecParser {
                 }
 
                 if (method.getDeclaredAnnotations().isAnnotationPresent(OnMethodExit.class)) {
-                    if (exitMethod == null)
-                        exitMethod = method;
+                    if (exitAdviceMethod == null)
+                        exitAdviceMethod = method;
                     else {
                         if (LOGGER.isWarnEnabled())
-                            LOGGER.warn("Ignored AdviceSpec with more than one @OnMethodExit annotated advice methods. \n"
+                            LOGGER.warn("Ignored ByteBuddy advice with more than one @OnMethodExit annotated advice methods. \n"
                                     + "  DeclaringType: {} \n"
+                                    + "  AdviceMethod: {} \n"
                                     + "  AdviceMethod: {} \n", 
                                     declaringType.getTypeName(),
+                                    MethodUtils.getMethodSignature(exitAdviceMethod),
                                     MethodUtils.getMethodSignature(method)
                             );
 
@@ -621,17 +614,66 @@ public interface AdviceSpecParser {
                 }
             }
 
-            if (enterMethod == null && exitMethod == null)
+            if (enterAdviceMethod == null && exitAdviceMethod == null)
                 return Collections.emptyList();
 
-            // TODO: resolve returning and throwing
-            // inline = false, not private...
+            if ( (enterAdviceMethod != null && validateAdviceMethod(declaringType, enterAdviceMethod) == false)
+                    || (exitAdviceMethod != null && validateAdviceMethod(declaringType, exitAdviceMethod) == false) )
+                return Collections.emptyList();
+
 
             ByteBuddyAdviceSpec.Default byteBuddyAdviceSpec = new ByteBuddyAdviceSpec.Default(
-                    ByteBuddyAdviceKind.parse(enterMethod != null, exitMethod != null),
-                    declaringType
+                    ByteBuddyAdviceKind.parse(enterAdviceMethod != null, exitAdviceMethod != null),
+                    declaringType, enterAdviceMethod, exitAdviceMethod
             );
             return Collections.singletonList(byteBuddyAdviceSpec);
+        }
+
+        private boolean validateAdviceMethod(TypeDescription declaringType, MethodDescription adviceMethod) {
+            // 1.non-static method
+            if (adviceMethod.isStatic() == false) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored ByteBuddy advice with non-static advice method. \n"
+                            + "  DeclaringType: {} \n"
+                            + "  AdviceMethod: {} \n", 
+                            declaringType.getTypeName(),
+                            MethodUtils.getMethodSignature(adviceMethod)
+                    );
+
+                return false;
+            }
+
+            // 2.private method
+            if (adviceMethod.isPrivate()) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored ByteBuddy advice with private advice method. \n"
+                            + "  DeclaringType: {} \n"
+                            + "  AdviceMethod: {} \n", 
+                            declaringType.getTypeName(),
+                            MethodUtils.getMethodSignature(adviceMethod)
+                    );
+
+                return false;
+            }
+
+            // 3.inline method
+            AnnotationDescription annotation = adviceMethod.getDeclaredAnnotations().ofType(OnMethodEnter.class);
+            if (annotation == null)
+                annotation = adviceMethod.getDeclaredAnnotations().ofType(OnMethodExit.class);
+            Boolean inline = annotation.getValue("inline").resolve(Boolean.class);
+            if (inline != null && inline) {
+                if (LOGGER.isWarnEnabled())
+                    LOGGER.warn("Ignored ByteBuddy advice with inline advice method. \n"
+                            + "  DeclaringType: {} \n"
+                            + "  AdviceMethod: {} \n", 
+                            declaringType.getTypeName(),
+                            MethodUtils.getMethodSignature(adviceMethod)
+                    );
+
+                return false;
+            }
+
+            return true;
         }
 
         /**

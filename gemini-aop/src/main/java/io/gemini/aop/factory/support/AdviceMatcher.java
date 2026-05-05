@@ -15,17 +15,22 @@
  */
 package io.gemini.aop.factory.support;
 
+import java.util.Map.Entry;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.gemini.aop.factory.support.AdviceSpec.AspectJAdviceSpec;
+import io.gemini.aop.factory.support.AdviceSpec.ByteBuddyAdviceSpec;
 import io.gemini.aop.factory.support.AdviceSpec.PojoAdviceSpec;
+import io.gemini.aspectj.weaver.PointcutParameter.NamedPointcutParameter;
 import io.gemini.core.util.ClassUtils;
 import io.gemini.core.util.MethodUtils;
 import io.gemini.core.util.Pair;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterList;
 import net.bytebuddy.description.type.TypeDefinition;
+import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeDescription.Generic;
 import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -41,7 +46,7 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
 
     abstract class AbstractBase<A extends AdviceSpec> implements AdviceMatcher {
 
-        private static final Logger LOGGER = LoggerFactory.getLogger(AdviceMatcher.class);
+        protected static final Logger LOGGER = LoggerFactory.getLogger(AdviceMatcher.class);
 
         private static final Generic RUNTIME_EXCEPTION = TypeDefinition.Sort.describe(RuntimeException.class);
 
@@ -120,6 +125,16 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
             return new Pair<>(returningType, throwingType);
         }
 
+        /**
+         * Matches returning type with target class loader at class loading time.
+         * 
+         * @param parameterizedReturningType returning type defined via parameterized argument or advice returning argument
+         * @param adviceMethod               advice method annotated with AspectJ annotation
+         * @param adviceReturningType        returning type defined by advice method
+         * @param targetMethod               target method in matching
+         * @param targetReturningType        returning type of target method
+         * @return matched or not
+         */
         protected boolean matchesReturningType(boolean parameterizedReturningType, 
                 MethodDescription adviceMethod, Generic adviceReturningType, 
                 MethodDescription targetMethod, Generic targetReturningType) {
@@ -128,6 +143,7 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
                     ? targetReturningType.asRawType() : targetReturningType;
             String matchingReturningTypeMsg = parameterizedReturningType ? "ParameterizedReturning" : "AdviceReturning";
 
+            // verify returning type visibility
             if (ClassUtils.isVisibleTo(adviceReturningType.asErasure(), adviceMethod.getDeclaringType().asErasure()) == false) {
                 if (LOGGER.isWarnEnabled()) {
                     LOGGER.warn("Ignored advice method referring to non public and non protected in the same package {} type under target ClassLoader. \n"
@@ -144,6 +160,7 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
                 return false;
             }
 
+            // verify returning type assignment
             if (parameterizedReturningType == true) {
                 if (ClassUtils.equals(adviceReturningType, targetReturningType) == false) {
                     if (LOGGER.isWarnEnabled())
@@ -183,13 +200,26 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
                     return false;
                 }
             }
+
             return true;
         }
 
+
+        /**
+         * Matches throwing type with target class loader at class loading time.
+         * 
+         * @param parameterizedThrowingType  throwing type defined via parameterized argument or advice throwing argument
+         * @param adviceMethod               advice method annotated with AspectJ annotation
+         * @param adviceThrowingType         throwing type defined by advice method
+         * @param targetMethod               target method in matching
+         * @return matched or not
+         */
         protected boolean matchesThrowingType(boolean parameterizedThrowingType, 
                 MethodDescription adviceMethod, Generic adviceThrowingType, MethodDescription targetMethod) {
             String matchingThrowingTypeMsg = parameterizedThrowingType ? "ParameterizedThrowing" : "AdviceThrowing";
             TypeDefinition declaringType = adviceMethod.getDeclaringType();
+
+            // verify throwing type visibility
             if (ClassUtils.isVisibleTo(adviceThrowingType.asErasure(), declaringType.asErasure()) == false) {
                 if (LOGGER.isWarnEnabled())
                     LOGGER.warn("Ignored advice method referring to non public or non protected in the same package {} type under target ClassLoader. \n"
@@ -205,6 +235,7 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
                 return false;
             }
 
+            // verify throwing type assignment
             TypeList.Generic exceptionTypes = targetMethod.getExceptionTypes();
             if (exceptionTypes.size() == 0) {
                 if (ClassUtils.equals(adviceThrowingType, RUNTIME_EXCEPTION) == false) {
@@ -288,6 +319,9 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
 
         /**
          * {@inheritDoc}
+         * 
+         * It's necessary to verify target types' visibility since aspect advice class created by framework under aspect class loader
+         * and could only access public target type or protected target type under same package.
          */
         @Override
         public boolean matches(MethodDescription targetMethod) {
@@ -315,6 +349,76 @@ public interface AdviceMatcher extends ElementMatcher<MethodDescription> {
                 return false;
             }
 
+            // 3.verify parameter type of advice method signature with target method
+            if (matchesParameterTypes(targetMethod, adviceReturningParameterType, adviceThrowingParameterType) == false)
+                return false;
+
+            return true;
+        }
+
+        /**
+         * Matches parameter types of advice method with target class loader at class loading time,
+         * except for adviceReturningParameterType, adviceThrowingParameterType.
+         * 
+         * @param targetMethod  target method in matching
+         * @param adviceReturningParameterType returning type defined via returning argument
+         * @param adviceThrowingParameterType  throwing type defined via throwing argument
+         * @return matched or not
+         */
+        private boolean matchesParameterTypes(MethodDescription targetMethod, Generic adviceReturningParameterType, Generic adviceThrowingParameterType) {
+            for (Entry<String, NamedPointcutParameter>  entry : adviceSpec.getNamedPointcutParameters().entrySet()) {
+                String paramName = entry.getKey();
+                NamedPointcutParameter pointcutParameterBinding = entry.getValue();
+
+                Generic paramGeneric = pointcutParameterBinding.getParamType();
+                if (adviceReturningParameterType != null && paramGeneric.equals(adviceReturningParameterType))
+                    continue;
+                if (adviceThrowingParameterType != null && paramGeneric.equals(adviceThrowingParameterType))
+                    continue;
+
+                // verify parameter type visibility
+                TypeDescription paramType = paramGeneric.asErasure();
+                if (ClassUtils.isVisibleTo(paramType, targetMethod.getDeclaringType().asErasure()) == false) {
+                    if (LOGGER.isWarnEnabled()) 
+                        LOGGER.warn("Ignored advice method referring to non public and non protected in the same package parameter type under target ClassLoader. \n"
+                                + "  DeclaringType: {} \n"
+                                + "  AdviceMethod: {} \n"
+                                + "    parameter '{}': {} {} \n",
+                                adviceSpec.getDeclaringType().getTypeName(),
+                                MethodUtils.getMethodSignature(adviceSpec.getAdviceMethod()),
+                                paramName, paramType.getVisibility(), paramType
+                        );
+
+                    return false;
+                }
+
+                // ignore parameter type assignment verified by {@link ExprPointcut}.
+            }
+
+            return true;
+        }
+    }
+
+
+    class ByteBuddyAdviceMatcher extends AbstractBase<ByteBuddyAdviceSpec> {
+
+        private final ByteBuddyAdviceSpec adviceSpec;
+
+
+        protected ByteBuddyAdviceMatcher(ByteBuddyAdviceSpec adviceSpec) {
+            this.adviceSpec = adviceSpec;
+        }
+
+        /**
+         * {@inheritDoc}
+         * 
+         * It's unnecessary to verify target types' visibility since java compiler helps to validate it
+         * when compiling ByteBuddy Advice class.
+         */
+        @Override
+        public boolean matches(MethodDescription targetMethod) {
+            // TODO: verify class assignment
+            // 1.verify parameter of enter advice method
             return true;
         }
     }
